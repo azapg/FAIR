@@ -1,0 +1,50 @@
+# PLATFORM
+
+# dependencies
+platform/node_modules
+platform/.pnp
+platform/.pnp.*
+platform/.yarn/*
+platform/!.yarn/patches
+platform/!.yarn/plugins
+platform/!.yarn/releases
+platform/!.yarn/versions
+
+# testing
+platform/coverage
+
+# next.js
+platform/.next/
+platform/out/
+
+# production
+platform/build
+
+# misc
+platform/.DS_Store
+platform/*.pem
+
+# debug
+platform/npm-debug.log*
+platform/yarn-debug.log*
+platform/yarn-error.log*
+platform/pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+platform/.vercel
+
+# typescript
+platform/*.tsbuildinfo
+platform/next-env.d.ts
+
+# BACKEND
+
+# dependencies
+backend/venv/
+backend/.venv/
+backend/.mypy_cache/
+backend/.pytest_cache/
+backend/.coverage
