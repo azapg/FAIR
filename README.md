@@ -6,7 +6,7 @@ It aims to provide a unified developer and user experience through a single CLI 
 <!-- what a terrible explanation btw, I should explain more about the features and mission once i publish the paper or idk -->
 
 > [!WARNING]
-> ⚠️ This project is in early development. Most features are still being prototyped.
+> This project is in early development. Most features are still being prototyped.
 
 ## What is Fair?
 
