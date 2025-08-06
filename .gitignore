@@ -1,5 +1,11 @@
 # PLATFORM
 
+# cli
+.venv
+*.egg-info/
+build/
+cli/__pycache__/
+
 # dependencies
 platform/node_modules
 platform/.pnp
