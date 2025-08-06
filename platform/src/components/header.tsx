@@ -70,7 +70,7 @@ export function Header({
     email: "user@example.com",
     initials: "U",
   },
-  title = "Fair Platform",
+  title = "The Fair Platform",
   centerContent,
   rightContent,
   dropdownItems,
@@ -111,7 +111,7 @@ export function Header({
     >
       {/* Left section - Platform title */}
       <div className="flex items-center">
-        <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+        <h1 className="text-xl font-serif font-semibold text-foreground">{title}</h1>
       </div>
 
       {/* Center section - Extensible content */}
