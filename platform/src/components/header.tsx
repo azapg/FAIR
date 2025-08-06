@@ -107,7 +107,7 @@ export function Header({
 
   return (
     <header
-      className={`flex items-center justify-between h-16 px-6 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${className}`}
+      className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-16 px-6 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${className}`}
     >
       {/* Left section - Platform title */}
       <div className="flex items-center">

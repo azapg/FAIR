@@ -10,7 +10,7 @@ export default function Home() {
           initials: "AZ",
         }}
       />
-      <main className="container mx-auto p-6 space-y-12">
+      <main className="container mx-auto p-6 space-y-12 pt-20">
         {/* Hero Section */}
         <div className="text-center space-y-6">
           <h1 className="font-serif text-4xl md:text-6xl font-bold text-foreground">
