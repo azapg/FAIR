@@ -1,4 +1,6 @@
 # PLATFORM
+**/__pycache__
+*.db
 
 # cli
 .venv
