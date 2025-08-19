@@ -5,6 +5,9 @@ from typing import Generator, Iterator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 
+from dotenv import load_dotenv
+load_dotenv()
+
 __all__ = [
     "engine",
     "SessionLocal",
@@ -19,6 +22,7 @@ DEFAULT_SQLITE_FILENAME = "fair.db"
 def get_database_url() -> str:
     url = os.getenv("DATABASE_URL", "").strip()
     if not url:
+        print("Using SQLite since DATABASE_URL is not set")
         return f"sqlite:///{DEFAULT_SQLITE_FILENAME}"
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://") :]
@@ -70,6 +74,7 @@ def init_db(create_all: bool = True) -> None:
     By default calls Base.metadata.create_all; safe to call multiple times.
     """
     if create_all:
+        from . import models  # noqa: F401
         Base.metadata.create_all(bind=engine)
 
 
