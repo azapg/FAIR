@@ -1,6 +1,7 @@
 import {Card, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Skeleton} from "@/components/ui/skeleton";
+import {Plus} from "lucide-react";
 
 type Course = {
   id: string;
@@ -68,7 +69,9 @@ export default function CoursesPage() {
     <main>
       <div className={"flex items-center justify-between mb-6"}>
         <h1 className={"text-3xl"}>Your courses</h1>
-        <Button>Create</Button>
+        <Button>
+          <Plus /> Create
+        </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7 mt-6">
         {courses.map((course) => (
