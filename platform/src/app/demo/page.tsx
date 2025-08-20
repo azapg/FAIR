@@ -1,7 +1,10 @@
+'use client';
+
 import {Card, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Skeleton} from "@/components/ui/skeleton";
 import {Plus} from "lucide-react";
+import {useRouter} from "next/navigation";
 
 type Course = {
   id: string;
@@ -65,8 +68,10 @@ const courses: Course[] = [
 ];
 
 export default function CoursesPage() {
+  const router = useRouter()
+
   return (
-    <main>
+    <main className={"p-5"}>
       <div className={"flex items-center justify-between mb-6"}>
         <h1 className={"text-3xl"}>Your courses</h1>
         <Button>
@@ -75,7 +80,10 @@ export default function CoursesPage() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7 mt-6">
         {courses.map((course) => (
-          <Card key={course.id} className={`flex flex-col h-full bg-${course.color}-50 hover:bg-${course.color}-100 transition-colors cursor-pointer`}>
+          <Card key={course.id}
+                className={`flex flex-col h-full bg-${course.color}-50 hover:bg-${course.color}-100 transition-colors cursor-pointer`}
+                onClick={() => router.push(`/demo/assignment`)}
+          >
             <CardHeader className={"flex-1 flex flex-col items-start"}>
               <CardTitle>{course.title}</CardTitle>
               <CardDescription>{course.description}</CardDescription>

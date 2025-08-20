@@ -22,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistMono.variable} ${hostGrotesk.variable} ${remark.variable} font-sans antialiased pt-20 m-5`}
+        className={`${geistMono.variable} ${hostGrotesk.variable} ${remark.variable} font-sans antialiased h-screen`}
       >
         <Header
           user={{
@@ -31,7 +31,9 @@ export default function RootLayout({
             initials: "AZ",
           }}
         />
-        {children}
+        <div className={"pt-16 h-full"}>
+          {children}
+        </div>
       </body>
     </html>
   );
