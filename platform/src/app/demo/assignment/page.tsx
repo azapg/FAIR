@@ -1,5 +1,16 @@
 import {Button} from "@/components/ui/button";
-import {CircleCheck, FileText, Hourglass, Link, Plus} from "lucide-react";
+import {CircleCheck, FileText, Hourglass, Link as LinkIcon, Plus} from "lucide-react";
+
+import Link from "next/link"
+
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 
 type AssignmentSubmissions = {
 
@@ -18,10 +29,35 @@ const assignment: Assignment = {
   submissions: []
 }
 
+export function BreadcrumbNav() {
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link href="/">Home</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link href="/demo">7014 Programación I</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>Asignación I</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  )
+}
+
 export default function AssignmentPage() {
   return (
     <div className={"flex flex-row divide-x-2 h-full m-0"}>
-      <div className={"w-3/4 p-5 h-full overflow-auto break-words"}>
+      <div className={"w-3/4 p-5 h-full overflow-auto break-words space-y-2"}>
+        <BreadcrumbNav />
         <div className={"mb-5"}>
           <h1 className={"text-2xl font-bold"}>{assignment.name}</h1>
           <p>{assignment.description}</p>
@@ -45,7 +81,7 @@ export default function AssignmentPage() {
           <div className={"flex flex-row gap-1 mt-4 items-center"}>
             <h2 className={"text-muted-foreground mr-4 text-sm"}>Resources</h2>
             <Button variant={"secondary"} size={"sm"}>
-              <Link /> 💻 BUCLES FOR ¿Qué son y...
+              <LinkIcon /> 💻 BUCLES FOR ¿Qué son y...
             </Button>
             <Button variant={"secondary"} size={"sm"}>
               <FileText /> ejercicios.docx
