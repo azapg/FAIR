@@ -141,7 +141,7 @@ export function BreadcrumbNav({className}: { className?: string }) {
 
 export default function AssignmentPage() {
   return (
-    <SidebarProvider className={"flex flex-row h-full m-0"}>
+    <SidebarProvider className={"flex flex-row m-0 p-0 h-auto overflow-none"}>
       <div className={"w-full h-full overflow-auto break-words"}>
         <div className={"flex flex-row justify-between items-center"}>
           <BreadcrumbNav className={"pt-3 pl-5 pb-2"}/>
