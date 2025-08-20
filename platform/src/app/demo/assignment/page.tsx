@@ -14,6 +14,8 @@ import {
 import {Separator} from "@/components/ui/separator";
 import {SubmissionsTable} from "@/app/demo/assignment/submissions-table";
 import {columns, Submission} from "@/app/demo/assignment/submissions";
+import {SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar";
+import {WorkflowsSidebar} from "@/app/demo/assignment/components/workflows-sidebar";
 
 type Assignment = {
   name: string;
@@ -138,9 +140,12 @@ export function BreadcrumbNav({ className }: { className?: string }) {
 
 export default function AssignmentPage() {
   return (
-    <div className={"flex flex-row divide-x-2 h-full m-0"}>
-      <div className={"w-3/4 h-full overflow-auto break-words"}>
-        <BreadcrumbNav className={"pt-3 pl-5 pb-2"}/>
+    <SidebarProvider className={"flex flex-row h-full m-0"}>
+      <div className={"w-full h-full overflow-auto break-words"}>
+        <div className={"flex flex-row justify-between items-center"}>
+          <BreadcrumbNav className={"pt-3 pl-5 pb-2"}/>
+          <SidebarTrigger />
+        </div>
         <Separator />
         <div className={"pl-5 pr-5 pt-3"}>
           <div className={"mb-5"}>
@@ -185,9 +190,7 @@ export default function AssignmentPage() {
 
         </div>
       </div>
-      <div className={"sticky w-1/4 p-5 h-full overflow-auto break-words"}>
-        sidebar here
-      </div>
-    </div>
+      <WorkflowsSidebar side={"right"} className={"pt-16"}/>
+    </SidebarProvider>
   );
 }
