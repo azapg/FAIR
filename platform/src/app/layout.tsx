@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import { hostGrotesk, remark } from "@/lib/fonts";
 import "./globals.css";
+import Header from "@/components/header";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -21,8 +22,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistMono.variable} ${hostGrotesk.variable} ${remark.variable} font-sans antialiased`}
+        className={`${geistMono.variable} ${hostGrotesk.variable} ${remark.variable} font-sans antialiased pt-20 m-5`}
       >
+        <Header
+          user={{
+            name: "Allan Zapata",
+            email: "allan.zapata@up.ac.pa",
+            initials: "AZ",
+          }}
+        />
         {children}
       </body>
     </html>
