@@ -145,7 +145,7 @@ export default function AssignmentPage() {
       <div className={"w-full h-full overflow-auto break-words"}>
         <div className={"flex flex-row justify-between items-center"}>
           <BreadcrumbNav className={"pt-3 pl-5 pb-2"}/>
-          <SidebarTrigger/>
+          <SidebarTrigger className={"pr-5"}/>
         </div>
         <Separator/>
         <div className={"pl-5 pr-5 pt-3"}>
