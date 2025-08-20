@@ -12,22 +12,104 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import {Separator} from "@/components/ui/separator";
-
-type AssignmentSubmissions = {
-
-}
+import {SubmissionsTable} from "@/app/demo/assignment/submissions-table";
+import {columns, Submission} from "@/app/demo/assignment/submissions";
 
 type Assignment = {
   name: string;
   description: string;
-  submissions: AssignmentSubmissions[];
+  submissions: Submission[];
 }
 
 
 const assignment: Assignment = {
   name: "Ejercicios de bucles en C",
   description: "Realiza los siguientes ejercicios utilizando bucles en C. Cada ejercicio debe ser implementado en un archivo separado y enviado como parte de tu tarea.",
-  submissions: []
+  submissions: [
+    {
+      id: "1",
+      name: "Juan Pérez",
+      status: "submitted",
+      grade: 85,
+      feedback: "Buen trabajo, pero revisa el ejercicio 3.",
+      submittedAt: new Date("2025-09-01T10:00:00Z"),
+    },
+    {
+      id: "2",
+      name: "María López",
+      status: "graded",
+      grade: 90,
+      feedback: "Excelente solución, todo correcto.",
+      submittedAt: new Date("2025-09-02T12:30:00Z"),
+    },
+    {
+      id: "3",
+      name: "Carlos García",
+      status: "needs_review",
+      feedback: "Requiere revisión adicional.",
+    },
+    {
+      id: "4",
+      name: "Ana Torres",
+      status: "pending",
+    },
+    {
+      id: "5",
+      name: "Luis Fernández",
+      status: "submitted",
+      grade: 75,
+      feedback: "Faltan algunos detalles, pero en general bien.",
+      submittedAt: new Date("2025-09-03T14:15:00Z"),
+    },
+    {
+      id: "6",
+      name: "Sofía Martínez",
+      status: "graded",
+      grade: 95,
+      feedback: "Excelente trabajo, muy bien hecho.",
+      submittedAt: new Date("2025-09-04T09:45:00Z"),
+    },
+    {
+      id: "7",
+      name: "Pedro Sánchez",
+      status: "pending",
+    },
+    {
+      id: "8",
+      name: "Lucía Ramírez",
+      status: "submitted",
+      grade: 80,
+      feedback: "Buen esfuerzo, pero revisa el ejercicio 2.",
+      submittedAt: new Date("2025-09-05T11:20:00Z"),
+    },
+    {
+      id: "9",
+      name: "Javier Díaz",
+      status: "needs_review",
+      feedback: "Requiere revisión adicional.",
+    },
+    {
+      id: "10",
+      name: "Clara Jiménez",
+      status: "graded",
+      grade: 88,
+      feedback: "Buen trabajo, pero hay algunos errores menores.",
+      submittedAt: new Date("2025-09-06T13:05:00Z"),
+    },
+    {
+      id: "11",
+      name: "Raúl Herrera",
+      status: "pending",
+    },
+    {
+      id: "12",
+      name: "Elena Castro",
+      status: "submitted",
+      grade: 92,
+      feedback: "Excelente solución, todo correcto.",
+      submittedAt: new Date("2024-09-07T15:30:00Z"),
+    }
+  ]
 }
 
 export function BreadcrumbNav({ className }: { className?: string }) {
@@ -95,7 +177,12 @@ export default function AssignmentPage() {
             </div>
 
           </div>
-          <h2 className={"text-xl font-semibold mt-4"}>Submissions</h2>
+
+          <div className={"space-y-5 mb-5"}>
+            <h2 className={"text-xl font-semibold mb-3"}>Submissions</h2>
+            <SubmissionsTable columns={columns} data={assignment.submissions} />
+          </div>
+
         </div>
       </div>
       <div className={"sticky w-1/4 p-5 h-full overflow-auto break-words"}>
