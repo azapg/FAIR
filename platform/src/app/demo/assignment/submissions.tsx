@@ -75,7 +75,7 @@ export const SubmissionStatusLabel = ({status}: SubmissionStatusLabelProps) => {
   return (
     <span
       className={`inline-flex items-center justify-center rounded-md border pl-1 pr-1 gap-1 text-sm
-        text-${meta.color} border-${meta.color} bg-${meta.color}/10`}
+        text-${meta.color} bg-${meta.color}/10`}
     >
       {meta.icon}
       <span className="text-foreground">
