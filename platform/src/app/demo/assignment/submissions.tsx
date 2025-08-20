@@ -128,9 +128,6 @@ export const columns: ColumnDef<Submission>[] = [
     id: "actions",
     cell: info => {
       const submission = info.row.original;
-
-      console.log(submission.id)
-
       return (
         <DropdownMenu>
           <DropdownMenuTrigger className={"cursor-pointer"}>
