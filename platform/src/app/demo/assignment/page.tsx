@@ -16,6 +16,7 @@ import {SubmissionsTable} from "@/app/demo/assignment/submissions-table";
 import {columns, Submission} from "@/app/demo/assignment/submissions";
 import {SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar";
 import {WorkflowsSidebar} from "@/app/demo/assignment/components/workflows-sidebar";
+import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 
 type Assignment = {
   name: string;
@@ -114,7 +115,7 @@ const assignment: Assignment = {
   ]
 }
 
-export function BreadcrumbNav({ className }: { className?: string }) {
+export function BreadcrumbNav({className}: { className?: string }) {
   return (
     <Breadcrumb className={className}>
       <BreadcrumbList>
@@ -123,13 +124,13 @@ export function BreadcrumbNav({ className }: { className?: string }) {
             <Link href="/">Home</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
-        <BreadcrumbSeparator />
+        <BreadcrumbSeparator/>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
             <Link href="/demo">7014 Programación I</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
-        <BreadcrumbSeparator />
+        <BreadcrumbSeparator/>
         <BreadcrumbItem>
           <BreadcrumbPage>Asignación I</BreadcrumbPage>
         </BreadcrumbItem>
@@ -144,9 +145,9 @@ export default function AssignmentPage() {
       <div className={"w-full h-full overflow-auto break-words"}>
         <div className={"flex flex-row justify-between items-center"}>
           <BreadcrumbNav className={"pt-3 pl-5 pb-2"}/>
-          <SidebarTrigger />
+          <SidebarTrigger/>
         </div>
-        <Separator />
+        <Separator/>
         <div className={"pl-5 pr-5 pt-3"}>
           <div className={"mb-5"}>
             <h1 className={"text-2xl font-bold"}>{assignment.name}</h1>
@@ -154,38 +155,41 @@ export default function AssignmentPage() {
 
             {/* METADATA */}
             {/* TODO: Make this real components, with real data types and functionalities (links, dates, etc) */}
+            <ScrollArea className={"w-full h-auto"}>
+              <div className={"flex flex-row gap-1 mt-4 items-center"}>
+                <h2 className={"text-muted-foreground mr-4 text-sm"}>Properties</h2>
+                <Button variant={"secondary"} size={"sm"}>
+                  <CircleCheck/> Completed
+                </Button>
+                <Button variant={"ghost"} size={"sm"}>
+                  <Hourglass/> 03 Sep
+                </Button>
+                <Button variant={"ghost"} size={"sm"}>
+                  <Plus/>
+                </Button>
+              </div>
 
-            <div className={"flex flex-row gap-1 mt-4 items-center"}>
-              <h2 className={"text-muted-foreground mr-4 text-sm"}>Properties</h2>
-              <Button variant={"secondary"} size={"sm"}>
-                <CircleCheck /> Completed
-              </Button>
-              <Button variant={"ghost"} size={"sm"}>
-                <Hourglass /> 03 Sep
-              </Button>
-              <Button variant={"ghost"} size={"sm"}>
-                <Plus />
-              </Button>
-            </div>
+              <div className={"flex flex-row gap-1 mt-4 items-center"}>
+                <h2 className={"text-muted-foreground mr-4 text-sm"}>Resources</h2>
+                <Button variant={"secondary"} size={"sm"}>
+                  <LinkIcon/> 💻 BUCLES FOR ¿Qué son y...
+                </Button>
+                <Button variant={"secondary"} size={"sm"}>
+                  <FileText/> ejercicios.docx
+                </Button>
+                <Button variant={"ghost"} size={"sm"}>
+                  <Plus/>
+                </Button>
+              </div>
 
-            <div className={"flex flex-row gap-1 mt-4 items-center"}>
-              <h2 className={"text-muted-foreground mr-4 text-sm"}>Resources</h2>
-              <Button variant={"secondary"} size={"sm"}>
-                <LinkIcon /> 💻 BUCLES FOR ¿Qué son y...
-              </Button>
-              <Button variant={"secondary"} size={"sm"}>
-                <FileText /> ejercicios.docx
-              </Button>
-              <Button variant={"ghost"} size={"sm"}>
-                <Plus />
-              </Button>
-            </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
 
           </div>
 
           <div className={"space-y-5 mb-5"}>
             <h2 className={"text-xl font-semibold mb-3"}>Submissions</h2>
-            <SubmissionsTable columns={columns} data={assignment.submissions} />
+            <SubmissionsTable columns={columns} data={assignment.submissions}/>
           </div>
 
         </div>
