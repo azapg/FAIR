@@ -97,7 +97,6 @@ export const columns: ColumnDef<Submission>[] = [
     header: "Estado",
     cell: info => {
       const status = info.getValue() as SubmissionStatus;
-      console.log({status, info})
       return <SubmissionStatusLabel status={status}/>;
     }
   },
