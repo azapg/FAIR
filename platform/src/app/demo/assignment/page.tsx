@@ -11,6 +11,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import {Separator} from "@/components/ui/separator";
 
 type AssignmentSubmissions = {
 
@@ -29,9 +30,9 @@ const assignment: Assignment = {
   submissions: []
 }
 
-export function BreadcrumbNav() {
+export function BreadcrumbNav({ className }: { className?: string }) {
   return (
-    <Breadcrumb>
+    <Breadcrumb className={className}>
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
@@ -56,43 +57,46 @@ export function BreadcrumbNav() {
 export default function AssignmentPage() {
   return (
     <div className={"flex flex-row divide-x-2 h-full m-0"}>
-      <div className={"w-3/4 p-5 h-full overflow-auto break-words space-y-2"}>
-        <BreadcrumbNav />
-        <div className={"mb-5"}>
-          <h1 className={"text-2xl font-bold"}>{assignment.name}</h1>
-          <p>{assignment.description}</p>
+      <div className={"w-3/4 h-full overflow-auto break-words"}>
+        <BreadcrumbNav className={"pt-3 pl-5 pb-2"}/>
+        <Separator />
+        <div className={"pl-5 pr-5 pt-3"}>
+          <div className={"mb-5"}>
+            <h1 className={"text-2xl font-bold"}>{assignment.name}</h1>
+            <p>{assignment.description}</p>
 
-          {/* METADATA */}
-          {/* TODO: Make this real components, with real data types and functionalities (links, dates, etc) */}
+            {/* METADATA */}
+            {/* TODO: Make this real components, with real data types and functionalities (links, dates, etc) */}
 
-          <div className={"flex flex-row gap-1 mt-4 items-center"}>
-            <h2 className={"text-muted-foreground mr-4 text-sm"}>Properties</h2>
-            <Button variant={"secondary"} size={"sm"}>
-              <CircleCheck /> Completed
-            </Button>
-            <Button variant={"ghost"} size={"sm"}>
-              <Hourglass /> 03 Sep
-            </Button>
-            <Button variant={"ghost"} size={"sm"}>
-              <Plus />
-            </Button>
+            <div className={"flex flex-row gap-1 mt-4 items-center"}>
+              <h2 className={"text-muted-foreground mr-4 text-sm"}>Properties</h2>
+              <Button variant={"secondary"} size={"sm"}>
+                <CircleCheck /> Completed
+              </Button>
+              <Button variant={"ghost"} size={"sm"}>
+                <Hourglass /> 03 Sep
+              </Button>
+              <Button variant={"ghost"} size={"sm"}>
+                <Plus />
+              </Button>
+            </div>
+
+            <div className={"flex flex-row gap-1 mt-4 items-center"}>
+              <h2 className={"text-muted-foreground mr-4 text-sm"}>Resources</h2>
+              <Button variant={"secondary"} size={"sm"}>
+                <LinkIcon /> 💻 BUCLES FOR ¿Qué son y...
+              </Button>
+              <Button variant={"secondary"} size={"sm"}>
+                <FileText /> ejercicios.docx
+              </Button>
+              <Button variant={"ghost"} size={"sm"}>
+                <Plus />
+              </Button>
+            </div>
+
           </div>
-
-          <div className={"flex flex-row gap-1 mt-4 items-center"}>
-            <h2 className={"text-muted-foreground mr-4 text-sm"}>Resources</h2>
-            <Button variant={"secondary"} size={"sm"}>
-              <LinkIcon /> 💻 BUCLES FOR ¿Qué son y...
-            </Button>
-            <Button variant={"secondary"} size={"sm"}>
-              <FileText /> ejercicios.docx
-            </Button>
-            <Button variant={"ghost"} size={"sm"}>
-              <Plus />
-            </Button>
-          </div>
-
+          <h2 className={"text-xl font-semibold mt-4"}>Submissions</h2>
         </div>
-        <h2 className={"text-xl font-semibold mt-4"}>Submissions</h2>
       </div>
       <div className={"sticky w-1/4 p-5 h-full overflow-auto break-words"}>
         sidebar here
