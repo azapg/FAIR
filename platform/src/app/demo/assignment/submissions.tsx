@@ -5,7 +5,8 @@ import {
   Ellipsis,
   History,
   Loader,
-  RefreshCcw,
+  ArrowRightLeft,
+  Repeat,
   RotateCw,
   Trash,
   SquircleDashed,
@@ -137,10 +138,11 @@ export const columns: ColumnDef<Submission>[] = [
             <Ellipsis size={18}/>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem><RefreshCcw size={16}/> Grade with... <ChevronRight size={16}/></DropdownMenuItem>
-            <DropdownMenuItem><RotateCw size={16}/> Regrade</DropdownMenuItem>
+            <DropdownMenuItem><Repeat /> Regrade</DropdownMenuItem>
+            <DropdownMenuItem><ArrowRightLeft size={16}/> Regrade with... <ChevronRight size={16}/></DropdownMenuItem>
             <DropdownMenuItem><History size={16}/> History</DropdownMenuItem>
             <DropdownMenuSeparator/>
+            <DropdownMenuItem ><RotateCw size={16}/> Reset</DropdownMenuItem>
             <DropdownMenuItem variant={"destructive"}><Trash size={16}/> Remove</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
