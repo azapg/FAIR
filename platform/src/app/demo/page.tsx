@@ -1,5 +1,6 @@
 import {Card, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
+import {Skeleton} from "@/components/ui/skeleton";
 
 type Course = {
   id: string;
@@ -79,6 +80,21 @@ export default function CoursesPage() {
             <CardFooter>{course.assignments} assignments.</CardFooter>
           </Card>
         ))}
+      {/* Skeleton example */}
+        <Card className={"bg-gray-50 cursor-wait flex flex-col h-full"}>
+          <CardHeader className={"flex-1 flex flex-col items-start"}>
+            <CardTitle>
+              <Skeleton className="h-[20px] w-[300px] rounded-full bg-gray-200" />
+            </CardTitle>
+            <CardDescription className={"space-y-2 mt-2"}>
+              <Skeleton className="h-4 w-[250px] bg-gray-200" />
+              <Skeleton className="h-4 w-[200px] bg-gray-200" />
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Skeleton className="h-4 w-[150px] bg-gray-200" />
+          </CardFooter>
+        </Card>
       </div>
     </main>
   );
