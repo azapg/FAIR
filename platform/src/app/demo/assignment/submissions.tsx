@@ -1,6 +1,20 @@
 'use client';
-import { ColumnDef } from "@tanstack/react-table"
-import { Ellipsis, RefreshCcw, RotateCw, History, Trash, ChevronRight } from "lucide-react";
+import {ColumnDef} from "@tanstack/react-table"
+import {
+  ChevronRight,
+  Ellipsis,
+  History,
+  Loader,
+  RefreshCcw,
+  RotateCw,
+  Trash,
+  SquircleDashed,
+  CircleCheck,
+  CircleAlert,
+  TriangleAlert,
+  Circle
+} from "lucide-react";
+import { ReactNode } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,11 +23,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+
+export type SubmissionStatus =
+  "pending"
+  | "submitted"
+  | "transcribing"
+  | "transcribed"
+  | "grading"
+  | "graded"
+  | "needs_review"
+  | "failure";
+
 export type Submission = {
   id: string;
   name: string;
-  status: "pending" | "submitted" | "graded" | "needs_review";
-  grade?: number;
+  status: SubmissionStatus; // simplified
+  grade?: number; // TODO: This could be more complex (e.g., letter grade, percentage, etc.).
   feedback?: string;
   submittedAt?: Date;
 }
@@ -27,6 +52,39 @@ function formatShortDate(date: Date) {
   return currentYear === year ? `${day} ${month}` : `${day} ${month} ${year}`;
 }
 
+const defaultSize = 14;
+
+const STATUS_META: Record<string, { label: string; color: string; icon?: ReactNode }> = {
+  pending: {label: "Pendiente", color: "gray-500", icon: <SquircleDashed size={defaultSize}/>},
+  submitted: {label: "Entregado", color: "green-500", icon: <Circle size={defaultSize}/> },
+  transcribing: {label: "Transcribiendo", color: "yellow-500", icon: <Loader className="animate-spin [animation-duration:4.0s]" size={defaultSize}/>},
+  transcribed: {label: "Transcrito", color: "blue-500", icon: <CircleCheck size={defaultSize}/>},
+  grading: {label: "Calificando", color: "yellow-500", icon: <Loader className="animate-spin [animation-duration:4.0s]" size={defaultSize}/>},
+  graded: {label: "Calificado", color: "blue-500", icon: <CircleCheck size={defaultSize}/>},
+  needs_review: {label: "Requiere Revisión", color: "orange-500", icon: <CircleAlert size={defaultSize}/>},
+  failure: {label: "Error", color: "red-500", icon: <TriangleAlert size={defaultSize}/> },
+};
+
+interface SubmissionStatusLabelProps {
+  status: SubmissionStatus | string;
+}
+
+export const SubmissionStatusLabel = ({status}: SubmissionStatusLabelProps) => {
+  const meta = STATUS_META[status] ?? {label: "Desconocido", color: "gray-500"};
+
+  return (
+    <span
+      className={`inline-flex items-center justify-center rounded-md border pl-1 pr-1 gap-1 text-sm
+        text-${meta.color} border-${meta.color} bg-${meta.color}/10`}
+    >
+      {meta.icon}
+      <span className="text-foreground">
+        {meta.label}
+      </span>
+    </span>
+  );
+}
+
 export const columns: ColumnDef<Submission>[] = [
   {
     accessorKey: "name",
@@ -37,19 +95,9 @@ export const columns: ColumnDef<Submission>[] = [
     accessorKey: "status",
     header: "Estado",
     cell: info => {
-      const status = info.getValue();
-      switch (status) {
-        case "pending":
-          return "Pendiente";
-        case "submitted":
-          return "Entregado";
-        case "graded":
-          return "Calificado";
-        case "needs_review":
-          return "Requiere Revisión";
-        default:
-          return "Desconocido";
-      }
+      const status = info.getValue() as SubmissionStatus;
+      console.log({status, info})
+      return <SubmissionStatusLabel status={status}/>;
     }
   },
   {
@@ -89,11 +137,11 @@ export const columns: ColumnDef<Submission>[] = [
             <Ellipsis size={18}/>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem><RefreshCcw size={16} /> Grade with... <ChevronRight size={16} /></DropdownMenuItem>
-            <DropdownMenuItem><RotateCw size={16} /> Regrade</DropdownMenuItem>
-            <DropdownMenuItem><History size={16} /> History</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant={"destructive"}><Trash size={16} /> Remove</DropdownMenuItem>
+            <DropdownMenuItem><RefreshCcw size={16}/> Grade with... <ChevronRight size={16}/></DropdownMenuItem>
+            <DropdownMenuItem><RotateCw size={16}/> Regrade</DropdownMenuItem>
+            <DropdownMenuItem><History size={16}/> History</DropdownMenuItem>
+            <DropdownMenuSeparator/>
+            <DropdownMenuItem variant={"destructive"}><Trash size={16}/> Remove</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

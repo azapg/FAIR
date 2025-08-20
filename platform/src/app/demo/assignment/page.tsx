@@ -29,7 +29,7 @@ const assignment: Assignment = {
     {
       id: "1",
       name: "Juan Pérez",
-      status: "submitted",
+      status: "failure",
       grade: 85,
       feedback: "Buen trabajo, pero revisa el ejercicio 3.",
       submittedAt: new Date("2025-09-01T10:00:00Z"),
@@ -45,18 +45,18 @@ const assignment: Assignment = {
     {
       id: "3",
       name: "Carlos García",
-      status: "needs_review",
+      status: "pending",
       feedback: "Requiere revisión adicional.",
     },
     {
       id: "4",
       name: "Ana Torres",
-      status: "pending",
+      status: "submitted",
     },
     {
       id: "5",
       name: "Luis Fernández",
-      status: "submitted",
+      status: "transcribed",
       grade: 75,
       feedback: "Faltan algunos detalles, pero en general bien.",
       submittedAt: new Date("2025-09-03T14:15:00Z"),
@@ -64,7 +64,7 @@ const assignment: Assignment = {
     {
       id: "6",
       name: "Sofía Martínez",
-      status: "graded",
+      status: "needs_review",
       grade: 95,
       feedback: "Excelente trabajo, muy bien hecho.",
       submittedAt: new Date("2025-09-04T09:45:00Z"),
@@ -72,12 +72,12 @@ const assignment: Assignment = {
     {
       id: "7",
       name: "Pedro Sánchez",
-      status: "pending",
+      status: "transcribing",
     },
     {
       id: "8",
       name: "Lucía Ramírez",
-      status: "submitted",
+      status: "grading",
       grade: 80,
       feedback: "Buen esfuerzo, pero revisa el ejercicio 2.",
       submittedAt: new Date("2025-09-05T11:20:00Z"),
