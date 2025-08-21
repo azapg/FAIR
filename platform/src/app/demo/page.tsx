@@ -19,7 +19,7 @@ type Course = {
   description: string;
   color: string;
   instructors: string[];
-  assignments: number;
+  assignments: string[];
 };
 
 const CourseCardSkeleton = () => (
@@ -115,8 +115,8 @@ export default function CoursesPage() {
                   <CardDescription>{course.description}</CardDescription>
                 </CardHeader>
                 <CardFooter>
-                  {course.assignments} assignment
-                  {course.assignments !== 1 ? "s" : ""}.
+                  {course.assignments.length} assignment
+                  {course.assignments.length !== 1 ? "s" : ""}.
                 </CardFooter>
               </Card>
             ))}
