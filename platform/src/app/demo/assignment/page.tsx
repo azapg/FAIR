@@ -143,9 +143,9 @@ export default function AssignmentPage() {
   return (
     <SidebarProvider className={"flex flex-row m-0 p-0 h-auto overflow-none"}>
       <div className={"w-full h-full overflow-auto break-words"}>
-        <div className={"flex flex-row justify-between items-center"}>
-          <BreadcrumbNav className={"pt-3 pl-5 pb-2"}/>
-          <SidebarTrigger className={"pr-5"}/>
+        <div className={"flex flex-row justify-between items-center pt-2 pl-5 pb-2 pr-5"}>
+          <BreadcrumbNav/>
+          <SidebarTrigger/>
         </div>
         <Separator/>
         <div className={"pl-5 pr-5 pt-3"}>
@@ -182,7 +182,7 @@ export default function AssignmentPage() {
                 </Button>
               </div>
 
-              <ScrollBar orientation="horizontal" />
+              <ScrollBar orientation="horizontal"/>
             </ScrollArea>
 
           </div>
