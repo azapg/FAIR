@@ -56,8 +56,8 @@ function formatShortDate(date: Date) {
 const defaultSize = 14;
 
 const STATUS_META: Record<string, { label: string; color: string; icon?: ReactNode }> = {
-  pending: {label: "Pendiente", color: "gray-500", icon: <SquircleDashed size={defaultSize}/>},
-  submitted: {label: "Entregado", color: "green-500", icon: <Circle size={defaultSize}/> },
+  pending: {label: "Pendiente", color: "black", icon: <SquircleDashed size={defaultSize}/>},
+  submitted: {label: "Entregado", color: "gray-500", icon: <Circle size={defaultSize}/> },
   transcribing: {label: "Transcribiendo", color: "yellow-500", icon: <Loader className="animate-spin [animation-duration:4.0s]" size={defaultSize}/>},
   transcribed: {label: "Transcrito", color: "blue-500", icon: <CircleCheck size={defaultSize}/>},
   grading: {label: "Calificando", color: "yellow-500", icon: <Loader className="animate-spin [animation-duration:4.0s]" size={defaultSize}/>},
