@@ -5,6 +5,7 @@ import {Button} from "@/components/ui/button";
 import {Skeleton} from "@/components/ui/skeleton";
 import {Plus} from "lucide-react";
 import {useRouter} from "next/navigation";
+import {useEffect, useState} from "react";
 
 type Course = {
   id: string;
@@ -15,60 +16,31 @@ type Course = {
   assignments: number;
 }
 
-// This is all AI-generated data for demonstration purposes.
-const courses: Course[] = [
-  {
-    id: "course-1",
-    title: "Introduction to Programming",
-    description: "Learn the basics of programming with Python.",
-    color: "blue",
-    instructors: ["Alice Smith", "Bob Johnson"],
-    assignments: 5,
-  },
-  {
-    id: "course-2",
-    title: "Data Structures and Algorithms",
-    description: "Explore fundamental data structures and algorithms.",
-    color: "amber",
-    instructors: ["Charlie Brown"],
-    assignments: 3,
-  },
-  {
-    id: "course-3",
-    title: "Web Development Fundamentals",
-    description: "Build your first website using HTML, CSS, and JavaScript.",
-    color: "red",
-    instructors: ["Diana Prince", "Ethan Hunt"],
-    assignments: 4,
-  },
-  {
-    id: "course-4",
-    title: "Machine Learning Basics",
-    description: "An introduction to machine learning concepts and techniques.",
-    color: "green",
-    instructors: ["Frank Castle"],
-    assignments: 2,
-  },
-  {
-    id: "course-5",
-    title: "Database Management Systems",
-    description: "Learn how to design and manage databases effectively.",
-    color: "purple",
-    instructors: ["Grace Hopper", "Hank Pym"],
-    assignments: 6,
-  },
-  {
-    id: "course-6",
-    title: "Mobile App Development",
-    description: "Create your first mobile application for Android and iOS.",
-    color: "pink",
-    instructors: ["Ivy League"],
-    assignments: 3,
-  },
-];
-
 export default function CoursesPage() {
-  const router = useRouter()
+  const router = useRouter();
+  const [courses, setCourses] = useState<Course[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/data/courses.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Status ${res.status}`);
+        const json = await res.json();
+        if (!cancelled) {
+          setCourses(json.courses as Course[]);
+          setError(null);
+        }
+      } catch (e:never) {
+        if (!cancelled) setError(e.message || 'Failed to load');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <main className={"p-5"}>
@@ -78,8 +50,9 @@ export default function CoursesPage() {
           <Plus /> Create
         </Button>
       </div>
+      {error && <div className="text-sm text-red-600 mb-4">Error: {error}</div>}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7 mt-6">
-        {courses.map((course) => (
+        {!loading && courses && courses.map((course) => (
           <Card key={course.id}
                 className={`flex flex-col h-full bg-${course.color}-50 hover:bg-${course.color}-100 transition-colors cursor-pointer`}
                 onClick={() => router.push(`/demo/assignment`)}
@@ -91,21 +64,22 @@ export default function CoursesPage() {
             <CardFooter>{course.assignments} assignments.</CardFooter>
           </Card>
         ))}
-      {/* Skeleton example */}
-        <Card className={"bg-gray-50 cursor-wait flex flex-col h-full"}>
-          <CardHeader className={"flex-1 flex flex-col items-start"}>
-            <CardTitle>
-              <Skeleton className="h-[20px] w-25 rounded-full bg-gray-200" />
-            </CardTitle>
-            <CardDescription className={"space-y-2 mt-2"}>
-              <Skeleton className="h-4 w-45 bg-gray-200" />
-              <Skeleton className="h-4 w-35 bg-gray-200" />
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Skeleton className="h-4 w-20 bg-gray-200" />
-          </CardFooter>
-        </Card>
+        {loading && [...Array(6)].map((_, i) => (
+          <Card key={i} className={"bg-gray-50 cursor-wait flex flex-col h-full"}>
+            <CardHeader className={"flex-1 flex flex-col items-start"}>
+              <CardTitle>
+                <Skeleton className="h-[20px] w-32 rounded-full bg-gray-200" />
+              </CardTitle>
+              <CardDescription className={"space-y-2 mt-2"}>
+                <Skeleton className="h-4 w-40 bg-gray-200" />
+                <Skeleton className="h-4 w-28 bg-gray-200" />
+              </CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Skeleton className="h-4 w-24 bg-gray-200" />
+            </CardFooter>
+          </Card>
+        ))}
       </div>
     </main>
   );
