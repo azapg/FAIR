@@ -151,7 +151,7 @@ export default function AssignmentPage() {
         <div className={"pl-5 pr-5 pt-3"}>
           <div className={"mb-5"}>
             <h1 className={"text-2xl font-bold"}>{assignment.name}</h1>
-            <p>{assignment.description}</p>
+            <p className={"text-sm"}>{assignment.description}</p>
 
             {/* METADATA */}
             {/* TODO: Make this real components, with real data types and functionalities (links, dates, etc) */}
