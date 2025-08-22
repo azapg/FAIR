@@ -20,6 +20,7 @@ import {
 import { ChevronDown } from "lucide-react"
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {Button} from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 
 const workflows = [
   { id: "1", name: "Workflow 1" },
@@ -39,6 +40,15 @@ export function WorkflowsSidebar({
   [key: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any
 }) {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(workflows[0]?.id)
+  const [graderTemperature, setGraderTemperature] = useState<number>(0.5)
+  const [validatorTemperature, setValidatorTemperature] = useState<number>(0.2)
+
+  // Reference values for temperature
+  const temperatureRefs = [
+    { value: 0, label: "Deterministic" },
+    { value: 0.5, label: "Balanced" },
+    { value: 1, label: "Creative" }
+  ]
 
   return (
     <Sidebar side={side} className={className} {...sidebarProps}>
@@ -106,6 +116,24 @@ export function WorkflowsSidebar({
             <CollapsibleContent>
               <SidebarGroupContent className={"flex flex-col pl-2 gap-2"}>
                 Hi, I&#39;m a Grader
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium mb-1">Temperature</label>
+                    <span className="text-xs text-muted-foreground ml-2">{graderTemperature.toFixed(2)}</span>
+                  </div>
+                  <Slider
+                    value={[graderTemperature]}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    onValueChange={vals => setGraderTemperature(vals[0])}
+                  />
+                  <div className="flex flex-row justify-between text-[10px] text-muted-foreground mt-1">
+                    {temperatureRefs.map(ref => (
+                      <span key={ref.value}>{ref.label} ({ref.value})</span>
+                    ))}
+                  </div>
+                </div>
                 <Button className="flex-1">Grade all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
@@ -123,6 +151,24 @@ export function WorkflowsSidebar({
             <CollapsibleContent>
               <SidebarGroupContent className={"flex flex-col pl-2 gap-2"}>
                 Hi, I&#39;m a Validator
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium mb-1">Temperature</label>
+                    <span className="text-xs text-muted-foreground ml-2">{validatorTemperature.toFixed(2)}</span>
+                  </div>
+                  <Slider
+                    value={[validatorTemperature]}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    onValueChange={vals => setValidatorTemperature(vals[0])}
+                  />
+                  <div className="flex flex-row justify-between text-[10px] text-muted-foreground mt-1">
+                    {temperatureRefs.map(ref => (
+                      <span key={ref.value}>{ref.label} ({ref.value})</span>
+                    ))}
+                  </div>
+                </div>
                 <Button className="flex-1">Validate all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
