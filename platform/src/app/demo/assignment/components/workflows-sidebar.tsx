@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import {useState} from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -17,26 +17,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ChevronDown } from "lucide-react"
+import {Plus} from "lucide-react"
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {Button} from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator"
+import {Slider} from "@/components/ui/slider";
+import {Textarea} from "@/components/ui/textarea";
+import {Separator} from "@/components/ui/separator"
 
 const workflows = [
-  { id: "1", name: "Workflow 1" },
-  { id: "2", name: "Workflow 2" },
-  { id: "3", name: "Workflow 3" },
+  {id: "1", name: "Workflow 1"},
+  {id: "2", name: "Workflow 2"},
+  {id: "3", name: "Workflow 3"},
 ]
+
+type SectionTriggerProps = {
+  label: string
+  className?: string
+  iconSize?: number
+}
+
+function SectionTrigger({label, className, iconSize = 12}: SectionTriggerProps) {
+  return (
+    <CollapsibleTrigger
+      className={`group/trigger flex w-full justify-between items-center px-1 text-base ${className ?? ""}`}
+    >
+      <span>{label}</span>
+      <span className="relative inline-flex w-4 h-4 shrink-0 items-center justify-center">
+        <Plus
+          size={iconSize}
+          className="
+            origin-center transition-all duration-200
+            group-data-[state=closed]/collapsible:rotate-0 group-data-[state=open]/collapsible:rotate-45
+          "
+        />
+      </span>
+    </CollapsibleTrigger>
+  )
+}
 
 // TODO: action buttons (transcribe, grade, validate) should have scopes (all, selected, etc.) and modes.
 //  probably a button group with a dropdown for scope and a dropdown for mode.
 export function WorkflowsSidebar({
-  side,
-  className,
-  ...sidebarProps
-}: {
+                                   side,
+                                   className,
+                                   ...sidebarProps
+                                 }: {
   side?: "left" | "right"
   className?: string
   [key: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -47,19 +72,19 @@ export function WorkflowsSidebar({
 
   // Reference values for temperature
   const temperatureRefs = [
-    { value: 0, label: "Deterministic" },
-    { value: 0.5, label: "Balanced" },
-    { value: 1, label: "Creative" }
+    {value: 0, label: "Deterministic"},
+    {value: 0.5, label: "Balanced"},
+    {value: 1, label: "Creative"}
   ]
 
   return (
     <Sidebar side={side} className={className} {...sidebarProps}>
-      <SidebarHeader className="py-4">
+      <SidebarHeader className="py-5">
         <SidebarMenu>
           <SidebarMenuItem>
             <Select value={selectedWorkflowId} onValueChange={setSelectedWorkflowId}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select workflow" />
+                <SelectValue placeholder="Select workflow"/>
               </SelectTrigger>
               <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
                 {workflows.map((w) => (
@@ -72,15 +97,12 @@ export function WorkflowsSidebar({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <Separator className="my-2" />
+      <Separator/>
       <SidebarContent>
         <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup>
+          <SidebarGroup className="group/section">
             <SidebarGroupLabel>
-              <CollapsibleTrigger className={"flex flex-row items-center gap-1 text-base"}>
-                Transcriber
-                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" size={18}/>
-              </CollapsibleTrigger>
+              <SectionTrigger label="Transcriber"/>
             </SidebarGroupLabel>
             <CollapsibleContent>
               <SidebarGroupContent className={"flex flex-col pl-2 gap-3"}>
@@ -88,7 +110,7 @@ export function WorkflowsSidebar({
                   <label className="text-xs font-medium mb-1">Force Language</label>
                   <Select defaultValue="auto">
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="auto" />
+                      <SelectValue placeholder="auto"/>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="auto">auto</SelectItem>
@@ -107,15 +129,12 @@ export function WorkflowsSidebar({
           </SidebarGroup>
         </Collapsible>
 
-        <Separator className="my-2" />
+        <Separator/>
 
         <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup>
+          <SidebarGroup className="group/section">
             <SidebarGroupLabel>
-              <CollapsibleTrigger className={"flex flex-row items-center gap-1 text-base"}>
-                Grader
-                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" size={18}  />
-              </CollapsibleTrigger>
+              <SectionTrigger label="Grader"/>
             </SidebarGroupLabel>
             <CollapsibleContent>
               <SidebarGroupContent className={"flex flex-col pl-2 gap-3"}>
@@ -150,15 +169,12 @@ export function WorkflowsSidebar({
           </SidebarGroup>
         </Collapsible>
 
-        <Separator className="my-2" />
+        <Separator/>
 
         <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup>
+          <SidebarGroup className="group/section">
             <SidebarGroupLabel>
-              <CollapsibleTrigger className={"flex flex-row items-center gap-1 text-base"}>
-                Validator
-                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" size={18}/>
-              </CollapsibleTrigger>
+              <SectionTrigger label="Validator"/>
             </SidebarGroupLabel>
             <CollapsibleContent>
               <SidebarGroupContent className={"flex flex-col pl-2 gap-3"}>
@@ -185,7 +201,7 @@ export function WorkflowsSidebar({
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
-        <Separator className="my-2" />
+        <Separator/>
       </SidebarContent>
       <SidebarFooter>
         <Button>Run Workflow</Button>
