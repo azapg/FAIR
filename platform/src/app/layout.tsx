@@ -3,6 +3,7 @@ import { Geist_Mono } from "next/font/google";
 import { hostGrotesk, remark } from "@/lib/fonts";
 import "./globals.css";
 import Header from "@/components/header";
+import {ThemeProvider} from "@/components/theme-provider";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -15,26 +16,32 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({
-  children,
-}: Readonly<{
+                                     children,
+                                   }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistMono.variable} ${hostGrotesk.variable} ${remark.variable} font-sans antialiased h-screen`}
-      >
-        <Header
-          user={{
-            name: "Allan Zapata",
-            email: "allan.zapata@up.ac.pa",
-            initials: "AZ",
-          }}
-        />
-        <div className={"pt-16 h-full"}>
-          {children}
-        </div>
-      </body>
+    <html lang="en" suppressHydrationWarning>
+    <body
+      className={`${geistMono.variable} ${hostGrotesk.variable} ${remark.variable} font-sans antialiased h-screen`}
+    >
+      <ThemeProvider
+        attribute={"class"}
+        defaultTheme={"system"}
+        enableSystem
+        disableTransitionOnChange>
+          <Header
+            user={{
+              name: "Allan Zapata",
+              email: "allan.zapata@up.ac.pa",
+              initials: "AZ",
+            }}
+          />
+          <div className={"pt-16 h-full"}>
+            {children}
+          </div>
+      </ThemeProvider>
+    </body>
     </html>
   );
 }
