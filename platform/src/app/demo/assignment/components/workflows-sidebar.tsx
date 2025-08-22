@@ -39,7 +39,7 @@ type SectionTriggerProps = {
 function SectionTrigger({label, className, iconSize = 12}: SectionTriggerProps) {
   return (
     <CollapsibleTrigger
-      className={`group/trigger flex w-full justify-between items-center px-1 text-base ${className ?? ""}`}
+      className={`group/trigger flex w-full justify-between items-center text-base text-foreground cursor-pointer ${className ?? ""}`}
     >
       <span>{label}</span>
       <span className="relative inline-flex w-4 h-4 shrink-0 items-center justify-center">
@@ -105,9 +105,9 @@ export function WorkflowsSidebar({
               <SectionTrigger label="Transcriber"/>
             </SidebarGroupLabel>
             <CollapsibleContent>
-              <SidebarGroupContent className={"flex flex-col pl-2 gap-3"}>
+              <SidebarGroupContent className={"flex flex-col px-2.5 gap-3"}>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium mb-1">Force Language</label>
+                  <label className="text-xs font-medium mb-1 text-muted-foreground">Force Language</label>
                   <Select defaultValue="auto">
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="auto"/>
@@ -123,7 +123,7 @@ export function WorkflowsSidebar({
                     </SelectContent>
                   </Select>
                 </div>
-                <Button className="flex-1">Transcribe all</Button>
+                <Button className="flex-1" variant={"secondary"}>Transcribe all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarGroup>
@@ -163,7 +163,7 @@ export function WorkflowsSidebar({
                     ))}
                   </div>
                 </div>
-                <Button className="flex-1">Grade all</Button>
+                <Button className="flex-1" variant={"secondary"}>Grade all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarGroup>
@@ -196,7 +196,7 @@ export function WorkflowsSidebar({
                     ))}
                   </div>
                 </div>
-                <Button className="flex-1">Validate all</Button>
+                <Button className="flex-1" variant={"secondary"}>Validate all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarGroup>
