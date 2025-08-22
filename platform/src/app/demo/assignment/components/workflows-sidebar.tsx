@@ -8,16 +8,15 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarMenuButton,
   SidebarGroupLabel, SidebarGroupContent,
 } from "@/components/ui/sidebar"
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-} from "@/components/ui/dropdown-menu"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { ChevronDown } from "lucide-react"
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 
@@ -37,33 +36,24 @@ export function WorkflowsSidebar({
   [key: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any
 }) {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(workflows[0]?.id)
-  const selectedWorkflowName = workflows.find(w => w.id === selectedWorkflowId)?.name ?? "Select workflow"
 
   return (
     <Sidebar side={side} className={className} {...sidebarProps}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton>
-                  {selectedWorkflowName}
-                  <ChevronDown className="ml-auto" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-[--radix-popper-anchor-width]">
-                <DropdownMenuRadioGroup
-                  value={selectedWorkflowId}
-                  onValueChange={(val) => setSelectedWorkflowId(val)}
-                >
-                  {workflows.map(w => (
-                    <DropdownMenuRadioItem key={w.id} value={w.id}>
-                      {w.name}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Select value={selectedWorkflowId} onValueChange={setSelectedWorkflowId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select workflow" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
+                {workflows.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>
+                    {w.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
