@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { ChevronDown } from "lucide-react"
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
+import {Button} from "@/components/ui/button";
 
 const workflows = [
   { id: "1", name: "Workflow 1" },
@@ -26,6 +27,8 @@ const workflows = [
   { id: "3", name: "Workflow 3" },
 ]
 
+// TODO: action buttons (transcribe, grade, validate) should have scopes (all, selected, etc.) and modes.
+//  probably a button group with a dropdown for scope and a dropdown for mode.
 export function WorkflowsSidebar({
   side,
   className,
@@ -67,8 +70,9 @@ export function WorkflowsSidebar({
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
-              <SidebarGroupContent className={"pl-2"}>
+              <SidebarGroupContent className={"flex flex-col pl-2 gap-2"}>
                 Hi, I&#39;m a Transcriber
+                <Button className="flex-1">Transcribe all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarGroup>
@@ -83,8 +87,9 @@ export function WorkflowsSidebar({
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
-              <SidebarGroupContent className={"pl-2"}>
+              <SidebarGroupContent className={"flex flex-col pl-2 gap-2"}>
                 Hi, I&#39;m a Grader
+                <Button className="flex-1">Grade all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarGroup>
@@ -99,14 +104,17 @@ export function WorkflowsSidebar({
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
-              <SidebarGroupContent className={"pl-2"}>
+              <SidebarGroupContent className={"flex flex-col pl-2 gap-2"}>
                 Hi, I&#39;m a Validator
+                <Button className="flex-1">Validate all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
       </SidebarContent>
-      <SidebarFooter />
+      <SidebarFooter>
+        <Button>Run Workflow</Button>
+      </SidebarFooter>
     </Sidebar>
   )
 }
