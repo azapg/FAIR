@@ -72,6 +72,23 @@ export function WorkflowsSidebar({
             <CollapsibleContent>
               <SidebarGroupContent className={"flex flex-col pl-2 gap-2"}>
                 Hi, I&#39;m a Transcriber
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium mb-1">Force Language</label>
+                  <Select defaultValue="auto">
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="auto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">auto</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="es">Spanish</SelectItem>
+                      <SelectItem value="fr">French</SelectItem>
+                      <SelectItem value="de">German</SelectItem>
+                      <SelectItem value="zh">Chinese</SelectItem>
+                      <SelectItem value="ar">Arabic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button className="flex-1">Transcribe all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
