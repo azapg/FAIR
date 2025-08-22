@@ -9,11 +9,11 @@ export default function ValidatorSection() {
 
   return (
     <SectionContainer label="Validator">
-      <div className="flex flex-col gap-1">
+      <div className="flex gap-1">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-medium mb-1">Temperature</label>
-          <span className="text-xs text-muted-foreground ml-2">{temperature.toFixed(2)}</span>
+          <label className="text-xs text-muted-foreground">Temperature</label>
         </div>
+        <span className="text-xs text-muted-foreground ml-2">{temperature.toFixed(2)}</span>
         <Slider
           value={[temperature]}
           min={0}

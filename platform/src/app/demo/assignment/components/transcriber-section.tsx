@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button"
 export default function TranscriberSection() {
   return (
     <SectionContainer label="Transcriber">
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium mb-1 text-muted-foreground">Force Language</label>
+      <div className="flex gap-1 items-center text-xs">
+        <label className="text-muted-foreground w-1/3">Force Language</label>
         <Select defaultValue="auto">
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-2/3" size={"sm"}>
             <SelectValue placeholder="auto" />
           </SelectTrigger>
           <SelectContent>
