@@ -3,6 +3,7 @@ import { useState } from "react"
 import SectionContainer from "./section-container"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
+import {Textarea} from "@/components/ui/textarea";
 
 export default function ValidatorSection() {
   const [temperature, setTemperature] = useState<number>(0.2)
@@ -22,6 +23,14 @@ export default function ValidatorSection() {
           onValueChange={(vals) => setTemperature(vals[0])}
         />
       </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs text-muted-foreground mb-1">Instructions</label>
+        <Textarea
+          className="w-full rounded px-3 py-2 text-sm resize-y min-h-[48px] bg-background"
+          placeholder="Your validation instructions here..."
+        />
+      </div>
+
       <Button variant={"secondary"}>Validate all</Button>
     </SectionContainer>
   )
