@@ -34,7 +34,6 @@ export function WorkflowsSidebar({
                                  }: {
   side?: "left" | "right"
   className?: string
-  [key: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any
 }) {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(workflows[0]?.id)
 
