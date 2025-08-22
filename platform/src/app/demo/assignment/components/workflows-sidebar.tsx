@@ -75,9 +75,9 @@ export function WorkflowsSidebar({
         <Collapsible defaultOpen className="group/collapsible">
           <SidebarGroup>
             <SidebarGroupLabel>
-              <CollapsibleTrigger  className={"flex flex-row items-center gap-1"}>
+              <CollapsibleTrigger className={"flex flex-row items-center gap-1 text-base"}>
                 Transcriber
-                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" size={14}/>
+                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" size={18}/>
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
@@ -108,9 +108,9 @@ export function WorkflowsSidebar({
         <Collapsible defaultOpen className="group/collapsible">
           <SidebarGroup>
             <SidebarGroupLabel>
-              <CollapsibleTrigger  className={"flex flex-row items-center gap-1"}>
+              <CollapsibleTrigger className={"flex flex-row items-center gap-1 text-base"}>
                 Grader
-                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" size={14}/>
+                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" size={18}  />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
@@ -149,9 +149,9 @@ export function WorkflowsSidebar({
         <Collapsible defaultOpen className="group/collapsible">
           <SidebarGroup>
             <SidebarGroupLabel>
-              <CollapsibleTrigger  className={"flex flex-row items-center gap-1"}>
+              <CollapsibleTrigger className={"flex flex-row items-center gap-1 text-base"}>
                 Validator
-                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" size={14}/>
+                <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" size={18}/>
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
