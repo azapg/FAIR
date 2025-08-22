@@ -63,9 +63,13 @@ export default function CoursesPage() {
           setCourses(data.courses || []);
           setError(null);
         }
-      } catch (err: never) {
+      } catch (err: unknown) {
         if (!cancelled) {
-          setError(err?.message || "Failed to load courses");
+          if (err instanceof Error) {
+            setError(err?.message || "Failed to load courses");
+          } else {
+            setError("An unknown error occurred while loading courses");
+          }
         }
       } finally {
         if (!cancelled) {
