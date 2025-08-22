@@ -70,13 +70,6 @@ export function WorkflowsSidebar({
   const [graderTemperature, setGraderTemperature] = useState<number>(0.5)
   const [validatorTemperature, setValidatorTemperature] = useState<number>(0.2)
 
-  // Reference values for temperature
-  const temperatureRefs = [
-    {value: 0, label: "Deterministic"},
-    {value: 0.5, label: "Balanced"},
-    {value: 1, label: "Creative"}
-  ]
-
   return (
     <Sidebar side={side} className={className} {...sidebarProps}>
       <SidebarHeader className="py-5">
@@ -105,7 +98,7 @@ export function WorkflowsSidebar({
               <SectionTrigger label="Transcriber"/>
             </SidebarGroupLabel>
             <CollapsibleContent>
-              <SidebarGroupContent className={"flex flex-col px-2.5 gap-3"}>
+              <SidebarGroupContent className={"flex flex-col pt-2 px-2 gap-6"}>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium mb-1 text-muted-foreground">Force Language</label>
                   <Select defaultValue="auto">
@@ -123,7 +116,7 @@ export function WorkflowsSidebar({
                     </SelectContent>
                   </Select>
                 </div>
-                <Button className="flex-1" variant={"secondary"}>Transcribe all</Button>
+                <Button variant={"secondary"}>Transcribe all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarGroup>
@@ -137,7 +130,7 @@ export function WorkflowsSidebar({
               <SectionTrigger label="Grader"/>
             </SidebarGroupLabel>
             <CollapsibleContent>
-              <SidebarGroupContent className={"flex flex-col pl-2 gap-3"}>
+              <SidebarGroupContent className={"flex flex-col pt-2 px-2 gap-6"}>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium mb-1">Rubric</label>
                   <Textarea
@@ -157,13 +150,8 @@ export function WorkflowsSidebar({
                     step={0.01}
                     onValueChange={vals => setGraderTemperature(vals[0])}
                   />
-                  <div className="flex flex-row justify-between text-[10px] text-muted-foreground mt-1">
-                    {temperatureRefs.map(ref => (
-                      <span key={ref.value}>{ref.label} ({ref.value})</span>
-                    ))}
-                  </div>
                 </div>
-                <Button className="flex-1" variant={"secondary"}>Grade all</Button>
+                <Button variant={"secondary"}>Grade all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarGroup>
@@ -177,7 +165,7 @@ export function WorkflowsSidebar({
               <SectionTrigger label="Validator"/>
             </SidebarGroupLabel>
             <CollapsibleContent>
-              <SidebarGroupContent className={"flex flex-col pl-2 gap-3"}>
+              <SidebarGroupContent className={"flex flex-col pt-2 px-2 gap-6"}>
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-medium mb-1">Temperature</label>
@@ -190,21 +178,17 @@ export function WorkflowsSidebar({
                     step={0.01}
                     onValueChange={vals => setValidatorTemperature(vals[0])}
                   />
-                  <div className="flex flex-row justify-between text-[10px] text-muted-foreground mt-1">
-                    {temperatureRefs.map(ref => (
-                      <span key={ref.value}>{ref.label} ({ref.value})</span>
-                    ))}
-                  </div>
                 </div>
-                <Button className="flex-1" variant={"secondary"}>Validate all</Button>
+                <Button variant={"secondary"}>Validate all</Button>
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
         <Separator/>
       </SidebarContent>
-      <SidebarFooter>
-        <Button>Run Workflow</Button>
+      <SidebarFooter className={"py-4 px-2.5"}>
+        <Separator/>
+        <Button >Run Workflow</Button>
       </SidebarFooter>
     </Sidebar>
   )
