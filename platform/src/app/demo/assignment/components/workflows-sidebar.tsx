@@ -22,6 +22,7 @@ import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/
 import {Button} from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator"
 
 const workflows = [
   { id: "1", name: "Workflow 1" },
@@ -53,7 +54,7 @@ export function WorkflowsSidebar({
 
   return (
     <Sidebar side={side} className={className} {...sidebarProps}>
-      <SidebarHeader>
+      <SidebarHeader className="py-4">
         <SidebarMenu>
           <SidebarMenuItem>
             <Select value={selectedWorkflowId} onValueChange={setSelectedWorkflowId}>
@@ -71,6 +72,7 @@ export function WorkflowsSidebar({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+      <Separator className="my-2" />
       <SidebarContent>
         <Collapsible defaultOpen className="group/collapsible">
           <SidebarGroup>
@@ -104,6 +106,8 @@ export function WorkflowsSidebar({
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
+
+        <Separator className="my-2" />
 
         <Collapsible defaultOpen className="group/collapsible">
           <SidebarGroup>
@@ -146,6 +150,8 @@ export function WorkflowsSidebar({
           </SidebarGroup>
         </Collapsible>
 
+        <Separator className="my-2" />
+
         <Collapsible defaultOpen className="group/collapsible">
           <SidebarGroup>
             <SidebarGroupLabel>
@@ -179,6 +185,7 @@ export function WorkflowsSidebar({
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
+        <Separator className="my-2" />
       </SidebarContent>
       <SidebarFooter>
         <Button>Run Workflow</Button>
