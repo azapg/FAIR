@@ -148,10 +148,10 @@ export default function AssignmentPage() {
           <SidebarTrigger/>
         </div>
         <Separator/>
-        <div className={"pl-5 pr-5 pt-3"}>
+        <div className={"px-8 pt-5"}>
           <div className={"mb-5"}>
-            <h1 className={"text-2xl font-bold"}>{assignment.name}</h1>
-            <p className={"text-sm"}>{assignment.description}</p>
+            <h1 className={"text-2xl font-bold pb-1"}>{assignment.name}</h1>
+            <p className={"text-sm text-muted-foreground"}>{assignment.description}</p>
 
             {/* METADATA */}
             {/* TODO: Make this real components, with real data types and functionalities (links, dates, etc) */}
