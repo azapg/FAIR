@@ -150,7 +150,7 @@ export default function AssignmentPage() {
         <Separator/>
         <div className={"px-8 pt-5"}>
           <div className={"mb-5"}>
-            <h1 className={"text-2xl font-bold pb-1"}>{assignment.name}</h1>
+            <h1 className={"text-3xl font-bold pb-1"}>{assignment.name}</h1>
             <p className={"text-sm text-muted-foreground"}>{assignment.description}</p>
 
             {/* METADATA */}
