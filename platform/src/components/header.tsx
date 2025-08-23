@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Settings, User, LogOut, HelpCircle } from "lucide-react";
+import {ThemeToggle} from "@/components/theme-toggle";
 
 interface HeaderProps {
   /**
@@ -122,9 +123,9 @@ export function Header({
       )}
 
       {/* Right section - Additional content and avatar */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {rightContent}
-        
+        <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
