@@ -5,6 +5,7 @@ from .submission import Submission, SubmissionStatus
 from .workflow import Workflow
 from .workflow_run import WorkflowRun, WorkflowRunStatus
 from .plugin import Plugin
+from .artifact import Artifact
 
 __all__ = [
     "User",
@@ -17,4 +18,5 @@ __all__ = [
     "WorkflowRun",
     "WorkflowRunStatus",
     "Plugin",
+    "Artifact",
 ]

@@ -10,12 +10,21 @@ from ..database import Base
 if TYPE_CHECKING:
     from .assignment import Assignment
     from .workflow_run import WorkflowRun
+    from .artifact import Artifact
 
 submission_workflow_runs = Table(
     "submission_workflow_runs",
     Base.metadata,
     Column("submission_id", SAUUID, ForeignKey("submissions.id", ondelete="CASCADE"), primary_key=True),
     Column("workflow_run_id", SAUUID, ForeignKey("workflow_runs.id", ondelete="CASCADE"), primary_key=True),
+)
+
+submission_artifacts = Table(
+    "submission_artifacts",
+    Base.metadata,
+    Column("id", SAUUID, primary_key=True),
+    Column("submission_id", SAUUID, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False),
+    Column("artifact_id", SAUUID, ForeignKey("artifacts.id", ondelete="CASCADE"), nullable=False),
 )
 
 class SubmissionStatus(str, Enum):
@@ -52,4 +61,9 @@ class Submission(Base):
         foreign_keys="Submission.official_run_id",
         uselist=False,
         post_update=True,
+    )
+    artifacts: Mapped[List["Artifact"]] = relationship(
+        "Artifact",
+        secondary="submission_artifacts",
+        back_populates="submissions",
     )
