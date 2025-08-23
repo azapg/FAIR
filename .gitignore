@@ -56,3 +56,7 @@ backend/.venv/
 backend/.mypy_cache/
 backend/.pytest_cache/
 backend/.coverage
+
+# IDEs
+**/.idea
+**/.vscode
