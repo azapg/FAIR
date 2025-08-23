@@ -1,6 +1,6 @@
 import os
 from contextlib import contextmanager
-from typing import Generator, Iterator
+from typing import Generator, Iterator, Any
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
@@ -31,7 +31,7 @@ def get_database_url() -> str:
 
 DATABASE_URL = get_database_url()
 
-_engine_kwargs = dict(future=True, pool_pre_ping=True)
+_engine_kwargs: dict[str, Any] = dict(future=True, pool_pre_ping=True)
 
 if DATABASE_URL.startswith("sqlite:"):
     # Allow usage across threads (useful for dev servers)
@@ -71,7 +71,7 @@ def session_dependency() -> Generator:
 def init_db(create_all: bool = True) -> None:
     """
     Initialize database artifacts.
-    By default calls Base.metadata.create_all; safe to call multiple times.
+    By default, calls Base.metadata.create_all; safe to call multiple times.
     """
     if create_all:
         from . import models  # noqa: F401
