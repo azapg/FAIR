@@ -3,9 +3,12 @@ from datetime import datetime
 from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 
 from ..database import Base
+
+if TYPE_CHECKING:
+    from .submission import Submission
 
 class WorkflowRunStatus(str, Enum):
     pending = "pending"

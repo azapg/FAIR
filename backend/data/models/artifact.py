@@ -1,9 +1,8 @@
 from uuid import UUID
 from typing import Optional, List, TYPE_CHECKING
 
-from sqlalchemy import Text, UUID as SAUUID
+from sqlalchemy import Text, JSON, UUID as SAUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import JSONB
 
 from ..database import Base
 
@@ -20,7 +19,7 @@ class Artifact(Base):
     mime: Mapped[str] = mapped_column(Text, nullable=False)
     storage_path: Mapped[str] = mapped_column(Text, nullable=False)
     storage_type: Mapped[str] = mapped_column(Text, nullable=False)
-    meta: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    meta: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     assignments: Mapped[List["Assignment"]] = relationship(
         "Assignment",
