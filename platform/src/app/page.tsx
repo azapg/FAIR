@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Home() {
   return (
     <main className="container mx-auto p-6 space-y-12 pt-20">
@@ -17,9 +19,12 @@ export default function Home() {
         <p className="font-sans text-base text-muted-foreground">
           Built by students, for educators and researchers who believe grading should be fair.
         </p>
-        <button className="px-6 py-3 rounded-2xl bg-foreground text-background font-medium hover:bg-opacity-90 transition">
-          Explore the Docs
-        </button>
+        <Link
+          href="/demo"
+          className="px-6 py-3 rounded-2xl bg-foreground text-background font-medium hover:bg-opacity-90 transition"
+        >
+          Explore the demo
+        </Link>
       </div>
 
       {/* Typography Showcase */}
