@@ -44,6 +44,7 @@ def update_user(user_id: UUID, payload: UserUpdate, db: Session = Depends(sessio
     if payload.role is not None:
         user.role = payload.role if isinstance(payload.role, str) else getattr(payload.role, "value", payload.role)
     db.add(user)
+    db.commit()
     db.refresh(user)
     return user
 
@@ -54,6 +55,7 @@ def delete_user(user_id: UUID, db: Session = Depends(session_dependency)):
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     db.delete(user)
+    db.commit()
     return None
 
 
