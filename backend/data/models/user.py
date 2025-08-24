@@ -1,5 +1,7 @@
 from enum import Enum
 from uuid import UUID
+
+from pydantic import EmailStr
 from sqlalchemy import String, UUID as SAUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, TYPE_CHECKING
@@ -22,7 +24,7 @@ class User(Base):
 
     id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    email: Mapped[str] = mapped_column(String, nullable=False)
+    email: Mapped[EmailStr] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False)
 
     # Relationship to courses where this user is the instructor

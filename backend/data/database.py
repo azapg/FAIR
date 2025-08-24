@@ -15,6 +15,7 @@ __all__ = [
     "get_session",
     "init_db",
     "get_database_url",
+    "session_dependency",
 ]
 
 DEFAULT_SQLITE_FILENAME = "fair.db"
