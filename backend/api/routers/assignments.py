@@ -87,9 +87,6 @@ def update_assignment(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can update this assignment")
-    
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
@@ -98,6 +95,8 @@ def update_assignment(
     if not course:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
 
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can update this assignment")
 
     if payload.title is not None:
         assignment.title = payload.title
@@ -131,9 +130,6 @@ def update_assignment(
 
 @router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can delete this assignment")
-    
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
@@ -141,6 +137,9 @@ def delete_assignment(assignment_id: UUID, db: Session = Depends(session_depende
     course = db.get(Course, assignment.course_id)
     if not course:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
+
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can delete this assignment")
 
     db.delete(assignment)
     db.commit()
