@@ -30,10 +30,19 @@ def get_user(user_id: UUID, db: Session = Depends(session_dependency)):
 
 
 @router.put("/{user_id}", response_model=UserRead)
-def update_user(user_id: UUID, payload: UserUpdate, db: Session = Depends(session_dependency)):
+def update_user(
+    user_id: UUID,
+    payload: UserUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if current_user.role != "admin" and current_user.id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this user")
+
     if payload.name is not None:
         user.name = payload.name
     if payload.email is not None:
