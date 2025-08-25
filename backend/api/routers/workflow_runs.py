@@ -8,16 +8,32 @@ from sqlalchemy.orm import Session
 from data.database import session_dependency
 from data.models.workflow_run import WorkflowRun, WorkflowRunStatus
 from data.models.workflow import Workflow
-from data.models.user import User
+from data.models.course import Course
+from data.models.user import User, UserRole
 from api.schema.workflow_run import WorkflowRunCreate, WorkflowRunRead, WorkflowRunUpdate
+from api.routers.auth import get_current_user
 
 router = APIRouter()
 
 
 @router.post("/", response_model=WorkflowRunRead, status_code=status.HTTP_201_CREATED)
-def create_workflow_run(payload: WorkflowRunCreate, db: Session = Depends(session_dependency)):
-    if not db.get(Workflow, payload.workflow_id):
+def create_workflow_run(
+    payload: WorkflowRunCreate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != UserRole.admin and current_user.role != UserRole.instructor:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin and instructor users can create workflow runs")
+
+    workflow = db.get(Workflow, payload.workflow_id)
+    if not workflow:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Workflow not found")
+
+    if current_user.role == UserRole.instructor:
+        course = db.get(Course, workflow.course_id)
+        if not course or course.instructor_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Instructors may only create runs for their own course workflows")
+
     if not db.get(User, payload.run_by):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Runner not found")
 
@@ -57,26 +73,24 @@ def get_workflow_run(run_id: UUID, db: Session = Depends(session_dependency)):
 
 
 @router.put("/{run_id}", response_model=WorkflowRunRead)
-def update_workflow_run(run_id: UUID, payload: WorkflowRunUpdate, db: Session = Depends(session_dependency)):
-    run = db.get(WorkflowRun, run_id)
-    if not run:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="WorkflowRun not found")
-
-    if payload.status is not None:
-        run.status = payload.status if isinstance(payload.status, str) else getattr(payload.status, "value", payload.status)
-    if payload.finished_at is not None:
-        run.finished_at = payload.finished_at
-    if payload.logs is not None:
-        run.logs = payload.logs
-
-    db.add(run)
-    db.commit()
-    db.refresh(run)
-    return run
+def update_workflow_run(
+    run_id: UUID,
+    payload: WorkflowRunUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    # TODO: Workflows Runs in the DB are mutable, you need to change statuses and logs,
+    #  I wonder if we should allow updates to certain fields
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can manage workflow runs")
+    raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail="Workflow runs are immutable and cannot be updated")
 
 
 @router.delete("/{run_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_workflow_run(run_id: UUID, db: Session = Depends(session_dependency)):
+def delete_workflow_run(run_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can delete workflow runs")
+
     run = db.get(WorkflowRun, run_id)
     if not run:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="WorkflowRun not found")

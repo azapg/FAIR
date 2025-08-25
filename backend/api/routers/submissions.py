@@ -9,20 +9,29 @@ from sqlalchemy.orm import Session
 from data.database import session_dependency
 from data.models.submission import Submission, SubmissionStatus, submission_artifacts, submission_workflow_runs
 from data.models.assignment import Assignment
-from data.models.user import User
+from data.models.user import User, UserRole
 from data.models.artifact import Artifact
 from data.models.workflow_run import WorkflowRun
 from api.schema.submission import SubmissionCreate, SubmissionRead, SubmissionUpdate
+from api.routers.auth import get_current_user
 
 router = APIRouter()
 
 
+# TODO: Implement enrollments table to be able to check
 @router.post("/", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
-def create_submission(payload: SubmissionCreate, db: Session = Depends(session_dependency)):
+def create_submission(
+    payload: SubmissionCreate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     if not db.get(Assignment, payload.assignment_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Assignment not found")
     if not db.get(User, payload.submitter_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Submitter not found")
+
+    if current_user.role != UserRole.admin and current_user.id != payload.submitter_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create submission for this user")
 
     submitted_at = payload.submitted_at or datetime.now(timezone.utc)
 
@@ -97,10 +106,18 @@ def get_submission(submission_id: UUID, db: Session = Depends(session_dependency
 
 
 @router.put("/{submission_id}", response_model=SubmissionRead)
-def update_submission(submission_id: UUID, payload: SubmissionUpdate, db: Session = Depends(session_dependency)):
+def update_submission(
+    submission_id: UUID,
+    payload: SubmissionUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     sub = db.get(Submission, submission_id)
     if not sub:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+
+    if current_user.role != UserRole.admin and current_user.id != sub.submitter_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this submission")
 
     if payload.submitted_at is not None:
         sub.submitted_at = payload.submitted_at
@@ -167,10 +184,14 @@ def update_submission(submission_id: UUID, payload: SubmissionUpdate, db: Sessio
 
 
 @router.delete("/{submission_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_submission(submission_id: UUID, db: Session = Depends(session_dependency)):
+def delete_submission(submission_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
     sub = db.get(Submission, submission_id)
     if not sub:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+
+    if current_user.role != UserRole.admin and current_user.id != sub.submitter_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this submission")
+
     db.delete(sub)
     db.commit()
     return None

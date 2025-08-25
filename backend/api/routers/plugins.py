@@ -5,12 +5,17 @@ from typing import List
 from data.database import session_dependency
 from data.models.plugin import Plugin
 from api.schema.plugin import PluginCreate, PluginRead, PluginUpdate
+from api.routers.auth import get_current_user
+from data.models.user import User, UserRole
 
 router = APIRouter()
 
 
 @router.post("/", response_model=PluginRead, status_code=status.HTTP_201_CREATED)
-def create_plugin(payload: PluginCreate, db: Session = Depends(session_dependency)):
+def create_plugin(payload: PluginCreate, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can manage plugins")
+
     existing = (
         db.query(Plugin)
         .filter(Plugin.id == payload.id, Plugin.hash == payload.hash)
@@ -34,10 +39,10 @@ def create_plugin(payload: PluginCreate, db: Session = Depends(session_dependenc
 
 
 @router.get("/", response_model=List[PluginRead])
-def list_plugins(pid: str | None = None, db: Session = Depends(session_dependency)):
+def list_plugins(id: str | None = None, db: Session = Depends(session_dependency)):
     q = db.query(Plugin)
-    if pid:
-        q = q.filter(Plugin.id == pid)
+    if id:
+        q = q.filter(Plugin.id == id)
     return q.all()
 
 
@@ -54,7 +59,10 @@ def get_plugin(plugin_id: str, plugin_hash: str, db: Session = Depends(session_d
 
 
 @router.put("/id/{plugin_id}/hash/{plugin_hash}", response_model=PluginRead)
-def update_plugin(plugin_id: str, plugin_hash: str, payload: PluginUpdate, db: Session = Depends(session_dependency)):
+def update_plugin(plugin_id: str, plugin_hash: str, payload: PluginUpdate, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can manage plugins")
+
     plugin = (
         db.query(Plugin)
         .filter(Plugin.id == plugin_id, Plugin.hash == plugin_hash)
@@ -81,7 +89,10 @@ def update_plugin(plugin_id: str, plugin_hash: str, payload: PluginUpdate, db: S
 
 
 @router.delete("/id/{plugin_id}/hash/{plugin_hash}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_plugin(plugin_id: str, plugin_hash: str, db: Session = Depends(session_dependency)):
+def delete_plugin(plugin_id: str, plugin_hash: str, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can manage plugins")
+
     plugin = (
         db.query(Plugin)
         .filter(Plugin.id == plugin_id, Plugin.hash == plugin_hash)
