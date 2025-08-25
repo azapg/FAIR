@@ -3,15 +3,12 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from api.routers.auth import get_current_user
 from data.models.user import User
 from api.schema.user import UserCreate, UserRead, UserUpdate
 from data.database import session_dependency
 
 router = APIRouter()
-
-# TODO: For now, the User object is managed without authentication, just for testing/development.
-#  In the future, the real end users (professors/admin) will have to authenticate, and maybe setup
-#  a "MockUser" for students that aren't part of the system.
 
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(session_dependency)):
@@ -50,7 +47,10 @@ def update_user(user_id: UUID, payload: UserUpdate, db: Session = Depends(sessio
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: UUID, db: Session = Depends(session_dependency)):
+def delete_user(user_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can delete users")
+
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

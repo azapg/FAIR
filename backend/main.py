@@ -9,6 +9,7 @@ from api.routers.plugins import router as plugins_router
 from api.routers.submissions import router as submissions_router
 from api.routers.workflows import router as workflows_router
 from api.routers.workflow_runs import router as workflow_runs_router
+from api.routers.auth import router as auth_router
 
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
@@ -30,6 +31,8 @@ app.include_router(plugins_router, prefix="/api/plugins", tags=["plugins"])
 app.include_router(submissions_router, prefix="/api/submissions", tags=["submissions"])
 app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows"])
 app.include_router(workflow_runs_router, prefix="/api/workflow-runs", tags=["workflow-runs"])
+
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
 @app.get("/")
 def read_root():
