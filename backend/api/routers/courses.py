@@ -7,18 +7,26 @@ from data.models.course import Course
 from data.models.user import User, UserRole
 from api.schema.course import CourseCreate, CourseRead, CourseUpdate
 from data.database import session_dependency
+from api.routers.auth import get_current_user
 
 router = APIRouter()
 
 
 @router.post("/", response_model=CourseRead, status_code=status.HTTP_201_CREATED)
-def create_course(course: CourseCreate, db: Session = Depends(session_dependency)):
+def create_course(
+    course: CourseCreate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     instructor = db.get(User, course.instructor_id)
     if not instructor:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Instructor not found")
 
     if instructor.role == UserRole.student:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Students cannot create courses")
+
+    if current_user.role != UserRole.admin and current_user.id != course.instructor_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create a course for this instructor")
 
     db_course = Course(
         id=uuid4(),
@@ -44,19 +52,19 @@ def get_course(course_id: UUID, db: Session = Depends(session_dependency)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
     return course
 
-
-# this is of course a mock for now, until we have real authentication
 @router.put("/{course_id}", response_model=CourseRead)
-def update_course(course_id: UUID, payload: CourseUpdate, current_user_id: UUID, db: Session = Depends(session_dependency)):
+def update_course(
+    course_id: UUID,
+    payload: CourseUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     course = db.get(Course, course_id)
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
-    current_user = db.get(User, current_user_id)
-    if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user_id:
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can update this course")
 
     if payload.instructor_id is not None:
@@ -81,10 +89,14 @@ def update_course(course_id: UUID, payload: CourseUpdate, current_user_id: UUID,
 
 
 @router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_course(course_id: UUID, db: Session = Depends(session_dependency)):
+def delete_course(course_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
     course = db.get(Course, course_id)
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can delete this course")
+
     db.delete(course)
     db.commit()
     return None
