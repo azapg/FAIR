@@ -7,12 +7,22 @@ from sqlalchemy.orm import Session
 from data.database import session_dependency
 from data.models.artifact import Artifact
 from api.schema.artifact import ArtifactCreate, ArtifactRead, ArtifactUpdate
+from api.routers.auth import get_current_user
+from data.models.user import User, UserRole
 
 router = APIRouter()
 
+# TODO: Artifacts not having owners means we can't enforce permissions easily.
+#   Most assignments will only be managed by their instructors/admin, but
+#   there students might want to update their submissions. Since in beta there
+#   are no students, this is not a concern yet, and we can just let instructors/admin
+#   manage everything.
 
 @router.post("/", response_model=ArtifactRead, status_code=status.HTTP_201_CREATED)
-def create_artifact(payload: ArtifactCreate, db: Session = Depends(session_dependency)):
+def create_artifact(payload: ArtifactCreate, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin and current_user.role != UserRole.instructor:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only instructors or admin can create artifacts")
+
     artifact = Artifact(
         id=uuid4(),
         title=payload.title,
@@ -42,7 +52,10 @@ def get_artifact(artifact_id: UUID, db: Session = Depends(session_dependency)):
 
 
 @router.put("/{artifact_id}", response_model=ArtifactRead)
-def update_artifact(artifact_id: UUID, payload: ArtifactUpdate, db: Session = Depends(session_dependency)):
+def update_artifact(artifact_id: UUID, payload: ArtifactUpdate, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin and current_user.role != UserRole.instructor:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only instructors or admin can update artifacts")
+    
     artifact = db.get(Artifact, artifact_id)
     if not artifact:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found")
@@ -67,10 +80,14 @@ def update_artifact(artifact_id: UUID, payload: ArtifactUpdate, db: Session = De
 
 
 @router.delete("/{artifact_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_artifact(artifact_id: UUID, db: Session = Depends(session_dependency)):
+def delete_artifact(artifact_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin and current_user.role != UserRole.instructor:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only instructors or admin can delete artifacts")
+
     artifact = db.get(Artifact, artifact_id)
     if not artifact:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found")
+    
     db.delete(artifact)
     db.commit()
     return None
