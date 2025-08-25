@@ -14,14 +14,23 @@ from api.schema.assignment import (
     AssignmentRead,
     AssignmentUpdate,
 )
+from api.routers.auth import get_current_user
+from data.models.user import User, UserRole
 
 router = APIRouter()
 
 
 @router.post("/", response_model=AssignmentRead, status_code=status.HTTP_201_CREATED)
-def create_assignment(payload: AssignmentCreate, db: Session = Depends(session_dependency)):
-    # validate course
-    if not db.get(Course, payload.course_id):
+def create_assignment(
+    payload: AssignmentCreate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can create assignments")
+
+    course = db.get(Course, payload.course_id)
+    if not course:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
 
     assignment = Assignment(
@@ -73,10 +82,23 @@ def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency
 
 
 @router.put("/{assignment_id}", response_model=AssignmentRead)
-def update_assignment(assignment_id: UUID, payload: AssignmentUpdate, db: Session = Depends(session_dependency)):
+def update_assignment(
+    assignment_id: UUID,
+    payload: AssignmentUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can update this assignment")
+    
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+
+    course = db.get(Course, assignment.course_id)
+    if not course:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
+
 
     if payload.title is not None:
         assignment.title = payload.title
@@ -109,10 +131,18 @@ def update_assignment(assignment_id: UUID, payload: AssignmentUpdate, db: Sessio
 
 
 @router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_assignment(assignment_id: UUID, db: Session = Depends(session_dependency)):
+def delete_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can delete this assignment")
+    
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+
+    course = db.get(Course, assignment.course_id)
+    if not course:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
+
     db.delete(assignment)
     db.commit()
     return None
