@@ -58,7 +58,7 @@ export default function CoursesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl">Your courses</h1>
 
-        <CourseFormDialog
+        { isAuthenticated && (<CourseFormDialog
           open={open}
           onOpenChangeAction={setOpen}
           mode="create"
@@ -75,7 +75,7 @@ export default function CoursesPage() {
               Create
             </Button>
           }
-        />
+        />)}
       </div>
 
       <CourseGrid
