@@ -12,12 +12,14 @@ import {Skeleton} from "@/components/ui/skeleton";
 import {Plus} from "lucide-react";
 import {useRouter} from "next/navigation";
 import {useState} from "react";
-import {useCourses, useCreateCourse, Course, Id} from "@/hooks/use-courses";
+import {useCourses, useCreateCourse, useUpdateCourse, useDeleteCourse, Course, Id} from "@/hooks/use-courses";
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
 import {useAuth} from "@/contexts/auth-context";
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
+import {MoreVertical} from "lucide-react";
 
 const CourseCardSkeleton = () => (
   <Card className="bg-gray-50 cursor-wait flex flex-col h-full">
@@ -41,27 +43,73 @@ export default function CoursesPage() {
   const {user, isAuthenticated} = useAuth()
   const {data, isPending, isError} = useCourses()
   const createCourse = useCreateCourse()
+  const updateCourse = useUpdateCourse()
+  const deleteCourse = useDeleteCourse()
 
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
 
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'clone'>('create')
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null)
+
   const courses: Course[] = data ?? []
+
+  const openCreateDialog = () => {
+    setDialogMode('create')
+    setEditingCourse(null)
+    setName("")
+    setDescription("")
+    setOpen(true)
+  }
+
+  const openEditDialog = (course: Course) => {
+    setDialogMode('edit')
+    setEditingCourse(course)
+    setName(course.name)
+    setDescription(course.description ?? "")
+    setOpen(true)
+  }
+
+  const openCloneDialog = (course: Course) => {
+    setDialogMode('clone')
+    setEditingCourse(course)
+    setName(course.name + " (Copy)")
+    setDescription(course.description ?? "")
+    setOpen(true)
+  }
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isAuthenticated || !user) return
     if (!name.trim()) return
 
-    await createCourse.mutateAsync({
-      name: name.trim(),
-      description: description.trim() || null,
-      instructor_id: user.id,
-    })
+    if (dialogMode === 'create' || dialogMode === 'clone') {
+      await createCourse.mutateAsync({
+        name: name.trim(),
+        description: description.trim() || null,
+        instructor_id: user.id,
+      })
+    } else if (dialogMode === 'edit' && editingCourse) {
+      await updateCourse.mutateAsync({
+        id: editingCourse.id,
+        data: {
+          name: name.trim(),
+          description: description.trim() || null,
+        },
+      })
+    }
 
     setName("")
     setDescription("")
+    setEditingCourse(null)
     setOpen(false)
+  }
+
+  const handleDeleteCourse = async (course: Course) => {
+    if (window.confirm(`Delete course "${course.name}"? This cannot be undone.`)) {
+      await deleteCourse.mutateAsync(course.id)
+    }
   }
 
   const handleCourseClick = (courseId: Id) => {
@@ -75,14 +123,16 @@ export default function CoursesPage() {
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={openCreateDialog}>
               <Plus className="mr-2"/>
               Create
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create course</DialogTitle>
+              <DialogTitle>
+                {dialogMode === 'edit' ? "Edit course" : dialogMode === 'clone' ? "Clone course" : "Create course"}
+              </DialogTitle>
             </DialogHeader>
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -107,9 +157,19 @@ export default function CoursesPage() {
               <DialogFooter>
                 <Button
                   type="submit"
-                  disabled={createCourse.isPending || !isAuthenticated}
+                  disabled={
+                    createCourse.isPending ||
+                    updateCourse.isPending ||
+                    !isAuthenticated
+                  }
                 >
-                  {createCourse.isPending ? "Wait..." : "Create"}
+                  {(createCourse.isPending || updateCourse.isPending)
+                    ? "Wait..."
+                    : dialogMode === 'edit'
+                      ? "Save"
+                      : dialogMode === 'clone'
+                        ? "Clone"
+                        : "Create"}
                 </Button>
               </DialogFooter>
             </form>
@@ -134,8 +194,31 @@ export default function CoursesPage() {
             </div>
           ) : (
             courses.map((course) => (
-              <Card key={course.id} className="flex flex-col bg-amber-50 hover:bg-amber-100 transition-colors"
+              <Card key={course.id} className="flex flex-col bg-amber-50 hover:bg-amber-100 transition-colors relative"
                     onClick={() => handleCourseClick(course.id)}>
+                <div className="absolute top-3 right-3 z-10">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" tabIndex={0} aria-label="Course actions"
+                        onClick={e => {e.stopPropagation();}}>
+                        <MoreVertical className="w-5 h-5"/>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                      <DropdownMenuItem onClick={() => {openEditDialog(course)}}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {openCloneDialog(course)}}>
+                        Clone
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={() => {handleDeleteCourse(course).then()}}>
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 <CardHeader className="flex-1 flex flex-col items-start">
                   <CardTitle>{course.name}</CardTitle>
                   {course.description && (
