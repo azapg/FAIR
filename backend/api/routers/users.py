@@ -4,14 +4,21 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from api.routers.auth import get_current_user
-from data.models.user import User
+from data.models.user import User, UserRole
 from api.schema.user import UserCreate, UserRead, UserUpdate
 from data.database import session_dependency
 
 router = APIRouter()
 
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def create_user(user: UserCreate, db: Session = Depends(session_dependency)):
+def create_user(
+    user: UserCreate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can create users")
+
     role_value = user.role if isinstance(user.role, str) else getattr(user.role, "value", user.role)
     db_user = User(id=uuid4(), name=user.name, email=user.email, role=role_value)
     db.add(db_user)
@@ -21,8 +28,18 @@ def create_user(user: UserCreate, db: Session = Depends(session_dependency)):
     return db_user
 
 
+@router.get("/", response_model=list[UserRead])
+def list_users(db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can list users")
+    return db.query(User).all()
+
+
 @router.get("/{user_id}", response_model=UserRead)
-def get_user(user_id: UUID, db: Session = Depends(session_dependency)):
+def get_user(user_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can view users")
+
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -36,12 +53,12 @@ def update_user(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can update users")
+
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    if current_user.role != "admin" and current_user.id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this user")
 
     if payload.name is not None:
         user.name = payload.name
@@ -57,7 +74,7 @@ def update_user(
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if current_user.role != UserRole.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admin users can delete users")
 
     user = db.get(User, user_id)
