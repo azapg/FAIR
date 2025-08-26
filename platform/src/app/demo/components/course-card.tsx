@@ -12,6 +12,17 @@ import type { Course, Id } from "@/hooks/use-courses";
 import { useCreateCourse, useUpdateCourse } from "@/hooks/use-courses";
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent as ConfirmContent,
+  AlertDialogDescription,
+  AlertDialogFooter as ConfirmFooter,
+  AlertDialogHeader as ConfirmHeader,
+  AlertDialogTitle as ConfirmTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export type CourseCardProps = {
   course: Course;
@@ -30,6 +41,9 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
   const [mode, setMode] = useState<Mode>("edit");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+
+  const [confirmName, setConfirmName] = useState("");
+  const isConfirmCorrect = confirmName === course.name;
 
   const setupEdit = () => {
     setMode("edit");
@@ -72,24 +86,61 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
     >
       <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" tabIndex={0} aria-label="Course actions">
-                <MoreVertical className="w-5 h-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DialogTrigger asChild>
-                <DropdownMenuItem onClick={setupEdit}>Edit</DropdownMenuItem>
-              </DialogTrigger>
-              <DialogTrigger asChild>
-                <DropdownMenuItem onClick={setupClone}>Clone</DropdownMenuItem>
-              </DialogTrigger>
-              <DropdownMenuItem className="text-red-600" onClick={() => onDeleteAction?.(course)}>
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AlertDialog onOpenChange={(isOpen) => { if (!isOpen) setConfirmName(""); }}>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" tabIndex={0} aria-label="Course actions">
+                  <MoreVertical className="w-5 h-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DialogTrigger asChild>
+                  <DropdownMenuItem onClick={setupEdit}>Edit</DropdownMenuItem>
+                </DialogTrigger>
+                <DialogTrigger asChild>
+                  <DropdownMenuItem onClick={setupClone}>Clone</DropdownMenuItem>
+                </DialogTrigger>
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                </AlertDialogTrigger>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <ConfirmContent onClick={(e) => e.stopPropagation()}>
+              <ConfirmHeader>
+                <ConfirmTitle>Delete course</ConfirmTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. To confirm deletion, type the course name exactly:
+                  <span className="font-medium"> {course.name}</span>
+                </AlertDialogDescription>
+              </ConfirmHeader>
+              <div className="space-y-2">
+                <Label htmlFor={`confirm-name-${course.id}`}>Course name</Label>
+                <Input
+                  id={`confirm-name-${course.id}`}
+                  value={confirmName}
+                  onChange={(e) => setConfirmName(e.target.value)}
+                  placeholder={course.name}
+                  autoFocus
+                />
+              </div>
+              <ConfirmFooter>
+                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={!isConfirmCorrect}
+                  onClick={(e) => {
+                    if (!isConfirmCorrect) {
+                      e.preventDefault();
+                      return;
+                    }
+                    onDeleteAction?.(course);
+                  }}
+                >
+                  Delete
+                </AlertDialogAction>
+              </ConfirmFooter>
+            </ConfirmContent>
+          </AlertDialog>
 
           <DialogContent onClick={(e) => e.stopPropagation()}>
             <DialogHeader>

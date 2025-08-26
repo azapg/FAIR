@@ -46,9 +46,7 @@ export default function CoursesPage() {
   };
 
   const handleDeleteCourse = async (course: Course) => {
-    if (window.confirm(`Delete course "${course.name}"? This cannot be undone.`)) {
-      await deleteCourse.mutateAsync(course.id);
-    }
+    await deleteCourse.mutateAsync(course.id);
   };
 
   const handleCourseClick = (courseId: Id) => {
