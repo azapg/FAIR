@@ -132,7 +132,7 @@ function Header({
     >
       {/* Left section - Platform title */}
       <div className="flex items-center">
-        <h1 className="text-xl font-serif font-semibold text-foreground">{title}</h1>
+        <h1 className="text-xl font-serif font-semibold text-foreground cursor-pointer" onClick={() => router.push("/")}>{title}</h1>
       </div>
 
       {/* Center section - Extensible content */}
