@@ -54,7 +54,7 @@ export default function CoursesPage() {
   };
 
   return (
-    <main className="p-5 h-full flex flex-col">
+    <main className="p-5 flex flex-col justify-center">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl">Your courses</h1>
 
@@ -78,13 +78,10 @@ export default function CoursesPage() {
         />
       </div>
 
-      {isError && (
-        <div className="text-sm text-red-600 mb-4 p-3 bg-red-50 rounded-md">Failed to load courses</div>
-      )}
-
       <CourseGrid
         courses={courses}
         isPending={isPending}
+        isError={isError}
         onCardClickAction={handleCourseClick}
         onDeleteAction={handleDeleteCourse}
       />
