@@ -8,12 +8,10 @@ export type CourseGridProps = {
   courses: Course[];
   isPending?: boolean;
   onCardClickAction?: (id: Id) => void;
-  onEditAction?: (course: Course) => void;
-  onCloneAction?: (course: Course) => void;
   onDeleteAction?: (course: Course) => void;
 };
 
-export default function CourseGrid({ courses, isPending = false, onCardClickAction, onEditAction, onCloneAction, onDeleteAction }: CourseGridProps) {
+export default function CourseGrid({ courses, isPending = false, onCardClickAction, onDeleteAction }: CourseGridProps) {
   return (
     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7 mt-6">
       {isPending ? (
@@ -28,8 +26,6 @@ export default function CourseGrid({ courses, isPending = false, onCardClickActi
             key={course.id}
             course={course}
             onClickAction={onCardClickAction}
-            onEditAction={onEditAction}
-            onCloneAction={onCloneAction}
             onDeleteAction={onDeleteAction}
           />
         ))
