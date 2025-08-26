@@ -1,4 +1,5 @@
 from uuid import UUID, uuid4
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -41,16 +42,43 @@ def create_course(
 
 
 @router.get("/", response_model=list[CourseRead])
-def list_courses(db: Session = Depends(session_dependency)):
-    return db.query(Course).all()
+def list_courses(
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+    instructor_id: Optional[UUID] = None,
+):
+    if current_user.role == UserRole.admin:
+        query = db.query(Course)
+        if instructor_id is not None:
+            query = query.filter(Course.instructor_id == instructor_id)
+        return query.all()
+
+    # TODO: Students see nothing for now. Add enrollment table
+    if current_user.role == UserRole.student:
+        return []
+
+    # Instructors (non-admin, non-student) see only their own courses.
+    return db.query(Course).filter(Course.instructor_id == current_user.id).all()
 
 
 @router.get("/{course_id}", response_model=CourseRead)
-def get_course(course_id: UUID, db: Session = Depends(session_dependency)):
+def get_course(course_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
     course = db.get(Course, course_id)
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    if current_user.role == UserRole.admin:
+        return course
+
+    # TODO: Students cannot access individual course details for now
+    if current_user.role == UserRole.student:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Students are not authorized to view course details")
+
+    if course.instructor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can view this course")
+
     return course
+
 
 @router.put("/{course_id}", response_model=CourseRead)
 def update_course(
