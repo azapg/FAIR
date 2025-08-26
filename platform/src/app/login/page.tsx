@@ -1,0 +1,85 @@
+'use client'
+
+import * as React from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/auth-context'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+
+export default function LoginPage() {
+  const router = useRouter()
+  const { login, loading } = useAuth()
+  const [email, setEmail] = React.useState('')
+  const [password, setPassword] = React.useState('')
+  const [error, setError] = React.useState<string | null>(null)
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    try {
+      await login({ username: email, password })
+      router.push('/')
+    } catch (err) {
+      setError('Unable to login. Please check your credentials and try again.')
+    }
+  }
+
+  return (
+    <div className="h-full flex items-center justify-center p-6">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl">Welcome back</CardTitle>
+          <CardDescription className="font-sans">Login to The Fair Platform</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmit} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+            {error && (
+              <p className="text-sm text-red-600">{error}</p>
+            )}
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Wait...' : 'Sign in'}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="justify-center">
+          <p className="text-sm text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <Link href="/register" className="underline underline-offset-4">
+              Create one
+            </Link>
+          </p>
+        </CardFooter>
+      </Card>
+    </div>
+  )
+}
+
