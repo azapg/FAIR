@@ -26,12 +26,10 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(session_dependency)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        print(payload)
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
     except JWTError as e:
-        print("JWTError: ", e)
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user = db.get(User, UUID(user_id))
