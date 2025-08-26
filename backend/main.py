@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from data.database import init_db
 from api.routers.users import router as users_router
@@ -22,6 +23,20 @@ async def lifespan(_ignored: FastAPI):
 
 
 app = FastAPI(title="Fair Platform Backend", version="0.1.0", lifespan=lifespan)
+
+# TODO: use env variable
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])

@@ -8,7 +8,7 @@ from data.models.user import UserRole
 class UserBase(BaseModel):
     name: str
     email: EmailStr
-    role: UserRole
+    role: UserRole = UserRole.professor
 
     class Config:
         use_enum_values = True
