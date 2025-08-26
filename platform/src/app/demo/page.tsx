@@ -55,7 +55,7 @@ export default function CoursesPage() {
 
   return (
     <main className="p-5 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl">Your courses</h1>
 
         <CourseFormDialog
