@@ -3,7 +3,7 @@ import { Geist_Mono } from "next/font/google";
 import { hostGrotesk, remark } from "@/lib/fonts";
 import "./globals.css";
 import Header from "@/components/header";
-import {ThemeProvider} from "@/components/theme-provider";
+import {Providers} from "./providers";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -25,22 +25,12 @@ export default function RootLayout({
     <body
       className={`${geistMono.variable} ${hostGrotesk.variable} ${remark.variable} font-sans antialiased h-screen`}
     >
-      <ThemeProvider
-        attribute={"class"}
-        defaultTheme={"system"}
-        enableSystem
-        disableTransitionOnChange>
-          <Header
-            user={{
-              name: "Allan Zapata",
-              email: "allan.zapata@up.ac.pa",
-              initials: "AZ",
-            }}
-          />
-          <div className={"pt-16 h-full"}>
-            {children}
-          </div>
-      </ThemeProvider>
+    <Providers>
+      <Header />
+      <div className={"pt-16 h-full"}>
+        {children}
+      </div>
+    </Providers>
     </body>
     </html>
   );
