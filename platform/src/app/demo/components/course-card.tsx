@@ -81,7 +81,7 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
 
   return (
     <Card
-      className="flex flex-col bg-amber-50 hover:bg-amber-100 transition-colors relative cursor-pointer"
+      className="flex flex-col bg-amber-50 hover:bg-amber-100 dark:bg-amber-950 dark:hover:bg-amber-900  transition-colors relative cursor-pointer"
       onClick={() => onClickAction?.(course.id)}
     >
       <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
