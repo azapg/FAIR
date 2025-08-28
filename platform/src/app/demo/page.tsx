@@ -50,7 +50,7 @@ export default function CoursesPage() {
   };
 
   const handleCourseClick = (courseId: Id) => {
-    router.push(`/demo/assignment?courseId=${courseId}`);
+  router.push(`/demo/courses/${courseId}`);
   };
 
   return (
