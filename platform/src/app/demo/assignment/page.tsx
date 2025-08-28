@@ -1,22 +1,12 @@
 import {Button} from "@/components/ui/button";
 import {CircleCheck, FileText, Hourglass, Link as LinkIcon, Plus} from "lucide-react";
-
-import Link from "next/link"
-
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import {Separator} from "@/components/ui/separator";
 import {SubmissionsTable} from "@/app/demo/assignment/submissions-table";
 import {columns, Submission} from "@/app/demo/assignment/submissions";
 import {SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar";
 import {WorkflowsSidebar} from "@/app/demo/assignment/components/workflows-sidebar";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
+import {BreadcrumbNav} from "@/app/demo/components/breadcrumb-nav";
 
 type Assignment = {
   name: string;
@@ -115,36 +105,24 @@ const assignment: Assignment = {
   ]
 }
 
-export function BreadcrumbNav({className}: { className?: string }) {
-  return (
-    <Breadcrumb className={className}>
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="/">Home</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator/>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="/demo">7014 Programación I</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator/>
-        <BreadcrumbItem>
-          <BreadcrumbPage>Asignación I</BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
-  )
-}
-
 export default function AssignmentPage() {
   return (
     <SidebarProvider className={"flex flex-row m-0 p-0 h-auto overflow-none"}>
       <div className={"w-full h-full overflow-auto break-words"}>
-        <div className={"flex flex-row justify-between items-center pt-2 pl-5 pb-2 pr-5"}>
-          <BreadcrumbNav/>
+        <div className={"flex flex-row justify-between items-center py-2 px-5"}>
+          <BreadcrumbNav baseUrl={"demo"} segments={[{
+            label: "Courses",
+            slug: "courses"
+          }, {
+            label: "CH7013-VISUALIZACION DE DATOS I",
+            slug: "b7cc83c6-d1f5-4508-86aa-2e5ec7d39705"
+          }, {
+            label: "Assignments",
+            slug: "assignments"
+          }, {
+            label: assignment.name,
+            slug: "ejercicios-de-bucles-en-c"
+          }]}/>
           <SidebarTrigger/>
         </div>
         <Separator/>
