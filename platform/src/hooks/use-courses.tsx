@@ -10,6 +10,8 @@ export type Course = {
   name: string
   description?: string | null
   instructor_id: Id
+  instructor_name?: string
+  assignments_count: number
 }
 
 export type CreateCourseInput = {

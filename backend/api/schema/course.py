@@ -28,6 +28,8 @@ class CourseUpdate(BaseModel):
 
 class CourseRead(CourseBase):
     id: UUID
+    instructor_name: str
+    assignments_count: int
 
 
 __all__ = ["CourseBase", "CourseCreate", "CourseUpdate", "CourseRead"]

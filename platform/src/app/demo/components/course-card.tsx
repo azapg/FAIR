@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -81,7 +81,7 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
 
   return (
     <Card
-      className="flex flex-col bg-amber-50 hover:bg-amber-100 dark:bg-amber-950 dark:hover:bg-amber-900  transition-colors relative cursor-pointer"
+      className="flex flex-col bg-amber-50 hover:bg-amber-100 dark:bg-amber-950 dark:hover:bg-amber-900  transition-colors relative cursor-pointer gap-3"
       onClick={() => onClickAction?.(course.id)}
     >
       <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
@@ -178,11 +178,15 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
 
       <CardHeader className="flex-1 flex flex-col items-start">
         <CardTitle>{course.name}</CardTitle>
-        {course.description && <CardDescription>{course.description}</CardDescription>}
       </CardHeader>
+      <CardContent>
+        {course.description && <CardDescription>{course.description}</CardDescription>}
+      </CardContent>
       <CardFooter>
-        {/* TODO: fetch name and number of assignments? seems expensive... */}
-        Instructor: {String(course.instructor_id)}
+        <span className="text-sm text-muted-foreground">
+          By {course.instructor_name}
+          {course.assignments_count > 0 && ` • ${course.assignments_count} assignment${course.assignments_count > 1 ? "s" : ""}`}
+        </span>
       </CardFooter>
     </Card>
   );
