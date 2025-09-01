@@ -14,6 +14,35 @@ export type Course = {
   assignments_count: number
 }
 
+export type CourseDetail = {
+  id: Id,
+  name: string,
+  description?: string | null,
+  instructor: {
+    id: Id,
+    name: string,
+    email: string,
+    role: 'professor' | 'admin' | 'student',
+  },
+  assignments: {
+    id: Id,
+    title: string,
+    description?: string | null,
+    deadline: string | null,
+    max_grade: {
+      type: 'points' | 'percentage' | 'letter' | 'pass_fail',
+      value: number | string | boolean,
+    } | null,
+  }[],
+  workflows: {
+    id: Id,
+    name: string,
+    description?: string | null,
+    created_at: string,
+    updated_at: string,
+  }
+}
+
 export type CreateCourseInput = {
   name: string
   description?: string | null
@@ -37,8 +66,8 @@ const fetchCourses = async (params?: ListParams): Promise<Course[]> => {
   return res.data
 }
 
-const fetchCourse = async (id: Id): Promise<Course> => {
-  const res = await api.get(`/courses/${id}`)
+const fetchCourse = async (id: Id, detailed: boolean = false): Promise<Course | CourseDetail> => {
+  const res = await api.get(`/courses/${id}?detailed=${detailed}`)
   return res.data
 }
 
@@ -64,10 +93,12 @@ export function useCourses(params?: ListParams, enabled = true) {
   })
 }
 
-export function useCourse(id?: Id, enabled = true) {
+export function useCourse(id?: Id, enabled = true, detailed = false) {
   return useQuery({
-    queryKey: id != null ? coursesKeys.detail(id) : coursesKeys.detail('unknown'),
-    queryFn: () => fetchCourse(id as Id),
+    queryKey: id != null
+      ? [...coursesKeys.detail(id), { detailed }]
+      : [...coursesKeys.detail('unknown'), { detailed }],
+    queryFn: () => fetchCourse(id as Id, detailed),
     enabled: enabled && id != null,
   })
 }

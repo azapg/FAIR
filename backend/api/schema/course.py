@@ -1,7 +1,9 @@
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
-
 from pydantic import BaseModel
+from api.schema.user import UserRead
+from api.schema.assignment import AssignmentRead
+from api.schema.workflow import WorkflowRead
 
 
 class CourseBase(BaseModel):
@@ -32,5 +34,22 @@ class CourseRead(CourseBase):
     assignments_count: int
 
 
-__all__ = ["CourseBase", "CourseCreate", "CourseUpdate", "CourseRead"]
+class CourseDetailRead(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str] = None
+    instructor: UserRead
+    assignments: List[AssignmentRead] = []
+    workflows: List[WorkflowRead] = []
 
+    class Config:
+        orm_mode = True
+
+
+__all__ = [
+    "CourseBase",
+    "CourseCreate",
+    "CourseUpdate",
+    "CourseRead",
+    "CourseDetailRead",
+]

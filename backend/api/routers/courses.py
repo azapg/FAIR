@@ -1,5 +1,5 @@
 from uuid import UUID, uuid4
-from typing import Optional
+from typing import Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from data.models.course import Course
 from data.models.user import User, UserRole
-from api.schema.course import CourseCreate, CourseRead, CourseUpdate
+from api.schema.course import CourseCreate, CourseRead, CourseUpdate, CourseDetailRead
 from data.database import session_dependency
 from api.routers.auth import get_current_user
 
@@ -102,34 +102,43 @@ def list_courses(
     ]
 
 
-@router.get("/{course_id}", response_model=CourseRead)
-def get_course(course_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
-    
-        # TODO: Students cannot access individual course details for now because there's no enrollment table
+@router.get("/{course_id}", response_model=Union[CourseRead, CourseDetailRead])
+def get_course(
+    course_id: UUID,
+    detailed: bool = False,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    # TODO: Students cannot access individual course details for now because there's no enrollment table
     if current_user.role == UserRole.student:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Students are not authorized to view course details")
     
     course = (
         db.query(Course)
-        .options(joinedload(Course.instructor), selectinload(Course.assignments))
+        .options(
+            joinedload(Course.instructor),
+            selectinload(Course.assignments),
+            selectinload(Course.workflows),
+        )
         .filter(Course.id == course_id)
         .first()
     )
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
-    if current_user.role == UserRole.admin:
+    # Authorization: admin or the course instructor
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can view this course")
+
+    if detailed:
         return {
             "id": course.id,
             "name": course.name,
             "description": course.description,
-            "instructor_id": course.instructor_id,
-            "instructor_name": course.instructor.name if course.instructor else "",
-            "assignments_count": len(course.assignments or []),
+            "instructor": course.instructor,
+            "assignments": course.assignments or [],
+            "workflows": course.workflows or [],
         }
-
-    if course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can view this course")
 
     return {
         "id": course.id,
@@ -190,7 +199,11 @@ def update_course(
 
 
 @router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_course(course_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+def delete_course(
+    course_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     course = db.get(Course, course_id)
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
