@@ -20,7 +20,7 @@ router = APIRouter()
 
 @router.post("/", response_model=ArtifactRead, status_code=status.HTTP_201_CREATED)
 def create_artifact(payload: ArtifactCreate, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
-    if current_user.role != UserRole.admin and current_user.role != UserRole.instructor:
+    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only instructors or admin can create artifacts")
 
     artifact = Artifact(
@@ -53,7 +53,7 @@ def get_artifact(artifact_id: UUID, db: Session = Depends(session_dependency)):
 
 @router.put("/{artifact_id}", response_model=ArtifactRead)
 def update_artifact(artifact_id: UUID, payload: ArtifactUpdate, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
-    if current_user.role != UserRole.admin and current_user.role != UserRole.instructor:
+    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only instructors or admin can update artifacts")
     
     artifact = db.get(Artifact, artifact_id)
@@ -81,7 +81,7 @@ def update_artifact(artifact_id: UUID, payload: ArtifactUpdate, db: Session = De
 
 @router.delete("/{artifact_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_artifact(artifact_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
-    if current_user.role != UserRole.admin and current_user.role != UserRole.instructor:
+    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only instructors or admin can delete artifacts")
 
     artifact = db.get(Artifact, artifact_id)

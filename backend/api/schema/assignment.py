@@ -18,7 +18,7 @@ class AssignmentBase(BaseModel):
     title: str
     description: Optional[str] = None
     deadline: Optional[datetime] = None
-    max_grade: Dict[str, Any]
+    max_grade: Optional[Dict[str, Any]] = None
 
     class Config:
         orm_mode = True

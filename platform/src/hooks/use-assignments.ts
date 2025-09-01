@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import {Grade} from "@/app/demo/courses/[...id]/tabs/assignments/assignments";
 
 export type Id = string | number
 export type ListParams = Record<string, string | number | boolean | null | undefined>
@@ -12,12 +13,12 @@ export type Assignment = {
   title: string
   description?: string | null
   deadline: string | null
-  max_grade?: number | null
+  max_grade?: Grade | null
 }
 
 export type AssignmentArtifactLink = {
   artifact_id: Id
-  role?: string | null
+  role: string | null
 }
 
 export type CreateAssignmentInput = {
@@ -25,7 +26,7 @@ export type CreateAssignmentInput = {
   title: string
   description?: string | null
   deadline?: string | null
-  max_grade?: number | null
+  max_grade?: Grade | null
   artifacts?: AssignmentArtifactLink[]
 }
 
