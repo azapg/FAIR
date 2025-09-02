@@ -1,7 +1,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import {Grade} from "@/app/demo/courses/[...id]/tabs/assignments/assignments";
+import {Grade} from "@/app/courses/tabs/assignments/assignments";
 
 export type Id = string | number
 export type ListParams = Record<string, string | number | boolean | null | undefined>
