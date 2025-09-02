@@ -4,9 +4,9 @@ import {useNavigate} from "react-router-dom";
 import {useState} from "react";
 import {useCourses, useCreateCourse, useDeleteCourse, Course, Id} from "@/hooks/use-courses";
 import {useAuth} from "@/contexts/auth-context";
-import CourseGrid from "@/app/demo/components/course-grid";
-import CourseFormDialog from "@/app/demo/components/course-form-dialog";
-import {BreadcrumbNav} from "@/app/demo/components/breadcrumb-nav";
+import CourseGrid from "@/app/courses/components/course-grid";
+import CourseFormDialog from "@/app/courses/components/course-form-dialog";
+import {BreadcrumbNav} from "@/components/breadcrumb-nav";
 import {Separator} from "@/components/ui/separator";
 
 export default function CoursesPage() {

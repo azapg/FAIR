@@ -1,8 +1,8 @@
 "use client";
 
 import {useState, FormEvent, useEffect, useRef} from "react";
-import {AssignmentsTable} from "@/app/demo/courses/[...id]/tabs/assignments/assignments-table";
-import {columns, Assignment, Grade} from "@/app/demo/courses/[...id]/tabs/assignments/assignments";
+import {AssignmentsTable} from "@/app/courses/tabs/assignments/assignments-table";
+import {columns, Assignment, Grade} from "@/app/courses/tabs/assignments/assignments";
 import {Button} from "@/components/ui/button";
 import {
   Dialog,

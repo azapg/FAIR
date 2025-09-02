@@ -1,12 +1,12 @@
 import {Button} from "@/components/ui/button";
 import {CircleCheck, FileText, Hourglass, Link as LinkIcon, Plus} from "lucide-react";
 import {Separator} from "@/components/ui/separator";
-import {SubmissionsTable} from "@/app/demo/assignment/submissions-table";
-import {columns, Submission} from "@/app/demo/assignment/submissions";
+import {SubmissionsTable} from "@/app/assignment/components/submissions/submissions-table";
+import {columns, Submission} from "@/app/assignment/components/submissions/submissions";
 import {SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar";
-import {WorkflowsSidebar} from "@/app/demo/assignment/components/workflows-sidebar";
+import {WorkflowsSidebar} from "@/app/assignment/components/workflows-sidebar";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
-import {BreadcrumbNav} from "@/app/demo/components/breadcrumb-nav";
+import {BreadcrumbNav} from "@/components/breadcrumb-nav";
 
 type Assignment = {
   name: string;
@@ -105,7 +105,7 @@ const assignment: Assignment = {
   ]
 }
 
-export default function AssignmentPage() {
+export default function DemoAssignmentPage() {
   return (
     <SidebarProvider className={"flex flex-row m-0 p-0 h-auto overflow-none"}>
       <div className={"w-full h-full overflow-auto break-words"}>

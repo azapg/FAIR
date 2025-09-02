@@ -1,9 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Home from "./home";
-import CoursesPage from "@/app/demo/courses/page";
+import Home from "@/home";
+import CoursesPage from "@/app/courses/page";
 import LoginPage from "@/app/login/page";
 import RegisterPage from "@/app/register/page";
-import CourseDetailPage from "@/app/demo/courses/[...id]/page";
+import CourseDetailPage from "@/app/courses/course/page";
+import DemoAssignmentPage from "@/app/assignment/demo";
+import AssignmentPage from "@/app/assignment/page";
 
 export function App() {
   return (
@@ -16,7 +18,9 @@ export function App() {
         {/*TODO:i should probably redirect to :assignments for consistency*/}
         <Route path={"courses/:courseId/"} element={<CourseDetailPage/>}/>
         <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage/>}/>
+        <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage />} />
 
+        <Route path={"assignment"} element={<DemoAssignmentPage />} />
       </Route>
 
       <Route path={"login"} element={<LoginPage/>}/>

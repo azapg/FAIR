@@ -64,7 +64,7 @@ bun run dev
 ## Key Files to Understand
 
 - `cli/main.py`: CLI entry point showing current serve command implementation
-- `platform/src/app/page.tsx`: Homepage showcasing typography system and component patterns
+- `platform/src/app/demo.tsx`: Homepage showcasing typography system and component patterns
 - `platform/src/components/header.tsx`: Complex component showing prop patterns and TypeScript interfaces
 - `platform/src/lib/fonts.ts`: Local font configuration example
 - Root `README.md`: Project vision and current limitations

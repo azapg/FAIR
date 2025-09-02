@@ -1,4 +1,3 @@
-'use client';
 import {ColumnDef} from "@tanstack/react-table"
 import {
   ChevronRight,
@@ -23,7 +22,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
 
 export type SubmissionStatus =
   "pending"

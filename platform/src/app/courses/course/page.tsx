@@ -1,8 +1,8 @@
 import {useCourse} from "@/hooks/use-courses";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
-import {BreadcrumbNav, BreadcrumbSegment} from "@/app/demo/components/breadcrumb-nav";
+import {BreadcrumbNav, BreadcrumbSegment} from "@/components/breadcrumb-nav";
 import {Separator} from "@/components/ui/separator";
-import AssignmentsTab from "@/app/demo/courses/[...id]/tabs/assignments/assignments-tab";
+import AssignmentsTab from "@/app/courses/tabs/assignments/assignments-tab";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import {useParams} from "react-router-dom";
 
