@@ -20,7 +20,7 @@ import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import type { CourseDetail } from "@/hooks/use-courses";
 import { useCreateArtifact, type CreateArtifactInput } from "@/hooks/use-artifacts";
 import { useCreateAssignment, type CreateAssignmentInput } from "@/hooks/use-assignments";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router-dom";
 
 // Map backend course assignments to local Assignment shape used by the table
 function mapAssignments(raw: NonNullable<CourseDetail["assignments"]>): Assignment[] {
@@ -99,10 +99,7 @@ export default function AssignmentsTab({
   const { mutateAsync: createArtifact } = useCreateArtifact();
   const { mutateAsync: createAssignment } = useCreateAssignment();
   const params = useParams();
-  // Try to derive course id from the dynamic [...id] param (use last segment if it's an array)
-  const courseId = Array.isArray((params as any)?.id)
-    ? (params as any).id[(params as any).id.length - 1]
-    : (params as any)?.id;
+  const courseId = params.assignmentId;
 
   const resetForm = () => {
     setForm({title: "", description: "", dueDate: "", gradeType: "", gradeValue: ""});
