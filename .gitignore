@@ -21,12 +21,8 @@ platform/!.yarn/versions
 # testing
 platform/coverage
 
-# next.js
-platform/.next/
-platform/out/
-
 # production
-platform/build
+platform/dist
 
 # misc
 platform/.DS_Store
