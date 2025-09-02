@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { Providers } from './providers'
-import App from './index'
+import {App} from './index'
 import Header from "@/components/header";
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
