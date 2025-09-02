@@ -1,5 +1,3 @@
-"use client";
-
 import type { Course, Id } from "@/hooks/use-courses";
 import CourseCard from "@/app/demo/components/course-card";
 import CourseCardSkeleton from "@/app/demo/components/course-card-skeleton";
