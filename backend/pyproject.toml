@@ -4,4 +4,13 @@ version = "0.1.0"
 description = "Fair Platform Backend"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "dotenv>=0.9.9",
+    "fastapi>=0.116.1",
+    "pydantic[email]>=2.11.7",
+    "python-jose>=3.5.0",
+    "python-multipart>=0.0.20",
+    "sqlalchemy>=2.0.43",
+    "uvicorn>=0.35.0",
+]
+

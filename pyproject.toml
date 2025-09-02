@@ -6,7 +6,11 @@ authors = [{name = "Allan Zapata", email = "allan.zapata@up.ac.pa" }]
 readme = "README.md"
 requires-python = ">=3.12" # I should probably change this
 dependencies = [
-    "typer[all]>=0.9.0"
+    "python-dotenv>=1.0.1",
+    "psycopg2>=2.9.10",
+    "sqlalchemy>=2.0.43",
+    "typer[all]>=0.9.0",
+    "alembic>=1.13.2",
 ]
 
 [project.scripts]
@@ -19,4 +23,3 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["cli*"]
-

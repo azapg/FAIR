@@ -1,4 +1,6 @@
 # PLATFORM
+**/__pycache__
+*.db
 
 # cli
 .venv
@@ -19,12 +21,8 @@ platform/!.yarn/versions
 # testing
 platform/coverage
 
-# next.js
-platform/.next/
-platform/out/
-
 # production
-platform/build
+platform/dist
 
 # misc
 platform/.DS_Store
@@ -54,3 +52,7 @@ backend/.venv/
 backend/.mypy_cache/
 backend/.pytest_cache/
 backend/.coverage
+
+# IDEs
+**/.idea
+**/.vscode

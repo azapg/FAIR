@@ -1,0 +1,36 @@
+{
+  "courses": [
+    {
+      "id": "dif",
+      "title": "7017 CALCULO DIFERENCIAL",
+      "description": "Introducción al cálculo diferencial, límites, continuidad, derivadas y sus aplicaciones.",
+      "color": "blue",
+      "instructors": [
+        "Juan Pérez"
+      ],
+      "assignments": [
+        "calc-001"
+      ]
+    },
+    {
+      "id": "int",
+      "title": "7020 CALCULO INTEGRAL",
+      "description": "Estudio del cálculo integral, técnicas de integración y aplicaciones.",
+      "color": "green",
+      "instructors": [
+        "Ana Gómez"
+      ],
+      "assignments": []
+    },
+    {
+      "id": "alg",
+      "title": "7030 ALGEBRA LINEAL",
+      "description": "Conceptos fundamentales de álgebra lineal, matrices, determinantes y sistemas de ecuaciones.",
+      "color": "red",
+      "instructors": [
+        "Carlos López"
+      ],
+      "assignments": []
+    }
+  ]
+}

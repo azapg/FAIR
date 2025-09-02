@@ -1,0 +1,67 @@
+{
+  "assignments": [
+    {
+      "id": "calc-001",
+      "title": "Ejercicios de diferenciación",
+      "description": "Resuelve los siguientes ejercicios de diferenciación utilizando las reglas básicas.",
+      "due_date": "2023-10-15",
+      "points": 100,
+      "course_id": "dif",
+      "instructor": "Juan Pérez",
+      "resources": [
+        {
+          "id": "res-001",
+          "type": "document/pdf",
+          "mime": "application/pdf",
+          "storage_path": "/resources/differentiation_exercises.pdf",
+          "storage_type": "local",
+          "title": "Ejercicios de diferenciación",
+          "meta": {
+            "pages": 10,
+            "size_kb": 256,
+            "language": "es"
+          }
+        },
+        {
+          "id": "res-002",
+          "type": "external/youtube",
+          "mime": "text/html",
+          "storage_path": "https://www.youtube.com/watch?v=_6-zwdrqD3U",
+          "storage_type": "external",
+          "title": "DERIVADAS: Clase Completa desde Cero",
+          "meta": {
+            "duration": "38:37",
+            "thumbnail": "https://i3.ytimg.com/vi/_6-zwdrqD3U/maxresdefault.jpg"
+          }
+        }
+      ],
+      "submissions": [
+        {
+          "id": "sub-001",
+          "student": "Allan Zapata",
+          "submitted_at": "2023-10-14T10:00:00Z",
+          "grade": 85,
+          "feedback": "Buen trabajo, pero revisa el ejercicio 3.",
+          "resources": [
+            {
+              "id": "res-003",
+              "type": "document/pdf",
+              "mime": "application/pdf",
+              "storage_path": "/submissions/stu-001_calc-001.pdf",
+              "storage_type": "local",
+              "title": "Solución a los ejercicios de diferenciación"
+            }
+          ]
+        },
+        {
+          "id": "sub-002",
+          "student": "Adrián Fúnez",
+          "submitted_at": "2023-10-15T09:30:00Z",
+          "grade": 90,
+          "feedback": "Excelente trabajo, todos los ejercicios están correctos.",
+          "resources": []
+        }
+      ]
+    }
+  ]
+}
