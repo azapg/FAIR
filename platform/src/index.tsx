@@ -15,7 +15,7 @@ export function App() {
       <Route path={"demo"} element={<Navigate to="/demo/courses" replace/>}  />
       <Route path={"demo"}>
         <Route path={"courses"} element={<CoursesPage/>}/>
-        {/*TODO:i should probably redirect to :assignments for consistency*/}
+        <Route path={"courses/:courseId"} element={<CourseDetailPage/>}/>
         <Route path={"courses/:courseId/"} element={<CourseDetailPage/>}/>
         <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage/>}/>
         <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage />} />

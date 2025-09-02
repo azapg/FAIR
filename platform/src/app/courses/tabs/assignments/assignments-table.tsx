@@ -4,6 +4,9 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table"
+import { useNavigate } from "react-router-dom"
+import type { Assignment } from "@/app/courses/tabs/assignments/assignments"
+import type { KeyboardEvent } from "react"
 
 import {
   Table,
@@ -14,20 +17,19 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
+interface DataTableProps {
+  columns: ColumnDef<Assignment>[]
+  data: Assignment[]
 }
 
-export function AssignmentsTable<TData, TValue>({
-  columns,
-  data,
-}: DataTableProps<TData, TValue>) {
-  const table = useReactTable({
+export function AssignmentsTable({ columns, data }: DataTableProps) {
+  const table = useReactTable<Assignment>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   })
+
+  const navigate = useNavigate()
 
   return (
     <div className="rounded-md border">
@@ -47,15 +49,36 @@ export function AssignmentsTable<TData, TValue>({
           ))}
         </TableHeader>
         <TableBody>
-          {table.getRowModel().rows.map(row => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map(cell => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
+          {table.getRowModel().rows.map(row => {
+            const onActivate = () => {
+              const id = row.original.id
+              if (id) {
+                navigate(id, { replace: false, relative: "path" })
+              }
+            }
+
+            return (
+              <TableRow
+                key={row.id}
+                role="button"
+                tabIndex={0}
+                className="group cursor-pointer hover:bg-muted"
+                onClick={onActivate}
+                onKeyDown={(e: KeyboardEvent<HTMLTableRowElement>) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    onActivate()
+                  }
+                }}
+              >
+                {row.getVisibleCells().map(cell => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </div>

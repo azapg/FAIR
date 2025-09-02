@@ -4,13 +4,26 @@ import {BreadcrumbNav, BreadcrumbSegment} from "@/components/breadcrumb-nav";
 import {Separator} from "@/components/ui/separator";
 import AssignmentsTab from "@/app/courses/tabs/assignments/assignments-tab";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
-import {useParams} from "react-router-dom";
+import {useParams, useNavigate} from "react-router-dom";
+import {useEffect} from "react";
+
+const allowedTabs = ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"];
 
 export default function CourseDetailPage() {
   const params = useParams<{ courseId: string, tab: string }>()
   const {courseId, tab} = params;
+  const navigate = useNavigate();
 
   const {isLoading, isError, data: course} = useCourse(courseId, Boolean(courseId), true);
+
+  const effectiveTab = tab && allowedTabs.includes(tab) ? tab : "assignments";
+
+  useEffect(() => {
+    if (!courseId) return;
+    if (!tab || !allowedTabs.includes(tab)) {
+      navigate(`/demo/courses/${courseId}/assignments`, {replace: true});
+    }
+  }, [tab, courseId, navigate]);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -39,7 +52,10 @@ export default function CourseDetailPage() {
         <h1 className={"text-3xl font-bold pb-1"}>{course?.name}</h1>
         <p className={"text-sm text-muted-foreground"}>{course?.description}</p>
       </div>
-      <Tabs defaultValue={tab || "assignments"}>
+      <Tabs value={effectiveTab} onValueChange={(val: string) => {
+        if (!courseId) return;
+        navigate(`/demo/courses/${courseId}/${val}`);
+      }}>
         <ScrollArea className={"w-full border-b"}>
           <TabsList className={"px-8 w-full"}>
             <TabsTrigger value="assignments">Assignments</TabsTrigger>
