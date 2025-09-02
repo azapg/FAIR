@@ -4,7 +4,7 @@ import {BreadcrumbNav, BreadcrumbSegment} from "@/components/breadcrumb-nav";
 import {Separator} from "@/components/ui/separator";
 import AssignmentsTab from "@/app/courses/tabs/assignments/assignments-tab";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
-import {useParams, useNavigate} from "react-router-dom";
+import {useParams, useNavigate, useLocation} from "react-router-dom";
 import {useEffect} from "react";
 
 const allowedTabs = ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"];
@@ -13,17 +13,20 @@ export default function CourseDetailPage() {
   const params = useParams<{ courseId: string, tab: string }>()
   const {courseId, tab} = params;
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const basePath = location.pathname.split('/').slice(0, -1).join('/');
 
   const {isLoading, isError, data: course} = useCourse(courseId, Boolean(courseId), true);
 
   const effectiveTab = tab && allowedTabs.includes(tab) ? tab : "assignments";
 
   useEffect(() => {
-    if (!courseId) return;
+    if (!courseId || isLoading || isError || !course) return;
     if (!tab || !allowedTabs.includes(tab)) {
-      navigate(`/demo/courses/${courseId}/assignments`, {replace: true});
+      navigate(`assignments`);
     }
-  }, [tab, courseId, navigate]);
+  }, [tab, courseId, navigate, basePath, isLoading, isError, course]);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -54,7 +57,7 @@ export default function CourseDetailPage() {
       </div>
       <Tabs value={effectiveTab} onValueChange={(val: string) => {
         if (!courseId) return;
-        navigate(`/demo/courses/${courseId}/${val}`);
+        navigate(`${basePath}/${val}`, {replace: true});
       }}>
         <ScrollArea className={"w-full border-b"}>
           <TabsList className={"px-8 w-full"}>
