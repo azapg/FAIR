@@ -53,7 +53,7 @@ export function AssignmentsTable({ columns, data }: DataTableProps) {
             const onActivate = () => {
               const id = row.original.id
               if (id) {
-                navigate(id, { replace: false, relative: "path" })
+                navigate(id, { relative: "path" })
               }
             }
 
