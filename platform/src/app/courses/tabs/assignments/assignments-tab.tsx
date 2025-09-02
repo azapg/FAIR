@@ -1,5 +1,3 @@
-"use client";
-
 import {useState, FormEvent, useEffect, useRef} from "react";
 import {AssignmentsTable} from "@/app/courses/tabs/assignments/assignments-table";
 import {columns, Assignment, Grade} from "@/app/courses/tabs/assignments/assignments";

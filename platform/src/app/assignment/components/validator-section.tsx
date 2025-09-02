@@ -1,4 +1,3 @@
-"use client"
 import { useState } from "react"
 import SectionContainer from "./section-container"
 import { Slider } from "@/components/ui/slider"
@@ -35,4 +34,3 @@ export default function ValidatorSection() {
     </SectionContainer>
   )
 }
-
