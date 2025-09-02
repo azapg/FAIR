@@ -1,8 +1,5 @@
-'use client'
-
 import * as React from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function LoginPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { login, loading } = useAuth()
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
@@ -21,7 +18,7 @@ export default function LoginPage() {
     setError(null)
     try {
       await login({ username: email, password })
-      router.push('/')
+      navigate('/')
     } catch (err) {
       setError('Unable to login. Please check your credentials and try again.')
     }
@@ -73,7 +70,7 @@ export default function LoginPage() {
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="underline underline-offset-4">
+            <Link to="/register" className="underline underline-offset-4">
               Create one
             </Link>
           </p>

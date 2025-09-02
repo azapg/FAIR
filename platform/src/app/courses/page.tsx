@@ -1,20 +1,18 @@
-"use client";
-
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useCourses, useCreateCourse, useDeleteCourse, Course, Id } from "@/hooks/use-courses";
-import { useAuth } from "@/contexts/auth-context";
-import CourseGrid from "@/app/demo/components/course-grid";
-import CourseFormDialog from "@/app/demo/components/course-form-dialog";
-import {BreadcrumbNav} from "@/app/demo/components/breadcrumb-nav";
+import {Button} from "@/components/ui/button";
+import {Plus} from "lucide-react";
+import {useNavigate} from "react-router-dom";
+import {useState} from "react";
+import {useCourses, useCreateCourse, useDeleteCourse, Course, Id} from "@/hooks/use-courses";
+import {useAuth} from "@/contexts/auth-context";
+import CourseGrid from "@/app/courses/components/course-grid";
+import CourseFormDialog from "@/app/courses/components/course-form-dialog";
+import {BreadcrumbNav} from "@/components/breadcrumb-nav";
 import {Separator} from "@/components/ui/separator";
 
 export default function CoursesPage() {
-  const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
-  const { data, isPending, isError } = useCourses();
+  const navigate = useNavigate();
+  const {user, isAuthenticated} = useAuth();
+  const {data, isPending, isError} = useCourses();
   const createCourse = useCreateCourse();
   const deleteCourse = useDeleteCourse();
 
@@ -52,7 +50,7 @@ export default function CoursesPage() {
   };
 
   const handleCourseClick = (courseId: Id) => {
-  router.push(`/demo/courses/${courseId}`);
+    navigate(`${courseId}`);
   };
 
   return (
@@ -63,13 +61,13 @@ export default function CoursesPage() {
             label: "Courses",
             slug: "courses"
           }
-        ]} />
+        ]}/>
       </div>
-      <Separator />
+      <Separator/>
       <div className="flex items-center justify-between px-6 pt-5">
         <h1 className="text-3xl">Your courses</h1>
 
-        { isAuthenticated && (<CourseFormDialog
+        {isAuthenticated && (<CourseFormDialog
           open={open}
           onOpenChangeAction={setOpen}
           mode="create"
@@ -82,7 +80,7 @@ export default function CoursesPage() {
           isDisabled={createCourse.isPending || !isAuthenticated}
           trigger={
             <Button onClick={openCreateDialog}>
-              <Plus className="mr-2" />
+              <Plus className="mr-2"/>
               Create
             </Button>
           }

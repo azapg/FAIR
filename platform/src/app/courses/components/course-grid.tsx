@@ -1,8 +1,6 @@
-"use client";
-
 import type { Course, Id } from "@/hooks/use-courses";
-import CourseCard from "@/app/demo/components/course-card";
-import CourseCardSkeleton from "@/app/demo/components/course-card-skeleton";
+import CourseCard from "@/app/courses/components/course-card";
+import CourseCardSkeleton from "@/app/courses/components/course-card-skeleton";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
 import {CircleAlert} from "lucide-react";
 

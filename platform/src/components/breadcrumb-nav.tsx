@@ -6,7 +6,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "@/components/ui/breadcrumb";
-import Link from "next/link";
+import {Link} from "react-router-dom";
 import React from "react";
 
 export type BreadcrumbSegment = {
@@ -58,7 +58,7 @@ export function BreadcrumbNav({className, segments, baseUrl = ""}: { className?:
                 <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
               ) : (
                 <BreadcrumbLink asChild>
-                  <Link href={crumb.href}>{crumb.label}</Link>
+                  <Link to={crumb.href}>{crumb.label}</Link>
                 </BreadcrumbLink>
               )}
             </BreadcrumbItem>
