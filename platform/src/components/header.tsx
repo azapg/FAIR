@@ -14,7 +14,7 @@ import {
 import { Settings, User, LogOut, HelpCircle } from "lucide-react";
 import {ThemeToggle} from "@/components/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
-import { useRouter } from "next/navigation";
+import {useNavigate} from "react-router-dom";
 
 interface HeaderProps {
   /**
@@ -86,7 +86,7 @@ function Header({
   onLogoutClick,
   className = "",
 }: HeaderProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { user: authUser, isAuthenticated, logout } = useAuth();
 
   const activeUser = isAuthenticated ? {
@@ -118,7 +118,7 @@ function Header({
       icon: <LogOut className="h-4 w-4" />,
       onClick: onLogoutClick || (() => {
         logout()
-        router.push("/login")
+        navigate("/login")
       }),
       separator: true,
     },
@@ -132,7 +132,7 @@ function Header({
     >
       {/* Left section - Platform title */}
       <div className="flex items-center">
-        <h1 className="text-xl font-serif font-semibold text-foreground cursor-pointer" onClick={() => router.push("/")}>{title}</h1>
+        <h1 className="text-xl font-serif font-semibold text-foreground cursor-pointer" onClick={() => navigate("/")}>{title}</h1>
       </div>
 
       {/* Center section - Extensible content */}
@@ -147,7 +147,7 @@ function Header({
         {rightContent}
         <ThemeToggle />
         {!isAuthenticated ? (
-          <Button onClick={() => router.push("/login")}>
+          <Button onClick={() => navigate("/login")}>
             Log in
           </Button>
         ) : (
