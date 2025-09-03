@@ -41,7 +41,6 @@ bun run dev
 - **Headings**: Remark serif font (`font-serif` class) - see `platform/public/fonts/remark/`
 - **Body Text**: Host Grotesk sans-serif (`font-sans` class) - see `platform/public/fonts/host-grotesk/`  
 - **Code**: Geist Mono (`font-mono` class)
-- Local fonts configured in `src/lib/fonts.ts` with CSS variables
 
 ### Component Patterns
 - **Shadcn/ui**: Radix UI + CVA-based components in `src/components/ui/`
@@ -66,7 +65,6 @@ bun run dev
 - `cli/main.py`: CLI entry point showing current serve command implementation
 - `platform/src/app/demo.tsx`: Homepage showcasing typography system and component patterns
 - `platform/src/components/header.tsx`: Complex component showing prop patterns and TypeScript interfaces
-- `platform/src/lib/fonts.ts`: Local font configuration example
 - Root `README.md`: Project vision and current limitations
 
 ## Development Patterns
