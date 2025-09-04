@@ -35,15 +35,59 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    try {
-      const storedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-      const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null
-      if (storedToken) setToken(storedToken)
-      if (storedUser) setUser(JSON.parse(storedUser))
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false)
+    const validateStoredSession = async () => {
+      try {
+        const storedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+        const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null
+        
+        if (storedToken && storedUser) {
+          // Set the token temporarily to make the validation request
+          setToken(storedToken)
+          
+          try {
+            // Validate the token by making a request to the /auth/me endpoint
+            const userRes = await api.get('/auth/me')
+            const validatedUser: AuthUser = userRes.data
+            
+            // If validation succeeds, set both token and user
+            setUser(validatedUser)
+            persist(storedToken, validatedUser)
+          } catch (error) {
+            // If validation fails, clear the invalid session
+            console.log('Stored session is invalid, clearing...')
+            setToken(null)
+            setUser(null)
+            persist(null, null)
+          }
+        }
+      } catch {
+        // If any error occurs during validation, clear the session
+        setToken(null)
+        setUser(null)
+        persist(null, null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // Listen for session expiry events from the API interceptor
+    const handleSessionExpiry = () => {
+      setToken(null)
+      setUser(null)
+      // Note: localStorage is already cleared by the interceptor
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('auth:session-expired', handleSessionExpiry)
+    }
+
+    validateStoredSession()
+
+    // Cleanup event listener
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('auth:session-expired', handleSessionExpiry)
+      }
     }
   }, [])
 

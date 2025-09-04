@@ -17,4 +17,23 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Response interceptor to handle session expiry
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Check if the error is due to unauthorized access (401) or forbidden (403)
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Clear the invalid session data from localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        
+        // Dispatch a custom event to notify the auth context
+        window.dispatchEvent(new CustomEvent('auth:session-expired'))
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export default api
