@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const handleSessionExpiry = () => {
       setToken(null)
       setUser(null)
-      // Note: localStorage is already cleared by the interceptor
+      window.location.href = '/login'
     }
 
     if (typeof window !== 'undefined') {
