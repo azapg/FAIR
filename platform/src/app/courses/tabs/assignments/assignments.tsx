@@ -15,6 +15,28 @@ export type Assignment = {
   updatedAt: Date;
 }
 
+// Form state type for create assignment dialog
+export type CreateAssignmentForm = {
+  title: string;
+  description: string;
+  dueDate: string; // yyyy-mm-dd
+  gradeType: Grade["type"] | "";
+  gradeValue: string; // number/letter/pass|fail as string
+}
+
+// Artifact chip type for file uploads
+export type ArtifactChip = {
+  id?: string | number;
+  title: string;
+  mime: string;
+  artifact_type: string;
+  storage_type: "local";
+  storage_path: string;
+  fileName: string;
+  status: "pending" | "uploading" | "uploaded" | "error";
+  error?: string;
+}
+
 export const columns: ColumnDef<Assignment>[] = [
   {
     accessorKey: "title",
