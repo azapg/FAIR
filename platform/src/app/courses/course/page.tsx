@@ -71,7 +71,7 @@ export default function CourseDetailPage() {
           <ScrollBar orientation="horizontal" className={"hidden"}/>
         </ScrollArea>
         <TabsContent value={"assignments"} className={"px-8 py-3"}>
-          <AssignmentsTab assignments={courseAssignments}/>
+          <AssignmentsTab assignments={courseAssignments} courseId={courseId}/>
         </TabsContent>
         <TabsContent value={"participants"} className={"px-8"}>participants</TabsContent>
         <TabsContent value={"runs"} className={"px-8"}>runs</TabsContent>
