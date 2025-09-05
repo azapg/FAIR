@@ -4,12 +4,7 @@ import {columns, Assignment} from "@/app/courses/tabs/assignments/assignments";
 import {CreateAssignmentDialog} from "@/app/courses/tabs/assignments/create-assignment-dialog";
 import type { CourseDetail } from "@/hooks/use-courses";
 
-import {useState, useEffect} from "react";
-import {AssignmentsTable} from "@/app/courses/tabs/assignments/assignments-table";
-import {columns, Assignment} from "@/app/courses/tabs/assignments/assignments";
-import {CreateAssignmentDialog} from "@/app/courses/tabs/assignments/create-assignment-dialog";
 import {mapAssignments} from "@/app/courses/tabs/assignments/assignment-utils";
-import type { CourseDetail } from "@/hooks/use-courses";
 
 export default function AssignmentsTab({
   assignments: rawAssignments = [],
