@@ -25,8 +25,8 @@ if PROJECT_ROOT not in sys.path:
 from dotenv import load_dotenv  # type: ignore
 load_dotenv()
 
-from src.fair_platform.backend.data import Base, get_database_url  # noqa: E402
-import src.fair_platform.backend.data.models  # noqa: F401,E402  (import models for autogenerate)
+from fair_platform.backend.data.database import Base, get_database_url  # noqa: E402
+import fair_platform.backend.data.models  # noqa: F401,E402  (import models for autogenerate)
 
 config = context.config
 
