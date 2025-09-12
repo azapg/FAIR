@@ -6,7 +6,6 @@
 .venv
 *.egg-info/
 build/
-cli/__pycache__/
 
 # dependencies
 frontend-dev/node_modules

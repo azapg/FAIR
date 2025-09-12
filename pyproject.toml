@@ -12,11 +12,12 @@ dependencies = [
     "python-jose>=3.5.0",
     "python-multipart>=0.0.20",
     "sqlalchemy>=2.0.43",
+    "typer>=0.17.4",
     "uvicorn>=0.35.0",
 ]
 
 [project.scripts]
-fair = "cli.main:app"
+fair = "fair_platform.cli.main:app"
 fair-backend = "fair_platform.backend.main:main"
 
 [build-system]
@@ -25,4 +26,3 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["cli*"]
