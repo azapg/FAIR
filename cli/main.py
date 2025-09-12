@@ -55,7 +55,7 @@ app.add_typer(db_app, name="db")
 def serve(port: Annotated[int, typer.Option("--port", "-p", help="Port to run the development server on")] = 3000):
     """Start the Fair Platform development server."""
     # I still have to figure out whether this will work for production
-    # As a reference I have open-webui, which installs the frontend in
+    # As a reference I have open-webui, which installs the frontend-dev in
     # \AppData\Local\Programs\Python\Python311\Lib\site-packages\open_webui
     script_dir = os.path.dirname(os.path.abspath(__file__))
     frontend_path = os.path.join(script_dir, "..", "platform")

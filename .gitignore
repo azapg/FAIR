@@ -9,40 +9,40 @@ build/
 cli/__pycache__/
 
 # dependencies
-platform/node_modules
-platform/.pnp
-platform/.pnp.*
-platform/.yarn/*
-platform/!.yarn/patches
-platform/!.yarn/plugins
-platform/!.yarn/releases
-platform/!.yarn/versions
+frontend-dev/node_modules
+frontend-dev/.pnp
+frontend-dev/.pnp.*
+frontend-dev/.yarn/*
+frontend-dev/!.yarn/patches
+frontend-dev/!.yarn/plugins
+frontend-dev/!.yarn/releases
+frontend-dev/!.yarn/versions
 
 # testing
-platform/coverage
+frontend-dev/coverage
 
 # production
-platform/dist
+frontend-dev/dist
 
 # misc
-platform/.DS_Store
-platform/*.pem
+frontend-dev/.DS_Store
+frontend-dev/*.pem
 
 # debug
-platform/npm-debug.log*
-platform/yarn-debug.log*
-platform/yarn-error.log*
-platform/pnpm-debug.log*
+frontend-dev/npm-debug.log*
+frontend-dev/yarn-debug.log*
+frontend-dev/yarn-error.log*
+frontend-dev/pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
 
 # vercel
-platform/.vercel
+frontend-dev/.vercel
 
 # typescript
-platform/*.tsbuildinfo
-platform/next-env.d.ts
+frontend-dev/*.tsbuildinfo
+frontend-dev/next-env.d.ts
 
 # BACKEND
 

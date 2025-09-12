@@ -15,7 +15,7 @@ The goal is to support researchers, educators, and students who want to explore 
 
 ## Getting Started
 ```bash
-# For frontend development
+# For frontend-dev development
 cd platform
 bun install
 bun run dev
