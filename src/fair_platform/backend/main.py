@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Path, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from fair_platform.backend.data.database import init_db
@@ -11,6 +12,7 @@ from fair_platform.backend.api.routers.submissions import router as submissions_
 from fair_platform.backend.api.routers.workflows import router as workflows_router
 from fair_platform.backend.api.routers.workflow_runs import router as workflow_runs_router
 from fair_platform.backend.api.routers.auth import router as auth_router
+import importlib.resources
 
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
@@ -25,10 +27,7 @@ async def lifespan(_ignored: FastAPI):
 app = FastAPI(title="Fair Platform Backend", version="0.1.0", lifespan=lifespan)
 
 # TODO: use env variable
-origins = [
-    "http://localhost",
-    "http://localhost:3000",
-]
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -49,10 +48,6 @@ app.include_router(workflow_runs_router, prefix="/api/workflow-runs", tags=["wor
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
-@app.get("/")
-def read_root():
-    return {"message": "Hello from backend!"}
-
 
 @app.get("/health")
 def health():
@@ -60,9 +55,26 @@ def health():
 
 
 def main():
-    # Local dev runner
+    run()
+
+
+def run(host: str = "127.0.0.1", port: int = 8000, headless: bool = False):
+    if not headless:
+        @app.get("/{full_path:path}")
+        def serve(full_path: str):
+            package_path = importlib.resources.files("fair_platform.frontend") / "dist"
+            file_path = package_path / full_path
+
+            if file_path.is_file():
+                with importlib.resources.as_file(file_path) as file_path:
+                    return FileResponse(file_path)
+            elif (package_path / "index.html").is_file():
+                with importlib.resources.as_file(package_path / "index.html") as index_file:
+                    return FileResponse(index_file)
+            return HTTPException(status_code=404, detail="Not Found")
+
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run(app, host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":
