@@ -4,8 +4,10 @@ from typing import Generator, Iterator, Any
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from fair_platform.backend.data.storage import storage
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 __all__ = [
@@ -18,15 +20,14 @@ __all__ = [
     "session_dependency",
 ]
 
-DEFAULT_SQLITE_FILENAME = "fair.db"
 
 def get_database_url() -> str:
     url = os.getenv("DATABASE_URL", "").strip()
     if not url:
         print("Using SQLite since DATABASE_URL is not set")
-        return f"sqlite:///{DEFAULT_SQLITE_FILENAME}"
+        return f"sqlite:///{storage.local_db_path}"
     if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://") :]
+        url = "postgresql://" + url[len("postgres://"):]
     return url
 
 

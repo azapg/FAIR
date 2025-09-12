@@ -6,6 +6,7 @@ authors = [{name = "Allan Zapata", email = "allan.zapata@up.ac.pa" }]
 readme = "README.md"
 requires-python = ">=3.12" # I should probably change this
 dependencies = [
+    "appdirs>=1.4.4",
     "dotenv>=0.9.9",
     "fastapi>=0.116.1",
     "pydantic[email]>=2.11.7",
