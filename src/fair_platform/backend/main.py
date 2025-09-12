@@ -1,7 +1,9 @@
-from fastapi import FastAPI, Path, HTTPException
-from fastapi.responses import FileResponse
-from fastapi.middleware.cors import CORSMiddleware
+import importlib.resources
+from fastapi import FastAPI
 from contextlib import asynccontextmanager
+
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fair_platform.backend.data.database import init_db
 from fair_platform.backend.api.routers.users import router as users_router
 from fair_platform.backend.api.routers.courses import router as courses_router
@@ -12,7 +14,7 @@ from fair_platform.backend.api.routers.submissions import router as submissions_
 from fair_platform.backend.api.routers.workflows import router as workflows_router
 from fair_platform.backend.api.routers.workflow_runs import router as workflow_runs_router
 from fair_platform.backend.api.routers.auth import router as auth_router
-import importlib.resources
+
 
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
@@ -25,17 +27,6 @@ async def lifespan(_ignored: FastAPI):
 
 
 app = FastAPI(title="Fair Platform Backend", version="0.1.0", lifespan=lifespan)
-
-# TODO: use env variable
-origins = ["*"]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
@@ -60,18 +51,25 @@ def main():
 
 def run(host: str = "127.0.0.1", port: int = 8000, headless: bool = False):
     if not headless:
-        @app.get("/{full_path:path}")
-        def serve(full_path: str):
-            package_path = importlib.resources.files("fair_platform.frontend") / "dist"
-            file_path = package_path / full_path
+        frontend_files = importlib.resources.files("fair_platform.frontend")
+        dist_dir = frontend_files / "dist"
 
-            if file_path.is_file():
-                with importlib.resources.as_file(file_path) as file_path:
-                    return FileResponse(file_path)
-            elif (package_path / "index.html").is_file():
-                with importlib.resources.as_file(package_path / "index.html") as index_file:
-                    return FileResponse(index_file)
-            return HTTPException(status_code=404, detail="Not Found")
+        with importlib.resources.as_file(dist_dir) as dist_path:
+            app.mount("/assets", StaticFiles(directory=dist_path / "assets"), name="assets")
+            app.mount("/fonts", StaticFiles(directory=dist_path / "fonts"), name="fonts")
+            app.mount("/data", StaticFiles(directory=dist_path / "data"), name="data")
+
+        @app.middleware("http")
+        async def spa_fallback(request, call_next):
+            try:
+                response = await call_next(request)
+                if response.status_code == 404:
+                    with importlib.resources.as_file(dist_dir / "index.html") as index_path:
+                        return FileResponse(index_path)
+                return response
+            except Exception:
+                with importlib.resources.as_file(dist_dir / "index.html") as index_path:
+                    return FileResponse(index_path)
 
     import uvicorn
     uvicorn.run(app, host=host, port=port, reload=False)
