@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
-from data.database import session_dependency
-from data.models.plugin import Plugin
-from api.schema.plugin import PluginCreate, PluginRead, PluginUpdate
-from api.routers.auth import get_current_user
-from data.models.user import User, UserRole
+from fair_platform.backend.data.database import session_dependency
+from fair_platform.backend.data.models.plugin import Plugin
+from fair_platform.backend.api.schema.plugin import PluginCreate, PluginRead, PluginUpdate
+from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.data.models.user import User, UserRole
 
 router = APIRouter()
 

@@ -1,16 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from data.database import init_db
-from api.routers.users import router as users_router
-from api.routers.courses import router as courses_router
-from api.routers.artifacts import router as artifacts_router
-from api.routers.assignments import router as assignments_router
-from api.routers.plugins import router as plugins_router
-from api.routers.submissions import router as submissions_router
-from api.routers.workflows import router as workflows_router
-from api.routers.workflow_runs import router as workflow_runs_router
-from api.routers.auth import router as auth_router
+from fair_platform.backend.data.database import init_db
+from fair_platform.backend.api.routers.users import router as users_router
+from fair_platform.backend.api.routers.courses import router as courses_router
+from fair_platform.backend.api.routers.artifacts import router as artifacts_router
+from fair_platform.backend.api.routers.assignments import router as assignments_router
+from fair_platform.backend.api.routers.plugins import router as plugins_router
+from fair_platform.backend.api.routers.submissions import router as submissions_router
+from fair_platform.backend.api.routers.workflows import router as workflows_router
+from fair_platform.backend.api.routers.workflow_runs import router as workflow_runs_router
+from fair_platform.backend.api.routers.auth import router as auth_router
 
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):

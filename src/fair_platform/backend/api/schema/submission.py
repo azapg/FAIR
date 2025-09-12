@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from data.models.submission import SubmissionStatus
+from fair_platform.backend.data.models.submission import SubmissionStatus
 
 
 class SubmissionBase(BaseModel):

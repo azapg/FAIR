@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload, selectinload
 
-from data.models.course import Course
-from data.models.user import User, UserRole
-from api.schema.course import CourseCreate, CourseRead, CourseUpdate, CourseDetailRead
-from data.database import session_dependency
-from api.routers.auth import get_current_user
+from fair_platform.backend.data.models.course import Course
+from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.api.schema.course import CourseCreate, CourseRead, CourseUpdate, CourseDetailRead
+from fair_platform.backend.data.database import session_dependency
+from fair_platform.backend.api.routers.auth import get_current_user
 
 router = APIRouter()
 

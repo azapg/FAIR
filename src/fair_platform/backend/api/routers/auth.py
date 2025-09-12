@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
-from api.schema.user import UserCreate, UserRead
+from fair_platform.backend.api.schema.user import UserCreate, UserRead
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 
-from data.database import session_dependency
-from data.models import User
+from fair_platform.backend.data.database import session_dependency
+from fair_platform.backend.data.models import User
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/mock_login")

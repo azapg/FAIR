@@ -1,9 +1,9 @@
 from typing import Optional, List
 from uuid import UUID
 from pydantic import BaseModel
-from api.schema.user import UserRead
-from api.schema.assignment import AssignmentRead
-from api.schema.workflow import WorkflowRead
+from fair_platform.backend.api.schema.user import UserRead
+from fair_platform.backend.api.schema.assignment import AssignmentRead
+from fair_platform.backend.api.schema.workflow import WorkflowRead
 
 
 class CourseBase(BaseModel):

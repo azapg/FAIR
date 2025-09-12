@@ -47,11 +47,11 @@ frontend-dev/next-env.d.ts
 # BACKEND
 
 # dependencies
-backend/venv/
-backend/.venv/
-backend/.mypy_cache/
-backend/.pytest_cache/
-backend/.coverage
+src/fair_platform/backend/venv/
+src/fair_platform/backend/.venv/
+src/fair_platform/backend/.mypy_cache/
+src/fair_platform/backend/.pytest_cache/
+src/fair_platform/backend/.coverage
 
 # IDEs
 **/.idea

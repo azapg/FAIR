@@ -3,10 +3,10 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from api.routers.auth import get_current_user
-from data.models.user import User, UserRole
-from api.schema.user import UserCreate, UserRead, UserUpdate
-from data.database import session_dependency
+from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.api.schema.user import UserCreate, UserRead, UserUpdate
+from fair_platform.backend.data.database import session_dependency
 
 router = APIRouter()
 

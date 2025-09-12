@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from data.models.workflow_run import WorkflowRunStatus
+from fair_platform.backend.data.models.workflow_run import WorkflowRunStatus
 
 
 class WorkflowRunBase(BaseModel):

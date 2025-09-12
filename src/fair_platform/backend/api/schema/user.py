@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr
 
-from data.models.user import UserRole
+from fair_platform.backend.data.models.user import UserRole
 
 class UserBase(BaseModel):
     name: str

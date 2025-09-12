@@ -5,13 +5,13 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from data.database import session_dependency
-from data.models.workflow_run import WorkflowRun, WorkflowRunStatus
-from data.models.workflow import Workflow
-from data.models.course import Course
-from data.models.user import User, UserRole
-from api.schema.workflow_run import WorkflowRunCreate, WorkflowRunRead, WorkflowRunUpdate
-from api.routers.auth import get_current_user
+from fair_platform.backend.data.database import session_dependency
+from fair_platform.backend.data.models.workflow_run import WorkflowRun, WorkflowRunStatus
+from fair_platform.backend.data.models.workflow import Workflow
+from fair_platform.backend.data.models.course import Course
+from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.api.schema.workflow_run import WorkflowRunCreate, WorkflowRunRead, WorkflowRunUpdate
+from fair_platform.backend.api.routers.auth import get_current_user
 
 router = APIRouter()
 

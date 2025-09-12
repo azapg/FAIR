@@ -6,14 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from data.database import session_dependency
-from data.models.submission import Submission, SubmissionStatus, submission_artifacts, submission_workflow_runs
-from data.models.assignment import Assignment
-from data.models.user import User, UserRole
-from data.models.artifact import Artifact
-from data.models.workflow_run import WorkflowRun
-from api.schema.submission import SubmissionCreate, SubmissionRead, SubmissionUpdate
-from api.routers.auth import get_current_user
+from fair_platform.backend.data.database import session_dependency
+from fair_platform.backend.data.models.submission import Submission, SubmissionStatus, submission_artifacts, submission_workflow_runs
+from fair_platform.backend.data.models.assignment import Assignment
+from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.data.models.artifact import Artifact
+from fair_platform.backend.data.models.workflow_run import WorkflowRun
+from fair_platform.backend.api.schema.submission import SubmissionCreate, SubmissionRead, SubmissionUpdate
+from fair_platform.backend.api.routers.auth import get_current_user
 
 router = APIRouter()
 
