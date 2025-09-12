@@ -67,7 +67,7 @@ def run(host: str = "127.0.0.1", port: int = 8000, headless: bool = False):
                     with importlib.resources.as_file(dist_dir / "index.html") as index_path:
                         return FileResponse(index_path)
                 return response
-            except Exception:
+            except (FileNotFoundError, RuntimeError, Exception):
                 with importlib.resources.as_file(dist_dir / "index.html") as index_path:
                     return FileResponse(index_path)
 
