@@ -18,7 +18,7 @@ The Fair Platform is a unified AI-powered grading platform with three main compo
 pip install .
 fair serve --port 3000
 
-# Manual frontend development
+# Manual frontend-dev development
 cd platform
 bun install
 bun run dev
