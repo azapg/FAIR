@@ -1,4 +1,4 @@
-# The Fair Platform [![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
+# The Fair Platform [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 FAIR (or _The Fair Platform_) is an open-source platform that makes it easy to experiment with automatic grading systems using AI. It provides a flexible and extensible environment for building, testing, and comparing grading approaches, from interpreters and rubrics to agent-based systems and research datasets.
 
@@ -15,19 +15,21 @@ The goal is to support researchers, educators, and students who want to explore 
 
 ## Getting Started
 ```bash
-# For frontend-dev development
-cd platform
-bun install
-bun run dev
-
-# For backend development
-cd backend
-uv run -m main
+pip install fair-platform
+fair serve
 ```
-### Requirements
-- Python 3.10+
+
+### Development Requirements
+- Python 3.12+
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - [Bun](https://bun.com/get) (for frontend development)
+
+Once you have uv and Bun instlaled, you can build the platform and start using it:
+```bash
+uv run
+./build.sh
+fair serve
+```
 
 ## Roadmap
 Some planned directions for FAIR include:
@@ -48,23 +50,22 @@ If you’re interested in collaborating, open an issue or start a discussion.
 
 ## License
 
-This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0). See LICENSE for the full text and details.
 
 ### What this means:
 
 **You CAN:**
-- Use this software for research, education, and personal projects
-- Universities and educational institutions can serve it to students
-- Make modifications and distribute copies for noncommercial purposes
-- Use insights and knowledge gained from the platform for any purpose (including commercial)
-- Nonprofit organizations can use it regardless of funding source
+- Use, modify, and distribute this software for any purpose, including commercial use.
+- Use insights and knowledge gained from the platform for any purpose.
+- Make modifications and distribute copies, provided that when you distribute the software (or derivative works) you comply with GPL-3.0 requirements.
+- Nonprofit organizations can use it regardless of funding source.
 
-**You CANNOT:**
-- Use this software or its infrastructure for commercial purposes
-- Offer this software as a commercial service
-- Integrate this software into commercial products
+**You MUST / OBEY GPL-3.0 REQUIREMENTS WHEN DISTRIBUTING:**
+- When distributing the software or derivative works, make the source code available under the terms of GPL-3.0.
+- Preserve copyright and license notices in redistributed source and binaries.
+- License any derivative works under GPL-3.0 when you distribute them.
 
 ### For Researchers:
-This platform is designed for academic and research use. While you cannot commercialize the software itself, you're free to use any research findings, insights, or knowledge gained from using this platform for commercial applications.
+This platform is intended for academic and research use and may also be used in commercial research or products. Note that if you distribute derived software that includes code from this project, you must do so under GPL-3.0 and provide corresponding source code.
 
 **Questions about licensing?** Please open an issue or contact [allan.zapata@up.ac.pa](mailto:allan.zapata@up.ac.pa).

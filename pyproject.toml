@@ -10,7 +10,8 @@ classifiers = [
     "Operating System :: OS Independent",
     "Development Status :: 1 - Planning"
 ]
-license = { file = "LICENSE" }
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 dependencies = [
     "appdirs>=1.4.4",
     "dotenv>=0.9.9",
