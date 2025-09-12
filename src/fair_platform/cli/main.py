@@ -1,7 +1,28 @@
 import typer
 from typing_extensions import Annotated
+from importlib.metadata import version, PackageNotFoundError
+from pathlib import Path
+import tomllib
 
-__version__ = "0.1.0"
+
+def _get_version() -> str:
+    try:
+        return version("fair-platform")
+    except PackageNotFoundError:
+        path = Path(__file__).resolve()
+        for parent in path.parents:
+            candidate = parent / "pyproject.toml"
+            if candidate.exists():
+                try:
+                    with candidate.open("rb") as f:
+                        data = tomllib.load(f)
+                    return data.get("project", {}).get("version", "0.0.0")
+                except Exception:
+                    break
+        return "0.0.0"
+
+
+__version__ = _get_version()
 
 
 def version_callback(value: bool):

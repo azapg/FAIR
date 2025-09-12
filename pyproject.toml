@@ -1,10 +1,16 @@
 [project]
 name = "fair-platform"
-version = "0.1.0"
-description = "Fair Platform CLI Wrapper"
-authors = [{name = "Allan Zapata", email = "allan.zapata@up.ac.pa" }]
+version = "0.1.3"
+description = "Fair Platform - The complete platform with backend, frontend, and CLI"
+authors = [{ name = "Allan Zapata", email = "allan.zapata@up.ac.pa" }]
 readme = "README.md"
-requires-python = ">=3.12" # I should probably change this
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 1 - Planning"
+]
+license = { file = "LICENSE" }
 dependencies = [
     "appdirs>=1.4.4",
     "dotenv>=0.9.9",
@@ -19,11 +25,14 @@ dependencies = [
 
 [project.scripts]
 fair = "fair_platform.cli.main:app"
-fair-backend = "fair_platform.backend.main:main"
 
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.8.17,<0.9.0"]
+build-backend = "uv_build"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
