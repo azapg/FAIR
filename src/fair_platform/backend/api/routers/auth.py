@@ -11,7 +11,7 @@ from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/mock_login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/mock-login")
 
 SECRET_KEY = "fair_dont.worry--this.is.a.fake.key-6u392h"
 ALGORITHM = "HS256"
