@@ -92,7 +92,7 @@ class PluginMeta(BaseModel):
     author: str
     description: Optional[str] = None
     version: Optional[str] = None
-    plugin: Type[BasePlugin]
+    # plugin: Type[BasePlugin]
 
 
 PLUGINS: Dict[str, PluginMeta] = {}
@@ -121,7 +121,7 @@ class FairPlugin:
             author=self.author,
             description=self.description,
             version=self.version,
-            plugin=cls
+            # plugin=cls
         )
 
         PLUGINS[self.name] = metadata
@@ -165,6 +165,7 @@ __all__ = [
     "TranscribedSubmission",
     "GradeResult",
 
+    "PluginMeta",
     "FairPlugin",
     "get_plugin_metadata",
     "list_plugins",

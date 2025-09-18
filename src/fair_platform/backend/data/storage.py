@@ -21,6 +21,12 @@ class PlatformStorage:
         return self.data_dir / "fair.db"
 
     @property
+    def plugins_dir(self):
+        plugins_dir = self.data_dir / "plugins"
+        plugins_dir.mkdir(exist_ok=True)
+        return plugins_dir
+
+    @property
     def uploads_dir(self):
         upload_dir = self.data_dir / "uploads"
         upload_dir.mkdir(exist_ok=True)

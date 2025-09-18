@@ -15,6 +15,8 @@ from fair_platform.backend.api.routers.workflows import router as workflows_rout
 from fair_platform.backend.api.routers.workflow_runs import router as workflow_runs_router
 from fair_platform.backend.api.routers.auth import router as auth_router
 
+from fair_platform.sdk import load_storage_plugins
+
 
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
@@ -50,6 +52,7 @@ def main():
 
 
 def run(host: str = "127.0.0.1", port: int = 8000, headless: bool = False):
+    load_storage_plugins()
     if not headless:
         frontend_files = importlib.resources.files("fair_platform.frontend")
         dist_dir = frontend_files / "dist"
