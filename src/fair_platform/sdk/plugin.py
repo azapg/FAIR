@@ -102,7 +102,7 @@ class PluginMeta(BaseModel):
     version: str
     hash: str
     source: str
-    settings_model: Dict[str, Any]
+    settings: Dict[str, Any]
 
 
 PLUGINS: Dict[str, PluginMeta] = {}
@@ -148,7 +148,7 @@ class FairPlugin:
             hash=extension_hash,
             source=source,
             author_email=self.author_email,
-            settings_model=create_settings_model(cls).model_json_schema()
+            settings=create_settings_model(cls).model_json_schema()
         )
 
         PLUGINS[self.name] = metadata

@@ -3,15 +3,17 @@ import SectionContainer from "./section-container"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import {Input} from "@/components/ui/input";
+import { usePlugins } from "@/hooks/use-plugins";
 
 export default function TranscriberSection() {
-  
+  let { data: plugins = [], isLoading, isError } = usePlugins("transcription");
+
   const onSelectPluginChange = (plugin: string) => {
     console.log("Selected plugin:", plugin);
   }
 
   return (
-    <SectionContainer pluginOptions={["SimpleTranscriber", "ComplexTranscriber"]} onSelectPluginChange={onSelectPluginChange}>
+    <SectionContainer pluginOptions={plugins?.map(plugin => plugin.name)} onSelectPluginChange={onSelectPluginChange}>
       <div className="flex gap-1 items-center text-xs">
         <label className="text-muted-foreground flex-1">Force Language</label>
         <Select defaultValue="auto">
