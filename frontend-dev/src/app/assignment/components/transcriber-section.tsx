@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/button"
 import {Input} from "@/components/ui/input";
 
 export default function TranscriberSection() {
+  
+  const onSelectPluginChange = (plugin: string) => {
+    console.log("Selected plugin:", plugin);
+  }
+
   return (
-    <SectionContainer label="Transcriber">
+    <SectionContainer pluginOptions={["SimpleTranscriber", "ComplexTranscriber"]} onSelectPluginChange={onSelectPluginChange}>
       <div className="flex gap-1 items-center text-xs">
         <label className="text-muted-foreground flex-1">Force Language</label>
         <Select defaultValue="auto">

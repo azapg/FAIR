@@ -38,7 +38,7 @@ export default function GraderSection() {
   const [temperature, setTemperature] = useState<number>(0.5)
 
   return (
-    <SectionContainer label="Grader">
+    <SectionContainer selectedPlugin="SimpleGrader" pluginOptions={["SimpleGrader", "AdvancedGrader"]}>
       <Table className="text-xs text-muted-foreground">
         <TableCaption className={"caption-top text-xs text-left pb-1"}>Structured Rubric</TableCaption>
         {/*<TableCaption className={"text-xs text-right pb-1"}><Button variant={"outline"} size={"sm"}>Add criterion</Button></TableCaption>*/}

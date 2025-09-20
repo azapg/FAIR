@@ -8,7 +8,7 @@ export default function ValidatorSection() {
   const [temperature, setTemperature] = useState<number>(0.2)
 
   return (
-    <SectionContainer label="Validator">
+    <SectionContainer selectedPlugin="SimpleValidator" pluginOptions={["SimpleValidator", "AdvancedValidator"]}>
       <div className="flex gap-1">
         <div className="flex items-center justify-between">
           <label className="text-xs text-muted-foreground">Temperature</label>
