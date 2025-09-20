@@ -37,17 +37,25 @@ export type ArtifactChip = {
   error?: string;
 }
 
+
 export const columns: ColumnDef<Assignment>[] = [
   {
     accessorKey: "title",
     header: "Assignment",
-    cell: info => info.getValue(),
+    cell: info => {
+      const value = info.getValue() as string;
+      return value.length > 50 ? `${value.substring(0, 50)}...` : value;
+    },
     footer: props => props.column.id,
   },
   {
     accessorKey: "description",
     header: "Description",
-    cell: info => info.getValue(),
+    cell: info => {
+      const value = info.getValue() as string;
+      if (!value) return "";
+      return value.length > 80 ? `${value.substring(0, 80)}...` : value;
+    },
     footer: props => props.column.id,
   },
   {
