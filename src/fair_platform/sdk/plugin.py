@@ -31,15 +31,20 @@ class BasePlugin:
                 if field.required:
                     raise ValueError(f"Missing required settings field: {name}")
 
-    def create_settings_model(self) -> Type[BaseModel]:
-        settings_fields = getattr(self.__class__, '_settings_fields', {})
-        model_fields = {}
+def create_settings_model(plugin_class: Type[BasePlugin] | BasePlugin) -> Type[BaseModel]:
+    settings_fields = getattr(plugin_class, '_settings_fields', {})
+    model_fields = {}
 
-        for name, field in settings_fields.items():
-            field_type, pydantic_field = field.to_pydantic_field()
-            model_fields[name] = (field_type, pydantic_field)
+    for name, field in settings_fields.items():
+        field_type, pydantic_field = field.to_pydantic_field()
+        model_fields[name] = (field_type, pydantic_field)
 
-        return create_model(f"{self.__class__.__name__}Settings", **model_fields)
+    if isinstance(plugin_class, BasePlugin):
+        model_name = f"{plugin_class.__class__.__name__}"
+    else:
+        model_name = plugin_class.__name__
+
+    return create_model(model_name, **model_fields)
 
 
 class TranscribedSubmission(BaseModel):
@@ -97,6 +102,7 @@ class PluginMeta(BaseModel):
     version: str
     hash: str
     source: str
+    settings_model: Dict[str, Any] = None
 
 
 PLUGINS: Dict[str, PluginMeta] = {}
@@ -140,7 +146,9 @@ class FairPlugin:
             description=self.description,
             version=self.version,
             hash=extension_hash,
-            source=source
+            source=source,
+            author_email=self.author_email,
+            settings_model=create_settings_model(cls).model_json_schema()
         )
 
         PLUGINS[self.name] = metadata
@@ -182,6 +190,7 @@ def list_validation_plugins() -> List[PluginMeta]:
 
 __all__ = [
     "BasePlugin",
+    "create_settings_model",
     "TranscriptionPlugin",
     "GradePlugin",
     "ValidationPlugin",

@@ -6,7 +6,8 @@ from pydantic import BaseModel, ValidationError
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.data.models import User, UserRole
 from fair_platform.sdk import list_plugins, list_grade_plugins, list_validation_plugins, list_transcription_plugins, \
-    PluginMeta, get_plugin_object, GradePlugin, TranscribedSubmission, Submission, Submitter, Assignment
+    PluginMeta, get_plugin_object, GradePlugin, TranscribedSubmission, Submission, Submitter, Assignment, \
+    create_settings_model
 from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter()
@@ -37,7 +38,6 @@ def list_all_plugins(type_filter: Optional[PluginType] = PluginType.all, user: U
 
 class GradeRequest(BaseModel):
     submission_id: str
-    plugin_id: str
     plugin_version: Optional[str] = None
     plugin_hash: Optional[str] = None
     settings: dict[str, Any]
@@ -60,7 +60,7 @@ def grade(plugin_id: str, grade_request: GradeRequest, user: User = Depends(get_
     if not isinstance(plugin, GradePlugin):
         raise HTTPException(status_code=400, detail="Plugin is not a grading plugin")
     try:
-        plugin_settings_model = plugin.create_settings_model()
+        plugin_settings_model = create_settings_model(plugin)
         validated_settings = plugin_settings_model(**grade_request.settings)
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=e.errors())

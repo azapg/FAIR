@@ -2,7 +2,7 @@ from fair_platform.sdk.schemas import Submission, Submitter, Assignment, Artifac
 from fair_platform.sdk.settings import SettingsField, SwitchField, TextField, NumberField
 from fair_platform.sdk.plugin import BasePlugin, TranscriptionPlugin, GradePlugin, ValidationPlugin, \
     TranscribedSubmission, GradeResult, PluginMeta, FairPlugin, list_plugins, list_grade_plugins, list_validation_plugins, \
-    list_transcription_plugins, get_plugin_metadata, get_plugin_object
+    list_transcription_plugins, get_plugin_metadata, get_plugin_object, create_settings_model
 from fair_platform.sdk.plugin_loader import load_storage_plugins
 
 __all__ = [
@@ -17,6 +17,7 @@ __all__ = [
     "NumberField",
 
     "BasePlugin",
+    "create_settings_model",
     "TranscriptionPlugin",
     "GradePlugin",
     "ValidationPlugin",
