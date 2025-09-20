@@ -102,7 +102,7 @@ class PluginMeta(BaseModel):
     version: str
     hash: str
     source: str
-    settings_model: Dict[str, Any] = None
+    settings_model: Dict[str, Any]
 
 
 PLUGINS: Dict[str, PluginMeta] = {}
