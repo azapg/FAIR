@@ -7,7 +7,7 @@ from pydantic import BaseModel, create_model
 
 
 class BasePlugin:
-    _settings_fields = dict[str, SettingsField[Any]]
+    _settings_fields: dict[str, SettingsField[Any]]
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -104,6 +104,7 @@ TRANSCRIPTION_PLUGINS: Dict[str, PluginMeta] = {}
 GRADE_PLUGINS: Dict[str, PluginMeta] = {}
 VALIDATION_PLUGINS: Dict[str, PluginMeta] = {}
 
+PLUGINS_OBJECTS: Dict[str, Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]] = {}
 
 class FairPlugin:
     def __init__(self, id: str, name: str, author, version: str, description: Optional[str] = None,
@@ -146,10 +147,13 @@ class FairPlugin:
 
         if issubclass(cls, TranscriptionPlugin):
             TRANSCRIPTION_PLUGINS[self.name] = metadata
+            PLUGINS_OBJECTS[self.id] = cls
         if issubclass(cls, GradePlugin):
             GRADE_PLUGINS[self.name] = metadata
+            PLUGINS_OBJECTS[self.id] = cls
         if issubclass(cls, ValidationPlugin):
             VALIDATION_PLUGINS[self.name] = metadata
+            PLUGINS_OBJECTS[self.id] = cls
 
         return cls
 
@@ -157,6 +161,8 @@ class FairPlugin:
 def get_plugin_metadata(name: str) -> Optional[PluginMeta]:
     return PLUGINS.get(name)
 
+def get_plugin_object(name: str) -> Optional[Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]]:
+    return PLUGINS_OBJECTS.get(name)
 
 def list_plugins() -> List[PluginMeta]:
     return list(PLUGINS.values())
@@ -186,6 +192,7 @@ __all__ = [
     "PluginMeta",
     "FairPlugin",
     "get_plugin_metadata",
+    "get_plugin_object",
     "list_plugins",
     "list_transcription_plugins",
     "list_grade_plugins",
