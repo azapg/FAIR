@@ -1,5 +1,6 @@
 from abc import abstractmethod, ABC
 from typing import Optional, TypeVar, Generic
+from pydantic import Field
 
 T = TypeVar('T')
 
@@ -16,9 +17,9 @@ class SettingsField(Generic[T], ABC):
 
     def __set_name__(self, owner: type, name: str) -> None:
         self.name = name
-        if not hasattr(owner, '_config_fields'):
-            owner._config_fields = {}
-        owner._config_fields[name] = self
+        if not hasattr(owner, '_settings_fields'):
+            owner._settings_fields = {}
+        owner._settings_fields[name] = self
 
     @abstractmethod
     def to_pydantic_field(self):
@@ -35,7 +36,6 @@ class TextField(SettingsField[str]):
         self.pattern = pattern
 
     def to_pydantic_field(self):
-        from pydantic import Field
         return (str, Field(default=self.default, title="TextField", description=self.label,
                            min_length=self.min_length if self.required else 0,
                            max_length=self.max_length, pattern=self.pattern))
@@ -49,7 +49,6 @@ class NumberField(SettingsField[float]):
         self.le = le
 
     def to_pydantic_field(self):
-        from pydantic import Field
         return (float, Field(default=self.default, title="NumberField", description=self.label,
                              ge=self.ge, le=self.le))
 
@@ -59,5 +58,4 @@ class SwitchField(SettingsField[bool]):
         super().__init__(label, default, required)
 
     def to_pydantic_field(self):
-        from pydantic import Field
         return bool, Field(default=self.default, title="SwitchField", description=self.label)
