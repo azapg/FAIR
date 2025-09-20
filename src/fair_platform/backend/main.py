@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.cors import CORSMiddleware
+
 from fair_platform.backend.data.database import init_db
 from fair_platform.backend.api.routers.users import router as users_router
 from fair_platform.backend.api.routers.courses import router as courses_router
@@ -51,7 +53,7 @@ def main():
     run()
 
 
-def run(host: str = "127.0.0.1", port: int = 8000, headless: bool = False):
+def run(host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False):
     load_storage_plugins()
     if not headless:
         frontend_files = importlib.resources.files("fair_platform.frontend")
@@ -73,6 +75,15 @@ def run(host: str = "127.0.0.1", port: int = 8000, headless: bool = False):
             except (FileNotFoundError, RuntimeError, Exception):
                 with importlib.resources.as_file(dist_dir / "index.html") as index_path:
                     return FileResponse(index_path)
+
+    if dev:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     import uvicorn
     uvicorn.run(app, host=host, port=port, reload=False)

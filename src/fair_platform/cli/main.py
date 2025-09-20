@@ -44,9 +44,9 @@ def common(
 
 @app.command()
 def serve(port: Annotated[int, typer.Option("--port", "-p", help="Port to run the development server on")] = 3000,
-          headless: Annotated[bool, typer.Option("--headless", "-h", help="Run in headless mode")] = False):
+          headless: Annotated[bool, typer.Option("--headless", "-h", help="Run in headless mode")] = False, dev: Annotated[bool, typer.Option("--dev", "-d", help="Run in development mode")] = False):
     from fair_platform.backend.main import run
-    run(host="127.0.0.1", port=port, headless=headless)
+    run(host="127.0.0.1", port=port, headless=headless, dev=dev)
 
 
 if __name__ == "__main__":

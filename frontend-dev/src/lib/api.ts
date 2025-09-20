@@ -1,7 +1,15 @@
 import axios from 'axios'
 
+const development = import.meta.env.DEV;
+
+let baseURL = '/api'
+
+if (development) {
+  baseURL = 'http://localhost:8000/api'
+}
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
