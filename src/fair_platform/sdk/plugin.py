@@ -1,7 +1,8 @@
+import inspect
 from abc import ABC, abstractmethod
 
 from fair_platform.sdk import Submission, SettingsField
-from typing import Any, Type, List, Optional, Dict
+from typing import Any, Type, List, Optional, Dict, Union
 from pydantic import BaseModel, create_model
 
 
@@ -88,11 +89,14 @@ class ValidationPlugin(BasePlugin, ABC):
 
 
 class PluginMeta(BaseModel):
+    id: str
     name: str
     author: str
+    author_email: Optional[str] = None
     description: Optional[str] = None
-    version: Optional[str] = None
-    # plugin: Type[BasePlugin]
+    version: str
+    hash: str
+    source: str
 
 
 PLUGINS: Dict[str, PluginMeta] = {}
@@ -102,10 +106,13 @@ VALIDATION_PLUGINS: Dict[str, PluginMeta] = {}
 
 
 class FairPlugin:
-    def __init__(self, name: str, author: str, description: Optional[str] = None, version: Optional[str] = None):
+    def __init__(self, id: str, name: str, author, version: str, description: Optional[str] = None,
+                 email: Optional[str] = None):
+        self.id = id
         self.name = name
         self.author = author
         self.description = description
+        self.author_email = email
         self.version = version
 
     def __call__(self, cls: Type[BasePlugin]):
@@ -116,12 +123,23 @@ class FairPlugin:
         if self.name in PLUGINS:
             raise ValueError(f"A plugin with the name '{self.name}' is already registered.")
 
+        current_module = inspect.getmodule(cls)
+        extension_hash = getattr(current_module, "__extension_hash__", None)
+        if extension_hash is None:
+            raise ValueError(f"Plugin class '{cls.__name__}' is missing '__extension_hash__' attribute.")
+
+        source = getattr(current_module, "__extension_dir__", None)
+        if source is None:
+            raise ValueError(f"Plugin class '{cls.__name__}' is missing '__extension_dir__' attribute.")
+
         metadata = PluginMeta(
+            id=self.id,
             name=self.name,
             author=self.author,
             description=self.description,
             version=self.version,
-            # plugin=cls
+            hash=extension_hash,
+            source=source
         )
 
         PLUGINS[self.name] = metadata

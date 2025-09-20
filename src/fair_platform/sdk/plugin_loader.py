@@ -1,3 +1,7 @@
+import hashlib
+from pathlib import Path
+from types import ModuleType
+
 from fair_platform.backend import storage
 
 import importlib.util
@@ -5,8 +9,22 @@ import os
 import sys
 from typing import Optional
 
+excluded = {'.DS_Store', '__pycache__'}
 
-def load_plugin_from_module(module_path: str) -> Optional[object]:
+def hash_extension_folder(folder: Path):
+    hash_builder = hashlib.sha256()
+    files = sorted(file for file in folder.rglob('*') if file.is_file() and file.name not in excluded)
+    for file in files:
+        with open(file, "rb") as f:
+            while chunk := f.read(8192):
+                hash_builder.update(chunk)
+    return hash_builder.hexdigest()
+
+def get_folder_modules(folder: Path):
+    return [file for file in folder.rglob('*.py') if file.is_file() and file.name not in excluded]
+
+
+def load_plugin_from_module(module_path: str) -> Optional[ModuleType]:
     """
     Load a plugin module from a file path. Registers the module under a unique name
     based on the plugin directory to avoid name collisions (e.g. plugin_<dirname>).
@@ -27,12 +45,20 @@ def load_plugin_from_module(module_path: str) -> Optional[object]:
         raise ImportError(f"Could not load specification for module '{module_name}' from '{module_path}'.")
 
     module = importlib.util.module_from_spec(spec)
+    
+    directory_path = Path(directory)
+    extension_hash = hash_extension_folder(directory_path)
+
+    setattr(module, "__extension_hash__", extension_hash)
+    setattr(module, "__extension_dir__", plugin_name)
+    sys.modules[module_name] = module
 
     try:
         spec.loader.exec_module(module)
         return module
     except Exception as e:
         print(f"Error loading module '{module_name}' from '{module_path}': {e}")
+        del sys.modules[module_name]
         return None
 
 
@@ -58,6 +84,7 @@ def load_storage_plugins():
 
         main_py = os.path.join(full_path, "main.py")
         if os.path.exists(main_py) and os.path.isfile(main_py):
+            # TODO: Maybe do a "load_plugin_from_folder", that loads all modules and injects hash metadata into them.
             load_plugin_from_module(main_py)
 
 

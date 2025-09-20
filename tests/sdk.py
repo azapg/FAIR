@@ -4,7 +4,7 @@ from fair_platform.sdk import TranscriptionPlugin, GradePlugin, TextField, Trans
     GradeResult, FairPlugin
 
 
-@FairPlugin(name="SimpleTranscriber", version="1.0.0", author="Test Author", description="A simple transcriber plugin.")
+@FairPlugin(id="up.ac.pa.allan.zapata.simple_transcriber", name="SimpleTranscriber", version="1.0.0", author="Test Author", description="A simple transcriber plugin.")
 class SimpleTranscriber(TranscriptionPlugin, ABC):
     instructions = TextField(label="Instructions", required=True, default="Transcribe the following math problem.")
 
@@ -18,7 +18,7 @@ class SimpleTranscriber(TranscriptionPlugin, ABC):
         )
 
 
-@FairPlugin(name="SimpleGrader", version="1.0.0", author="Test Author")
+@FairPlugin(id="up.ac.pa.allan.zapata.simple_grader", name="SimpleGrader", version="1.0.0", author="Test Author")
 class SimpleGrader(GradePlugin, ABC):
     strict = SwitchField(label="Strict Grading", required=False, default=False)
 
@@ -34,6 +34,7 @@ class SimpleGrader(GradePlugin, ABC):
             feedback="Lenient grading applied.",
             meta={}
         )
+
 
 from fair_platform.sdk import get_plugin_metadata, list_plugins, list_transcription_plugins, list_grade_plugins
 
