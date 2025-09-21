@@ -1,20 +1,27 @@
 "use client"
-import SectionContainer from "./section-container"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import SectionContainer from "@/app/assignment/components/section-container"
 import { Button } from "@/components/ui/button"
-import {Input} from "@/components/ui/input";
 import { usePlugins } from "@/hooks/use-plugins";
+import { useState } from "react";
+import { PluginSettings } from "@/app/assignment/components/plugin-settings";
 
 export default function TranscriberSection() {
   let { data: plugins = [], isLoading, isError } = usePlugins("transcription");
+  const [plugin, setPlugin] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Record<string, any> | null>(null);
 
   const onSelectPluginChange = (plugin: string) => {
     console.log("Selected plugin:", plugin);
+    console.log("Available plugins:", plugins);
+    console.log("Found plugin:", plugins.find(p => p.name === plugin));
+    setPlugin(plugins.find(p => p.name === plugin)?.id || null);
+    setSettings(plugins.find(p => p.name === plugin)?.settings || null);
   }
 
   return (
     <SectionContainer pluginOptions={plugins?.map(plugin => plugin.name)} onSelectPluginChange={onSelectPluginChange}>
-      <div className="flex gap-1 items-center text-xs">
+      <PluginSettings properties={settings?.properties}/>
+      {/* <div className="flex gap-1 items-center text-xs">
         <label className="text-muted-foreground flex-1">Force Language</label>
         <Select defaultValue="auto">
           <SelectTrigger className="flex-1" size={"sm"}>
@@ -34,7 +41,7 @@ export default function TranscriberSection() {
       <div className="flex gap-1 items-center text-xs">
         <label className="text-muted-foreground w-1/3 flex-1">Max tokens</label>
         <Input className={"flex-1"} type={"number"} max={10000} min={256} defaultValue={2048}/>
-      </div>
+      </div> */}
       <Button variant={"secondary"}>Transcribe all</Button>
     </SectionContainer>
   )
