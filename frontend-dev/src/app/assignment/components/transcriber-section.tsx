@@ -3,12 +3,12 @@ import SectionContainer from "@/app/assignment/components/section-container"
 import {Button} from "@/components/ui/button"
 import {usePlugins} from "@/hooks/use-plugins";
 import {useState} from "react";
-import {PluginSettings} from "@/app/assignment/components/plugin-settings";
+import {PluginSettings, PydanticSchema} from "@/app/assignment/components/plugin-settings";
 import {Select, SelectTrigger, SelectItem, SelectContent, SelectValue} from "@/components/ui/select"
 
 export default function TranscriberSection() {
   let {data: plugins = [], isLoading, isError} = usePlugins("transcription");
-  const [settings, setSettings] = useState<Record<string, any> | null>(null);
+  const [settings, setSettings] = useState<PydanticSchema | null>(null);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -21,7 +21,8 @@ export default function TranscriberSection() {
   const onSelectPluginChange = (pluginName: string) => {
     const plugin = plugins.find((p) => p.name === pluginName);
     if (plugin) {
-      setSettings(plugin.settings);
+      // TODO: I should probably separate schema and settings in the backend
+      setSettings(plugin.settings as any);
     } else {
       setSettings(null);
     }
@@ -43,7 +44,7 @@ export default function TranscriberSection() {
         </SelectContent>
       </Select>
 
-      {settings && <PluginSettings properties={settings?.properties}/>}
+      {settings && <PluginSettings type="transcription" schema={settings}/>}
       <Button variant={"secondary"}>Transcribe all</Button>
     </SectionContainer>
   )

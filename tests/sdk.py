@@ -1,10 +1,13 @@
 from abc import ABC
+from typing import List
 
 from fair_platform.sdk import TranscriptionPlugin, GradePlugin, TextField, TranscribedSubmission, SwitchField, \
-    GradeResult, FairPlugin
+    GradeResult, FairPlugin, NumberField, Submission
+from fair_platform.sdk.settings import FileField
 
 
-@FairPlugin(id="up.ac.pa.allan.zapata.simple_transcriber", name="SimpleTranscriber", version="1.0.0", author="Test Author", description="A simple transcriber plugin.")
+@FairPlugin(id="up.ac.pa.allan.zapata.simple_transcriber", name="SimpleTranscriber", version="1.0.0",
+            author="Test Author", description="A simple transcriber plugin.")
 class SimpleTranscriber(TranscriptionPlugin, ABC):
     instructions = TextField(label="Instructions", required=True, default="Transcribe the following math problem.")
 
@@ -34,6 +37,28 @@ class SimpleGrader(GradePlugin, ABC):
             feedback="Lenient grading applied.",
             meta={}
         )
+
+
+# TODO: What happens if a plugin implements multiple plugin types?
+@FairPlugin(id="up.ac.pa.allan.zapata.complex_plugin", name="ComplexPlugin", version="1.0.0", author="Test Author")
+class ComplexPlugin(TranscriptionPlugin, ABC):
+    instructions = TextField(label="Instructions", required=True, default="Transcribe and grade the following content.")
+    strict = SwitchField(label="Strict Grading", required=False, default=False)
+    max_tokens = NumberField(label="Max Tokens", required=False, default=1000, ge=100, le=2000)
+    temperature = NumberField(label="Temperature", required=False, default=0.7, ge=0.0, le=1.0)
+    file = FileField(label="Reference File", required=False, file_types=["txt", "pdf"])
+
+    def transcribe(self, submission) -> TranscribedSubmission:
+        transcription = f"{self.instructions.value} [Transcribed content from {submission.id}]"
+        confidence = 0.90
+        return TranscribedSubmission(
+            transcription=transcription,
+            confidence=confidence,
+            original_submission=submission
+        )
+
+    def transcribe_batch(self, submissions: List[Submission]) -> List[TranscribedSubmission]:
+        return [self.transcribe(sub) for sub in submissions]
 
 
 from fair_platform.sdk import get_plugin_metadata, list_plugins, list_transcription_plugins, list_grade_plugins

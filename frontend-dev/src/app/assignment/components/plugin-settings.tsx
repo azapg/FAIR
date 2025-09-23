@@ -1,93 +1,199 @@
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { PluginType } from "@/hooks/use-plugins"
+import { useState, useCallback } from "react"
 
-type SettingModel = {
-    default?: any
-    description?: string
-    title: string
-    type: string
-    [key: string]: any
+interface PydanticProperty {
+  type: 'string' | 'number' | 'boolean' | 'object'
+  title: string
+  description?: string
+  default?: any
+  minimum?: number
+  maximum?: number
+  minLength?: number
+  maxLength?: number
+  $ref?: string
 }
 
-type SettingsModel = {
-    properties?: Record<string, SettingModel>
+interface PydanticSchema {
+  properties: Record<string, PydanticProperty>
+  $defs?: Record<string, any>
+  title: string
+  type: 'object'
 }
 
-function TextField({ setting, value, onChange }: { 
-    setting: SettingModel
-    value: any
-    onChange: (value: any) => void 
-}) {
-    return (
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground mb-1">{setting.description}</label>
-        <Textarea
-          className="w-full rounded px-3 py-2 text-sm resize-y min-h-[48px] bg-background"
-          placeholder={setting.default}
-        />
+interface PluginSettingsProps {
+  schema: PydanticSchema
+  type: Exclude<PluginType, 'all'>
+  values?: Record<string, any>
+  onChange?: (values: Record<string, any>) => void
+}
+
+interface BaseInputProps {
+  property: PydanticProperty
+  value: any
+  onChange: (value: any) => void
+  name: string
+}
+
+function TextField({ property, value, onChange, name }: BaseInputProps) {
+  return (
+    <div className="space-y-2">
+      {property.description && (
+        <p className="text-xs text-muted-foreground">{property.description}</p>
+      )}
+      <Textarea
+        id={name}
+        className="min-h-[80px] resize-y"
+        placeholder={property.default?.toString() || ''}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        minLength={property.minLength}
+        maxLength={property.maxLength}
+      />
+    </div>
+  )
+}
+
+function NumberField({ property, value, onChange, name }: BaseInputProps) {
+  return (
+    <div className="space-y-2">
+      {property.description && (
+        <p className="text-xs text-muted-foreground">{property.description}</p>
+      )}
+      <Input
+        id={name}
+        type="number"
+        placeholder={property.default?.toString() || ''}
+        value={value || ''}
+        onChange={(e) => onChange(Number(e.target.value))}
+        min={property.minimum}
+        max={property.maximum}
+        step={property.type === 'number' ? 'any' : '1'}
+      />
+    </div>
+  )
+}
+
+function SwitchField({ property, value, onChange, name }: BaseInputProps) {
+  return (
+    <div className="flex items-center justify-between space-y-2">
+      <div className="space-y-0.5">
+        {property.description && (
+          <p className="text-xs text-muted-foreground">{property.description}</p>
+        )}
       </div>
-    )
+      <Switch
+        id={name}
+        checked={value ?? property.default ?? false}
+        onCheckedChange={onChange}
+      />
+    </div>
+  )
 }
 
-function Selector({ setting, value, onChange }: {
-    setting: SettingModel
-    value: any
-    onChange: (value: any) => void
-}) {
-    const currentValue = value || setting.default || ''
-    
-    return (
-        <div className="space-y-2">
-            <Label>{setting.description || setting.title}</Label>
-            <Select value={currentValue} onValueChange={onChange}>
-                <SelectTrigger>
-                    <SelectValue placeholder={setting.description} />
-                </SelectTrigger>
-                <SelectContent>
-                    {setting.options?.map((option, index) => (
-                        <SelectItem key={index} value={option.value}>
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    )
+function FileField({ property, value, onChange, name }: BaseInputProps) {
+  return (
+    <div className="space-y-2">
+      {property.description && (
+        <p className="text-xs text-muted-foreground">{property.description}</p>
+      )}
+      <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+        <p className="text-sm text-muted-foreground">File upload not implemented</p>
+      </div>
+    </div>
+  )
 }
 
-// Factory function
-const InputFactory = {
-    TextField,
-    Selector
+function UnsupportedField({ property }: { property: PydanticProperty; name: string }) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium text-destructive">
+        Unsupported field: {property.title}
+      </Label>
+      <p className="text-xs text-muted-foreground">
+        Type: {property.type} | Title: {property.title}
+      </p>
+    </div>
+  )
+}
+
+// Component factory
+const INPUT_COMPONENTS = {
+  TextField,
+  NumberField,
+  SwitchField,
+  FileField,
 } as const
 
-function createInput(setting: SettingModel, key: string, value: any, onChange: (value: any) => void) {
-    const Component = InputFactory[setting.title as keyof typeof InputFactory]
-    
-    if (!Component) {
-        return (
-            <div key={key} className="space-y-2">
-                <Label>Unsupported input type: {setting.title}</Label>
-            </div>
-        )
-    }
-    
-    return <Component key={key} setting={setting} value={value} onChange={onChange} />
+type InputComponentKey = keyof typeof INPUT_COMPONENTS
+
+function getComponentType(property: PydanticProperty): InputComponentKey | null {
+  if (property.title in INPUT_COMPONENTS) {
+    return property.title as InputComponentKey
+  }
+
+  return null
 }
 
-export function PluginSettings({ properties }: SettingsModel) {
-    // You'll want to manage state here for form values
-    const handleChange = (key: string, value: any) => {
-        // TODO: Implement state management
-        console.log(`${key}: ${value}`)
-    }
+function createInputComponent(
+  property: PydanticProperty,
+  name: string,
+  value: any,
+  onChange: (value: any) => void
+) {
+  const componentType = getComponentType(property)
+  
+  if (!componentType) {
+    return <UnsupportedField key={name} property={property} name={name} />
+  }
+  
+  const Component = INPUT_COMPONENTS[componentType]
+  
+  return (
+    <Component
+      key={name}
+      property={property}
+      value={value}
+      onChange={onChange}
+      name={name}
+    />
+  )
+}
 
+export function PluginSettings({ schema, type, values = {}, onChange }: PluginSettingsProps) {
+  const [formValues, setFormValues] = useState<Record<string, any>>(values)
+  
+  const handleFieldChange = useCallback((key: string, value: any) => {
+    const newValues = { ...formValues, [key]: value }
+    setFormValues(newValues)
+    onChange?.(newValues)
+  }, [formValues, onChange, type])
+  
+  if (!schema.properties) {
     return (
-        <div className="space-y-4">
-            {properties ? Object.entries(properties).map(([key, setting]) => 
-                createInput(setting, key, undefined, (value) => handleChange(key, value))
-            ) : null}
-        </div>
+      <div className="text-center py-8">
+        <p className="text-sm text-muted-foreground">No settings available</p>
+      </div>
     )
+  }
+  
+  return (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        {Object.entries(schema.properties).map(([key, property]) =>
+          createInputComponent(
+            property,
+            key,
+            formValues[key],
+            (value) => handleFieldChange(key, value)
+          )
+        )}
+      </div>
+    </div>
+  )
 }
+
+export type { PydanticSchema, PydanticProperty, PluginSettingsProps }

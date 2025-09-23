@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABC
 from typing import Optional, TypeVar, Generic
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 T = TypeVar('T')
 
@@ -59,3 +59,18 @@ class SwitchField(SettingsField[bool]):
 
     def to_pydantic_field(self):
         return bool, Field(default=self.default, title="SwitchField", description=self.label)
+
+
+class FileInput(BaseModel):
+    filename: str
+    url: str
+
+
+class FileField(SettingsField[FileInput]):
+    def __init__(self, label: str, default: Optional[FileInput] = None, required: bool = False,
+                 file_types: Optional[list[str]] = None):
+        super().__init__(label, default, required)
+        self.file_types = file_types or ["*"]
+
+    def to_pydantic_field(self):
+        return FileInput, Field(default=self.default, title="FileField", description=self.label)

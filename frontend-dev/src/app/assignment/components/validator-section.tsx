@@ -2,12 +2,12 @@ import { useState } from "react"
 import SectionContainer from "./section-container"
 import { Button } from "@/components/ui/button"
 import {usePlugins} from "@/hooks/use-plugins";
-import {PluginSettings} from "@/app/assignment/components/plugin-settings";
+import {PluginSettings, PydanticSchema} from "@/app/assignment/components/plugin-settings";
 import {Select, SelectTrigger, SelectItem, SelectContent, SelectValue} from "@/components/ui/select"
 
 export default function ValidatorSection() {
   let {data: plugins = [], isLoading, isError} = usePlugins("validation");
-  const [settings, setSettings] = useState<Record<string, any> | null>(null);
+  const [settings, setSettings] = useState<PydanticSchema | null>(null);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -20,7 +20,7 @@ export default function ValidatorSection() {
   const onSelectPluginChange = (pluginName: string) => {
     const plugin = plugins.find((p) => p.name === pluginName);
     if (plugin) {
-      setSettings(plugin.settings);
+      setSettings(plugin.settings as any);
     } else {
       setSettings(null);
     }
@@ -42,7 +42,7 @@ export default function ValidatorSection() {
         </SelectContent>
       </Select>
 
-      {settings && <PluginSettings properties={settings?.properties}/>}
+      {settings && <PluginSettings type="validation" schema={settings}/>}
       <Button variant={"secondary"}>Validate all</Button>
     </SectionContainer>
   )

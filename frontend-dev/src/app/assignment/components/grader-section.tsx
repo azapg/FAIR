@@ -4,11 +4,11 @@ import SectionContainer from "./section-container"
 import { Button } from "@/components/ui/button"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {usePlugins} from "@/hooks/use-plugins";
-import {PluginSettings} from "@/app/assignment/components/plugin-settings";
+import {PluginSettings, PydanticSchema} from "@/app/assignment/components/plugin-settings";
 
 export default function GraderSection() {
   let {data: plugins = [], isLoading, isError} = usePlugins("grade");
-  const [settings, setSettings] = useState<Record<string, any> | null>(null);
+  const [settings, setSettings] = useState<PydanticSchema | null>(null);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -21,7 +21,7 @@ export default function GraderSection() {
   const onSelectPluginChange = (pluginName: string) => {
     const plugin = plugins.find((p) => p.name === pluginName);
     if (plugin) {
-      setSettings(plugin.settings);
+      setSettings(plugin.settings as any);
     } else {
       setSettings(null);
     }
@@ -43,7 +43,7 @@ export default function GraderSection() {
         </SelectContent>
       </Select>
 
-      {settings && <PluginSettings properties={settings?.properties}/>}
+      {settings && <PluginSettings type="grade" schema={settings}/>}
       <Button variant={"secondary"}>Grade all</Button>
     </SectionContainer>
   )
