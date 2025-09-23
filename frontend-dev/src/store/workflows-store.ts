@@ -75,8 +75,8 @@ export const useWorkflowStore = create<State & Actions>()(
       },
       setActiveCourseId: (courseId: string) => set({activeCourseId: courseId}),
       setActiveWorkflowId: (workflowId: string) => {
-        const workflow = get().workflows.find(w => w.id === workflowId)
-        const activeCourseId = get().activeCourseId
+        const { workflows, activeCourseId } = get()
+        const workflow = workflows.find(w => w.id === workflowId)
 
         if (workflow) {
           set({activeWorkflowId: workflowId})
@@ -91,30 +91,35 @@ export const useWorkflowStore = create<State & Actions>()(
         }
       },
       getActiveWorkflow: () => {
-        let active = get().workflows.find(w => w.id === get().activeWorkflowId)
-        const activeCourseId = get().activeCourseId
+        const {workflows, activeCourseId, coursesActiveWorkflows, activeWorkflowId} = get()
+        let active = workflows.find(w => w.id === activeWorkflowId)
         if (!active && activeCourseId) {
-          const lastActiveId = get().coursesActiveWorkflows[activeCourseId]
+          const lastActiveId = coursesActiveWorkflows[activeCourseId]
           active = get().workflows.find(w => w.id === lastActiveId)
         }
-
         return active
       },
 
       createWorkflow: async (name: string, description?: string) => {
+        const { activeCourseId, workflows, setActiveWorkflowId } = get()
+
+        if (!activeCourseId) {
+          throw new Error('No active course selected')
+        }
+
         const newWorkflow: WorkflowCreate = {
-          courseId: get().activeCourseId || 'unknown', // TODO: handle unknown better
+          courseId: activeCourseId,
           name,
           description: description || '',
           plugins: {}
         }
 
         try {
-          const createdWf = await api.post('/workflows', newWorkflow) as { data: Workflow }
-          set({workflows: [...get().workflows, createdWf.data]})
-          get().setActiveWorkflowId(createdWf.data.id)
+          const created = await api.post('/workflows', newWorkflow) as { data: Workflow }
+          set({workflows: [...workflows, created.data]})
+          setActiveWorkflowId(created.data.id)
         } catch (error) {
-          alert('Failed to create workflow. Please try again.')
+          throw new Error('Failed to create workflow', {cause: error})
         }
 
       }
