@@ -48,7 +48,7 @@ def create_workflow(
 @router.get("/", response_model=List[WorkflowRead])
 def list_workflows(course_id: UUID | None = None, db: Session = Depends(session_dependency),
                    current_user: User = Depends(get_current_user)):
-    if current_user.role != UserRole.admin or current_user.role != UserRole.professor:
+    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
         raise HTTPException(status_code=403, detail="Not authorized to list workflows")
 
     if course_id:
