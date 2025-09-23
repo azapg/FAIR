@@ -6,15 +6,17 @@ from pydantic import BaseModel
 class PluginBase(BaseModel):
     id: str
     name: str
-    author: Optional[str] = None
-    version: Optional[str] = None
+    author: str = None
+    author_email: Optional[str] = None
+    version: str = None
     hash: str
     source: str
-    meta: Optional[Dict[str, Any]] = None
+    settings: Optional[Dict[str, Any]] = None
 
     class Config:
-        orm_mode = True
-
+        from_attributes = True
+        alias_generator = lambda field_name: ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        validate_by_name = True
 
 class PluginCreate(PluginBase):
     pass
@@ -25,10 +27,12 @@ class PluginUpdate(BaseModel):
     author: Optional[str] = None
     version: Optional[str] = None
     source: Optional[str] = None
-    meta: Optional[Dict[str, Any]] = None
+    settings: Optional[Dict[str, Any]] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        validate_by_name = True
 
 
 class PluginRead(PluginBase):

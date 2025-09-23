@@ -1,18 +1,24 @@
-from typing import Optional
+from typing import Optional, Dict, List
 from uuid import UUID
 from datetime import datetime
 
 from pydantic import BaseModel
 
+from fair_platform.backend.api.schema.plugin import PluginBase
+from fair_platform.backend.api.schema.workflow_run import WorkflowRunBase
+
 
 class WorkflowBase(BaseModel):
-    course_id: UUID
     name: str
+    course_id: UUID
     description: Optional[str] = None
-    created_by: UUID
+    plugins: Optional[Dict[str, PluginBase]] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: ''.join(
+            word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        validate_by_name = True
 
 
 class WorkflowCreate(WorkflowBase):
@@ -20,18 +26,22 @@ class WorkflowCreate(WorkflowBase):
 
 
 class WorkflowUpdate(BaseModel):
-    course_id: Optional[UUID] = None
     name: Optional[str] = None
     description: Optional[str] = None
-    created_by: Optional[UUID] = None
+    plugins: Optional[Dict[str, PluginBase]] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: ''.join(
+            word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        validate_by_name = True
 
 
 class WorkflowRead(WorkflowBase):
     id: UUID
     created_at: datetime
+    created_by: UUID
+    runs: Optional[List[WorkflowRunBase]] = None
 
 
 __all__ = [
@@ -40,4 +50,3 @@ __all__ = [
     "WorkflowUpdate",
     "WorkflowRead",
 ]
-

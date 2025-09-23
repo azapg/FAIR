@@ -17,29 +17,26 @@ router = APIRouter()
 
 @router.post("/", response_model=WorkflowRead, status_code=status.HTTP_201_CREATED)
 def create_workflow(
-    payload: WorkflowCreate,
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
+        payload: WorkflowCreate,
+        db: Session = Depends(session_dependency),
+        current_user: User = Depends(get_current_user),
 ):
+    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
+        raise HTTPException(status_code=403, detail="Not authorized to create workflows")
+
     course = db.get(Course, payload.course_id)
     if not course:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
 
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can create workflows")
-
-    if not db.get(User, payload.created_by):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Creator not found")
-
-    if current_user.role != UserRole.admin and payload.created_by != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create workflow on behalf of another user")
+        raise HTTPException(status_code=403, detail="Only the course instructor or admin can create workflows")
 
     wf = Workflow(
         id=uuid4(),
         course_id=payload.course_id,
         name=payload.name,
         description=payload.description,
-        created_by=payload.created_by,
+        created_by=current_user.id,
         created_at=datetime.now(timezone.utc),
     )
     db.add(wf)
@@ -49,7 +46,18 @@ def create_workflow(
 
 
 @router.get("/", response_model=List[WorkflowRead])
-def list_workflows(course_id: UUID | None = None, db: Session = Depends(session_dependency)):
+def list_workflows(course_id: UUID | None = None, db: Session = Depends(session_dependency),
+                   current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin or current_user.role != UserRole.professor:
+        raise HTTPException(status_code=403, detail="Not authorized to list workflows")
+
+    if course_id:
+        course = db.get(Course, course_id)
+        if not course:
+            raise HTTPException(status_code=400, detail="Course not found")
+        if current_user.role == UserRole.professor and course.instructor_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to list workflows for this course")
+
     q = db.query(Workflow)
     if course_id:
         q = q.filter(Workflow.course_id == course_id)
@@ -57,7 +65,11 @@ def list_workflows(course_id: UUID | None = None, db: Session = Depends(session_
 
 
 @router.get("/{workflow_id}", response_model=WorkflowRead)
-def get_workflow(workflow_id: UUID, db: Session = Depends(session_dependency)):
+def get_workflow(workflow_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
+        raise HTTPException(status_code=403, detail="Not authorized to get workflow")
+
+    # TODO: we should also check if the professor is the instructor of the course related to this workflow
     wf = db.get(Workflow, workflow_id)
     if not wf:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
@@ -66,36 +78,29 @@ def get_workflow(workflow_id: UUID, db: Session = Depends(session_dependency)):
 
 @router.put("/{workflow_id}", response_model=WorkflowRead)
 def update_workflow(
-    workflow_id: UUID,
-    payload: WorkflowUpdate,
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
+        workflow_id: UUID,
+        payload: WorkflowUpdate,
+        db: Session = Depends(session_dependency),
+        current_user: User = Depends(get_current_user),
 ):
+    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
+        raise HTTPException(status_code=403, detail="Not authorized to update workflow")
+
     wf = db.get(Workflow, workflow_id)
     if not wf:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
+        raise HTTPException(status_code=404, detail="Workflow not found")
 
     course = db.get(Course, wf.course_id)
     if not course:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
+        raise HTTPException(status_code=400, detail="Cannot find course for this workflow. Data integrity issue?")
 
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can update this workflow")
+        raise HTTPException(status_code=403, detail="Only the course instructor or admin can update this workflow")
 
-    if payload.course_id is not None:
-        if not db.get(Course, payload.course_id):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
-        wf.course_id = payload.course_id
     if payload.name is not None:
         wf.name = payload.name
     if payload.description is not None:
         wf.description = payload.description
-    if payload.created_by is not None:
-        if not db.get(User, payload.created_by):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Creator not found")
-        if current_user.role != UserRole.admin and payload.created_by != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to change creator")
-        wf.created_by = payload.created_by
 
     db.add(wf)
     db.commit()
@@ -104,7 +109,8 @@ def update_workflow(
 
 
 @router.delete("/{workflow_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_workflow(workflow_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+def delete_workflow(workflow_id: UUID, db: Session = Depends(session_dependency),
+                    current_user: User = Depends(get_current_user)):
     wf = db.get(Workflow, workflow_id)
     if not wf:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
@@ -114,7 +120,8 @@ def delete_workflow(workflow_id: UUID, db: Session = Depends(session_dependency)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
 
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can delete this workflow")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Only the course instructor or admin can delete this workflow")
 
     db.delete(wf)
     db.commit()
@@ -122,4 +129,3 @@ def delete_workflow(workflow_id: UUID, db: Session = Depends(session_dependency)
 
 
 __all__ = ["router"]
-

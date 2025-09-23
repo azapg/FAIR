@@ -15,13 +15,19 @@ class SubmissionBase(BaseModel):
     official_run_id: Optional[UUID] = None
 
     class Config:
-        use_enum_values = True
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        validate_by_name = True
 
 
 class SubmissionCreate(SubmissionBase):
     artifact_ids: Optional[List[UUID]] = None
     run_ids: Optional[List[UUID]] = None
+
+    class Config:
+        from_attributes = True
+        alias_generator = lambda field_name: ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        validate_by_name = True
 
 
 class SubmissionUpdate(BaseModel):
@@ -32,8 +38,9 @@ class SubmissionUpdate(BaseModel):
     run_ids: Optional[List[UUID]] = None      # full replace if provided
 
     class Config:
-        use_enum_values = True
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        validate_by_name = True
 
 
 class SubmissionRead(SubmissionBase):

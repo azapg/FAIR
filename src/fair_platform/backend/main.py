@@ -14,7 +14,6 @@ from fair_platform.backend.api.routers.assignments import router as assignments_
 from fair_platform.backend.api.routers.plugins import router as plugins_router
 from fair_platform.backend.api.routers.submissions import router as submissions_router
 from fair_platform.backend.api.routers.workflows import router as workflows_router
-from fair_platform.backend.api.routers.workflow_runs import router as workflow_runs_router
 from fair_platform.backend.api.routers.auth import router as auth_router
 
 from fair_platform.sdk import load_storage_plugins
@@ -39,8 +38,6 @@ app.include_router(assignments_router, prefix="/api/assignments", tags=["assignm
 app.include_router(plugins_router, prefix="/api/plugins", tags=["plugins"])
 app.include_router(submissions_router, prefix="/api/submissions", tags=["submissions"])
 app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows"])
-app.include_router(workflow_runs_router, prefix="/api/workflow-runs", tags=["workflow-runs"])
-
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
 
