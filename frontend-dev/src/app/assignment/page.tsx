@@ -1,5 +1,5 @@
 import {Button} from "@/components/ui/button";
-import {CircleCheck, FileText, Hourglass, Link as LinkIcon, Plus} from "lucide-react";
+import {CircleCheck, Hourglass, Plus} from "lucide-react";
 import {Separator} from "@/components/ui/separator";
 import {SubmissionsTable} from "@/app/assignment/components/submissions/submissions-table";
 import {columns} from "@/app/assignment/components/submissions/submissions";
@@ -11,6 +11,8 @@ import {BreadcrumbNav} from "@/components/breadcrumb-nav";
 import {useParams} from "react-router-dom";
 import { useAssignment } from "@/hooks/use-assignments";
 import { useCourse } from "@/hooks/use-courses";
+import {useWorkflowStore} from "@/store/workflows-store";
+import {useEffect} from "react";
 
 
 export default function AssignmentPage() {
@@ -18,6 +20,13 @@ export default function AssignmentPage() {
   const { data: assignment, isLoading, isError } = useAssignment(assignmentId!);
   // TODO: This is ugly, try getting course_id from somewhere else, maybe from parents
   const { data: course } = useCourse(assignment?.course_id!);
+  const setActiveCourseId = useWorkflowStore(state => state.setActiveCourseId)
+
+  useEffect(() => {
+    if (course?.id) {
+      setActiveCourseId(course.id.toString());
+    }
+  }, [course, setActiveCourseId]);
 
   if (isLoading) {
     return <div>Loading...</div>
@@ -69,12 +78,6 @@ export default function AssignmentPage() {
 
               <div className={"flex flex-row gap-1 mt-4 items-center"}>
                 <h2 className={"text-muted-foreground mr-4 text-sm"}>Resources</h2>
-                {/* <Button variant={"secondary"} size={"sm"}>
-                  <LinkIcon/> 💻 BUCLES FOR ¿Qué son y...
-                </Button>
-                <Button variant={"secondary"} size={"sm"}>
-                  <FileText/> ejercicios.docx
-                </Button> */}
                 <Button variant={"ghost"} size={"sm"}>
                   <Plus/>
                 </Button>

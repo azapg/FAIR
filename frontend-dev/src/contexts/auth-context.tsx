@@ -8,7 +8,7 @@ export enum AuthUserRole {
 }
 
 export type AuthUser = {
-  id: string | number
+  id: string
   name: string
   email: string
   role: AuthUserRole
