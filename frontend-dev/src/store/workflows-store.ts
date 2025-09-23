@@ -43,7 +43,7 @@ type State = {
 }
 
 type Actions = {
-  setWorkflows: (workflows: Workflow[]) => void;
+  loadWorkflows: () => Promise<void>;
   setActiveCourseId: (courseId: string) => void;
   setActiveWorkflowId: (workflowId: string) => void;
   getActiveWorkflow: () => Workflow | undefined;
@@ -60,27 +60,45 @@ export const useWorkflowStore = create<State & Actions>()(
       activeWorkflowId: undefined,
       coursesActiveWorkflows: {},
 
-      setWorkflows: (workflows: Workflow[]) => set({workflows}),
+      loadWorkflows: async () => {
+        const course_id = get().activeCourseId;
+        if (!course_id) {
+          throw new Error('No active course selected');
+        }
+
+        try {
+          const response = await api.get('/workflows', {params: {course_id: course_id}}) as { data: Workflow[] };
+          set({workflows: response.data});
+        } catch (error) {
+          throw new Error('Failed to load workflows', {cause: error});
+        }
+      },
       setActiveCourseId: (courseId: string) => set({activeCourseId: courseId}),
       setActiveWorkflowId: (workflowId: string) => {
         const workflow = get().workflows.find(w => w.id === workflowId)
+        const activeCourseId = get().activeCourseId
+
         if (workflow) {
           set({activeWorkflowId: workflowId})
-          if (workflow.courseId) {
+          if (activeCourseId) {
             set(state => ({
               coursesActiveWorkflows: {
                 ...state.coursesActiveWorkflows,
-                [workflow.courseId]: workflowId
+                [activeCourseId]: workflowId
               }
             }))
           }
         }
       },
       getActiveWorkflow: () => {
-        // TODO: If the activeWorkflowId is not found, it might be because
-        //  the workflows have not been loaded yet, or the activeWorkflowId
-        //  is stale. We might need to try a reload, or clear the activeWorkflowId.
-        return get().workflows.find(w => w.id === get().activeWorkflowId)
+        let active = get().workflows.find(w => w.id === get().activeWorkflowId)
+        const activeCourseId = get().activeCourseId
+        if (!active && activeCourseId) {
+          const lastActiveId = get().coursesActiveWorkflows[activeCourseId]
+          active = get().workflows.find(w => w.id === lastActiveId)
+        }
+
+        return active
       },
 
       createWorkflow: async (name: string, description?: string) => {
@@ -92,7 +110,7 @@ export const useWorkflowStore = create<State & Actions>()(
         }
 
         try {
-          const createdWf = await api.post('/workflows', newWorkflow) as {data: Workflow}
+          const createdWf = await api.post('/workflows', newWorkflow) as { data: Workflow }
           set({workflows: [...get().workflows, createdWf.data]})
           get().setActiveWorkflowId(createdWf.data.id)
         } catch (error) {

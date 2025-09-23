@@ -21,10 +21,12 @@ export default function AssignmentPage() {
   // TODO: This is ugly, try getting course_id from somewhere else, maybe from parents
   const { data: course } = useCourse(assignment?.course_id!);
   const setActiveCourseId = useWorkflowStore(state => state.setActiveCourseId)
+  const loadWorkflows = useWorkflowStore(state => state.loadWorkflows)
 
   useEffect(() => {
     if (course?.id) {
       setActiveCourseId(course.id.toString());
+      loadWorkflows().then().catch(err => {console.error(err)});
     }
   }, [course, setActiveCourseId]);
 
