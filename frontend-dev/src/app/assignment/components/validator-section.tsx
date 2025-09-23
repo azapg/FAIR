@@ -1,35 +1,48 @@
 import { useState } from "react"
 import SectionContainer from "./section-container"
-import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
-import {Textarea} from "@/components/ui/textarea";
+import {usePlugins} from "@/hooks/use-plugins";
+import {PluginSettings} from "@/app/assignment/components/plugin-settings";
+import {Select, SelectTrigger, SelectItem, SelectContent, SelectValue} from "@/components/ui/select"
 
 export default function ValidatorSection() {
-  const [temperature, setTemperature] = useState<number>(0.2)
+  let {data: plugins = [], isLoading, isError} = usePlugins("validation");
+  const [settings, setSettings] = useState<Record<string, any> | null>(null);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (isError) {
+    return <div>Error loading plugins</div>;
+  }
+
+  const onSelectPluginChange = (pluginName: string) => {
+    const plugin = plugins.find((p) => p.name === pluginName);
+    if (plugin) {
+      setSettings(plugin.settings);
+    } else {
+      setSettings(null);
+    }
+  }
 
   return (
-    <SectionContainer selectedPlugin="SimpleValidator" pluginOptions={["SimpleValidator", "AdvancedValidator"]}>
-      <div className="flex gap-1">
-        <div className="flex items-center justify-between">
-          <label className="text-xs text-muted-foreground">Temperature</label>
-        </div>
-        <span className="text-xs text-muted-foreground ml-2">{temperature.toFixed(2)}</span>
-        <Slider
-          value={[temperature]}
-          min={0}
-          max={1}
-          step={0.01}
-          onValueChange={(vals) => setTemperature(vals[0])}
-        />
-      </div>
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground mb-1">Instructions</label>
-        <Textarea
-          className="w-full rounded px-3 py-2 text-sm resize-y min-h-[48px] bg-background"
-          placeholder="Your validation instructions here..."
-        />
-      </div>
+    <SectionContainer title="Validator">
+      <Select onValueChange={onSelectPluginChange}>
+        <SelectTrigger className="w-full" size={"sm"}>
+          <SelectValue placeholder="Select plugin"/>
+        </SelectTrigger>
+        <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
+          {plugins?.map((option) => (
+            <SelectItem key={option.id} value={option.name}>
+              {option.name}
+            </SelectItem>
+          ))}
+          <SelectItem value={undefined!}>None</SelectItem>
+        </SelectContent>
+      </Select>
 
+      {settings && <PluginSettings properties={settings?.properties}/>}
       <Button variant={"secondary"}>Validate all</Button>
     </SectionContainer>
   )
