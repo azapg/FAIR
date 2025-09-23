@@ -18,7 +18,6 @@ import GraderSection from "./grader-section"
 import ValidatorSection from "./validator-section"
 import {PlusIcon} from "lucide-react";
 import {useWorkflowStore} from "@/store/workflows-store";
-import {useAuth} from "@/contexts/auth-context";
 
 
 export function WorkflowsSidebar({
@@ -32,16 +31,10 @@ export function WorkflowsSidebar({
   const {workflows, createWorkflow, getActiveWorkflow, setActiveWorkflowId} = useWorkflowStore();
   const workflow = getActiveWorkflow();
 
-  const {user, isAuthenticated} = useAuth();
-
-  if (!isAuthenticated || !user) {
-    return null; // TODO: i do need to handle this better
-  }
-
   const onCreateWorkflow = () => {
     const name = prompt("Enter workflow name", "Untitled Workflow");
     if (name) {
-      createWorkflow(name, user.id);
+      createWorkflow(name);
     }
   }
 
