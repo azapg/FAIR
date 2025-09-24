@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {persist} from "zustand/middleware";
-import {Plugin} from "@/hooks/use-plugins";
+import {Plugin, PluginType} from "@/hooks/use-plugins";
 import api from "@/lib/api";
 
 export type WorkflowRunCreate = {
@@ -37,31 +37,37 @@ export type Workflow = WorkflowCreate & {
 
 type State = {
   workflows: Workflow[];
+
   coursesActiveWorkflows: Record<string, string>; // courseId -> workflowId
   activeCourseId?: string;
   activeWorkflowId?: string;
+
+  pluginsDraft: Record<string, WorkflowCreate['plugins']>; // workflowId -> WorkflowCreate.plugins
 }
 
 type Actions = {
   loadWorkflows: () => Promise<void>;
+  createWorkflow: (name: string, description?: string) => void;
+
   setActiveCourseId: (courseId: string) => void;
   setActiveWorkflowId: (workflowId: string) => void;
   getActiveWorkflow: () => Workflow | undefined;
 
-  createWorkflow: (name: string, description?: string) => void;
-
+  saveWorkflowDraft: (pluginType: PluginType, values: Record<string, any>) => void;
+  clearWorkflowDraft: (workflowId: string, plugin?: string) => void;
 }
 
 export const useWorkflowStore = create<State & Actions>()(
   persist(
     (set, get) => ({
       workflows: [],
+      pluginsDraft: {},
       activeCourseId: undefined,
       activeWorkflowId: undefined,
       coursesActiveWorkflows: {},
 
       loadWorkflows: async () => {
-        const course_id = get().activeCourseId;
+        const { activeCourseId: course_id, activeWorkflowId } = get();
         if (!course_id) {
           throw new Error('No active course selected');
         }
@@ -69,6 +75,23 @@ export const useWorkflowStore = create<State & Actions>()(
         try {
           const response = await api.get('/workflows', {params: {course_id: course_id}}) as { data: Workflow[] };
           set({workflows: response.data});
+
+          if (activeWorkflowId) {
+            const exists = response.data.some(w => w.id === activeWorkflowId);
+            if (!exists) {
+              set({activeWorkflowId: undefined});
+            }
+          } else {
+            const lastActiveId = get().coursesActiveWorkflows[course_id];
+            if (lastActiveId) {
+              const exists = response.data.some(w => w.id === lastActiveId);
+              if (exists) {
+                set({activeWorkflowId: lastActiveId});
+              }
+            }
+          }
+
+
         } catch (error) {
           throw new Error('Failed to load workflows', {cause: error});
         }
@@ -122,10 +145,73 @@ export const useWorkflowStore = create<State & Actions>()(
           throw new Error('Failed to create workflow', {cause: error})
         }
 
+      },
+      saveWorkflowDraft: (pluginType: PluginType, values: Record<string, any>) => {
+        const {activeWorkflowId, workflows, pluginsDraft} = get()
+        if (!activeWorkflowId) {
+          throw new Error('No active workflow selected')
+        }
+
+        const workflow = workflows.find(w => w.id === activeWorkflowId)
+        if (!workflow) {
+          throw new Error('Active workflow not found')
+        }
+
+        // TODO: This just prefers the draft over the saved workflow, which might lead to lost updates
+        const updatedPlugins = pluginsDraft[activeWorkflowId] ? {...pluginsDraft[activeWorkflowId]} : {...workflow.plugins}
+
+        if (pluginType === 'transcription') {
+          updatedPlugins.transcriber = {
+            ...updatedPlugins.transcriber,
+            settings: values
+          } as Plugin
+        } else if (pluginType === 'grade') {
+          updatedPlugins.grader = {
+            ...updatedPlugins.grader,
+            settings: values
+          } as Plugin
+        } else if (pluginType === 'validation') {
+          updatedPlugins.validator = {
+            ...updatedPlugins.validator,
+            settings: values
+          } as Plugin
+        }
+
+        set(state => ({
+          pluginsDraft: {
+            ...state.pluginsDraft,
+            [activeWorkflowId]: {...updatedPlugins}
+          }
+        }))
+      },
+      clearWorkflowDraft: (workflowId: string, plugin?: string) => {
+        const {pluginsDraft} = get()
+        if (plugin) {
+          const draft = pluginsDraft[workflowId]
+          if (draft && draft[plugin as keyof WorkflowCreate['plugins']]) {
+            const updatedDraft = {...draft}
+            delete updatedDraft[plugin as keyof WorkflowCreate['plugins']]
+            set(state => ({
+              pluginsDraft: {
+                ...state.pluginsDraft,
+                [workflowId]: updatedDraft
+              }
+            }))
+          }
+        } else {
+          if (pluginsDraft[workflowId]) {
+            const updatedDrafts = {...pluginsDraft}
+            delete updatedDrafts[workflowId]
+            set(_ => ({ pluginsDraft: updatedDrafts }))
+          }
+        }
       }
     }), {
       name: 'WorkflowsStore',
-      partialize: (state) => ({coursesActiveWorkflows: state.coursesActiveWorkflows})
+      partialize: (state) => ({
+        coursesActiveWorkflows: state.coursesActiveWorkflows,
+        pluginsDraft: state.pluginsDraft,
+      })
     }
   )
 )

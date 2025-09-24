@@ -3,7 +3,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { PluginType } from "@/hooks/use-plugins"
-import { useState, useCallback } from "react"
+import {useState, useCallback, useMemo} from "react"
+import {useWorkflowStore} from "@/store/workflows-store";
 
 interface PydanticProperty {
   type: 'string' | 'number' | 'boolean' | 'object'
@@ -163,13 +164,50 @@ function createInputComponent(
   )
 }
 
+function extractDefaults(schema: PydanticSchema): Record<string, any> {
+  return Object.entries(schema.properties).reduce((acc, [key, property]) => {
+    if (property.default !== undefined) {
+      acc[key] = property.default
+    }
+    return acc
+  }, {} as Record<string, any>)
+}
+
+
+// TODO: I have to sync this
+const pluginTypeToKey = (type: Exclude<PluginType, 'all'>) => {
+  switch(type) {
+    case 'transcription':
+      return 'transcriber'
+    case 'grade':
+      return 'grader'
+    case 'validation':
+      return 'validator'
+  }
+}
+
 export function PluginSettings({ schema, type, values = {}, onChange }: PluginSettingsProps) {
+  const pluginsDraft = useWorkflowStore(state => state.pluginsDraft)
+  const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId)
+  const savePluginDraftValues = useWorkflowStore(state => state.saveWorkflowDraft)
+
+  const pluginDraft = pluginsDraft[activeWorkflowId || ""]
+  const draftSettings = pluginDraft[pluginTypeToKey(type)]?.settings
+  const defaults = useMemo(() => extractDefaults(schema), [schema])
+
+  if(pluginDraft && draftSettings) {
+    values = draftSettings
+  } else {
+    values = { ...defaults, ...values }
+  }
+
   const [formValues, setFormValues] = useState<Record<string, any>>(values)
-  
+
   const handleFieldChange = useCallback((key: string, value: any) => {
     const newValues = { ...formValues, [key]: value }
     setFormValues(newValues)
     onChange?.(newValues)
+    savePluginDraftValues(type, newValues)
   }, [formValues, onChange, type])
   
   if (!schema.properties) {
