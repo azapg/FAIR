@@ -6,7 +6,7 @@ import {PluginSettings, PydanticSchema} from "@/app/assignment/components/plugin
 import {Select, SelectTrigger, SelectItem, SelectContent, SelectValue} from "@/components/ui/select"
 
 export default function ValidatorSection() {
-  let {data: plugins = [], isLoading, isError} = usePlugins("validation");
+  let {data: plugins = [], isLoading, isError} = usePlugins("validator");
   const [settings, setSettings] = useState<PydanticSchema | null>(null);
 
   if (isLoading) {
@@ -42,7 +42,7 @@ export default function ValidatorSection() {
         </SelectContent>
       </Select>
 
-      {settings && <PluginSettings type="validation" schema={settings}/>}
+      {settings && <PluginSettings type="validator" schema={settings}/>}
       <Button variant={"secondary"}>Validate all</Button>
     </SectionContainer>
   )

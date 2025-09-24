@@ -13,13 +13,7 @@ export type Plugin = {
     settings: Record<string, any>
 }
 
-export type PluginOption = {
-    id: string
-    name: string
-    description?: string | null
-}
-
-export type PluginType = "all" | "transcription" | "grade" | "validation"
+export type PluginType = "transcriber" | "grader" | "validator"
 
 export const pluginsKeys = {
     all: ['plugins'] as const,
@@ -30,7 +24,7 @@ export const pluginsKeys = {
 }
 
 
-const fetchPlugins = async (type: PluginType): Promise<Plugin[]> => {
+const fetchPlugins = async (type?: PluginType): Promise<Plugin[]> => {
     const params = type ? { type_filter: type } : {}
     const res = await api.get('/plugins', { params })
     return res.data
@@ -43,7 +37,7 @@ const fetchPlugin = async (id: string): Promise<Plugin> => {
 export const usePlugins = (type?: PluginType) => {
     return useQuery({
         queryKey: [...pluginsKeys.list(), type],
-        queryFn: () => fetchPlugins(type || "all"),
+        queryFn: () => fetchPlugins(type),
     })
 }
 

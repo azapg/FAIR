@@ -54,7 +54,7 @@ type Actions = {
   getActiveWorkflow: () => Workflow | undefined;
 
   saveWorkflowDraft: (pluginType: PluginType, values: Record<string, any>) => void;
-  clearWorkflowDraft: (workflowId: string, plugin?: string) => void;
+  clearWorkflowDraft: (workflowId: string, plugin?: PluginType) => void;
 }
 
 export const useWorkflowStore = create<State & Actions>()(
@@ -160,17 +160,19 @@ export const useWorkflowStore = create<State & Actions>()(
         // TODO: This just prefers the draft over the saved workflow, which might lead to lost updates
         const updatedPlugins = pluginsDraft[activeWorkflowId] ? {...pluginsDraft[activeWorkflowId]} : {...workflow.plugins}
 
-        if (pluginType === 'transcription') {
+
+
+        if (pluginType === 'transcriber') {
           updatedPlugins.transcriber = {
             ...updatedPlugins.transcriber,
             settings: values
           } as Plugin
-        } else if (pluginType === 'grade') {
+        } else if (pluginType === 'grader') {
           updatedPlugins.grader = {
             ...updatedPlugins.grader,
             settings: values
           } as Plugin
-        } else if (pluginType === 'validation') {
+        } else if (pluginType === 'validator') {
           updatedPlugins.validator = {
             ...updatedPlugins.validator,
             settings: values
@@ -184,13 +186,13 @@ export const useWorkflowStore = create<State & Actions>()(
           }
         }))
       },
-      clearWorkflowDraft: (workflowId: string, plugin?: string) => {
+      clearWorkflowDraft: (workflowId: string, plugin?: PluginType) => {
         const {pluginsDraft} = get()
         if (plugin) {
           const draft = pluginsDraft[workflowId]
-          if (draft && draft[plugin as keyof WorkflowCreate['plugins']]) {
+          if (draft && draft[plugin]) {
             const updatedDraft = {...draft}
-            delete updatedDraft[plugin as keyof WorkflowCreate['plugins']]
+            delete updatedDraft[plugin]
             set(state => ({
               pluginsDraft: {
                 ...state.pluginsDraft,

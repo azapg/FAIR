@@ -7,7 +7,7 @@ import {usePlugins} from "@/hooks/use-plugins";
 import {PluginSettings, PydanticSchema} from "@/app/assignment/components/plugin-settings";
 
 export default function GraderSection() {
-  let {data: plugins = [], isLoading, isError} = usePlugins("grade");
+  let {data: plugins = [], isLoading, isError} = usePlugins("grader");
   const [settings, setSettings] = useState<PydanticSchema | null>(null);
 
   if (isLoading) {
@@ -43,7 +43,7 @@ export default function GraderSection() {
         </SelectContent>
       </Select>
 
-      {settings && <PluginSettings type="grade" schema={settings}/>}
+      {settings && <PluginSettings type="grader" schema={settings}/>}
       <Button variant={"secondary"}>Grade all</Button>
     </SectionContainer>
   )

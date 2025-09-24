@@ -173,30 +173,16 @@ function extractDefaults(schema: PydanticSchema): Record<string, any> {
   }, {} as Record<string, any>)
 }
 
-
-// TODO: I have to sync this
-const pluginTypeToKey = (type: Exclude<PluginType, 'all'>) => {
-  switch(type) {
-    case 'transcription':
-      return 'transcriber'
-    case 'grade':
-      return 'grader'
-    case 'validation':
-      return 'validator'
-  }
-}
-
 export function PluginSettings({ schema, type, values = {}, onChange }: PluginSettingsProps) {
   const pluginsDraft = useWorkflowStore(state => state.pluginsDraft)
   const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId)
   const savePluginDraftValues = useWorkflowStore(state => state.saveWorkflowDraft)
 
   const pluginDraft = pluginsDraft[activeWorkflowId || ""]
-  const draftSettings = pluginDraft[pluginTypeToKey(type)]?.settings
   const defaults = useMemo(() => extractDefaults(schema), [schema])
 
-  if(pluginDraft && draftSettings) {
-    values = draftSettings
+  if(pluginDraft && pluginDraft[type]) {
+    values = pluginDraft[type]?.settings
   } else {
     values = { ...defaults, ...values }
   }

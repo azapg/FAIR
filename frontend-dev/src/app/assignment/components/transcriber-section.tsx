@@ -7,7 +7,7 @@ import {PluginSettings, PydanticSchema} from "@/app/assignment/components/plugin
 import {Select, SelectTrigger, SelectItem, SelectContent, SelectValue} from "@/components/ui/select"
 
 export default function TranscriberSection() {
-  let {data: plugins = [], isLoading, isError} = usePlugins("transcription");
+  let {data: plugins = [], isLoading, isError} = usePlugins("transcriber");
   const [settings, setSettings] = useState<PydanticSchema | null>(null);
 
   if (isLoading) {
@@ -44,7 +44,7 @@ export default function TranscriberSection() {
         </SelectContent>
       </Select>
 
-      {settings && <PluginSettings type="transcription" schema={settings}/>}
+      {settings && <PluginSettings type="transcriber" schema={settings}/>}
       <Button variant={"secondary"}>Transcribe all</Button>
     </SectionContainer>
   )

@@ -14,22 +14,21 @@ router = APIRouter()
 
 
 class PluginType(str, Enum):
-    transcription = "transcription"
-    grade = "grade"
-    validation = "validation"
-    all = "all"
+    transcriber = "transcriber"
+    grader = "grader"
+    validator = "validator"
 
 
 @router.get("/", response_model=List[PluginMeta])
-def list_all_plugins(type_filter: Optional[PluginType] = PluginType.all, user: User = Depends(get_current_user)):
+def list_all_plugins(type_filter: Optional[PluginType] = None, user: User = Depends(get_current_user)):
     if user.role != UserRole.admin and user.role != UserRole.professor:
         raise HTTPException(status_code=403, detail="Not authorized to list plugins")
 
-    if type_filter == PluginType.transcription:
+    if type_filter == PluginType.transcriber:
         plugins = list_transcription_plugins()
-    elif type_filter == PluginType.grade:
+    elif type_filter == PluginType.grader:
         plugins = list_grade_plugins()
-    elif type_filter == PluginType.validation:
+    elif type_filter == PluginType.validator:
         plugins = list_validation_plugins()
     else:
         plugins = list_plugins()
