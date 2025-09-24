@@ -4,7 +4,7 @@ import {Separator} from "@/components/ui/separator";
 import {SubmissionsTable} from "@/app/assignment/components/submissions/submissions-table";
 import {columns, Submission} from "@/app/assignment/components/submissions/submissions";
 import {SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar";
-import {WorkflowsSidebar} from "@/app/assignment/components/workflows-sidebar";
+import {WorkflowsSidebar} from "@/app/assignment/components/sidebar/workflows-sidebar";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import {BreadcrumbNav} from "@/components/breadcrumb-nav";
 

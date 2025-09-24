@@ -1,13 +1,12 @@
-"use client"
-import SectionContainer from "@/app/assignment/components/section-container"
-import {Button} from "@/components/ui/button"
+import { useState } from "react"
+import SectionContainer from "./section-container"
+import { Button } from "@/components/ui/button"
 import {usePlugins} from "@/hooks/use-plugins";
-import {useState} from "react";
-import {PluginSettings, PydanticSchema} from "@/app/assignment/components/plugin-settings";
+import {PluginSettings, PydanticSchema} from "@/app/assignment/components/sidebar/plugin-settings";
 import {Select, SelectTrigger, SelectItem, SelectContent, SelectValue} from "@/components/ui/select"
 
-export default function TranscriberSection() {
-  let {data: plugins = [], isLoading, isError} = usePlugins("transcriber");
+export default function ValidatorSection() {
+  let {data: plugins = [], isLoading, isError} = usePlugins("validator");
   const [settings, setSettings] = useState<PydanticSchema | null>(null);
 
   if (isLoading) {
@@ -21,7 +20,6 @@ export default function TranscriberSection() {
   const onSelectPluginChange = (pluginName: string) => {
     const plugin = plugins.find((p) => p.name === pluginName);
     if (plugin) {
-      // TODO: I should probably separate schema and settings in the backend
       setSettings(plugin.settings as any);
     } else {
       setSettings(null);
@@ -29,7 +27,7 @@ export default function TranscriberSection() {
   }
 
   return (
-    <SectionContainer title="Transcriber">
+    <SectionContainer title="Validator">
       <Select onValueChange={onSelectPluginChange}>
         <SelectTrigger className="w-full" size={"sm"}>
           <SelectValue placeholder="Select plugin"/>
@@ -44,9 +42,8 @@ export default function TranscriberSection() {
         </SelectContent>
       </Select>
 
-      {settings && <PluginSettings type="transcriber" schema={settings}/>}
-      <Button variant={"secondary"}>Transcribe all</Button>
+      {settings && <PluginSettings type="validator" schema={settings}/>}
+      <Button variant={"secondary"}>Validate all</Button>
     </SectionContainer>
   )
 }
-

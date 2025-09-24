@@ -1,13 +1,13 @@
 "use client"
-import { useState } from "react"
-import SectionContainer from "./section-container"
-import { Button } from "@/components/ui/button"
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import SectionContainer from "@/app/assignment/components/sidebar/section-container"
+import {Button} from "@/components/ui/button"
 import {usePlugins} from "@/hooks/use-plugins";
-import {PluginSettings, PydanticSchema} from "@/app/assignment/components/plugin-settings";
+import {useState} from "react";
+import {PluginSettings, PydanticSchema} from "@/app/assignment/components/sidebar/plugin-settings";
+import {Select, SelectTrigger, SelectItem, SelectContent, SelectValue} from "@/components/ui/select"
 
-export default function GraderSection() {
-  let {data: plugins = [], isLoading, isError} = usePlugins("grader");
+export default function TranscriberSection() {
+  let {data: plugins = [], isLoading, isError} = usePlugins("transcriber");
   const [settings, setSettings] = useState<PydanticSchema | null>(null);
 
   if (isLoading) {
@@ -21,6 +21,7 @@ export default function GraderSection() {
   const onSelectPluginChange = (pluginName: string) => {
     const plugin = plugins.find((p) => p.name === pluginName);
     if (plugin) {
+      // TODO: I should probably separate schema and settings in the backend
       setSettings(plugin.settings as any);
     } else {
       setSettings(null);
@@ -28,7 +29,7 @@ export default function GraderSection() {
   }
 
   return (
-    <SectionContainer title="Grader">
+    <SectionContainer title="Transcriber">
       <Select onValueChange={onSelectPluginChange}>
         <SelectTrigger className="w-full" size={"sm"}>
           <SelectValue placeholder="Select plugin"/>
@@ -43,8 +44,8 @@ export default function GraderSection() {
         </SelectContent>
       </Select>
 
-      {settings && <PluginSettings type="grader" schema={settings}/>}
-      <Button variant={"secondary"}>Grade all</Button>
+      {settings && <PluginSettings type="transcriber" schema={settings}/>}
+      <Button variant={"secondary"}>Transcribe all</Button>
     </SectionContainer>
   )
 }

@@ -1,12 +1,13 @@
+"use client"
 import { useState } from "react"
 import SectionContainer from "./section-container"
 import { Button } from "@/components/ui/button"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {usePlugins} from "@/hooks/use-plugins";
-import {PluginSettings, PydanticSchema} from "@/app/assignment/components/plugin-settings";
-import {Select, SelectTrigger, SelectItem, SelectContent, SelectValue} from "@/components/ui/select"
+import {PluginSettings, PydanticSchema} from "@/app/assignment/components/sidebar/plugin-settings";
 
-export default function ValidatorSection() {
-  let {data: plugins = [], isLoading, isError} = usePlugins("validator");
+export default function GraderSection() {
+  let {data: plugins = [], isLoading, isError} = usePlugins("grader");
   const [settings, setSettings] = useState<PydanticSchema | null>(null);
 
   if (isLoading) {
@@ -27,7 +28,7 @@ export default function ValidatorSection() {
   }
 
   return (
-    <SectionContainer title="Validator">
+    <SectionContainer title="Grader">
       <Select onValueChange={onSelectPluginChange}>
         <SelectTrigger className="w-full" size={"sm"}>
           <SelectValue placeholder="Select plugin"/>
@@ -42,8 +43,9 @@ export default function ValidatorSection() {
         </SelectContent>
       </Select>
 
-      {settings && <PluginSettings type="validator" schema={settings}/>}
-      <Button variant={"secondary"}>Validate all</Button>
+      {settings && <PluginSettings type="grader" schema={settings}/>}
+      <Button variant={"secondary"}>Grade all</Button>
     </SectionContainer>
   )
 }
+
