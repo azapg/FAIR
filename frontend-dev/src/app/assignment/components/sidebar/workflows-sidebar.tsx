@@ -13,11 +13,9 @@ import {
 } from "@/components/ui/select"
 import {Separator} from "@/components/ui/separator"
 import {Button} from "@/components/ui/button"
-import TranscriberSection from "./transcriber-section"
-import GraderSection from "./grader-section"
-import ValidatorSection from "./validator-section"
 import {PlusIcon} from "lucide-react";
 import {useWorkflowStore} from "@/store/workflows-store";
+import PluginSection from "@/app/assignment/components/sidebar/plugin-section";
 
 
 export function WorkflowsSidebar({
@@ -60,11 +58,11 @@ export function WorkflowsSidebar({
       </SidebarHeader>
       <Separator/>
       <SidebarContent>
-        <TranscriberSection/>
+        <PluginSection title={"Transcriber"} action={"Transcribe all"} type={"transcriber"} />
         <Separator/>
-        <GraderSection/>
+        <PluginSection title={"Grader"} action={"Grade all"} type={"grader"} />
         <Separator/>
-        <ValidatorSection/>
+        <PluginSection title={"Validator"} action={"Validate all"} type={"validator"} />
         <Separator/>
       </SidebarContent>
       <SidebarFooter className={"py-4 px-2.5"}>

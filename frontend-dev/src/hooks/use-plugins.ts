@@ -1,5 +1,6 @@
 import api from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
+import {PydanticSchema} from "@/app/assignment/components/sidebar/plugin-settings";
 
 export type Plugin = {
     id: string
@@ -10,7 +11,7 @@ export type Plugin = {
     version: string
     hash: string
     source: string
-    settings: Record<string, any>
+    settings: PydanticSchema // TODO: this should be schema, not settings. Change in backend too.
 }
 
 export type PluginType = "transcriber" | "grader" | "validator"
