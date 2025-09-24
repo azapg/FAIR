@@ -165,17 +165,17 @@ export const useWorkflowStore = create<State & Actions>()(
         if (pluginType === 'transcriber') {
           updatedPlugins.transcriber = {
             ...updatedPlugins.transcriber,
-            settings: values
+            settings_schema: values
           } as Plugin
         } else if (pluginType === 'grader') {
           updatedPlugins.grader = {
             ...updatedPlugins.grader,
-            settings: values
+            settings_schema: values
           } as Plugin
         } else if (pluginType === 'validator') {
           updatedPlugins.validator = {
             ...updatedPlugins.validator,
-            settings: values
+            settings_schema: values
           } as Plugin
         }
 

@@ -49,7 +49,7 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
         </SelectContent>
       </Select>
 
-      {selectedPlugin && <PluginSettings type="transcriber" schema={selectedPlugin.settings}/>}
+      {selectedPlugin && <PluginSettings type="transcriber" schema={selectedPlugin.settings_schema}/>}
       <Button variant={"secondary"}>{action}</Button>
     </SectionContainer>
   )

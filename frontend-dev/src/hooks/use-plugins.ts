@@ -11,7 +11,8 @@ export type Plugin = {
     version: string
     hash: string
     source: string
-    settings: PydanticSchema // TODO: this should be schema, not settings. Change in backend too.
+    settings_schema: PydanticSchema
+    type: PluginType
 }
 
 export type PluginType = "transcriber" | "grader" | "validator"

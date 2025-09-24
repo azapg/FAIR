@@ -110,7 +110,7 @@ class PluginMeta(BaseModel):
     version: str
     hash: str
     source: str
-    settings: Dict[str, Any]
+    settings_schema: Dict[str, Any]
     type: PluginType
 
 
@@ -164,7 +164,7 @@ class FairPlugin:
             hash=extension_hash,
             source=source,
             author_email=self.author_email,
-            settings=create_settings_model(cls).model_json_schema(),
+            settings_schema=create_settings_model(cls).model_json_schema(),
             type=plugin_type
         )
 

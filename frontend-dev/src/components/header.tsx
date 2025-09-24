@@ -48,7 +48,7 @@ interface HeaderProps {
     separator?: boolean;
   }>;
   /**
-   * Callback when user clicks settings
+   * Callback when user clicks settings_schema
    */
   onSettingsClick?: () => void;
   /**

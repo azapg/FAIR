@@ -182,7 +182,7 @@ export function PluginSettings({ schema, type, values = {}, onChange }: PluginSe
   const defaults = useMemo(() => extractDefaults(schema), [schema])
 
   if(pluginDraft && pluginDraft[type]) {
-    values = pluginDraft[type]?.settings
+    values = pluginDraft[type]?.settings_schema
   } else {
     values = { ...defaults, ...values }
   }
