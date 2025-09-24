@@ -1,22 +1,15 @@
-from enum import Enum
 from typing import Optional, List, Any
 
 from pydantic import BaseModel, ValidationError
 
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.data.models import User, UserRole
-from fair_platform.sdk import list_plugins, list_grade_plugins, list_validation_plugins, list_transcription_plugins, \
-    PluginMeta, get_plugin_object, GradePlugin, TranscribedSubmission, Submission, Submitter, Assignment, \
-    create_settings_model
+from fair_platform.sdk import list_plugins, PluginMeta, get_plugin_object, GradePlugin, TranscribedSubmission, \
+    Submission, Submitter, Assignment, \
+    create_settings_model, PluginType
 from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter()
-
-
-class PluginType(str, Enum):
-    transcriber = "transcriber"
-    grader = "grader"
-    validator = "validator"
 
 
 @router.get("/", response_model=List[PluginMeta])
@@ -24,22 +17,17 @@ def list_all_plugins(type_filter: Optional[PluginType] = None, user: User = Depe
     if user.role != UserRole.admin and user.role != UserRole.professor:
         raise HTTPException(status_code=403, detail="Not authorized to list plugins")
 
-    if type_filter == PluginType.transcriber:
-        plugins = list_transcription_plugins()
-    elif type_filter == PluginType.grader:
-        plugins = list_grade_plugins()
-    elif type_filter == PluginType.validator:
-        plugins = list_validation_plugins()
-    else:
-        plugins = list_plugins()
+    plugins = list_plugins(plugin_type=type_filter)
 
     return plugins
+
 
 class GradeRequest(BaseModel):
     submission_id: str
     plugin_version: Optional[str] = None
     plugin_hash: Optional[str] = None
     settings: dict[str, Any]
+
 
 # EXAMPLE: plugins/up.allan-zapata.simple-transcriber/transcribe
 # with optional payload: version, hash. If not provided, use latest version
@@ -55,7 +43,7 @@ def grade(plugin_id: str, grade_request: GradeRequest, user: User = Depends(get_
         raise HTTPException(status_code=404, detail="Plugin not found")
     else:
         plugin = plugin()
-        
+
     if not isinstance(plugin, GradePlugin):
         raise HTTPException(status_code=400, detail="Plugin is not a grading plugin")
     try:
@@ -69,8 +57,10 @@ def grade(plugin_id: str, grade_request: GradeRequest, user: User = Depends(get_
     # TODO: just for testing
     submitter = Submitter(id="student123", name="Test Student", email="")
     assignment = Assignment(id="assignment123", title="Test Assignment", description="", deadline="", max_score=100.0)
-    original_submission = Submission(id=grade_request.submission_id, submitter=submitter, submitted_at="", assignment=assignment, artifacts=[])
-    transcribed_submission = TranscribedSubmission(transcription="This is a test transcription.", confidence=1.0, original_submission=original_submission)
+    original_submission = Submission(id=grade_request.submission_id, submitter=submitter, submitted_at="",
+                                     assignment=assignment, artifacts=[])
+    transcribed_submission = TranscribedSubmission(transcription="This is a test transcription.", confidence=1.0,
+                                                   original_submission=original_submission)
     result = plugin.grade(transcribed_submission)
 
     return result

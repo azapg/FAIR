@@ -1,5 +1,6 @@
 import inspect
 from abc import ABC, abstractmethod
+from enum import Enum
 
 from fair_platform.sdk import Submission, SettingsField
 from typing import Any, Type, List, Optional, Dict, Union
@@ -30,6 +31,7 @@ class BasePlugin:
             else:
                 if field.required:
                     raise ValueError(f"Missing required settings field: {name}")
+
 
 def create_settings_model(plugin_class: Type[BasePlugin] | BasePlugin) -> Type[BaseModel]:
     settings_fields = getattr(plugin_class, '_settings_fields', {})
@@ -93,6 +95,12 @@ class ValidationPlugin(BasePlugin, ABC):
         return [self.validate_one(grade_result=gr) for gr in grade_results]
 
 
+class PluginType(str, Enum):
+    transcriber = "transcriber"
+    grader = "grader"
+    validator = "validator"
+
+
 class PluginMeta(BaseModel):
     id: str
     name: str
@@ -103,14 +111,13 @@ class PluginMeta(BaseModel):
     hash: str
     source: str
     settings: Dict[str, Any]
+    type: PluginType
 
 
 PLUGINS: Dict[str, PluginMeta] = {}
-TRANSCRIPTION_PLUGINS: Dict[str, PluginMeta] = {}
-GRADE_PLUGINS: Dict[str, PluginMeta] = {}
-VALIDATION_PLUGINS: Dict[str, PluginMeta] = {}
 
 PLUGINS_OBJECTS: Dict[str, Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]] = {}
+
 
 class FairPlugin:
     def __init__(self, id: str, name: str, author, version: str, description: Optional[str] = None,
@@ -139,6 +146,15 @@ class FairPlugin:
         if source is None:
             raise ValueError(f"Plugin class '{cls.__name__}' is missing '__extension_dir__' attribute.")
 
+        if issubclass(cls, TranscriptionPlugin):
+            plugin_type = PluginType.transcriber
+        elif issubclass(cls, GradePlugin):
+            plugin_type = PluginType.grader
+        elif issubclass(cls, ValidationPlugin):
+            plugin_type = PluginType.validator
+        else:
+            raise TypeError("FairPlugin decorator can only be applied to subclasses of TranscriptionPlugin, GradePlugin, or ValidationPlugin")
+
         metadata = PluginMeta(
             id=self.id,
             name=self.name,
@@ -148,45 +164,28 @@ class FairPlugin:
             hash=extension_hash,
             source=source,
             author_email=self.author_email,
-            settings=create_settings_model(cls).model_json_schema()
+            settings=create_settings_model(cls).model_json_schema(),
+            type=plugin_type
         )
 
         PLUGINS[self.name] = metadata
-
-        if issubclass(cls, TranscriptionPlugin):
-            TRANSCRIPTION_PLUGINS[self.name] = metadata
-            PLUGINS_OBJECTS[self.id] = cls
-        if issubclass(cls, GradePlugin):
-            GRADE_PLUGINS[self.name] = metadata
-            PLUGINS_OBJECTS[self.id] = cls
-        if issubclass(cls, ValidationPlugin):
-            VALIDATION_PLUGINS[self.name] = metadata
-            PLUGINS_OBJECTS[self.id] = cls
-
+        PLUGINS_OBJECTS[self.name] = cls
         return cls
 
 
 def get_plugin_metadata(name: str) -> Optional[PluginMeta]:
     return PLUGINS.get(name)
 
-def get_plugin_object(name: str) -> Optional[Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]]:
+
+def get_plugin_object(name: str) -> Optional[
+    Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]]:
     return PLUGINS_OBJECTS.get(name)
 
-def list_plugins() -> List[PluginMeta]:
+
+def list_plugins(plugin_type: Optional[PluginType] = None) -> List[PluginMeta]:
+    if plugin_type:
+        return [plugin for plugin in PLUGINS.values() if plugin.type == plugin_type]
     return list(PLUGINS.values())
-
-
-def list_transcription_plugins() -> List[PluginMeta]:
-    return list(TRANSCRIPTION_PLUGINS.values())
-
-
-def list_grade_plugins() -> List[PluginMeta]:
-    return list(GRADE_PLUGINS.values())
-
-
-def list_validation_plugins() -> List[PluginMeta]:
-    return list(VALIDATION_PLUGINS.values())
-
 
 __all__ = [
     "BasePlugin",
@@ -203,7 +202,5 @@ __all__ = [
     "get_plugin_metadata",
     "get_plugin_object",
     "list_plugins",
-    "list_transcription_plugins",
-    "list_grade_plugins",
-    "list_validation_plugins",
+    "PluginType"
 ]

@@ -59,9 +59,3 @@ class ComplexPlugin(TranscriptionPlugin, ABC):
 
     def transcribe_batch(self, submissions: List[Submission]) -> List[TranscribedSubmission]:
         return [self.transcribe(sub) for sub in submissions]
-
-
-from fair_platform.sdk import get_plugin_metadata, list_plugins, list_transcription_plugins, list_grade_plugins
-
-print(get_plugin_metadata("SimpleTranscriber"))
-print(list_plugins())
