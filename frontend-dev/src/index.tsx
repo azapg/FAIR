@@ -6,6 +6,7 @@ import RegisterPage from "@/app/register/page";
 import CourseDetailPage from "@/app/courses/course/page";
 import DemoAssignmentPage from "@/app/assignment/demo";
 import AssignmentPage from "@/app/assignment/page";
+import WorkflowsDemo from "@/app/workflows-demo";
 
 export function App() {
   return (
@@ -21,6 +22,7 @@ export function App() {
         <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage />} />
 
         <Route path={"assignment"} element={<DemoAssignmentPage />} />
+        <Route path={"workflows"} element={<WorkflowsDemo />} />
       </Route>
 
       <Route path={"login"} element={<LoginPage/>}/>
