@@ -2,8 +2,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { PluginType } from "@/store/workflows-store"
-import { useState, useCallback, useMemo, useEffect } from "react"
+import { PluginType } from "@/hooks/use-plugins"
+import {useState, useCallback, useMemo} from "react"
+import {useWorkflowStore} from "@/store/workflows-store";
 
 interface PydanticProperty {
   type: 'string' | 'number' | 'boolean' | 'object'
@@ -41,9 +42,6 @@ interface BaseInputProps {
 function TextField({ property, value, onChange, name }: BaseInputProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={name} className="text-sm font-medium">
-        {property.title}
-      </Label>
       {property.description && (
         <p className="text-xs text-muted-foreground">{property.description}</p>
       )}
@@ -60,34 +58,9 @@ function TextField({ property, value, onChange, name }: BaseInputProps) {
   )
 }
 
-function StringField({ property, value, onChange, name }: BaseInputProps) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name} className="text-sm font-medium">
-        {property.title}
-      </Label>
-      {property.description && (
-        <p className="text-xs text-muted-foreground">{property.description}</p>
-      )}
-      <Input
-        id={name}
-        type="text"
-        placeholder={property.default?.toString() || ''}
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        minLength={property.minLength}
-        maxLength={property.maxLength}
-      />
-    </div>
-  )
-}
-
 function NumberField({ property, value, onChange, name }: BaseInputProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={name} className="text-sm font-medium">
-        {property.title}
-      </Label>
       {property.description && (
         <p className="text-xs text-muted-foreground">{property.description}</p>
       )}
@@ -95,8 +68,8 @@ function NumberField({ property, value, onChange, name }: BaseInputProps) {
         id={name}
         type="number"
         placeholder={property.default?.toString() || ''}
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
+        value={value || ''}
+        onChange={(e) => onChange(Number(e.target.value))}
         min={property.minimum}
         max={property.maximum}
         step={property.type === 'number' ? 'any' : '1'}
@@ -105,13 +78,10 @@ function NumberField({ property, value, onChange, name }: BaseInputProps) {
   )
 }
 
-function BooleanField({ property, value, onChange, name }: BaseInputProps) {
+function SwitchField({ property, value, onChange, name }: BaseInputProps) {
   return (
     <div className="flex items-center justify-between space-y-2">
       <div className="space-y-0.5">
-        <Label htmlFor={name} className="text-sm font-medium">
-          {property.title}
-        </Label>
         {property.description && (
           <p className="text-xs text-muted-foreground">{property.description}</p>
         )}
@@ -125,7 +95,20 @@ function BooleanField({ property, value, onChange, name }: BaseInputProps) {
   )
 }
 
-function UnsupportedField({ property, name }: { property: PydanticProperty; name: string }) {
+function FileField({ property, value, onChange, name }: BaseInputProps) {
+  return (
+    <div className="space-y-2">
+      {property.description && (
+        <p className="text-xs text-muted-foreground">{property.description}</p>
+      )}
+      <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+        <p className="text-sm text-muted-foreground">File upload not implemented</p>
+      </div>
+    </div>
+  )
+}
+
+function UnsupportedField({ property }: { property: PydanticProperty; name: string }) {
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium text-destructive">
@@ -138,32 +121,47 @@ function UnsupportedField({ property, name }: { property: PydanticProperty; name
   )
 }
 
+// Component factory
+const INPUT_COMPONENTS = {
+  TextField,
+  NumberField,
+  SwitchField,
+  FileField,
+} as const
+
+type InputComponentKey = keyof typeof INPUT_COMPONENTS
+
+function getComponentType(property: PydanticProperty): InputComponentKey | null {
+  if (property.title in INPUT_COMPONENTS) {
+    return property.title as InputComponentKey
+  }
+
+  return null
+}
+
 function createInputComponent(
   property: PydanticProperty,
   name: string,
   value: any,
   onChange: (value: any) => void
 ) {
-  const props = { property, value, onChange, name };
+  const componentType = getComponentType(property)
   
-  // Determine component type based on property characteristics
-  if (property.type === 'boolean') {
-    return <BooleanField key={name} {...props} />;
+  if (!componentType) {
+    return <UnsupportedField key={name} property={property} name={name} />
   }
   
-  if (property.type === 'number') {
-    return <NumberField key={name} {...props} />;
-  }
+  const Component = INPUT_COMPONENTS[componentType]
   
-  if (property.type === 'string') {
-    // Use textarea for long text fields, otherwise use regular input
-    if (property.maxLength && property.maxLength > 100) {
-      return <TextField key={name} {...props} />;
-    }
-    return <StringField key={name} {...props} />;
-  }
-  
-  return <UnsupportedField key={name} property={property} name={name} />;
+  return (
+    <Component
+      key={name}
+      property={property}
+      value={value}
+      onChange={onChange}
+      name={name}
+    />
+  )
 }
 
 function extractDefaults(schema: PydanticSchema): Record<string, any> {
@@ -176,52 +174,40 @@ function extractDefaults(schema: PydanticSchema): Record<string, any> {
 }
 
 export function PluginSettings({ schema, type, values = {}, onChange }: PluginSettingsProps) {
-  const defaults = useMemo(() => extractDefaults(schema), [schema])
-  const [formValues, setFormValues] = useState<Record<string, any>>(() => ({
-    ...defaults,
-    ...values
-  }))
+  const pluginsDraft = useWorkflowStore(state => state.pluginsDraft)
+  const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId)
+  const savePluginDraftValues = useWorkflowStore(state => state.saveWorkflowDraft)
 
-  // Update form values when external values change
-  useEffect(() => {
-    setFormValues(prevValues => ({
-      ...defaults,
-      ...values,
-      ...prevValues // Keep any user changes that haven't been saved yet
-    }))
-  }, [values, defaults])
+  const pluginDraft = pluginsDraft[activeWorkflowId || ""]
+  const defaults = useMemo(() => extractDefaults(schema), [schema])
+
+  if(pluginDraft && pluginDraft[type]) {
+    values = pluginDraft[type]?.settings_schema
+  } else {
+    values = { ...defaults, ...values }
+  }
+
+  const [formValues, setFormValues] = useState<Record<string, any>>(values)
 
   const handleFieldChange = useCallback((key: string, value: any) => {
     const newValues = { ...formValues, [key]: value }
     setFormValues(newValues)
     onChange?.(newValues)
-  }, [formValues, onChange])
+    savePluginDraftValues(type, newValues)
+  }, [formValues, onChange, type])
   
-  if (!schema?.properties) {
+  if (!schema.properties) {
     return (
-      <div className="text-center py-4">
+      <div className="text-center py-8">
         <p className="text-sm text-muted-foreground">No settings available</p>
       </div>
     )
   }
   
-  const propertyEntries = Object.entries(schema.properties);
-  
-  if (propertyEntries.length === 0) {
-    return (
-      <div className="text-center py-4">
-        <p className="text-sm text-muted-foreground">No configuration needed</p>
-      </div>
-    )
-  }
-  
   return (
-    <div className="space-y-4">
-      <div className="text-sm font-medium text-muted-foreground">
-        Plugin Configuration
-      </div>
+    <div className="space-y-6">
       <div className="space-y-4">
-        {propertyEntries.map(([key, property]) =>
+        {Object.entries(schema.properties).map(([key, property]) =>
           createInputComponent(
             property,
             key,

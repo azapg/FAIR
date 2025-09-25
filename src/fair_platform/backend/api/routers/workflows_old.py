@@ -96,6 +96,36 @@ def create_workflow(
     return _convert_workflow_to_read(wf)
 
 
+@router.post("/", response_model=WorkflowRead, status_code=status.HTTP_201_CREATED)
+def create_workflow(
+        payload: WorkflowCreate,
+        db: Session = Depends(session_dependency),
+        current_user: User = Depends(get_current_user),
+):
+    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
+        raise HTTPException(status_code=403, detail="Not authorized to create workflows")
+
+    course = db.get(Course, payload.course_id)
+    if not course:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
+
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the course instructor or admin can create workflows")
+
+    wf = Workflow(
+        id=uuid4(),
+        course_id=payload.course_id,
+        name=payload.name,
+        description=payload.description,
+        created_by=current_user.id,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(wf)
+    db.commit()
+    db.refresh(wf)
+    return wf
+
+
 @router.get("/", response_model=List[WorkflowRead])
 def list_workflows(course_id: UUID | None = None, db: Session = Depends(session_dependency),
                    current_user: User = Depends(get_current_user)):
@@ -112,26 +142,19 @@ def list_workflows(course_id: UUID | None = None, db: Session = Depends(session_
     q = db.query(Workflow)
     if course_id:
         q = q.filter(Workflow.course_id == course_id)
-    
-    workflows = q.all()
-    return [_convert_workflow_to_read(wf) for wf in workflows]
+    return q.all()
 
 
 @router.get("/{workflow_id}", response_model=WorkflowRead)
-def get_workflow(workflow_id: UUID, db: Session = Depends(session_dependency), 
-                 current_user: User = Depends(get_current_user)):
+def get_workflow(workflow_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
     if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
         raise HTTPException(status_code=403, detail="Not authorized to get workflow")
 
+    # TODO: we should also check if the professor is the instructor of the course related to this workflow
     wf = db.get(Workflow, workflow_id)
     if not wf:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
-    
-    course = db.get(Course, wf.course_id)
-    if current_user.role == UserRole.professor and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to access this workflow")
-    
-    return _convert_workflow_to_read(wf)
+    return wf
 
 
 @router.put("/{workflow_id}", response_model=WorkflowRead)
@@ -150,7 +173,7 @@ def update_workflow(
 
     course = db.get(Course, wf.course_id)
     if not course:
-        raise HTTPException(status_code=400, detail="Cannot find course for this workflow")
+        raise HTTPException(status_code=400, detail="Cannot find course for this workflow. Data integrity issue?")
 
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only the course instructor or admin can update this workflow")
@@ -159,21 +182,11 @@ def update_workflow(
         wf.name = payload.name
     if payload.description is not None:
         wf.description = payload.description
-    if payload.plugin_configs is not None:
-        # Convert PluginConfig objects to dict for storage
-        plugin_configs_dict = {}
-        for plugin_type, config in payload.plugin_configs.items():
-            if isinstance(config, PluginConfig):
-                plugin_configs_dict[plugin_type] = config.model_dump()
-            else:
-                plugin_configs_dict[plugin_type] = config
-        wf.plugin_configs = plugin_configs_dict
-    
-    wf.updated_at = datetime.now(timezone.utc)
+
     db.add(wf)
     db.commit()
     db.refresh(wf)
-    return _convert_workflow_to_read(wf)
+    return wf
 
 
 @router.delete("/{workflow_id}", status_code=status.HTTP_204_NO_CONTENT)

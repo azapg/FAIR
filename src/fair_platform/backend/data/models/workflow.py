@@ -2,7 +2,7 @@ from uuid import UUID
 from datetime import datetime
 from sqlalchemy import String, Text, ForeignKey, UUID as SAUUID, TIMESTAMP, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 
 from ..database import Base
 
@@ -22,17 +22,55 @@ class Workflow(Base):
     created_by: Mapped[UUID] = mapped_column(SAUUID, ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False)
     updated_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
-    # TODO: What an ugly schema, needs refactoring.
-    transcriber_plugin_id: Mapped[str] = mapped_column(Text, ForeignKey("plugins.id"), nullable=True)
-    transcriber_settings = Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    grader_plugin_id: Mapped[str] = mapped_column(Text, ForeignKey("plugins.id"), nullable=True)
-    grader_settings = Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    validator_plugin_id: Mapped[str] = mapped_column(Text, ForeignKey("plugins.id"), nullable=True)
-    validator_settings = Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    
+    # Simplified schema - single JSON field for all plugin configurations
+    plugin_configs: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True, default={})
+    
+    # Legacy fields for backward compatibility - to be removed after migration
+    transcriber_plugin_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    transcriber_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    grader_plugin_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    grader_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    validator_plugin_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    validator_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     course: Mapped["Course"] = relationship("Course", back_populates="workflows")
     creator: Mapped["User"] = relationship("User", back_populates="created_workflows")
     runs: Mapped[List["WorkflowRun"]] = relationship("WorkflowRun", back_populates="workflow")
+    
+    def get_plugin_config(self, plugin_type: str) -> Optional[Dict[str, Any]]:
+        """Get plugin configuration for a specific type."""
+        if not self.plugin_configs:
+            return None
+        return self.plugin_configs.get(plugin_type)
+    
+    def set_plugin_config(self, plugin_type: str, config: Dict[str, Any]) -> None:
+        """Set plugin configuration for a specific type."""
+        if not self.plugin_configs:
+            self.plugin_configs = {}
+        self.plugin_configs[plugin_type] = config
+    
+    def get_legacy_plugin_config(self, plugin_type: str) -> Optional[Dict[str, Any]]:
+        """Get plugin configuration from legacy fields - for migration purposes."""
+        if plugin_type == "transcriber" and self.transcriber_plugin_id:
+            return {
+                "plugin_id": self.transcriber_plugin_id,
+                "plugin_hash": None,  # Not available in legacy schema
+                "settings": self.transcriber_settings or {}
+            }
+        elif plugin_type == "grader" and self.grader_plugin_id:
+            return {
+                "plugin_id": self.grader_plugin_id,
+                "plugin_hash": None,
+                "settings": self.grader_settings or {}
+            }
+        elif plugin_type == "validator" and self.validator_plugin_id:
+            return {
+                "plugin_id": self.validator_plugin_id,
+                "plugin_hash": None,
+                "settings": self.validator_settings or {}
+            }
+        return None
 
     def __repr__(self) -> str:
         return f"<Workflow id={self.id} name={self.name!r} course_id={self.course_id} created_by={self.created_by}>"

@@ -1,219 +1,387 @@
-import {create} from 'zustand';
-import {persist} from "zustand/middleware";
-import {Plugin, PluginType} from "@/hooks/use-plugins";
-import api from "@/lib/api";
+import { create } from 'zustand';
+import { persist } from "zustand/middleware";
 
-export type WorkflowRunCreate = {
-  status: 'pending' | 'running' | 'success' | 'failure' | 'cancelled';
-  runBy: string;
-  logs: any;
-  submissions: any; // TODO: submission object
-}
+export type PluginType = "transcriber" | "grader" | "validator";
 
-export type WorkflowRun = WorkflowRunCreate & {
+export type PluginConfig = {
+  plugin_id: string;
+  plugin_hash?: string;
+  settings: Record<string, any>;
+};
+
+export type Plugin = {
   id: string;
-  workflowId: string;
-  startedAt: string;
-  finishedAt: string | null;
-}
+  name: string;
+  author: string;
+  version: string;
+  hash: string;
+  settings_schema: any; // JSON Schema
+  type: PluginType;
+};
+
+export type Workflow = {
+  id: string;
+  name: string;
+  course_id: string;
+  description?: string;
+  created_by: string;
+  created_at: string;
+  updated_at?: string;
+  plugin_configs: Record<PluginType, PluginConfig>;
+};
 
 export type WorkflowCreate = {
   name: string;
-  courseId: string;
+  course_id: string;
   description?: string;
-  plugins: {
-    transcriber?: Plugin,
-    grader?: Plugin,
-    validator?: Plugin,
-  }
-}
+  created_by: string;
+  plugin_configs?: Record<PluginType, PluginConfig>;
+};
 
-export type Workflow = WorkflowCreate & {
-  id: string;
-  createdAt: string;
-  creatorId: string;
-  runs?: WorkflowRun[];
-}
+type WorkflowDraft = {
+  hasChanges: boolean;
+  plugin_configs: Record<PluginType, PluginConfig>;
+};
 
 type State = {
+  // Current workflow being edited
+  currentWorkflow: Workflow | null;
+  
+  // All workflows for current course
   workflows: Workflow[];
-
-  coursesActiveWorkflows: Record<string, string>; // courseId -> workflowId
-  activeCourseId?: string;
-  activeWorkflowId?: string;
-
-  pluginsDraft: Record<string, WorkflowCreate['plugins']>; // workflowId -> WorkflowCreate.plugins
-}
+  
+  // Draft changes (unsaved)
+  draft: WorkflowDraft;
+  
+  // Available plugins for selection
+  availablePlugins: Record<PluginType, Plugin[]>;
+  
+  // UI state
+  isLoading: boolean;
+  error: string | null;
+  
+  // Course context
+  currentCourseId: string | null;
+};
 
 type Actions = {
+  // Workflow management
+  setCurrentCourse: (courseId: string) => void;
   loadWorkflows: () => Promise<void>;
-  createWorkflow: (name: string, description?: string) => void;
+  loadWorkflow: (workflowId: string) => Promise<void>;
+  createWorkflow: (name: string, description?: string) => Promise<void>;
+  
+  // Draft management
+  selectPlugin: (type: PluginType, pluginId: string, pluginHash?: string) => void;
+  updatePluginSettings: (type: PluginType, settings: Record<string, any>) => void;
+  saveDraft: () => Promise<void>;
+  discardDraft: () => void;
+  
+  // Plugin management
+  loadAvailablePlugins: (type?: PluginType) => Promise<void>;
+  
+  // Workflow execution
+  runWorkflow: () => Promise<void>;
+  
+  // Utility
+  clearError: () => void;
+};
 
-  setActiveCourseId: (courseId: string) => void;
-  setActiveWorkflowId: (workflowId: string) => void;
-  getActiveWorkflow: () => Workflow | undefined;
-
-  saveWorkflowDraft: (pluginType: PluginType, values: Record<string, any>) => void;
-  clearWorkflowDraft: (workflowId: string, plugin?: PluginType) => void;
-}
+const initialDraft: WorkflowDraft = {
+  hasChanges: false,
+  plugin_configs: {}
+};
 
 export const useWorkflowStore = create<State & Actions>()(
   persist(
     (set, get) => ({
+      // State
+      currentWorkflow: null,
       workflows: [],
-      pluginsDraft: {},
-      activeCourseId: undefined,
-      activeWorkflowId: undefined,
-      coursesActiveWorkflows: {},
+      draft: initialDraft,
+      availablePlugins: {
+        transcriber: [],
+        grader: [],
+        validator: []
+      },
+      isLoading: false,
+      error: null,
+      currentCourseId: null,
+
+      // Actions
+      setCurrentCourse: (courseId: string) => {
+        set({ currentCourseId: courseId, currentWorkflow: null, draft: initialDraft });
+      },
 
       loadWorkflows: async () => {
-        const { activeCourseId: course_id, activeWorkflowId } = get();
-        if (!course_id) {
-          throw new Error('No active course selected');
+        const { currentCourseId } = get();
+        if (!currentCourseId) {
+          set({ error: "No course selected" });
+          return;
         }
 
+        set({ isLoading: true, error: null });
         try {
-          const response = await api.get('/workflows', {params: {course_id: course_id}}) as { data: Workflow[] };
-          set({workflows: response.data});
-
-          if (activeWorkflowId) {
-            const exists = response.data.some(w => w.id === activeWorkflowId);
-            if (!exists) {
-              set({activeWorkflowId: undefined});
-            }
-          } else {
-            const lastActiveId = get().coursesActiveWorkflows[course_id];
-            if (lastActiveId) {
-              const exists = response.data.some(w => w.id === lastActiveId);
-              if (exists) {
-                set({activeWorkflowId: lastActiveId});
-              }
-            }
+          // Mock API call - replace with actual API
+          const response = await fetch(`/api/workflows?course_id=${currentCourseId}`);
+          if (!response.ok) {
+            throw new Error(`Failed to load workflows: ${response.statusText}`);
           }
-
-
+          const workflows = await response.json();
+          set({ workflows, isLoading: false });
         } catch (error) {
-          throw new Error('Failed to load workflows', {cause: error});
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to load workflows',
+            isLoading: false 
+          });
         }
       },
-      setActiveCourseId: (courseId: string) => set({activeCourseId: courseId}),
-      setActiveWorkflowId: (workflowId: string) => {
-        const { workflows, activeCourseId } = get()
-        const workflow = workflows.find(w => w.id === workflowId)
 
-        if (workflow) {
-          set({activeWorkflowId: workflowId})
-          if (activeCourseId) {
-            set(state => ({
-              coursesActiveWorkflows: {
-                ...state.coursesActiveWorkflows,
-                [activeCourseId]: workflowId
-              }
-            }))
+      loadWorkflow: async (workflowId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          // Mock API call - replace with actual API
+          const response = await fetch(`/api/workflows/${workflowId}`);
+          if (!response.ok) {
+            throw new Error(`Failed to load workflow: ${response.statusText}`);
           }
+          const workflow = await response.json();
+          set({ 
+            currentWorkflow: workflow, 
+            draft: { hasChanges: false, plugin_configs: { ...workflow.plugin_configs } },
+            isLoading: false 
+          });
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to load workflow',
+            isLoading: false 
+          });
         }
-      },
-      getActiveWorkflow: () => {
-        const {workflows, activeCourseId, coursesActiveWorkflows, activeWorkflowId} = get()
-        let active = workflows.find(w => w.id === activeWorkflowId)
-        if (!active && activeCourseId) {
-          const lastActiveId = coursesActiveWorkflows[activeCourseId]
-          active = get().workflows.find(w => w.id === lastActiveId)
-        }
-        return active
       },
 
       createWorkflow: async (name: string, description?: string) => {
-        const { activeCourseId, workflows, setActiveWorkflowId } = get()
-
-        if (!activeCourseId) {
-          throw new Error('No active course selected')
+        const { currentCourseId } = get();
+        if (!currentCourseId) {
+          set({ error: "No course selected" });
+          return;
         }
 
-        const newWorkflow: WorkflowCreate = {
-          courseId: activeCourseId,
-          name,
-          description: description || '',
-          plugins: {}
-        }
-
+        set({ isLoading: true, error: null });
         try {
-          const created = await api.post('/workflows', newWorkflow) as { data: Workflow }
-          set({workflows: [...workflows, created.data]})
-          setActiveWorkflowId(created.data.id)
+          const workflowData: WorkflowCreate = {
+            name,
+            course_id: currentCourseId,
+            description,
+            created_by: "current-user-id", // TODO: Get from auth context
+            plugin_configs: {}
+          };
+
+          // Mock API call - replace with actual API
+          const response = await fetch('/api/workflows', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(workflowData)
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to create workflow: ${response.statusText}`);
+          }
+          
+          const newWorkflow = await response.json();
+          set(state => ({
+            workflows: [...state.workflows, newWorkflow],
+            currentWorkflow: newWorkflow,
+            draft: { hasChanges: false, plugin_configs: {} },
+            isLoading: false
+          }));
         } catch (error) {
-          throw new Error('Failed to create workflow', {cause: error})
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to create workflow',
+            isLoading: false 
+          });
         }
-
       },
-      saveWorkflowDraft: (pluginType: PluginType, values: Record<string, any>) => {
-        const {activeWorkflowId, workflows, pluginsDraft} = get()
-        if (!activeWorkflowId) {
-          throw new Error('No active workflow selected')
-        }
 
-        const workflow = workflows.find(w => w.id === activeWorkflowId)
-        if (!workflow) {
-          throw new Error('Active workflow not found')
-        }
-
-        // TODO: This just prefers the draft over the saved workflow, which might lead to lost updates
-        const updatedPlugins = pluginsDraft[activeWorkflowId] ? {...pluginsDraft[activeWorkflowId]} : {...workflow.plugins}
-
-
-
-        if (pluginType === 'transcriber') {
-          updatedPlugins.transcriber = {
-            ...updatedPlugins.transcriber,
-            settings_schema: values
-          } as Plugin
-        } else if (pluginType === 'grader') {
-          updatedPlugins.grader = {
-            ...updatedPlugins.grader,
-            settings_schema: values
-          } as Plugin
-        } else if (pluginType === 'validator') {
-          updatedPlugins.validator = {
-            ...updatedPlugins.validator,
-            settings_schema: values
-          } as Plugin
+      selectPlugin: (type: PluginType, pluginId: string, pluginHash?: string) => {
+        const { availablePlugins } = get();
+        const plugin = availablePlugins[type].find(p => p.id === pluginId);
+        
+        if (!plugin) {
+          set({ error: `Plugin ${pluginId} not found` });
+          return;
         }
 
         set(state => ({
-          pluginsDraft: {
-            ...state.pluginsDraft,
-            [activeWorkflowId]: {...updatedPlugins}
-          }
-        }))
-      },
-      clearWorkflowDraft: (workflowId: string, plugin?: PluginType) => {
-        const {pluginsDraft} = get()
-        if (plugin) {
-          const draft = pluginsDraft[workflowId]
-          if (draft && draft[plugin]) {
-            const updatedDraft = {...draft}
-            delete updatedDraft[plugin]
-            set(state => ({
-              pluginsDraft: {
-                ...state.pluginsDraft,
-                [workflowId]: updatedDraft
+          draft: {
+            hasChanges: true,
+            plugin_configs: {
+              ...state.draft.plugin_configs,
+              [type]: {
+                plugin_id: pluginId,
+                plugin_hash: pluginHash || plugin.hash,
+                settings: {} // Reset settings when changing plugin
               }
-            }))
+            }
+          },
+          error: null
+        }));
+      },
+
+      updatePluginSettings: (type: PluginType, settings: Record<string, any>) => {
+        set(state => {
+          const currentConfig = state.draft.plugin_configs[type];
+          if (!currentConfig) {
+            return { error: `No plugin selected for ${type}` };
           }
-        } else {
-          if (pluginsDraft[workflowId]) {
-            const updatedDrafts = {...pluginsDraft}
-            delete updatedDrafts[workflowId]
-            set(_ => ({ pluginsDraft: updatedDrafts }))
-          }
+
+          return {
+            draft: {
+              hasChanges: true,
+              plugin_configs: {
+                ...state.draft.plugin_configs,
+                [type]: {
+                  ...currentConfig,
+                  settings
+                }
+              }
+            },
+            error: null
+          };
+        });
+      },
+
+      saveDraft: async () => {
+        const { currentWorkflow, draft } = get();
+        if (!currentWorkflow) {
+          set({ error: "No workflow selected" });
+          return;
         }
-      }
-    }), {
-      name: 'WorkflowsStore',
+
+        if (!draft.hasChanges) {
+          return; // Nothing to save
+        }
+
+        set({ isLoading: true, error: null });
+        try {
+          // Mock API call - replace with actual API
+          const response = await fetch(`/api/workflows/${currentWorkflow.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              plugin_configs: draft.plugin_configs
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to save workflow: ${response.statusText}`);
+          }
+          
+          const updatedWorkflow = await response.json();
+          set(state => ({
+            currentWorkflow: updatedWorkflow,
+            workflows: state.workflows.map(w => 
+              w.id === updatedWorkflow.id ? updatedWorkflow : w
+            ),
+            draft: { hasChanges: false, plugin_configs: draft.plugin_configs },
+            isLoading: false
+          }));
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to save workflow',
+            isLoading: false 
+          });
+        }
+      },
+
+      discardDraft: () => {
+        const { currentWorkflow } = get();
+        set({
+          draft: currentWorkflow ? {
+            hasChanges: false,
+            plugin_configs: { ...currentWorkflow.plugin_configs }
+          } : initialDraft
+        });
+      },
+
+      loadAvailablePlugins: async (type?: PluginType) => {
+        set({ isLoading: true, error: null });
+        try {
+          const url = type ? `/api/plugins?type_filter=${type}` : '/api/plugins';
+          // Mock API call - replace with actual API
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Failed to load plugins: ${response.statusText}`);
+          }
+          const plugins = await response.json();
+          
+          // Group plugins by type
+          const pluginsByType = plugins.reduce((acc: Record<PluginType, Plugin[]>, plugin: Plugin) => {
+            if (!acc[plugin.type]) {
+              acc[plugin.type] = [];
+            }
+            acc[plugin.type].push(plugin);
+            return acc;
+          }, { transcriber: [], grader: [], validator: [] });
+
+          set(state => ({
+            availablePlugins: type ? 
+              { ...state.availablePlugins, [type]: pluginsByType[type] || [] } :
+              pluginsByType,
+            isLoading: false
+          }));
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to load plugins',
+            isLoading: false 
+          });
+        }
+      },
+
+      runWorkflow: async () => {
+        const { currentWorkflow, draft } = get();
+        if (!currentWorkflow) {
+          set({ error: "No workflow selected" });
+          return;
+        }
+
+        // Use draft configs if there are unsaved changes, otherwise use saved configs
+        const configsToRun = draft.hasChanges ? draft.plugin_configs : currentWorkflow.plugin_configs;
+
+        set({ isLoading: true, error: null });
+        try {
+          // Mock API call - replace with actual API
+          const response = await fetch('/api/workflow-runs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workflow_id: currentWorkflow.id,
+              plugin_configs: configsToRun,
+              run_by: "current-user-id" // TODO: Get from auth context
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to run workflow: ${response.statusText}`);
+          }
+          
+          const workflowRun = await response.json();
+          console.log('Workflow run started:', workflowRun);
+          set({ isLoading: false });
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to run workflow',
+            isLoading: false 
+          });
+        }
+      },
+
+      clearError: () => set({ error: null })
+    }),
+    {
+      name: 'workflow-store',
       partialize: (state) => ({
-        coursesActiveWorkflows: state.coursesActiveWorkflows,
-        pluginsDraft: state.pluginsDraft,
+        currentCourseId: state.currentCourseId,
       })
     }
   )
-)
+);
