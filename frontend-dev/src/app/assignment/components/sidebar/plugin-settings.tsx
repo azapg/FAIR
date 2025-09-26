@@ -2,7 +2,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import {RuntimePlugin} from "@/hooks/use-plugins"
+import {RuntimePluginRead} from "@/hooks/use-plugins"
 import {useState, useCallback, useMemo} from "react"
 import {PluginSummary, useWorkflowStore, WorkflowDraft} from "@/store/workflows-store";
 
@@ -26,7 +26,7 @@ interface PydanticSchema {
 }
 
 interface PluginSettingsProps {
-  plugin: RuntimePlugin,
+  plugin: RuntimePluginRead,
   values?: Record<string, any>
   onChange?: (values: Record<string, any>) => void
 }
@@ -201,6 +201,7 @@ export function PluginSettings({ plugin, values = {}, onChange }: PluginSettings
       version: plugin.version,
       hash: plugin.hash,
       settings: newValues,
+      settings_schema: plugin.settings_schema,
     }
 
     const newDraft: WorkflowDraft = {

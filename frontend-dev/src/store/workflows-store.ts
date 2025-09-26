@@ -35,7 +35,7 @@ export type Workflow = WorkflowCreate & {
   runs?: WorkflowRun[];
 }
 
-export type PluginSummary = Pick<RuntimePlugin, 'id' | 'version' | 'hash' | 'settings'>;
+export type PluginSummary = Pick<RuntimePlugin, 'id' | 'version' | 'hash' | 'settings' | 'settings_schema'>;
 
 export type WorkflowDraft = {
   workflowId: string;

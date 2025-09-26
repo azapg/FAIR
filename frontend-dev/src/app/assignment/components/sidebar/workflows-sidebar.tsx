@@ -29,6 +29,9 @@ export function WorkflowsSidebar({
   className?: string
 }) {
   const {workflows = [], createWorkflow, getActiveWorkflow, setActiveWorkflowId} = useWorkflowStore();
+  const drafts = useWorkflowStore(state => state.drafts);
+  const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId);
+  const draft = drafts[activeWorkflowId || ""];
   const workflow = getActiveWorkflow();
 
   useEffect(() => {
@@ -49,6 +52,10 @@ export function WorkflowsSidebar({
     if (name) {
       createWorkflow(name).then(_ => {});
     }
+  }
+
+  const runWorkflow = () => {
+    console.log({draft});
   }
 
   return (
@@ -89,7 +96,7 @@ export function WorkflowsSidebar({
       </SidebarContent>
       <SidebarFooter className={"py-4 px-2.5"}>
         <Separator/>
-        <Button>Run Workflow</Button>
+        <Button onClick={runWorkflow}>Run Workflow</Button>
       </SidebarFooter>
     </Sidebar>
   )

@@ -19,6 +19,9 @@ export type RuntimePlugin = Plugin & {
   settings: Record<string, any>
 }
 
+export type RuntimePluginRead = Omit<RuntimePlugin, 'settings'>
+
+
 export type PluginType = "transcriber" | "grader" | "validator"
 
 export const pluginsKeys = {
@@ -30,12 +33,12 @@ export const pluginsKeys = {
 }
 
 
-const fetchPlugins = async (type?: PluginType): Promise<Plugin[]> => {
+const fetchPlugins = async (type?: PluginType): Promise<RuntimePluginRead[]> => {
     const params = type ? { type_filter: type } : {}
     const res = await api.get('/plugins', { params })
     return res.data
 }
-const fetchPlugin = async (id: string): Promise<Plugin> => {
+const fetchPlugin = async (id: string): Promise<RuntimePluginRead> => {
     const res = await api.get(`/plugins/${id}`)
     return res.data
 }

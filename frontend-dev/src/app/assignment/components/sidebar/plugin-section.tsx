@@ -1,4 +1,4 @@
-import {PluginType, usePlugins, Plugin, RuntimePlugin} from "@/hooks/use-plugins";
+import {PluginType, usePlugins, RuntimePluginRead} from "@/hooks/use-plugins";
 import {PropsWithChildren, useEffect, useState} from "react";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {PluginSettings} from "@/app/assignment/components/sidebar/plugin-settings";
@@ -16,7 +16,7 @@ type PluginSectionProps = {
 
 export default function PluginSection({title, action, type}: PluginSectionProps) {
   const {data: plugins = [], isLoading, isError} = usePlugins(type);
-  const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
+  const [selectedPlugin, setSelectedPlugin] = useState<RuntimePluginRead | null>(null);
   const drafts = useWorkflowStore(state => state.drafts);
   const saveDraft = useWorkflowStore(state => state.saveDraft);
   const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId);
@@ -45,6 +45,10 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
     return <div>Error loading plugins</div>;
   }
 
+  const runStep = () => {
+    console.log({currentDraft});
+  }
+
   const onSelectPluginChange = (id: string) => {
     const plugin = plugins.find((p) => p.id === id);
     if (plugin) {
@@ -58,6 +62,7 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
             version: plugin.version,
             hash: plugin.hash,
             settings: {},
+            settings_schema: plugin.settings_schema
           }
         }
       });
@@ -81,9 +86,8 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
         </SelectContent>
       </Select>
 
-      {/* TODO: I think usePlugin hook should return RuntimePlugin by default */}
-      {selectedPlugin && <PluginSettings plugin={selectedPlugin as RuntimePlugin} />}
-      <Button variant={"secondary"}>{action}</Button>
+      {selectedPlugin && <PluginSettings plugin={selectedPlugin} />}
+      <Button variant={"secondary"} onClick={runStep}>{action}</Button>
     </SectionContainer>
   )
 }
