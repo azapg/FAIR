@@ -1,11 +1,12 @@
 import {PluginType, usePlugins, Plugin, RuntimePlugin} from "@/hooks/use-plugins";
-import {PropsWithChildren, useState} from "react";
+import {PropsWithChildren, useEffect, useState} from "react";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {PluginSettings} from "@/app/assignment/components/sidebar/plugin-settings";
 import {Button} from "@/components/ui/button";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {SidebarGroup, SidebarGroupContent, SidebarGroupLabel} from "@/components/ui/sidebar";
 import {Plus} from "lucide-react";
+import {useWorkflowStore} from "@/store/workflows-store";
 
 type PluginSectionProps = {
   title: string;
@@ -16,6 +17,27 @@ type PluginSectionProps = {
 export default function PluginSection({title, action, type}: PluginSectionProps) {
   const {data: plugins = [], isLoading, isError} = usePlugins(type);
   const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
+  const drafts = useWorkflowStore(state => state.drafts);
+  const saveDraft = useWorkflowStore(state => state.saveDraft);
+  const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId);
+  const currentDraft = drafts[activeWorkflowId || ""];
+
+  console.log(selectedPlugin)
+
+  useEffect(() => {
+    const pluginInDraft = currentDraft?.plugins[type];
+    if (pluginInDraft) {
+      const plugin = plugins.find((p) => p.id === pluginInDraft.id && p.hash === pluginInDraft.hash);
+      if (plugin) {
+        setSelectedPlugin(plugin);
+      } else {
+        setSelectedPlugin(null);
+      }
+    } else {
+      setSelectedPlugin(null);
+    }
+  }, [currentDraft, plugins]);
+
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -25,10 +47,22 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
     return <div>Error loading plugins</div>;
   }
 
-  const onSelectPluginChange = (pluginName: string) => {
-    const plugin = plugins.find((p) => p.name === pluginName);
+  const onSelectPluginChange = (id: string) => {
+    const plugin = plugins.find((p) => p.id === id);
     if (plugin) {
       setSelectedPlugin(plugin);
+      saveDraft({
+        ...currentDraft,
+        plugins: {
+          ...(currentDraft?.plugins || {}),
+          [type]: {
+            id: plugin.id,
+            version: plugin.version,
+            hash: plugin.hash,
+            settings: {},
+          }
+        }
+      });
     } else {
       setSelectedPlugin(null);
     }
@@ -36,13 +70,13 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
 
   return (
     <SectionContainer title={title}>
-      <Select onValueChange={onSelectPluginChange}>
+      <Select onValueChange={onSelectPluginChange} value={selectedPlugin?.id || ''}>
         <SelectTrigger className="w-full" size={"sm"}>
-          <SelectValue placeholder="Select plugin"/>
+          <SelectValue placeholder="Select plugin" />
         </SelectTrigger>
         <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
           {plugins?.map((option) => (
-            <SelectItem key={option.id} value={option.name}>
+            <SelectItem key={option.id} value={option.id}>
               {option.name}
             </SelectItem>
           ))}
