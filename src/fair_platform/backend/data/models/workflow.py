@@ -24,11 +24,11 @@ class Workflow(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     # TODO: What an ugly schema, needs refactoring.
     transcriber_plugin_id: Mapped[str] = mapped_column(Text, ForeignKey("plugins.id"), nullable=True)
-    transcriber_settings = Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    transcriber_setting: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     grader_plugin_id: Mapped[str] = mapped_column(Text, ForeignKey("plugins.id"), nullable=True)
-    grader_settings = Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    grader_setting: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     validator_plugin_id: Mapped[str] = mapped_column(Text, ForeignKey("plugins.id"), nullable=True)
-    validator_settings = Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    validator_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     course: Mapped["Course"] = relationship("Course", back_populates="workflows")
     creator: Mapped["User"] = relationship("User", back_populates="created_workflows")
