@@ -181,11 +181,11 @@ export function PluginSettings({ plugin, values = {}, onChange }: PluginSettings
   const currentDraft = drafts[activeWorkflowId || ""]
   const defaults = useMemo(() => extractDefaults(schema), [schema])
 
-
   if(currentDraft) {
     values = currentDraft.plugins[plugin.type] || {}
-    console.log({currentDraft, values})
   } else {
+    // TODO: these values will now be part of the form. I think it would be better for them to be "silent"
+    //  and only appear when submitting a request.
     values = { ...defaults, ...values }
   }
 
