@@ -4,9 +4,9 @@ import {Separator} from "@/components/ui/separator";
 import {SubmissionsTable} from "@/app/assignment/components/submissions/submissions-table";
 import {columns, Submission} from "@/app/assignment/components/submissions/submissions";
 import {SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar";
-import {WorkflowsSidebar} from "@/app/assignment/components/sidebar/workflows-sidebar";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import {BreadcrumbNav} from "@/components/breadcrumb-nav";
+import {MarkdownRenderer} from "@/components/markdown-renderer";
 
 type Assignment = {
   name: string;
@@ -17,7 +17,22 @@ type Assignment = {
 
 const assignment: Assignment = {
   name: "Ejercicios de bucles en C",
-  description: "Realiza los siguientes ejercicios utilizando bucles en C. Cada ejercicio debe ser implementado en un archivo separado y enviado como parte de tu tarea.",
+  description: `Realizar los siguientes problemas de conversión entre sistemas numéricos. Recuerden también **realizar las operaciones inversas** para _comprobar_ que los problemas están bien hechos.
+
+Problemas:
+
+\\item $(2,403)_{10} = (?)_{2}$
+\\item $10001011011_{2} = (?)_{16}$
+\\item $3FE2A_{16} = (?)_{10}$
+\\item $(6756)_{16} = (?)_{2}$
+\\item $B6C8D_{16} = (?)_{2}$
+
+Instrucciones:
+
+1. Harán el problema a mano; no utilizarán ninguna herramienta o apoyo web.
+2. Las operaciones y el proceso deben poder verse claramente
+3. Colocaran su nombre, cedula y fecha en las hojas en donde desarrollen los problemas.
+4. Escanearan las hojas en UN SOLO DOCUMENTO, y lo subirán a UP VIRTUAL para la fecha limite que indique la asignación.`,
   submissions: [
     {
       id: "1",
@@ -129,7 +144,7 @@ export default function DemoAssignmentPage() {
         <div className={"px-8 pt-5"}>
           <div className={"mb-5"}>
             <h1 className={"text-3xl font-bold pb-1"}>{assignment.name}</h1>
-            <p className={"text-sm text-muted-foreground"}>{assignment.description}</p>
+            <MarkdownRenderer className={"text-sm text-muted-foreground"}>{assignment.description}</MarkdownRenderer>
 
             {/* METADATA */}
             {/* TODO: Make this real components, with real data types and functionalities (links, dates, etc) */}
@@ -172,7 +187,6 @@ export default function DemoAssignmentPage() {
 
         </div>
       </div>
-      <WorkflowsSidebar side={"right"} className={"pt-16"}/>
     </SidebarProvider>
   );
 }
