@@ -51,10 +51,6 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
   }
 
   const onSelectPluginChange = (id: string) => {
-    if(!currentDraft) {
-      return;
-    }
-
     const plugin = plugins.find((p) => p.id === id);
     if (plugin) {
       setSelectedPlugin(plugin);

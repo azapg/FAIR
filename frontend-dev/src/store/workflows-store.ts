@@ -74,7 +74,7 @@ type Actions = {
    * Does not persist to backend until explicitly saved.
    * @param draft The draft data to save.
    */
-  saveDraft: (draft: WorkflowDraft) => void;
+  saveDraft: (draft: Partial<WorkflowDraft>) => void;
   clearDraft: (workflowId: string) => void;
 }
 
@@ -175,7 +175,7 @@ export const useWorkflowStore = create<State & Actions>()(
         }
 
       },
-      saveDraft: (draft: WorkflowDraft) => {
+      saveDraft: (draft: Partial<WorkflowDraft>) => {
         // TODO: I could get a workflowId param instead of relying on activeWorkflowId, or get the draft.workflowId and update that...
         const {activeWorkflowId, drafts} = get();
         if (!activeWorkflowId) {
