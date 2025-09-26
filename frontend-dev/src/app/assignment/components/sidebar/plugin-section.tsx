@@ -1,4 +1,4 @@
-import {PluginType, usePlugins, Plugin} from "@/hooks/use-plugins";
+import {PluginType, usePlugins, Plugin, RuntimePlugin} from "@/hooks/use-plugins";
 import {PropsWithChildren, useState} from "react";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {PluginSettings} from "@/app/assignment/components/sidebar/plugin-settings";
@@ -49,7 +49,8 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
         </SelectContent>
       </Select>
 
-      {selectedPlugin && <PluginSettings type="transcriber" schema={selectedPlugin.settings_schema}/>}
+      {/* TODO: I think usePlugin hook should return RuntimePlugin by default */}
+      {selectedPlugin && <PluginSettings plugin={selectedPlugin as RuntimePlugin} />}
       <Button variant={"secondary"}>{action}</Button>
     </SectionContainer>
   )

@@ -22,6 +22,10 @@ export default function AssignmentPage() {
   const { data: course } = useCourse(assignment?.course_id!);
   const setActiveCourseId = useWorkflowStore(state => state.setActiveCourseId)
   const loadWorkflows = useWorkflowStore(state => state.loadWorkflows)
+  const isLoadingWorkflows = useWorkflowStore(state => state.isLoadingWorkflows)
+  const workflows = useWorkflowStore(state => state.workflows)
+
+  const isOverallLoading = isLoading || isLoadingWorkflows || !workflows;
 
   useEffect(() => {
     if (course?.id) {
@@ -30,7 +34,7 @@ export default function AssignmentPage() {
     }
   }, [course, setActiveCourseId]);
 
-  if (isLoading) {
+  if (isOverallLoading) {
     return <div>Loading...</div>
   }
 

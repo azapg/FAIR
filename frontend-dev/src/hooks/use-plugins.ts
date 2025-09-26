@@ -11,8 +11,12 @@ export type Plugin = {
     version: string
     hash: string
     source: string
-    settings_schema: PydanticSchema
     type: PluginType
+}
+
+export type RuntimePlugin = Plugin & {
+  settings_schema: PydanticSchema
+  settings: Record<string, any>
 }
 
 export type PluginType = "transcriber" | "grader" | "validator"

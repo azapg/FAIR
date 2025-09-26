@@ -2,9 +2,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { PluginType } from "@/hooks/use-plugins"
+import {PluginType, RuntimePlugin} from "@/hooks/use-plugins"
 import {useState, useCallback, useMemo} from "react"
-import {useWorkflowStore} from "@/store/workflows-store";
+import {PluginSummary, useWorkflowStore, WorkflowDraft} from "@/store/workflows-store";
 
 interface PydanticProperty {
   type: 'string' | 'number' | 'boolean' | 'object'
@@ -26,8 +26,7 @@ interface PydanticSchema {
 }
 
 interface PluginSettingsProps {
-  schema: PydanticSchema
-  type: Exclude<PluginType, 'all'>
+  plugin: RuntimePlugin,
   values?: Record<string, any>
   onChange?: (values: Record<string, any>) => void
 }
@@ -173,16 +172,19 @@ function extractDefaults(schema: PydanticSchema): Record<string, any> {
   }, {} as Record<string, any>)
 }
 
-export function PluginSettings({ schema, type, values = {}, onChange }: PluginSettingsProps) {
-  const pluginsDraft = useWorkflowStore(state => state.pluginsDraft)
+export function PluginSettings({ plugin, values = {}, onChange }: PluginSettingsProps) {
+  const schema = plugin.settings_schema
+  const drafts = useWorkflowStore(state => state.drafts)
   const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId)
-  const savePluginDraftValues = useWorkflowStore(state => state.saveWorkflowDraft)
+  const saveDraft = useWorkflowStore(state => state.saveDraft)
 
-  const pluginDraft = pluginsDraft[activeWorkflowId || ""]
+  const currentDraft = drafts[activeWorkflowId || ""]
   const defaults = useMemo(() => extractDefaults(schema), [schema])
 
-  if(pluginDraft && pluginDraft[type]) {
-    values = pluginDraft[type]?.settings_schema
+
+  if(currentDraft) {
+    values = currentDraft.plugins[plugin.type] || {}
+    console.log({currentDraft, values})
   } else {
     values = { ...defaults, ...values }
   }
@@ -193,8 +195,27 @@ export function PluginSettings({ schema, type, values = {}, onChange }: PluginSe
     const newValues = { ...formValues, [key]: value }
     setFormValues(newValues)
     onChange?.(newValues)
-    savePluginDraftValues(type, newValues)
-  }, [formValues, onChange, type])
+
+    const summary: PluginSummary = {
+      id: plugin.id,
+      version: plugin.version,
+      hash: plugin.hash,
+      settings: newValues,
+    }
+
+    const newDraft: WorkflowDraft = {
+      ...currentDraft,
+      plugins: {
+        ...(currentDraft?.plugins || {}),
+        [plugin.type]: {
+          ...summary,
+          settings: newValues,
+        },
+      }
+    }
+
+    saveDraft(newDraft)
+  }, [formValues, onChange, plugin])
   
   if (!schema.properties) {
     return (

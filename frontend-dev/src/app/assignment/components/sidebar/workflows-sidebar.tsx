@@ -17,6 +17,7 @@ import {PlusIcon} from "lucide-react";
 import {useWorkflowStore} from "@/store/workflows-store";
 import PluginSection from "@/app/assignment/components/sidebar/plugin-section";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
+import {useEffect} from "react";
 
 
 export function WorkflowsSidebar({
@@ -27,13 +28,26 @@ export function WorkflowsSidebar({
   side?: "left" | "right"
   className?: string
 }) {
-  const {workflows, createWorkflow, getActiveWorkflow, setActiveWorkflowId} = useWorkflowStore();
+  const {workflows = [], createWorkflow, getActiveWorkflow, setActiveWorkflowId} = useWorkflowStore();
   const workflow = getActiveWorkflow();
+
+  useEffect(() => {
+    if(!workflow && workflows.length > 0) {
+      setActiveWorkflowId(workflows[0].id);
+    } else {
+      setActiveWorkflowId(workflows[0].id); // TODO: this is weird, in the future I will manage the store better
+    }
+  }, [workflow]);
+
+  if(!workflow) {
+    // TODO: Skeleton loader
+    return <></>
+  }
 
   const onCreateWorkflow = () => {
     const name = prompt("Enter workflow name", "Untitled Workflow");
     if (name) {
-      createWorkflow(name);
+      createWorkflow(name).then(r => {});
     }
   }
 
