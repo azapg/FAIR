@@ -47,7 +47,7 @@ export function WorkflowsSidebar({
   const onCreateWorkflow = () => {
     const name = prompt("Enter workflow name", "Untitled Workflow");
     if (name) {
-      createWorkflow(name).then(r => {});
+      createWorkflow(name).then(_ => {});
     }
   }
 

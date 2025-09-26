@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {persist} from "zustand/middleware";
-import {Plugin, PluginType, RuntimePlugin} from "@/hooks/use-plugins";
+import {Plugin, RuntimePlugin} from "@/hooks/use-plugins";
 import api from "@/lib/api";
 
 export type WorkflowRunCreate = {
@@ -75,7 +75,7 @@ type Actions = {
    * @param draft The draft data to save.
    */
   saveDraft: (draft: WorkflowDraft) => void;
-  clearDraft: (workflowId: string, plugin?: PluginType) => void;
+  clearDraft: (workflowId: string) => void;
 }
 
 export const useWorkflowStore = create<State & Actions>()(
@@ -127,7 +127,7 @@ export const useWorkflowStore = create<State & Actions>()(
       },
       setActiveCourseId: (courseId: string) => set({activeCourseId: courseId}),
       setActiveWorkflowId: (workflowId: string) => {
-        const { workflows = [], activeCourseId, activeWorkflowId } = get()
+        const { workflows = [], activeCourseId } = get()
         const workflow = workflows.find(w => w.id === workflowId)
 
         if (workflow) {
@@ -200,7 +200,13 @@ export const useWorkflowStore = create<State & Actions>()(
           }
         }));
       },
-      clearDraft: (workflowId: string, plugin?: PluginType) => {}
+      clearDraft: (workflowId: string ) => {
+        set(state => {
+          const newDrafts = { ...state.drafts };
+          delete newDrafts[workflowId];
+          return { drafts: newDrafts };
+        });
+      }
     }), {
       name: 'WorkflowsStore',
       partialize: (state) => ({

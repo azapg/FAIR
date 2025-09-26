@@ -2,7 +2,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import {PluginType, RuntimePlugin} from "@/hooks/use-plugins"
+import {RuntimePlugin} from "@/hooks/use-plugins"
 import {useState, useCallback, useMemo} from "react"
 import {PluginSummary, useWorkflowStore, WorkflowDraft} from "@/store/workflows-store";
 
@@ -94,7 +94,7 @@ function SwitchField({ property, value, onChange, name }: BaseInputProps) {
   )
 }
 
-function FileField({ property, value, onChange, name }: BaseInputProps) {
+function FileField({ property }: BaseInputProps) {
   return (
     <div className="space-y-2">
       {property.description && (
