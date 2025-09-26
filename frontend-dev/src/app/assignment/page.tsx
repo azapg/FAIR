@@ -7,6 +7,7 @@ import {SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar";
 import {WorkflowsSidebar} from "@/app/assignment/components/sidebar/workflows-sidebar";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import {BreadcrumbNav} from "@/components/breadcrumb-nav";
+import {MarkdownRenderer} from "@/components/markdown-renderer";
 
 import {useParams} from "react-router-dom";
 import { useAssignment } from "@/hooks/use-assignments";
@@ -66,7 +67,7 @@ export default function AssignmentPage() {
         <div className={"px-8 pt-5"}>
           <div className={"mb-5"}>
             <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
-            <p className={"text-sm text-muted-foreground whitespace-pre-line"}>{assignment.description}</p>
+            <MarkdownRenderer className={"text-sm text-muted-foreground"}>{assignment.description}</MarkdownRenderer>
 
             <ScrollArea className={"w-full h-auto"}>
               <div className={"flex flex-row gap-1 mt-4 items-center"}>
