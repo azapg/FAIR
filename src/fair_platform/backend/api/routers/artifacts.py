@@ -42,7 +42,12 @@ def create_artifact(payload: ArtifactCreate, db: Session = Depends(session_depen
 def list_artifacts(db: Session = Depends(session_dependency)):
     return db.query(Artifact).all()
 
-
+# TODO: You shouldn't be able to get artifacts you don't have access to.
+#   This is related to the ownership problem mentioned above.
+#   I think the solution would be to relate artifacts to assignments/submissions,
+#   and then check if the user has access to those. (e.g. if the user is the instructor of the course
+#   the assignment belongs to, or if the user is the student who made the submission)
+#   But since there are no students in beta, this is not a concern yet.
 @router.get("/{artifact_id}", response_model=ArtifactRead)
 def get_artifact(artifact_id: UUID, db: Session = Depends(session_dependency)):
     artifact = db.get(Artifact, artifact_id)
