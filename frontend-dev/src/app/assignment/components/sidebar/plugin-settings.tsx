@@ -3,7 +3,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import {RuntimePluginRead} from "@/hooks/use-plugins"
-import {useState, useCallback, useMemo} from "react"
+import {useState, useCallback} from "react"
 import {PluginSummary, useWorkflowStore, WorkflowDraft} from "@/store/workflows-store";
 
 interface PydanticProperty {
@@ -163,31 +163,12 @@ function createInputComponent(
   )
 }
 
-function extractDefaults(schema: PydanticSchema): Record<string, any> {
-  return Object.entries(schema.properties).reduce((acc, [key, property]) => {
-    if (property.default !== undefined) {
-      acc[key] = property.default
-    }
-    return acc
-  }, {} as Record<string, any>)
-}
-
 export function PluginSettings({ plugin, values = {}, onChange }: PluginSettingsProps) {
   const schema = plugin.settings_schema
+  const saveDraft = useWorkflowStore(state => state.saveDraft)
   const drafts = useWorkflowStore(state => state.drafts)
   const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId)
-  const saveDraft = useWorkflowStore(state => state.saveDraft)
-
   const currentDraft = drafts[activeWorkflowId || ""]
-  const defaults = useMemo(() => extractDefaults(schema), [schema])
-
-  if(currentDraft) {
-    values = currentDraft.plugins[plugin.type] || {}
-  } else {
-    // TODO: these values will now be part of the form. I think it would be better for them to be "silent"
-    //  and only appear when submitting a request.
-    values = { ...defaults, ...values }
-  }
 
   const [formValues, setFormValues] = useState<Record<string, any>>(values)
 
@@ -208,10 +189,7 @@ export function PluginSettings({ plugin, values = {}, onChange }: PluginSettings
       ...currentDraft,
       plugins: {
         ...(currentDraft?.plugins || {}),
-        [plugin.type]: {
-          ...summary,
-          settings: newValues,
-        },
+        [plugin.type]: summary
       }
     }
 

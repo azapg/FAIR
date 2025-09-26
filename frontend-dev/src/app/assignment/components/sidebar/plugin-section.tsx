@@ -86,7 +86,7 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
         </SelectContent>
       </Select>
 
-      {selectedPlugin && <PluginSettings plugin={selectedPlugin} />}
+      {selectedPlugin && <PluginSettings plugin={selectedPlugin} values={currentDraft.plugins[type]?.settings}/>}
       <Button variant={"secondary"} onClick={runStep}>{action}</Button>
     </SectionContainer>
   )
