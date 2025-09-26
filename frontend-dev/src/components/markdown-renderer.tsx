@@ -17,13 +17,13 @@ export function MarkdownRenderer({ children, className }: MarkdownRendererProps)
         rehypePlugins={[rehypeKatex]}
         components={{
           // Custom styling for markdown elements to match the design system
-          h1: ({node, ...props}) => <h1 className="text-2xl font-serif font-bold mb-4" {...props} />,
-          h2: ({node, ...props}) => <h2 className="text-xl font-serif font-semibold mb-3" {...props} />,
-          h3: ({node, ...props}) => <h3 className="text-lg font-serif font-semibold mb-2" {...props} />,
-          h4: ({node, ...props}) => <h4 className="text-base font-serif font-semibold mb-2" {...props} />,
-          h5: ({node, ...props}) => <h5 className="text-sm font-serif font-semibold mb-2" {...props} />,
-          h6: ({node, ...props}) => <h6 className="text-sm font-serif font-semibold mb-2" {...props} />,
+          h1: ({node, ...props}) => <h1 className="text-2xl mb-4" {...props} />,
           p: ({node, ...props}) => <p className="mb-4 leading-relaxed" {...props} />,
+          h2: ({node, ...props}) => <h2 className="text-xl mb-3" {...props} />,
+          h3: ({node, ...props}) => <h3 className="text-lg mb-2" {...props} />,
+          h4: ({node, ...props}) => <h4 className="text-base mb-2" {...props} />,
+          h5: ({node, ...props}) => <h5 className="text-sm mb-2" {...props} />,
+          h6: ({node, ...props}) => <h6 className="text-sm mb-2" {...props} />,
           ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4 space-y-1" {...props} />,
           ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4 space-y-1" {...props} />,
           li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
