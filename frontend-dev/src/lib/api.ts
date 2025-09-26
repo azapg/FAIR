@@ -1,10 +1,8 @@
 import axios from 'axios'
 
-const development = import.meta.env.DEV;
-
 let baseURL = '/api'
 
-if (development) {
+if (import.meta.env.DEV) {
   baseURL = 'http://localhost:8000/api'
 }
 
