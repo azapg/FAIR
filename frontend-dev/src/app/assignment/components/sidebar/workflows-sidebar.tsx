@@ -16,6 +16,7 @@ import {Button} from "@/components/ui/button"
 import {PlusIcon} from "lucide-react";
 import {useWorkflowStore} from "@/store/workflows-store";
 import PluginSection from "@/app/assignment/components/sidebar/plugin-section";
+import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 
 
 export function WorkflowsSidebar({
@@ -52,9 +53,16 @@ export function WorkflowsSidebar({
           </SelectContent>
         </Select>
 
-        <Button variant="outline" size="icon" onClick={onCreateWorkflow}>
-          <PlusIcon/>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="icon" onClick={onCreateWorkflow} disabled>
+              <PlusIcon/>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>This feature is disabled during beta preview.</p>
+          </TooltipContent>
+        </Tooltip>
       </SidebarHeader>
       <Separator/>
       <SidebarContent>
