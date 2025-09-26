@@ -13,11 +13,11 @@ import {
 } from "@/components/ui/select"
 import {Separator} from "@/components/ui/separator"
 import {Button} from "@/components/ui/button"
-import {PlusIcon} from "lucide-react";
+import {LoaderIcon, PlusIcon} from "lucide-react";
 import {useWorkflowStore} from "@/store/workflows-store";
 import PluginSection from "@/app/assignment/components/sidebar/plugin-section";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 
 
 export function WorkflowsSidebar({
@@ -33,6 +33,8 @@ export function WorkflowsSidebar({
   const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId);
   const draft = drafts[activeWorkflowId || ""];
   const workflow = getActiveWorkflow();
+
+  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     if(!workflow && workflows.length > 0) {
@@ -55,6 +57,8 @@ export function WorkflowsSidebar({
   }
 
   const runWorkflow = () => {
+    if(isRunning) return;
+    setIsRunning(true);
     console.log({draft});
   }
 
@@ -96,7 +100,9 @@ export function WorkflowsSidebar({
       </SidebarContent>
       <SidebarFooter className={"py-4 px-2.5"}>
         <Separator/>
-        <Button onClick={runWorkflow}>Run Workflow</Button>
+        <Button onClick={runWorkflow} disabled={isRunning}>
+          {isRunning ? <><LoaderIcon className={"animate-spin"} /> Running</> : <>Run Workflow</>}
+        </Button>
       </SidebarFooter>
     </Sidebar>
   )

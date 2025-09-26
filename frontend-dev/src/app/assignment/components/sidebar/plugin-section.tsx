@@ -17,10 +17,11 @@ type PluginSectionProps = {
 export default function PluginSection({title, action, type}: PluginSectionProps) {
   const {data: plugins = [], isLoading, isError} = usePlugins(type);
   const [selectedPlugin, setSelectedPlugin] = useState<RuntimePluginRead | null>(null);
-  const drafts = useWorkflowStore(state => state.drafts);
   const saveDraft = useWorkflowStore(state => state.saveDraft);
-  const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId);
-  const currentDraft = drafts[activeWorkflowId || ""];
+  const currentDraft = useWorkflowStore(
+    s => (s.activeWorkflowId ? s.drafts[s.activeWorkflowId] : undefined)
+  );
+
 
   useEffect(() => {
     const pluginInDraft = currentDraft?.plugins[type];
@@ -50,6 +51,10 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
   }
 
   const onSelectPluginChange = (id: string) => {
+    if(!currentDraft) {
+      return;
+    }
+
     const plugin = plugins.find((p) => p.id === id);
     if (plugin) {
       setSelectedPlugin(plugin);
@@ -86,7 +91,11 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
         </SelectContent>
       </Select>
 
-      {selectedPlugin && <PluginSettings plugin={selectedPlugin} values={currentDraft.plugins[type]?.settings}/>}
+      {selectedPlugin && currentDraft && <PluginSettings
+          key={`${type}-settings-${selectedPlugin.id}-${selectedPlugin.hash}`}
+          plugin={selectedPlugin}
+          values={currentDraft.plugins[type]?.settings}
+      />}
       <Button variant={"secondary"} onClick={runStep}>{action}</Button>
     </SectionContainer>
   )
