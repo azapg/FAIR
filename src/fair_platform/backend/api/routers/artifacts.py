@@ -1,9 +1,10 @@
 from uuid import UUID, uuid4
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
 from sqlalchemy.orm import Session
 
+from fair_platform.backend import storage
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.artifact import Artifact
 from fair_platform.backend.api.schema.artifact import ArtifactCreate, ArtifactRead, ArtifactUpdate
@@ -18,24 +19,42 @@ router = APIRouter()
 #   are no students, this is not a concern yet, and we can just let instructors/admin
 #   manage everything.
 
-@router.post("/", response_model=ArtifactRead, status_code=status.HTTP_201_CREATED)
-def create_artifact(payload: ArtifactCreate, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=List[ArtifactRead])
+def create_artifact(files: List[UploadFile], db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
     if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only instructors or admin can create artifacts")
 
-    artifact = Artifact(
-        id=uuid4(),
-        title=payload.title,
-        artifact_type=payload.artifact_type,
-        mime=payload.mime,
-        storage_path=payload.storage_path,
-        storage_type=payload.storage_type,
-        meta=payload.meta,
-    )
-    db.add(artifact)
-    db.commit()
-    db.refresh(artifact)
-    return artifact
+    uploads_folder = storage.uploads_dir
+    created_artifacts = []
+
+    try:
+        for file in files:
+            artifact_id = uuid4()
+            artifact_folder = uploads_folder / str(artifact_id)
+            artifact_folder.mkdir(parents=True, exist_ok=True)
+            file_location = artifact_folder / file.filename
+
+            artifact = Artifact(
+                id=artifact_id,
+                title=file.filename,
+                artifact_type="file",
+                mime=file.content_type,
+                storage_path=str(artifact_id) + "/" + file.filename,
+                storage_type="local",
+                meta=None,
+            )
+
+            with open(file_location, "wb+") as buffer:
+                buffer.write(file.file.read())
+
+            db.add(artifact)
+            db.commit()
+            db.refresh(artifact)
+            created_artifacts.append(artifact)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to upload file: {e}")
+
+    return created_artifacts
 
 
 @router.get("/", response_model=List[ArtifactRead])

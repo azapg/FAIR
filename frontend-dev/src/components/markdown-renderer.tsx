@@ -5,7 +5,7 @@ import 'katex/dist/katex.min.css'; // Import KaTeX CSS for proper styling
 import { cn } from '@/lib/utils';
 
 interface MarkdownRendererProps {
-  children: string;
+  children: any;
   className?: string;
 }
 

@@ -10,17 +10,18 @@ import {BreadcrumbNav} from "@/components/breadcrumb-nav";
 import {MarkdownRenderer} from "@/components/markdown-renderer";
 
 import {useParams} from "react-router-dom";
-import { useAssignment } from "@/hooks/use-assignments";
-import { useCourse } from "@/hooks/use-courses";
+import {useAssignment} from "@/hooks/use-assignments";
+import {useCourse} from "@/hooks/use-courses";
 import {useWorkflowStore} from "@/store/workflows-store";
 import {useEffect} from "react";
+import {CreateSubmissionDialog} from "@/app/assignment/components/submissions/create-submission-dialog";
 
 
 export default function AssignmentPage() {
-  const { assignmentId } = useParams<{ assignmentId: string }>()
-  const { data: assignment, isLoading, isError } = useAssignment(assignmentId!);
+  const {assignmentId} = useParams<{ assignmentId: string }>()
+  const {data: assignment, isLoading, isError} = useAssignment(assignmentId!);
   // TODO: This is ugly, try getting course_id from somewhere else, maybe from parents
-  const { data: course } = useCourse(assignment?.course_id!);
+  const {data: course} = useCourse(assignment?.course_id!);
   const setActiveCourseId = useWorkflowStore(state => state.setActiveCourseId)
   const loadWorkflows = useWorkflowStore(state => state.loadWorkflows)
   const isLoadingWorkflows = useWorkflowStore(state => state.isLoadingWorkflows)
@@ -31,7 +32,9 @@ export default function AssignmentPage() {
   useEffect(() => {
     if (course?.id) {
       setActiveCourseId(course.id.toString());
-      loadWorkflows().then().catch(err => {console.error(err)});
+      loadWorkflows().then().catch(err => {
+        console.error(err)
+      });
     }
   }, [course, setActiveCourseId]);
 
@@ -39,10 +42,10 @@ export default function AssignmentPage() {
     return <div>Loading...</div>
   }
 
-  if (isError || !assignment || !course ) {
+  if (isError || !assignment || !course) {
     return <div>Error loading assignment.</div>
   }
-  
+
 
   return (
     <SidebarProvider className={"flex flex-row m-0 p-0 h-auto overflow-none"}>
@@ -76,7 +79,10 @@ export default function AssignmentPage() {
                   <CircleCheck/> Completed
                 </Button>
                 <Button variant={"ghost"} size={"sm"}>
-                  <Hourglass/> {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString(undefined, { day: '2-digit', month: 'short' }) : 'No deadline'}
+                  <Hourglass/> {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString(undefined, {
+                  day: '2-digit',
+                  month: 'short'
+                }) : 'No deadline'}
                 </Button>
                 <Button variant={"ghost"} size={"sm"}>
                   <Plus/>
@@ -95,8 +101,11 @@ export default function AssignmentPage() {
 
           </div>
 
-          <div className={"space-y-5 mb-5"}>
-            <h2 className={"text-xl font-semibold mb-3"}>Submissions</h2>
+          <div className={"space-y-3 mb-5"}>
+            <div className={"flex justify-between items-center mb-3"}>
+              <h2 className={"text-xl font-semibold"}>Submissions</h2>
+              <CreateSubmissionDialog assignmentId={assignment.id.toString()}/>
+            </div>
             <SubmissionsTable columns={columns} data={[]}/>
           </div>
 

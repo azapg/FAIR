@@ -3,6 +3,8 @@ from typing import List, Optional
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from pydantic.v1 import EmailStr
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
@@ -17,73 +19,58 @@ from fair_platform.backend.api.routers.auth import get_current_user
 
 router = APIRouter()
 
+class SyntheticSubmission(BaseModel):
+    assignment_id: UUID
+    submitter: str
+    artifacts_ids: Optional[List[UUID]] = None
+
+    class Config:
+        from_attributes = True
+        alias_generator = lambda field_name: ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        validate_by_name = True
+
 
 # TODO: Implement enrollments table to be able to check
 @router.post("/", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
 def create_submission(
-    payload: SubmissionCreate,
+    payload: SyntheticSubmission,
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
     if not db.get(Assignment, payload.assignment_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Assignment not found")
-    if not db.get(User, payload.submitter_id):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Submitter not found")
 
-    if current_user.role != UserRole.admin and current_user.id != payload.submitter_id:
+    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create submission for this user")
 
-    submitted_at = payload.submitted_at or datetime.now(timezone.utc)
+    submitted_at = datetime.now(timezone.utc)
+    status_value = SubmissionStatus.pending
 
-    status_value = (
-        payload.status if isinstance(payload.status, str) else getattr(payload.status, "value", payload.status)
-    ) or SubmissionStatus.pending.value
+    synthetic_user = User(id=uuid4(), name=payload.submitter, email=EmailStr("student@fair.com"), role=UserRole.student)
+    db.add(synthetic_user)
+    db.commit()
+    db.refresh(synthetic_user)
+
 
     sub = Submission(
         id=uuid4(),
         assignment_id=payload.assignment_id,
-        submitter_id=payload.submitter_id,
+        submitter_id=synthetic_user.id,
         submitted_at=submitted_at,
         status=status_value,
-        official_run_id=payload.official_run_id,
     )
     db.add(sub)
     db.commit()
 
-    if payload.artifact_ids:
-        for aid in payload.artifact_ids:
+    if payload.artifacts_ids:
+        for aid in payload.artifacts_ids:
             if not db.get(Artifact, aid):
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Artifact {aid} not found")
             db.execute(
                 submission_artifacts.insert().values(id=uuid4(), submission_id=sub.id, artifact_id=aid)
             )
+            db.refresh(submission_artifacts)
         db.commit()
-
-    if payload.run_ids:
-        for rid in payload.run_ids:
-            if not db.get(WorkflowRun, rid):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"WorkflowRun {rid} not found")
-            db.execute(
-                submission_workflow_runs.insert().values(submission_id=sub.id, workflow_run_id=rid)
-            )
-        db.commit()
-
-    if payload.official_run_id is not None:
-        run = db.get(WorkflowRun, payload.official_run_id)
-        if not run:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="official_run_id not found")
-        # link if not linked already
-        existing = db.execute(
-            submission_workflow_runs.select().where(
-                submission_workflow_runs.c.submission_id == sub.id,
-                submission_workflow_runs.c.workflow_run_id == payload.official_run_id,
-            )
-        ).first()
-        if not existing:
-            db.execute(
-                submission_workflow_runs.insert().values(submission_id=sub.id, workflow_run_id=payload.official_run_id)
-            )
-            db.commit()
 
     db.refresh(sub)
     return sub
