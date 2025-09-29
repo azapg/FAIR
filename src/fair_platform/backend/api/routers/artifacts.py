@@ -23,8 +23,15 @@ router = APIRouter()
 #   are no students, this is not a concern yet, and we can just let instructors/admin
 #   manage everything.
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=List[ArtifactRead])
-def create_artifact(files: List[UploadFile], db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+
+@router.post(
+    "/", status_code=status.HTTP_201_CREATED, response_model=List[ArtifactRead]
+)
+def create_artifact(
+    files: List[UploadFile],
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -59,7 +66,10 @@ def create_artifact(files: List[UploadFile], db: Session = Depends(session_depen
             db.refresh(artifact)
             created_artifacts.append(artifact)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to upload file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload file: {e}",
+        )
 
     return created_artifacts
 

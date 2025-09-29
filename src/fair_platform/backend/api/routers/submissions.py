@@ -28,6 +28,7 @@ from fair_platform.backend.api.routers.auth import get_current_user
 
 router = APIRouter()
 
+
 class SyntheticSubmission(BaseModel):
     assignment_id: UUID
     submitter: str
@@ -35,7 +36,10 @@ class SyntheticSubmission(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
         validate_by_name = True
 
 
@@ -47,19 +51,28 @@ def create_submission(
     current_user: User = Depends(get_current_user),
 ):
     if not db.get(Assignment, payload.assignment_id):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Assignment not found")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Assignment not found"
+        )
 
     if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create submission for this user")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to create submission for this user",
+        )
 
     submitted_at = datetime.now(timezone.utc)
     status_value = SubmissionStatus.pending
 
-    synthetic_user = User(id=uuid4(), name=payload.submitter, email=EmailStr("student@fair.com"), role=UserRole.student)
+    synthetic_user = User(
+        id=uuid4(),
+        name=payload.submitter,
+        email=EmailStr("student@fair.com"),
+        role=UserRole.student,
+    )
     db.add(synthetic_user)
     db.commit()
     db.refresh(synthetic_user)
-
 
     sub = Submission(
         id=uuid4(),
