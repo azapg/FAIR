@@ -24,6 +24,15 @@ dependencies = [
     "uvicorn>=0.35.0",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.25.0",
+    "pytest-mock>=3.11.0",
+    "faker>=19.0.0",
+]
+
 [project.scripts]
 fair = "fair_platform.cli.main:app"
 
