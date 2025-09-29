@@ -50,15 +50,21 @@ def main():
     run()
 
 
-def run(host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False):
+def run(
+    host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False
+):
     load_storage_plugins()
     if not headless:
         frontend_files = importlib.resources.files("fair_platform.frontend")
         dist_dir = frontend_files / "dist"
 
         with importlib.resources.as_file(dist_dir) as dist_path:
-            app.mount("/assets", StaticFiles(directory=dist_path / "assets"), name="assets")
-            app.mount("/fonts", StaticFiles(directory=dist_path / "fonts"), name="fonts")
+            app.mount(
+                "/assets", StaticFiles(directory=dist_path / "assets"), name="assets"
+            )
+            app.mount(
+                "/fonts", StaticFiles(directory=dist_path / "fonts"), name="fonts"
+            )
             app.mount("/data", StaticFiles(directory=dist_path / "data"), name="data")
 
         @app.middleware("http")
@@ -66,7 +72,9 @@ def run(host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: 
             try:
                 response = await call_next(request)
                 if response.status_code == 404:
-                    with importlib.resources.as_file(dist_dir / "index.html") as index_path:
+                    with importlib.resources.as_file(
+                        dist_dir / "index.html"
+                    ) as index_path:
                         return FileResponse(index_path)
                 return response
             except (FileNotFoundError, RuntimeError, Exception):
@@ -83,6 +91,7 @@ def run(host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: 
         )
 
     import uvicorn
+
     uvicorn.run(app, host=host, port=port, reload=False)
 
 

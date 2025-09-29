@@ -12,11 +12,11 @@ class BasePlugin:
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
-        if not hasattr(cls, '_settings_fields'):
+        if not hasattr(cls, "_settings_fields"):
             cls._settings_fields = {}
 
     def set_values(self, values: dict[str, Any]) -> None:
-        settings_fields = getattr(self.__class__, '_settings_fields', {})
+        settings_fields = getattr(self.__class__, "_settings_fields", {})
 
         for field in values:
             if field not in settings_fields:
@@ -33,8 +33,10 @@ class BasePlugin:
                     raise ValueError(f"Missing required settings field: {name}")
 
 
-def create_settings_model(plugin_class: Type[BasePlugin] | BasePlugin) -> Type[BaseModel]:
-    settings_fields = getattr(plugin_class, '_settings_fields', {})
+def create_settings_model(
+    plugin_class: Type[BasePlugin] | BasePlugin,
+) -> Type[BaseModel]:
+    settings_fields = getattr(plugin_class, "_settings_fields", {})
     model_fields = {}
 
     for name, field in settings_fields.items():
@@ -61,7 +63,9 @@ class TranscriptionPlugin(BasePlugin, ABC):
         pass
 
     @abstractmethod
-    def transcribe_batch(self, submissions: List[Submission]) -> List[TranscribedSubmission]:
+    def transcribe_batch(
+        self, submissions: List[Submission]
+    ) -> List[TranscribedSubmission]:
         return [self.transcribe(submission=sub) for sub in submissions]
 
 
@@ -77,7 +81,9 @@ class GradePlugin(BasePlugin, ABC):
         pass
 
     @abstractmethod
-    def grade_batch(self, submissions: List[TranscribedSubmission]) -> List[GradeResult]:
+    def grade_batch(
+        self, submissions: List[TranscribedSubmission]
+    ) -> List[GradeResult]:
         return [self.grade(submission=sub) for sub in submissions]
 
 
@@ -116,12 +122,21 @@ class PluginMeta(BaseModel):
 
 PLUGINS: Dict[str, PluginMeta] = {}
 
-PLUGINS_OBJECTS: Dict[str, Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]] = {}
+PLUGINS_OBJECTS: Dict[
+    str, Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]
+] = {}
 
 
 class FairPlugin:
-    def __init__(self, id: str, name: str, author, version: str, description: Optional[str] = None,
-                 email: Optional[str] = None):
+    def __init__(
+        self,
+        id: str,
+        name: str,
+        author,
+        version: str,
+        description: Optional[str] = None,
+        email: Optional[str] = None,
+    ):
         self.id = id
         self.name = name
         self.author = author
@@ -131,20 +146,28 @@ class FairPlugin:
 
     def __call__(self, cls: Type[BasePlugin]):
         if not issubclass(cls, BasePlugin):
-            raise TypeError("FairPlugin decorator can only be applied to subclasses of BasePlugin")
+            raise TypeError(
+                "FairPlugin decorator can only be applied to subclasses of BasePlugin"
+            )
 
         # TODO: Later on, plugin uniqueness should be checked via hashes
         if self.name in PLUGINS:
-            raise ValueError(f"A plugin with the name '{self.name}' is already registered.")
+            raise ValueError(
+                f"A plugin with the name '{self.name}' is already registered."
+            )
 
         current_module = inspect.getmodule(cls)
         extension_hash = getattr(current_module, "__extension_hash__", None)
         if extension_hash is None:
-            raise ValueError(f"Plugin class '{cls.__name__}' is missing '__extension_hash__' attribute.")
+            raise ValueError(
+                f"Plugin class '{cls.__name__}' is missing '__extension_hash__' attribute."
+            )
 
         source = getattr(current_module, "__extension_dir__", None)
         if source is None:
-            raise ValueError(f"Plugin class '{cls.__name__}' is missing '__extension_dir__' attribute.")
+            raise ValueError(
+                f"Plugin class '{cls.__name__}' is missing '__extension_dir__' attribute."
+            )
 
         if issubclass(cls, TranscriptionPlugin):
             plugin_type = PluginType.transcriber
@@ -153,7 +176,9 @@ class FairPlugin:
         elif issubclass(cls, ValidationPlugin):
             plugin_type = PluginType.validator
         else:
-            raise TypeError("FairPlugin decorator can only be applied to subclasses of TranscriptionPlugin, GradePlugin, or ValidationPlugin")
+            raise TypeError(
+                "FairPlugin decorator can only be applied to subclasses of TranscriptionPlugin, GradePlugin, or ValidationPlugin"
+            )
 
         metadata = PluginMeta(
             id=self.id,
@@ -165,7 +190,7 @@ class FairPlugin:
             source=source,
             author_email=self.author_email,
             settings_schema=create_settings_model(cls).model_json_schema(),
-            type=plugin_type
+            type=plugin_type,
         )
 
         PLUGINS[self.name] = metadata
@@ -177,8 +202,11 @@ def get_plugin_metadata(name: str) -> Optional[PluginMeta]:
     return PLUGINS.get(name)
 
 
-def get_plugin_object(name: str) -> Optional[
-    Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]]:
+def get_plugin_object(
+    name: str,
+) -> Optional[
+    Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]
+]:
     return PLUGINS_OBJECTS.get(name)
 
 
@@ -187,20 +215,19 @@ def list_plugins(plugin_type: Optional[PluginType] = None) -> List[PluginMeta]:
         return [plugin for plugin in PLUGINS.values() if plugin.type == plugin_type]
     return list(PLUGINS.values())
 
+
 __all__ = [
     "BasePlugin",
     "create_settings_model",
     "TranscriptionPlugin",
     "GradePlugin",
     "ValidationPlugin",
-
     "TranscribedSubmission",
     "GradeResult",
-
     "PluginMeta",
     "FairPlugin",
     "get_plugin_metadata",
     "get_plugin_object",
     "list_plugins",
-    "PluginType"
+    "PluginType",
 ]

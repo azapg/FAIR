@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from .assignment import Assignment
     from .submission import Submission
 
+
 class Artifact(Base):
     __tablename__ = "artifacts"
 

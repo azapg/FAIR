@@ -4,11 +4,10 @@ from typing import Optional
 
 from ..database import Base
 
+
 class Plugin(Base):
     __tablename__ = "plugins"
-    __table_args__ = (
-        PrimaryKeyConstraint("id", "hash"),
-    )
+    __table_args__ = (PrimaryKeyConstraint("id", "hash"),)
 
     id: Mapped[str] = mapped_column(String, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
@@ -20,4 +19,3 @@ class Plugin(Base):
 
     def __repr__(self) -> str:
         return f"<Plugin id={self.id} hash={self.hash} name={self.name} source={self.source}>"
-

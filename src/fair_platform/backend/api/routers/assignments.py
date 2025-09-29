@@ -6,7 +6,10 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.database import session_dependency
-from fair_platform.backend.data.models.assignment import Assignment, assignment_artifacts
+from fair_platform.backend.data.models.assignment import (
+    Assignment,
+    assignment_artifacts,
+)
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.artifact import Artifact
 from fair_platform.backend.api.schema.assignment import (
@@ -28,9 +31,14 @@ def create_assignment(
 ):
     course = db.get(Course, payload.course_id)
     if not course:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
+        )
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can create assignments")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can create assignments",
+        )
 
     assignment = Assignment(
         id=uuid4(),
@@ -47,10 +55,16 @@ def create_assignment(
     if payload.artifacts:
         for link in payload.artifacts:
             if not db.get(Artifact, link.artifact_id):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Artifact {link.artifact_id} not found")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Artifact {link.artifact_id} not found",
+                )
             db.execute(
                 assignment_artifacts.insert().values(
-                    id=uuid4(), assignment_id=assignment.id, artifact_id=link.artifact_id, role=link.role
+                    id=uuid4(),
+                    assignment_id=assignment.id,
+                    artifact_id=link.artifact_id,
+                    role=link.role,
                 )
             )
         db.commit()
@@ -67,7 +81,9 @@ def list_assignments(
     query = db.query(Assignment)
     if course_id is not None:
         if not db.get(Course, course_id):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+            )
         query = query.filter(Assignment.course_id == course_id)
     return query.all()
 
@@ -76,7 +92,9 @@ def list_assignments(
 def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency)):
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
+        )
     return assignment
 
 
@@ -89,14 +107,21 @@ def update_assignment(
 ):
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
+        )
 
     course = db.get(Course, assignment.course_id)
     if not course:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
+        )
 
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can update this assignment")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can update this assignment",
+        )
 
     if payload.title is not None:
         assignment.title = payload.title
@@ -112,14 +137,24 @@ def update_assignment(
 
     # Replace artifact links if provided... maybe not the best idea though
     if payload.artifacts is not None:
-        db.execute(delete(assignment_artifacts).where(lambda: assignment_artifacts.c.assignment_id == assignment.id))
+        db.execute(
+            delete(assignment_artifacts).where(
+                lambda: assignment_artifacts.c.assignment_id == assignment.id
+            )
+        )
         db.commit()
         for link in payload.artifacts:
             if not db.get(Artifact, link.artifact_id):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Artifact {link.artifact_id} not found")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Artifact {link.artifact_id} not found",
+                )
             db.execute(
                 assignment_artifacts.insert().values(
-                    id=uuid4(), assignment_id=assignment.id, artifact_id=link.artifact_id, role=link.role
+                    id=uuid4(),
+                    assignment_id=assignment.id,
+                    artifact_id=link.artifact_id,
+                    role=link.role,
                 )
             )
         db.commit()
@@ -129,17 +164,28 @@ def update_assignment(
 
 
 @router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+def delete_assignment(
+    assignment_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
+        )
 
     course = db.get(Course, assignment.course_id)
     if not course:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
+        )
 
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can delete this assignment")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can delete this assignment",
+        )
 
     db.delete(assignment)
     db.commit()

@@ -7,6 +7,7 @@ Usage:
 
 The DATABASE_URL environment variable (or .env file) overrides the fallback URL.
 """
+
 from __future__ import annotations
 import os
 import sys
@@ -23,6 +24,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from dotenv import load_dotenv  # type: ignore
+
 load_dotenv()
 
 from fair_platform.backend.data.database import Base, get_database_url  # noqa: E402
@@ -48,6 +50,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # --- Helper functions -----------------------------------------------------------------
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""

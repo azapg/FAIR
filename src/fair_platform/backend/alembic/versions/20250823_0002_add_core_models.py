@@ -4,6 +4,7 @@ Revision ID: 20250823_0002
 Revises: 20250818_0001
 Create Date: 2025-08-23
 """
+
 from __future__ import annotations
 
 from alembic import op  # type: ignore
@@ -37,7 +38,9 @@ def _migrate_users_table_to_uuid_and_string_role() -> None:
         sa.Column("id", sa.UUID(), primary_key=True, nullable=False),
         sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
-        sa.Column("role", sa.String(length=50), nullable=False, server_default="student"),
+        sa.Column(
+            "role", sa.String(length=50), nullable=False, server_default="student"
+        ),
         sa.UniqueConstraint("email", name="uq_users_email"),
     )
 
@@ -45,7 +48,9 @@ def _migrate_users_table_to_uuid_and_string_role() -> None:
     inspector = sa.inspect(conn)
     if "users" in inspector.get_table_names():
         try:
-            rows = conn.execute(sa.text("SELECT email, name, role FROM users")).fetchall()
+            rows = conn.execute(
+                sa.text("SELECT email, name, role FROM users")
+            ).fetchall()
         except Exception:
             rows = []
         if rows:
@@ -88,9 +93,13 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), primary_key=True, nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-    sa.Column("instructor_id", sa.UUID(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column(
+            "instructor_id", sa.UUID(), sa.ForeignKey("users.id"), nullable=False
+        ),
     )
-    op.create_index("ix_courses_instructor_id", "courses", ["instructor_id"], unique=False)
+    op.create_index(
+        "ix_courses_instructor_id", "courses", ["instructor_id"], unique=False
+    )
 
     op.create_table(
         "assignments",
@@ -101,7 +110,9 @@ def upgrade() -> None:
         sa.Column("deadline", sa.TIMESTAMP(), nullable=True),
         sa.Column("max_grade", sa.JSON(), nullable=False),
     )
-    op.create_index("ix_assignments_course_id", "assignments", ["course_id"], unique=False)
+    op.create_index(
+        "ix_assignments_course_id", "assignments", ["course_id"], unique=False
+    )
 
     op.create_table(
         "workflows",
@@ -109,42 +120,76 @@ def upgrade() -> None:
         sa.Column("course_id", sa.UUID(), sa.ForeignKey("courses.id"), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-    sa.Column("created_by", sa.UUID(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("created_by", sa.UUID(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
     )
     op.create_index("ix_workflows_course_id", "workflows", ["course_id"], unique=False)
-    op.create_index("ix_workflows_created_by", "workflows", ["created_by"], unique=False)
+    op.create_index(
+        "ix_workflows_created_by", "workflows", ["created_by"], unique=False
+    )
 
     op.create_table(
         "workflow_runs",
         sa.Column("id", sa.UUID(), primary_key=True, nullable=False),
-        sa.Column("workflow_id", sa.UUID(), sa.ForeignKey("workflows.id"), nullable=False),
+        sa.Column(
+            "workflow_id", sa.UUID(), sa.ForeignKey("workflows.id"), nullable=False
+        ),
         sa.Column("run_by", sa.UUID(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("started_at", sa.TIMESTAMP(), nullable=False),
         sa.Column("finished_at", sa.TIMESTAMP(), nullable=True),
         sa.Column("status", sa.String(), nullable=False),
         sa.Column("logs", sa.JSON(), nullable=True),
     )
-    op.create_index("ix_workflow_runs_workflow_id", "workflow_runs", ["workflow_id"], unique=False)
-    op.create_index("ix_workflow_runs_run_by", "workflow_runs", ["run_by"], unique=False)
+    op.create_index(
+        "ix_workflow_runs_workflow_id", "workflow_runs", ["workflow_id"], unique=False
+    )
+    op.create_index(
+        "ix_workflow_runs_run_by", "workflow_runs", ["run_by"], unique=False
+    )
 
     op.create_table(
         "submissions",
         sa.Column("id", sa.UUID(), primary_key=True, nullable=False),
-        sa.Column("assignment_id", sa.UUID(), sa.ForeignKey("assignments.id"), nullable=False),
+        sa.Column(
+            "assignment_id", sa.UUID(), sa.ForeignKey("assignments.id"), nullable=False
+        ),
         sa.Column("submitter_id", sa.UUID(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("submitted_at", sa.TIMESTAMP(), nullable=True),
         sa.Column("status", sa.String(), nullable=False, server_default="pending"),
-    sa.Column("official_run_id", sa.UUID(), sa.ForeignKey("workflow_runs.id"), nullable=True),
+        sa.Column(
+            "official_run_id",
+            sa.UUID(),
+            sa.ForeignKey("workflow_runs.id"),
+            nullable=True,
+        ),
     )
-    op.create_index("ix_submissions_assignment_id", "submissions", ["assignment_id"], unique=False)
-    op.create_index("ix_submissions_submitter_id", "submissions", ["submitter_id"], unique=False)
-    op.create_index("ix_submissions_official_run_id", "submissions", ["official_run_id"], unique=False)
+    op.create_index(
+        "ix_submissions_assignment_id", "submissions", ["assignment_id"], unique=False
+    )
+    op.create_index(
+        "ix_submissions_submitter_id", "submissions", ["submitter_id"], unique=False
+    )
+    op.create_index(
+        "ix_submissions_official_run_id",
+        "submissions",
+        ["official_run_id"],
+        unique=False,
+    )
 
     op.create_table(
         "submission_workflow_runs",
-        sa.Column("submission_id", sa.UUID(), sa.ForeignKey("submissions.id", ondelete="CASCADE"), primary_key=True),
-        sa.Column("workflow_run_id", sa.UUID(), sa.ForeignKey("workflow_runs.id", ondelete="CASCADE"), primary_key=True),
+        sa.Column(
+            "submission_id",
+            sa.UUID(),
+            sa.ForeignKey("submissions.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
+        sa.Column(
+            "workflow_run_id",
+            sa.UUID(),
+            sa.ForeignKey("workflow_runs.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
     )
 
     op.create_table(
@@ -205,7 +250,9 @@ def downgrade() -> None:
 
     # Copy data back with fresh integer ids (as downgrade is best-effort)
     try:
-        rows = conn.execute(sa.text("SELECT email, name, role FROM users_uuid")).fetchall()
+        rows = conn.execute(
+            sa.text("SELECT email, name, role FROM users_uuid")
+        ).fetchall()
     except Exception:
         rows = []
     if rows:

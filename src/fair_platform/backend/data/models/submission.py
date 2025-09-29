@@ -15,17 +15,38 @@ if TYPE_CHECKING:
 submission_workflow_runs = Table(
     "submission_workflow_runs",
     Base.metadata,
-    Column("submission_id", SAUUID, ForeignKey("submissions.id", ondelete="CASCADE"), primary_key=True),
-    Column("workflow_run_id", SAUUID, ForeignKey("workflow_runs.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "submission_id",
+        SAUUID,
+        ForeignKey("submissions.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "workflow_run_id",
+        SAUUID,
+        ForeignKey("workflow_runs.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
 )
 
 submission_artifacts = Table(
     "submission_artifacts",
     Base.metadata,
     Column("id", SAUUID, primary_key=True),
-    Column("submission_id", SAUUID, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False),
-    Column("artifact_id", SAUUID, ForeignKey("artifacts.id", ondelete="CASCADE"), nullable=False),
+    Column(
+        "submission_id",
+        SAUUID,
+        ForeignKey("submissions.id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column(
+        "artifact_id",
+        SAUUID,
+        ForeignKey("artifacts.id", ondelete="CASCADE"),
+        nullable=False,
+    ),
 )
+
 
 class SubmissionStatus(str, Enum):
     pending = "pending"
@@ -37,17 +58,28 @@ class SubmissionStatus(str, Enum):
     needs_review = "needs_review"
     failure = "failure"
 
+
 class Submission(Base):
     __tablename__ = "submissions"
 
     id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True)
-    assignment_id: Mapped[UUID] = mapped_column(SAUUID, ForeignKey("assignments.id"), nullable=False)
-    submitter_id: Mapped[UUID] = mapped_column(SAUUID, ForeignKey("users.id"), nullable=False)
+    assignment_id: Mapped[UUID] = mapped_column(
+        SAUUID, ForeignKey("assignments.id"), nullable=False
+    )
+    submitter_id: Mapped[UUID] = mapped_column(
+        SAUUID, ForeignKey("users.id"), nullable=False
+    )
     submitted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
-    status: Mapped[SubmissionStatus] = mapped_column(String, nullable=False, default=SubmissionStatus.pending)
-    official_run_id: Mapped[Optional[UUID]] = mapped_column(SAUUID, ForeignKey("workflow_runs.id"), nullable=True)
+    status: Mapped[SubmissionStatus] = mapped_column(
+        String, nullable=False, default=SubmissionStatus.pending
+    )
+    official_run_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("workflow_runs.id"), nullable=True
+    )
 
-    assignment: Mapped["Assignment"] = relationship("Assignment", back_populates="submissions")
+    assignment: Mapped["Assignment"] = relationship(
+        "Assignment", back_populates="submissions"
+    )
     # Many-to-many: a submission can have multiple runs linked
     runs: Mapped[List["WorkflowRun"]] = relationship(
         "WorkflowRun",
