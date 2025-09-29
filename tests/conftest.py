@@ -105,11 +105,21 @@ def student_user(test_db):
 
 def get_auth_token(test_client: TestClient, user: User) -> str:
     """Helper function to get authentication token for a user"""
-    login_data = {
+    user_data = {
+        "name": user.name,
         "email": user.email,
-        "role": user.role
+        "role": user.role,
+        "password": "test_password_123"
     }
-    response = test_client.post("/api/auth/mock-login", json=login_data)
+    register_response = test_client.post("/api/auth/register", json=user_data)
+    if register_response.status_code != 201:
+        pass
+    
+    login_data = {
+        "username": user.email,
+        "password": "test_password_123"
+    }
+    response = test_client.post("/api/auth/login", data=login_data)
     
     if response.status_code != 200:
         raise Exception(f"Failed to get auth token: {response.text}")
@@ -122,5 +132,6 @@ def create_sample_user_data(role: UserRole = UserRole.student) -> dict:
     return {
         "name": fake.name(),
         "email": fake.email(),
-        "role": role.value
+        "role": role.value,
+        "password": "test_password_123"  # TODO: Implement password hashing
     }

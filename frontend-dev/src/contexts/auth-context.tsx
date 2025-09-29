@@ -115,7 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       form.append('grant_type', 'password')
       form.append('scope', '')
 
-      const loginRes = await api.post('/auth/mock-login', form, {
+      const loginRes = await api.post('/auth/login', form, {
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       })
 
