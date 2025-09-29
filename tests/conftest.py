@@ -105,7 +105,6 @@ def student_user(test_db):
 
 def get_auth_token(test_client: TestClient, user: User) -> str:
     """Helper function to get authentication token for a user"""
-    # First register the user (required for proper auth flow)
     user_data = {
         "name": user.name,
         "email": user.email,
@@ -114,10 +113,8 @@ def get_auth_token(test_client: TestClient, user: User) -> str:
     }
     register_response = test_client.post("/api/auth/register", json=user_data)
     if register_response.status_code != 201:
-        # User might already exist, continue with login
         pass
     
-    # Then login with proper OAuth2 form data
     login_data = {
         "username": user.email,
         "password": "test_password_123"
@@ -136,5 +133,5 @@ def create_sample_user_data(role: UserRole = UserRole.student) -> dict:
         "name": fake.name(),
         "email": fake.email(),
         "role": role.value,
-        "password": "test_password_123"  # TODO: This will fail until proper password hashing is implemented
+        "password": "test_password_123"  # TODO: Implement password hashing
     }

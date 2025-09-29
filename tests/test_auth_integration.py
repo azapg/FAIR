@@ -31,10 +31,10 @@ class TestAuthenticationFlow:
         assert created_user["role"] == user_data["role"]
         
         login_response = test_client.post(
-            "/api/auth/login",  # Updated to use real login endpoint
+            "/api/auth/login",
             data={
                 "username": user_data["email"],
-                "password": "test_password_123"  # Use the test password from the fixture
+                "password": "test_password_123"
             }
         )
         
@@ -50,14 +50,12 @@ class TestAuthenticationFlow:
         """
         user_data = create_sample_user_data(role=UserRole.student)
         
-        # Register user first
         create_response = test_client.post(
             "/api/auth/register",
             json=user_data,
         )
         assert create_response.status_code == 201, f"User creation failed: {create_response.text}"
         
-        # Try to login with wrong password
         login_response = test_client.post(
             "/api/auth/login",
             data={

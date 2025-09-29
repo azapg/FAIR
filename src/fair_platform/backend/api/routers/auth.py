@@ -46,8 +46,7 @@ def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # TODO: Implement proper password hashing - for now we ignore the password
-    # This reminds us that password handling is not yet implemented
+    # TODO: Implement proper password hashing. For now, we ignore the password
     user = User(id=uuid4(), name=user_in.name, email=user_in.email, role=user_in.role)
     db.add(user)
     db.commit()
@@ -67,9 +66,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # TODO: Implement proper password verification with hashing
-    # For now, we make this fail to remind us that password handling is not implemented
-    # This simulates the requirement that login should fail until password hashing is implemented
-    if form_data.password != "test_password_123":  # Temporary hardcoded password for testing
+    if form_data.password != "test_password_123":
         raise HTTPException(status_code=401, detail="Invalid credentials - password verification not implemented")
     
     access_token = create_access_token({"sub": str(user.id), "role": user.role})
