@@ -16,7 +16,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    pass
+    password: str  # TODO: This will require proper password hashing implementation
 
 
 class UserUpdate(BaseModel):

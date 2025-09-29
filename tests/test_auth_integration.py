@@ -2,7 +2,6 @@ from fastapi.testclient import TestClient
 from fair_platform.backend.data.models.user import UserRole
 from tests.conftest import create_sample_user_data
 
-# TODO: Separate api/users tests from api/auth tests. Also, be more strict with current auth tests. Do not allow for mock-login nor hashing bypass.
 
 class TestAuthenticationFlow:
     """Test the complete user authentication and authorization flow"""
@@ -32,18 +31,72 @@ class TestAuthenticationFlow:
         assert created_user["role"] == user_data["role"]
         
         login_response = test_client.post(
-            "/api/auth/mock-login", # TODO: Change to real login endpoint when implemented
+            "/api/auth/login",  # Updated to use real login endpoint
             data={
                 "username": user_data["email"],
-                "password": "bruh i am not even hashing passwords yet"
+                "password": "test_password_123"  # Use the test password from the fixture
             }
         )
         
-        assert login_response.status_code == 200, f"Mock login failed: {login_response.text}"
+        assert login_response.status_code == 200, f"Login failed: {login_response.text}"
         login_data = login_response.json()
         assert "access_token" in login_data
         assert "token_type" in login_data
         assert login_data["token_type"] == "bearer"
+
+    def test_login_with_invalid_password_fails(self, test_client: TestClient, admin_user):
+        """
+        Test that login fails with an invalid password (showcasing password validation).
+        """
+        user_data = create_sample_user_data(role=UserRole.student)
+        
+        # Register user first
+        create_response = test_client.post(
+            "/api/auth/register",
+            json=user_data,
+        )
+        assert create_response.status_code == 201, f"User creation failed: {create_response.text}"
+        
+        # Try to login with wrong password
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={
+                "username": user_data["email"],
+                "password": "wrong_password"
+            }
+        )
+        
+        assert login_response.status_code == 401, f"Expected login to fail with invalid password, got {login_response.status_code}: {login_response.text}"
+        assert "Invalid credentials" in login_response.json()["detail"]
+
+    def test_login_with_nonexistent_user_fails(self, test_client: TestClient):
+        """
+        Test that login fails for non-existent users.
+        """
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={
+                "username": "nonexistent@example.com",
+                "password": "any_password"
+            }
+        )
+        
+        assert login_response.status_code == 401, f"Expected login to fail for non-existent user, got {login_response.status_code}: {login_response.text}"
+        assert "Invalid credentials" in login_response.json()["detail"]
+
+    def test_register_requires_password_field(self, test_client: TestClient):
+        """
+        Test that registration now requires a password field.
+        """
+        user_data_without_password = {
+            "name": "Test User",
+            "email": "test@example.com",
+            "role": "student"
+        }
+        
+        response = test_client.post("/api/auth/register", json=user_data_without_password)
+        
+        assert response.status_code == 422, f"Expected validation error without password field, got {response.status_code}: {response.text}"
 
     
     def test_protected_route_without_token_fails(self, test_client: TestClient, student_user):
