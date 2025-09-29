@@ -9,12 +9,21 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.database import session_dependency
-from fair_platform.backend.data.models.submission import Submission, SubmissionStatus, submission_artifacts, submission_workflow_runs
+from fair_platform.backend.data.models.submission import (
+    Submission,
+    SubmissionStatus,
+    submission_artifacts,
+    submission_workflow_runs,
+)
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.user import User, UserRole
 from fair_platform.backend.data.models.artifact import Artifact
 from fair_platform.backend.data.models.workflow_run import WorkflowRun
-from fair_platform.backend.api.schema.submission import SubmissionCreate, SubmissionRead, SubmissionUpdate
+from fair_platform.backend.api.schema.submission import (
+    SubmissionCreate,
+    SubmissionRead,
+    SubmissionUpdate,
+)
 from fair_platform.backend.api.routers.auth import get_current_user
 
 router = APIRouter()
@@ -65,9 +74,14 @@ def create_submission(
     if payload.artifacts_ids:
         for aid in payload.artifacts_ids:
             if not db.get(Artifact, aid):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Artifact {aid} not found")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Artifact {aid} not found",
+                )
             db.execute(
-                submission_artifacts.insert().values(id=uuid4(), submission_id=sub.id, artifact_id=aid)
+                submission_artifacts.insert().values(
+                    id=uuid4(), submission_id=sub.id, artifact_id=aid
+                )
             )
             db.refresh(submission_artifacts)
         db.commit()
@@ -77,7 +91,9 @@ def create_submission(
 
 
 @router.get("/", response_model=List[SubmissionRead])
-def list_submissions(assignment_id: Optional[UUID] = None, db: Session = Depends(session_dependency)):
+def list_submissions(
+    assignment_id: Optional[UUID] = None, db: Session = Depends(session_dependency)
+):
     q = db.query(Submission)
     if assignment_id:
         q = q.filter(Submission.assignment_id == assignment_id)
@@ -88,7 +104,9 @@ def list_submissions(assignment_id: Optional[UUID] = None, db: Session = Depends
 def get_submission(submission_id: UUID, db: Session = Depends(session_dependency)):
     sub = db.get(Submission, submission_id)
     if not sub:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
+        )
     return sub
 
 
@@ -101,19 +119,31 @@ def update_submission(
 ):
     sub = db.get(Submission, submission_id)
     if not sub:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
+        )
 
     if current_user.role != UserRole.admin and current_user.id != sub.submitter_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this submission")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this submission",
+        )
 
     if payload.submitted_at is not None:
         sub.submitted_at = payload.submitted_at
     if payload.status is not None:
-        sub.status = payload.status if isinstance(payload.status, str) else getattr(payload.status, "value", payload.status)
+        sub.status = (
+            payload.status
+            if isinstance(payload.status, str)
+            else getattr(payload.status, "value", payload.status)
+        )
     if payload.official_run_id is not None:
         run = db.get(WorkflowRun, payload.official_run_id)
         if not run:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="official_run_id not found")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="official_run_id not found",
+            )
         sub.official_run_id = payload.official_run_id
         existing = db.execute(
             submission_workflow_runs.select().where(
@@ -123,7 +153,9 @@ def update_submission(
         ).first()
         if not existing:
             db.execute(
-                submission_workflow_runs.insert().values(submission_id=sub.id, workflow_run_id=payload.official_run_id)
+                submission_workflow_runs.insert().values(
+                    submission_id=sub.id, workflow_run_id=payload.official_run_id
+                )
             )
             db.commit()
 
@@ -132,25 +164,43 @@ def update_submission(
 
     # replaces artifacts if provided
     if payload.artifact_ids is not None:
-        db.execute(delete(submission_artifacts).where(lambda: submission_artifacts.c.submission_id == sub.id))
+        db.execute(
+            delete(submission_artifacts).where(
+                lambda: submission_artifacts.c.submission_id == sub.id
+            )
+        )
         db.commit()
         for aid in payload.artifact_ids:
             if not db.get(Artifact, aid):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Artifact {aid} not found")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Artifact {aid} not found",
+                )
             db.execute(
-                submission_artifacts.insert().values(id=uuid4(), submission_id=sub.id, artifact_id=aid)
+                submission_artifacts.insert().values(
+                    id=uuid4(), submission_id=sub.id, artifact_id=aid
+                )
             )
         db.commit()
 
     # replaces runs if provided
     if payload.run_ids is not None:
-        db.execute(delete(submission_workflow_runs).where(lambda: submission_workflow_runs.c.submission_id == sub.id))
+        db.execute(
+            delete(submission_workflow_runs).where(
+                lambda: submission_workflow_runs.c.submission_id == sub.id
+            )
+        )
         db.commit()
         for rid in payload.run_ids:
             if not db.get(WorkflowRun, rid):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"WorkflowRun {rid} not found")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"WorkflowRun {rid} not found",
+                )
             db.execute(
-                submission_workflow_runs.insert().values(submission_id=sub.id, workflow_run_id=rid)
+                submission_workflow_runs.insert().values(
+                    submission_id=sub.id, workflow_run_id=rid
+                )
             )
         db.commit()
         if sub.official_run_id is not None:
@@ -162,7 +212,9 @@ def update_submission(
             ).first()
             if not existing:
                 db.execute(
-                    submission_workflow_runs.insert().values(submission_id=sub.id, workflow_run_id=sub.official_run_id)
+                    submission_workflow_runs.insert().values(
+                        submission_id=sub.id, workflow_run_id=sub.official_run_id
+                    )
                 )
                 db.commit()
 
@@ -171,13 +223,22 @@ def update_submission(
 
 
 @router.delete("/{submission_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_submission(submission_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+def delete_submission(
+    submission_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     sub = db.get(Submission, submission_id)
     if not sub:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
+        )
 
     if current_user.role != UserRole.admin and current_user.id != sub.submitter_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this submission")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this submission",
+        )
 
     db.delete(sub)
     db.commit()

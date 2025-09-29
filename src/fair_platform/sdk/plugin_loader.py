@@ -9,19 +9,29 @@ import os
 import sys
 from typing import Optional
 
-excluded = {'.DS_Store', '__pycache__'}
+excluded = {".DS_Store", "__pycache__"}
+
 
 def hash_extension_folder(folder: Path):
     hash_builder = hashlib.sha256()
-    files = sorted(file for file in folder.rglob('*') if file.is_file() and file.name not in excluded)
+    files = sorted(
+        file
+        for file in folder.rglob("*")
+        if file.is_file() and file.name not in excluded
+    )
     for file in files:
         with open(file, "rb") as f:
             while chunk := f.read(8192):
                 hash_builder.update(chunk)
     return hash_builder.hexdigest()
 
+
 def get_folder_modules(folder: Path):
-    return [file for file in folder.rglob('*.py') if file.is_file() and file.name not in excluded]
+    return [
+        file
+        for file in folder.rglob("*.py")
+        if file.is_file() and file.name not in excluded
+    ]
 
 
 def load_plugin_from_module(module_path: str) -> Optional[ModuleType]:
@@ -42,10 +52,12 @@ def load_plugin_from_module(module_path: str) -> Optional[ModuleType]:
 
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load specification for module '{module_name}' from '{module_path}'.")
+        raise ImportError(
+            f"Could not load specification for module '{module_name}' from '{module_path}'."
+        )
 
     module = importlib.util.module_from_spec(spec)
-    
+
     directory_path = Path(directory)
     extension_hash = hash_extension_folder(directory_path)
 

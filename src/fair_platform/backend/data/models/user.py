@@ -19,6 +19,7 @@ class UserRole(str, Enum):
     student = "student"
     admin = "admin"
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -28,9 +29,15 @@ class User(Base):
     role: Mapped[str] = mapped_column(String, nullable=False)
 
     # Relationship to courses where this user is the instructor
-    courses: Mapped[List["Course"]] = relationship("Course", back_populates="instructor")
-    created_workflows: Mapped[List["Workflow"]] = relationship("Workflow", back_populates="creator")
-    workflow_runs: Mapped[List["WorkflowRun"]] = relationship("WorkflowRun", back_populates="runner")
+    courses: Mapped[List["Course"]] = relationship(
+        "Course", back_populates="instructor"
+    )
+    created_workflows: Mapped[List["Workflow"]] = relationship(
+        "Workflow", back_populates="creator"
+    )
+    workflow_runs: Mapped[List["WorkflowRun"]] = relationship(
+        "WorkflowRun", back_populates="runner"
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r} role={self.role}>"

@@ -10,6 +10,7 @@ from ..database import Base
 if TYPE_CHECKING:
     from .submission import Submission
 
+
 class WorkflowRunStatus(str, Enum):
     pending = "pending"
     running = "running"
@@ -17,11 +18,14 @@ class WorkflowRunStatus(str, Enum):
     failure = "failure"
     cancelled = "cancelled"
 
+
 class WorkflowRun(Base):
     __tablename__ = "workflow_runs"
 
     id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True)
-    workflow_id: Mapped[UUID] = mapped_column(SAUUID, ForeignKey("workflows.id"), nullable=False)
+    workflow_id: Mapped[UUID] = mapped_column(
+        SAUUID, ForeignKey("workflows.id"), nullable=False
+    )
     run_by: Mapped[UUID] = mapped_column(SAUUID, ForeignKey("users.id"), nullable=False)
     started_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False)
     finished_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)

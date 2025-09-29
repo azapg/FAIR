@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr
 
 from fair_platform.backend.data.models.user import UserRole
 
+
 class UserBase(BaseModel):
     name: str
     email: EmailStr

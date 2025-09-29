@@ -36,16 +36,26 @@ app = typer.Typer()
 
 @app.callback()
 def common(
-        ctx: typer.Context,
-        version: bool = typer.Option(None, "--version", "-v", callback=version_callback),
+    ctx: typer.Context,
+    version: bool = typer.Option(None, "--version", "-v", callback=version_callback),
 ):
     pass
 
 
 @app.command()
-def serve(port: Annotated[int, typer.Option("--port", "-p", help="Port to run the development server on")] = 3000,
-          headless: Annotated[bool, typer.Option("--headless", "-h", help="Run in headless mode")] = False, dev: Annotated[bool, typer.Option("--dev", "-d", help="Run in development mode")] = False):
+def serve(
+    port: Annotated[
+        int, typer.Option("--port", "-p", help="Port to run the development server on")
+    ] = 3000,
+    headless: Annotated[
+        bool, typer.Option("--headless", "-h", help="Run in headless mode")
+    ] = False,
+    dev: Annotated[
+        bool, typer.Option("--dev", "-d", help="Run in development mode")
+    ] = False,
+):
     from fair_platform.backend.main import run
+
     run(host="127.0.0.1", port=port, headless=headless, dev=dev)
 
 

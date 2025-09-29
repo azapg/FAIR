@@ -16,7 +16,10 @@ class SubmissionBase(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
         validate_by_name = True
 
 
@@ -26,7 +29,10 @@ class SubmissionCreate(SubmissionBase):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
         validate_by_name = True
 
 
@@ -35,11 +41,14 @@ class SubmissionUpdate(BaseModel):
     status: Optional[SubmissionStatus] = None
     official_run_id: Optional[UUID] = None
     artifact_ids: Optional[List[UUID]] = None  # full replace if provided
-    run_ids: Optional[List[UUID]] = None      # full replace if provided
+    run_ids: Optional[List[UUID]] = None  # full replace if provided
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: ''.join(word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
         validate_by_name = True
 
 
@@ -54,4 +63,3 @@ __all__ = [
     "SubmissionUpdate",
     "SubmissionRead",
 ]
-

@@ -4,6 +4,7 @@ Revision ID: 20250818_0001
 Revises:
 Create Date: 2025-08-18
 """
+
 from __future__ import annotations
 from alembic import op  # type: ignore
 import sqlalchemy as sa
@@ -13,6 +14,7 @@ revision = "20250818_0001"
 down_revision = None
 branch_labels = None
 depends_on = None
+
 
 def upgrade() -> None:
     # Create Enum type for portability (will be inline for SQLite)

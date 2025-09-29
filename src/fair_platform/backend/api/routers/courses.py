@@ -7,7 +7,12 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.user import User, UserRole
-from fair_platform.backend.api.schema.course import CourseCreate, CourseRead, CourseUpdate, CourseDetailRead
+from fair_platform.backend.api.schema.course import (
+    CourseCreate,
+    CourseRead,
+    CourseUpdate,
+    CourseDetailRead,
+)
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.api.routers.auth import get_current_user
 
@@ -22,19 +27,27 @@ def create_course(
 ):
     instructor = db.get(User, course.instructor_id)
     if not instructor:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Instructor not found")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Instructor not found"
+        )
 
     if instructor.role == UserRole.student:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Students cannot create courses")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Students cannot create courses",
+        )
 
     if current_user.role != UserRole.admin and current_user.id != course.instructor_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create a course for this instructor")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to create a course for this instructor",
+        )
 
     db_course = Course(
         id=uuid4(),
         name=course.name,
         description=course.description,
-        instructor_id=course.instructor_id
+        instructor_id=course.instructor_id,
     )
     db.add(db_course)
     db.commit()
@@ -60,7 +73,7 @@ def list_courses(
             joinedload(Course.instructor),
             selectinload(Course.assignments),
         )
-        
+
         if instructor_id is not None:
             query = query.filter(Course.instructor_id == instructor_id)
         courses = query.all()
@@ -95,7 +108,9 @@ def list_courses(
             "name": c.name,
             "description": c.description,
             "instructor_id": c.instructor_id,
-            "instructor_name": c.instructor.name if c.instructor else "Unknown Instructor",
+            "instructor_name": c.instructor.name
+            if c.instructor
+            else "Unknown Instructor",
             "assignments_count": len(c.assignments or []),
         }
         for c in courses
@@ -111,8 +126,11 @@ def get_course(
 ):
     # TODO: Students cannot access individual course details for now because there's no enrollment table
     if current_user.role == UserRole.student:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Students are not authorized to view course details")
-    
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Students are not authorized to view course details",
+        )
+
     course = (
         db.query(Course)
         .options(
@@ -124,11 +142,16 @@ def get_course(
         .first()
     )
     if not course:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+        )
 
     # Authorization: admin or the course instructor
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can view this course")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can view this course",
+        )
 
     if detailed:
         return {
@@ -164,18 +187,28 @@ def update_course(
         .first()
     )
     if not course:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+        )
 
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can update this course")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can update this course",
+        )
 
     if payload.instructor_id is not None:
         instructor = db.get(User, payload.instructor_id)
         if not instructor:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Instructor not found")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Instructor not found"
+            )
 
         if instructor.role == UserRole.student:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Students cannot be assigned as instructors")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Students cannot be assigned as instructors",
+            )
 
         course.instructor_id = payload.instructor_id
         course.instructor = instructor
@@ -206,10 +239,15 @@ def delete_course(
 ):
     course = db.get(Course, course_id)
     if not course:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+        )
 
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can delete this course")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can delete this course",
+        )
 
     db.delete(course)
     db.commit()

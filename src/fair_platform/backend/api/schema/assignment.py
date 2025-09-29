@@ -33,7 +33,9 @@ class AssignmentUpdate(BaseModel):
     description: Optional[str] = None
     deadline: Optional[datetime] = None
     max_grade: Optional[Dict[str, Any]] = None
-    artifacts: Optional[List[AssignmentArtifactLink]] = None  # full-replace semantics if provided
+    artifacts: Optional[List[AssignmentArtifactLink]] = (
+        None  # full-replace semantics if provided
+    )
 
     class Config:
         orm_mode = True
@@ -50,4 +52,3 @@ __all__ = [
     "AssignmentUpdate",
     "AssignmentRead",
 ]
-

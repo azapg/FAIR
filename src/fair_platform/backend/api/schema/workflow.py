@@ -16,8 +16,10 @@ class WorkflowBase(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: ''.join(
-            word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
         validate_by_name = True
 
 
@@ -32,8 +34,10 @@ class WorkflowUpdate(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: ''.join(
-            word.capitalize() if i > 0 else word for i, word in enumerate(field_name.split('_')))
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
         validate_by_name = True
 
 

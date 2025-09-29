@@ -27,7 +27,7 @@ def get_database_url() -> str:
         print("Using SQLite since DATABASE_URL is not set")
         return f"sqlite:///{storage.local_db_path}"
     if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
+        url = "postgresql://" + url[len("postgres://") :]
     return url
 
 
@@ -41,7 +41,9 @@ if DATABASE_URL.startswith("sqlite:"):
 
 engine = create_engine(DATABASE_URL, **_engine_kwargs)
 
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False, future=True)
+SessionLocal = sessionmaker(
+    bind=engine, autoflush=False, autocommit=False, expire_on_commit=False, future=True
+)
 
 Base = declarative_base()
 
@@ -77,6 +79,7 @@ def init_db(create_all: bool = True) -> None:
     """
     if create_all:
         from . import models  # noqa: F401
+
         Base.metadata.create_all(bind=engine)
 
 
