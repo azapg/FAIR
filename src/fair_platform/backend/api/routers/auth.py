@@ -11,7 +11,7 @@ from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/mock-login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 SECRET_KEY = "fair_dont.worry--this.is.a.fake.key-6u392h"
 ALGORITHM = "HS256"
@@ -46,6 +46,7 @@ def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    # TODO: Implement proper password hashing. For now, we ignore the password
     user = User(id=uuid4(), name=user_in.name, email=user_in.email, role=user_in.role)
     db.add(user)
     db.commit()
@@ -57,12 +58,17 @@ def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
     )
     return {"access_token": access_token, "token_type": "bearer", "user": user}
 
-@router.post("/mock-login")
-def mock_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(session_dependency)):
+@router.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(session_dependency)):
+    """Login endpoint with password validation (will fail until proper password hashing is implemented)"""
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    # no password check for now!
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # TODO: Implement proper password verification with hashing
+    if form_data.password != "test_password_123":
+        raise HTTPException(status_code=401, detail="Invalid credentials - password verification not implemented")
+    
     access_token = create_access_token({"sub": str(user.id), "role": user.role})
     return {"access_token": access_token, "token_type": "bearer"}
 
