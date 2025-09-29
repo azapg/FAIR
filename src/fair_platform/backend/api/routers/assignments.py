@@ -53,18 +53,17 @@ def create_assignment(
 
     # link artifacts if provided
     if payload.artifacts:
-        for link in payload.artifacts:
-            if not db.get(Artifact, link.artifact_id):
+        for artifact_id in payload.artifacts:
+            if not db.get(Artifact, artifact_id):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Artifact {link.artifact_id} not found",
+                    detail=f"Artifact {artifact_id} not found",
                 )
             db.execute(
                 assignment_artifacts.insert().values(
                     id=uuid4(),
                     assignment_id=assignment.id,
-                    artifact_id=link.artifact_id,
-                    role=link.role,
+                    artifact_id=artifact_id,
                 )
             )
         db.commit()
@@ -143,18 +142,17 @@ def update_assignment(
             )
         )
         db.commit()
-        for link in payload.artifacts:
-            if not db.get(Artifact, link.artifact_id):
+        for artifact_id in payload.artifacts:
+            if not db.get(Artifact, artifact_id):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Artifact {link.artifact_id} not found",
+                    detail=f"Artifact {artifact_id} not found",
                 )
             db.execute(
                 assignment_artifacts.insert().values(
                     id=uuid4(),
                     assignment_id=assignment.id,
-                    artifact_id=link.artifact_id,
-                    role=link.role,
+                    artifact_id=artifact_id,
                 )
             )
         db.commit()

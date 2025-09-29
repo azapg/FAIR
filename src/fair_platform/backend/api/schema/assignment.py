@@ -5,14 +5,6 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class AssignmentArtifactLink(BaseModel):
-    artifact_id: UUID
-    role: str
-
-    class Config:
-        orm_mode = True
-
-
 class AssignmentBase(BaseModel):
     course_id: UUID
     title: str
@@ -25,7 +17,7 @@ class AssignmentBase(BaseModel):
 
 
 class AssignmentCreate(AssignmentBase):
-    artifacts: Optional[List[AssignmentArtifactLink]] = None
+    artifacts: Optional[List[UUID]] = None
 
 
 class AssignmentUpdate(BaseModel):
@@ -33,9 +25,7 @@ class AssignmentUpdate(BaseModel):
     description: Optional[str] = None
     deadline: Optional[datetime] = None
     max_grade: Optional[Dict[str, Any]] = None
-    artifacts: Optional[List[AssignmentArtifactLink]] = (
-        None  # full-replace semantics if provided
-    )
+    artifacts: Optional[List[UUID]] = None
 
     class Config:
         orm_mode = True
@@ -46,7 +36,6 @@ class AssignmentRead(AssignmentBase):
 
 
 __all__ = [
-    "AssignmentArtifactLink",
     "AssignmentBase",
     "AssignmentCreate",
     "AssignmentUpdate",

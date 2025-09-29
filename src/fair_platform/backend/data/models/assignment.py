@@ -36,7 +36,6 @@ assignment_artifacts = Table(
         ForeignKey("artifacts.id", ondelete="CASCADE"),
         nullable=False,
     ),
-    Column("role", Text, nullable=False),
 )
 
 

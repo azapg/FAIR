@@ -26,7 +26,7 @@ export type CreateAssignmentForm = {
 
 // Artifact chip type for file uploads
 export type ArtifactChip = {
-  id?: string | number;
+  id: string;
   title: string;
   mime: string;
   artifact_type: string;

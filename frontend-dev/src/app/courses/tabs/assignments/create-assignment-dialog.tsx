@@ -169,10 +169,9 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
       }
     }
 
-    const artifactLinks = artifactChips
+    const artifactIds = artifactChips
       .filter(a => a.id && a.status === "uploaded")
-      // i forgot why i added role...
-      .map(a => ({ artifact_id: a.id!, role: "resource" }));
+      .map(a => a.id!);
 
     // Try to persist via API when possible
     try {
@@ -183,7 +182,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
           description: form.description.trim() || null,
           deadline: form.dueDate || null,
           max_grade: totalPoints ?? null,
-          artifacts: artifactLinks,
+          artifacts: artifactIds,
         };
         await createAssignment(payload);
       }

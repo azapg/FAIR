@@ -3,34 +3,28 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import {Grade} from "@/app/courses/tabs/assignments/assignments";
 
-export type Id = string | number
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
 export type Assignment = {
-  id: Id
-  course_id: Id
+  id: string
+  course_id: string
   title: string
   description?: string | null
   deadline: string | null
   max_grade?: Grade | null
 }
 
-export type AssignmentArtifactLink = {
-  artifact_id: Id
-  role: string | null
-}
-
 export type CreateAssignmentInput = {
-  course_id: Id
+  course_id: string
   title: string
   description?: string | null
   deadline?: string | null
   max_grade?: Grade | null
-  artifacts?: AssignmentArtifactLink[]
+  artifacts?: string[]
 }
 
 export type UpdateAssignmentInput = Partial<Omit<CreateAssignmentInput, 'course_id'>> & {
-  artifacts?: AssignmentArtifactLink[]
+  artifacts?: string[]
 }
 
 export const assignmentsKeys = {
@@ -38,7 +32,7 @@ export const assignmentsKeys = {
   lists: () => [...assignmentsKeys.all, 'list'] as const,
   list: (params?: ListParams) => [...assignmentsKeys.lists(), { params }] as const,
   details: () => [...assignmentsKeys.all, 'detail'] as const,
-  detail: (id: Id) => [...assignmentsKeys.details(), id] as const,
+  detail: (id: string) => [...assignmentsKeys.details(), id] as const,
 }
 
 const fetchAssignments = async (params?: ListParams): Promise<Assignment[]> => {
@@ -46,7 +40,7 @@ const fetchAssignments = async (params?: ListParams): Promise<Assignment[]> => {
   return res.data
 }
 
-const fetchAssignment = async (id: Id): Promise<Assignment> => {
+const fetchAssignment = async (id: string): Promise<Assignment> => {
   const res = await api.get(`/assignments/${id}`)
   return res.data
 }
@@ -56,12 +50,12 @@ const createAssignment = async (data: CreateAssignmentInput): Promise<Assignment
   return res.data
 }
 
-const updateAssignment = async (id: Id, data: UpdateAssignmentInput): Promise<Assignment> => {
+const updateAssignment = async (id: string, data: UpdateAssignmentInput): Promise<Assignment> => {
   const res = await api.put(`/assignments/${id}`, data)
   return res.data
 }
 
-const deleteAssignment = async (id: Id): Promise<void> => {
+const deleteAssignment = async (id: string): Promise<void> => {
   await api.delete(`/assignments/${id}`)
 }
 
@@ -73,10 +67,10 @@ export function useAssignments(params?: ListParams, enabled = true) {
   })
 }
 
-export function useAssignment(id?: Id, enabled = true) {
+export function useAssignment(id?: string, enabled = true) {
   return useQuery({
     queryKey: id != null ? assignmentsKeys.detail(id) : assignmentsKeys.detail('unknown'),
-    queryFn: () => fetchAssignment(id as Id),
+    queryFn: () => fetchAssignment(id as string),
     enabled: enabled && id != null,
   })
 }
@@ -96,7 +90,7 @@ export function useCreateAssignment() {
 export function useUpdateAssignment() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: Id; data: UpdateAssignmentInput }) => updateAssignment(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateAssignmentInput }) => updateAssignment(id, data),
     onSuccess: (_assignment, vars) => {
       qc.invalidateQueries({ queryKey: assignmentsKeys.detail(vars.id) }).then()
       qc.invalidateQueries({ queryKey: assignmentsKeys.lists() }).then()
@@ -107,7 +101,7 @@ export function useUpdateAssignment() {
 export function useDeleteAssignment() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: Id) => deleteAssignment(id),
+    mutationFn: (id: string) => deleteAssignment(id),
     onSuccess: (_void, id) => {
       qc.invalidateQueries({ queryKey: assignmentsKeys.detail(id) }).then()
       qc.invalidateQueries({ queryKey: assignmentsKeys.lists() }).then()

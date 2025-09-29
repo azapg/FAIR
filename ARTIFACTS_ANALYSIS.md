@@ -41,7 +41,6 @@ assignment_artifacts = Table(
     Column("id", SAUUID, primary_key=True),
     Column("assignment_id", SAUUID, ForeignKey("assignments.id", ondelete="CASCADE")),
     Column("artifact_id", SAUUID, ForeignKey("artifacts.id", ondelete="CASCADE")),
-    Column("role", Text, nullable=False),  # e.g., "template", "resource"
 )
 ```
 
@@ -218,7 +217,6 @@ class Artifact(Base):
 def upload_assignment_artifacts(
     assignment_id: UUID,
     files: List[UploadFile],
-    role: str = "resource",  # template, resource, rubric
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user)
 ):
@@ -401,14 +399,12 @@ export type Artifact = {
 // Upload with context
 export function useUploadArtifactsToAssignment() {
   return useMutation({
-    mutationFn: ({ assignmentId, files, role }: { 
+    mutationFn: ({ assignmentId, files }: { 
       assignmentId: Id, 
-      files: FileList, 
-      role: string 
+      files: FileList
     }) => {
       const formData = new FormData()
       Array.from(files).forEach(file => formData.append('files', file))
-      formData.append('role', role)
       
       return api.post(`/assignments/${assignmentId}/artifacts`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
