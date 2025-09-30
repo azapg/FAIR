@@ -1,14 +1,15 @@
 from uuid import UUID, uuid4
 from typing import List
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
 from sqlalchemy.orm import Session
 
 from fair_platform.backend import storage
 from fair_platform.backend.data.database import session_dependency
-from fair_platform.backend.data.models.artifact import Artifact
+from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus, AccessLevel
+from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.api.schema.artifact import (
-    ArtifactCreate,
     ArtifactRead,
     ArtifactUpdate,
 )
@@ -16,13 +17,6 @@ from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.data.models.user import User, UserRole
 
 router = APIRouter()
-
-# TODO: Artifacts not having owners means we can't enforce permissions easily.
-#   Most assignments will only be managed by their instructors/admin, but
-#   there students might want to update their submissions. Since in beta there
-#   are no students, this is not a concern yet, and we can just let instructors/admin
-#   manage everything.
-
 
 @router.post(
     "/", status_code=status.HTTP_201_CREATED, response_model=List[ArtifactRead]
@@ -43,6 +37,12 @@ def create_artifact(
 
     try:
         for file in files:
+            if not file.filename:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="File must have a filename",
+                )
+            
             artifact_id = uuid4()
             artifact_folder = uploads_folder / str(artifact_id)
             artifact_folder.mkdir(parents=True, exist_ok=True)
@@ -51,11 +51,17 @@ def create_artifact(
             artifact = Artifact(
                 id=artifact_id,
                 title=file.filename,
+                # TODO: I want to make this a cleaner and more useful mime for plugins and other things, currently just "file"
                 artifact_type="file",
-                mime=file.content_type,
+                mime=file.content_type or "application/octet-stream",
                 storage_path=str(artifact_id) + "/" + file.filename,
                 storage_type="local",
                 meta=None,
+                creator_id=current_user.id,
+                created_at=datetime.now(),
+                updated_at=datetime.now(),
+                status=ArtifactStatus.pending,
+                access_level=AccessLevel.private,
             )
 
             with open(file_location, "wb+") as buffer:
@@ -75,16 +81,13 @@ def create_artifact(
 
 
 @router.get("/", response_model=List[ArtifactRead])
-def list_artifacts(db: Session = Depends(session_dependency)):
-    return db.query(Artifact).all()
+def list_artifacts(db: Session = Depends(session_dependency), user: User = Depends(get_current_user)):
+    # TODO: Allow filtering by user, course, assignment, access level, etc.
+    return db.query(Artifact).filter(Artifact.creator_id == user.id).all()
+    
+    
 
 
-# TODO: You shouldn't be able to get artifacts you don't have access to.
-#   This is related to the ownership problem mentioned above.
-#   I think the solution would be to relate artifacts to assignments/submissions,
-#   and then check if the user has access to those. (e.g. if the user is the instructor of the course
-#   the assignment belongs to, or if the user is the student who made the submission)
-#   But since there are no students in beta, this is not a concern yet.
 @router.get("/{artifact_id}", response_model=ArtifactRead)
 def get_artifact(artifact_id: UUID, db: Session = Depends(session_dependency)):
     artifact = db.get(Artifact, artifact_id)
@@ -102,30 +105,34 @@ def update_artifact(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only instructors or admin can update artifacts",
-        )
-
     artifact = db.get(Artifact, artifact_id)
     if not artifact:
+        raise HTTPException(404, detail="Artifact not found")
+
+    if (
+        artifact.creator_id != current_user.id
+        and current_user.role != UserRole.admin
+        and current_user.role != UserRole.professor
+    ):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the creator, instructors, or admin can update artifacts",
         )
 
     if payload.title is not None:
         artifact.title = payload.title
-    if payload.artifact_type is not None:
-        artifact.artifact_type = payload.artifact_type
-    if payload.mime is not None:
-        artifact.mime = payload.mime
-    if payload.storage_path is not None:
-        artifact.storage_path = payload.storage_path
-    if payload.storage_type is not None:
-        artifact.storage_type = payload.storage_type
     if payload.meta is not None:
         artifact.meta = payload.meta
+    if payload.course_id is not None:
+        artifact.course_id = payload.course_id
+    if payload.assignment_id is not None:
+        artifact.assignment_id = payload.assignment_id
+    if payload.access_level is not None:
+        artifact.access_level = AccessLevel(payload.access_level)
+    if payload.status is not None:
+        artifact.status = ArtifactStatus(payload.status)
+    
+    artifact.updated_at = datetime.now()
 
     db.add(artifact)
     db.commit()
@@ -139,16 +146,26 @@ def delete_artifact(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only instructors or admin can delete artifacts",
-        )
-
     artifact = db.get(Artifact, artifact_id)
     if not artifact:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+
+    can_professor_delete = False
+    valid_access_levels = [AccessLevel.course, AccessLevel.assignment, AccessLevel.public]
+    if artifact.course_id and current_user.role == UserRole.professor and artifact.access_level in valid_access_levels:
+        course = db.get(Course, artifact.course_id)
+        if course and course.instructor_id == current_user.id:
+            can_professor_delete = True   
+    
+
+    if (
+        artifact.creator_id != current_user.id
+        and current_user.role != UserRole.admin
+        and not can_professor_delete
+    ):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the creator, instructors, or admin can delete artifacts",
         )
 
     db.delete(artifact)

@@ -1,15 +1,12 @@
 from typing import Optional, Dict, Any
 from uuid import UUID
+from datetime import datetime
 
 from pydantic import BaseModel
 
 
 class ArtifactBase(BaseModel):
     title: str
-    artifact_type: str
-    mime: str
-    storage_path: str
-    storage_type: str
     meta: Optional[Dict[str, Any]] = None
 
     class Config:
@@ -22,15 +19,19 @@ class ArtifactBase(BaseModel):
 
 
 class ArtifactCreate(ArtifactBase):
-    pass
+    creator_id: Optional[UUID] = None
+    course_id: Optional[UUID] = None
+    assignment_id: Optional[UUID] = None
+    access_level: Optional[str] = None
+    status: Optional[str] = None
 
 
 class ArtifactUpdate(BaseModel):
     title: Optional[str] = None
-    artifact_type: Optional[str] = None
-    mime: Optional[str] = None
-    storage_path: Optional[str] = None
-    storage_type: Optional[str] = None
+    course_id: Optional[UUID] = None
+    assignment_id: Optional[UUID] = None
+    access_level: Optional[str] = None
+    status: Optional[str] = None
     meta: Optional[Dict[str, Any]] = None
 
     class Config:
@@ -44,6 +45,15 @@ class ArtifactUpdate(BaseModel):
 
 class ArtifactRead(ArtifactBase):
     id: UUID
+    storage_path: str
+    storage_type: str
+    creator_id: UUID
+    created_at: datetime
+    updated_at: datetime
+    status: str
+    course_id: Optional[UUID] = None
+    assignment_id: Optional[UUID] = None
+    access_level: str
 
 
 __all__ = [

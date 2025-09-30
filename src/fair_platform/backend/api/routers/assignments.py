@@ -11,7 +11,7 @@ from fair_platform.backend.data.models.assignment import (
     assignment_artifacts,
 )
 from fair_platform.backend.data.models.course import Course
-from fair_platform.backend.data.models.artifact import Artifact
+from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus
 from fair_platform.backend.api.schema.assignment import (
     AssignmentCreate,
     AssignmentRead,
@@ -51,14 +51,17 @@ def create_assignment(
     db.add(assignment)
     db.commit()
 
-    # link artifacts if provided
     if payload.artifacts:
         for artifact_id in payload.artifacts:
-            if not db.get(Artifact, artifact_id):
+            artifact = db.get(Artifact, artifact_id)
+            if not artifact:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Artifact {artifact_id} not found",
                 )
+            artifact.status = ArtifactStatus.attached
+            db.add(artifact)
+            
             db.execute(
                 assignment_artifacts.insert().values(
                     id=uuid4(),
@@ -136,18 +139,36 @@ def update_assignment(
 
     # Replace artifact links if provided... maybe not the best idea though
     if payload.artifacts is not None:
+        old_artifacts = db.query(Artifact).join(
+            assignment_artifacts,
+            assignment_artifacts.c.artifact_id == Artifact.id
+        ).filter(
+            assignment_artifacts.c.assignment_id == assignment.id
+        ).all()
+        
         db.execute(
             delete(assignment_artifacts).where(
                 lambda: assignment_artifacts.c.assignment_id == assignment.id
             )
         )
         db.commit()
+        
+        for artifact in old_artifacts:
+            db.refresh(artifact)
+            if not artifact.assignments and not artifact.submissions:
+                artifact.status = ArtifactStatus.orphaned
+                db.add(artifact)
+        
         for artifact_id in payload.artifacts:
-            if not db.get(Artifact, artifact_id):
+            artifact = db.get(Artifact, artifact_id)
+            if not artifact:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Artifact {artifact_id} not found",
                 )
+            artifact.status = ArtifactStatus.attached
+            db.add(artifact)
+            
             db.execute(
                 assignment_artifacts.insert().values(
                     id=uuid4(),

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .course import Course
     from .workflow import Workflow
     from .workflow_run import WorkflowRun
+    from .artifact import Artifact
 
 
 class UserRole(str, Enum):
@@ -37,6 +38,9 @@ class User(Base):
     )
     workflow_runs: Mapped[List["WorkflowRun"]] = relationship(
         "WorkflowRun", back_populates="runner"
+    )
+    created_artifacts: Mapped[List["Artifact"]] = relationship(
+        "Artifact", back_populates="creator"
     )
 
     def __repr__(self) -> str:

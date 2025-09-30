@@ -56,6 +56,10 @@ class Assignment(Base):
         "Submission", back_populates="assignment"
     )
 
+    direct_artifacts: Mapped[List["Artifact"]] = relationship(
+        "Artifact", back_populates="assignment"
+    )
+
     artifacts: Mapped[List["Artifact"]] = relationship(
         "Artifact",
         secondary="assignment_artifacts",

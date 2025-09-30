@@ -17,10 +17,9 @@ from fair_platform.backend.data.models.submission import (
 )
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.user import User, UserRole
-from fair_platform.backend.data.models.artifact import Artifact
+from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus
 from fair_platform.backend.data.models.workflow_run import WorkflowRun
 from fair_platform.backend.api.schema.submission import (
-    SubmissionCreate,
     SubmissionRead,
     SubmissionUpdate,
 )
@@ -86,11 +85,15 @@ def create_submission(
 
     if payload.artifacts_ids:
         for aid in payload.artifacts_ids:
-            if not db.get(Artifact, aid):
+            artifact = db.get(Artifact, aid)
+            if not artifact:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Artifact {aid} not found",
                 )
+            artifact.status = ArtifactStatus.attached
+            db.add(artifact)
+            
             db.execute(
                 submission_artifacts.insert().values(
                     id=uuid4(), submission_id=sub.id, artifact_id=aid
@@ -123,6 +126,9 @@ def get_submission(submission_id: UUID, db: Session = Depends(session_dependency
     return sub
 
 
+# TODO: This endpoint is ugly. It shouldn't be doing so many things at once.
+#  I think it would be better to have a artifacts manager that handles adding/removing artifacts
+#  both in db and storage.
 @router.put("/{submission_id}", response_model=SubmissionRead)
 def update_submission(
     submission_id: UUID,
@@ -148,7 +154,7 @@ def update_submission(
         sub.status = (
             payload.status
             if isinstance(payload.status, str)
-            else getattr(payload.status, "value", payload.status)
+            else SubmissionStatus.pending
         )
     if payload.official_run_id is not None:
         run = db.get(WorkflowRun, payload.official_run_id)
@@ -175,20 +181,37 @@ def update_submission(
     db.add(sub)
     db.commit()
 
-    # replaces artifacts if provided
     if payload.artifact_ids is not None:
+        old_artifacts = db.query(Artifact).join(
+            submission_artifacts,
+            submission_artifacts.c.artifact_id == Artifact.id
+        ).filter(
+            submission_artifacts.c.submission_id == sub.id
+        ).all()
+        
         db.execute(
             delete(submission_artifacts).where(
                 lambda: submission_artifacts.c.submission_id == sub.id
             )
         )
         db.commit()
+        
+        for artifact in old_artifacts:
+            db.refresh(artifact)
+            if not artifact.assignments and not artifact.submissions:
+                artifact.status = ArtifactStatus.orphaned
+                db.add(artifact)
+        
         for aid in payload.artifact_ids:
-            if not db.get(Artifact, aid):
+            artifact = db.get(Artifact, aid)
+            if not artifact:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Artifact {aid} not found",
                 )
+            artifact.status = ArtifactStatus.attached
+            db.add(artifact)
+            
             db.execute(
                 submission_artifacts.insert().values(
                     id=uuid4(), submission_id=sub.id, artifact_id=aid
