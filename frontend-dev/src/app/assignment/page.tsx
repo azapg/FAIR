@@ -1,5 +1,5 @@
 import {Button} from "@/components/ui/button";
-import {CircleCheck, Hourglass, Plus} from "lucide-react";
+import {ArrowUpRight, CircleCheck, ExternalLink, FileText, Hourglass, MoveUpRight, Plus} from "lucide-react";
 import {Separator} from "@/components/ui/separator";
 import {SubmissionsTable} from "@/app/assignment/components/submissions/submissions-table";
 import {columns} from "@/app/assignment/components/submissions/submissions";
@@ -15,6 +15,7 @@ import {useCourse} from "@/hooks/use-courses";
 import {useWorkflowStore} from "@/store/workflows-store";
 import {useEffect} from "react";
 import {CreateSubmissionDialog} from "@/app/assignment/components/submissions/create-submission-dialog";
+import { useArtifacts } from "@/hooks/use-artifacts";
 
 
 export default function AssignmentPage() {
@@ -26,8 +27,11 @@ export default function AssignmentPage() {
   const loadWorkflows = useWorkflowStore(state => state.loadWorkflows)
   const isLoadingWorkflows = useWorkflowStore(state => state.isLoadingWorkflows)
   const workflows = useWorkflowStore(state => state.workflows)
+  const {data: artifacts, isLoading: isLoadingArtifacts, isError: isErrorArtifacts, error: errorArtifacts} = useArtifacts({
+      assignmentId: assignmentId
+    });
 
-  const isOverallLoading = isLoading || isLoadingWorkflows || !workflows;
+  const isOverallLoading = isLoading || isLoadingWorkflows || !workflows || isLoadingArtifacts;
 
   useEffect(() => {
     if (course?.id) {
@@ -42,7 +46,7 @@ export default function AssignmentPage() {
     return <div>Loading...</div>
   }
 
-  if (isError || !assignment || !course) {
+  if (isError || !assignment || !course || isErrorArtifacts) {
     return <div>Error loading assignment.</div>
   }
 
@@ -91,6 +95,18 @@ export default function AssignmentPage() {
 
               <div className={"flex flex-row gap-1 mt-4 items-center"}>
                 <h2 className={"text-muted-foreground mr-4 text-sm"}>Resources</h2>
+                {
+                  artifacts && artifacts.length > 0 ? (
+                    artifacts.map(artifact => (
+                      <Button key={artifact.id} variant={"secondary"} size={"sm"}>
+                        <FileText />
+                        {artifact.title}
+                          <ArrowUpRight className="text-muted-foreground"/>
+                      </Button>
+                    ))
+                  ) : (
+                    <></>
+                  )}
                 <Button variant={"ghost"} size={"sm"}>
                   <Plus/>
                 </Button>
