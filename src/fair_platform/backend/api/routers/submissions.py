@@ -2,10 +2,9 @@ from uuid import UUID, uuid4
 from typing import List, Optional
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from pydantic import BaseModel
 from pydantic.v1 import EmailStr
-from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.database import session_dependency
@@ -13,17 +12,16 @@ from fair_platform.backend.data.models.submission import (
     Submission,
     SubmissionStatus,
     submission_artifacts,
-    submission_workflow_runs,
 )
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.user import User, UserRole
-from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus
-from fair_platform.backend.data.models.workflow_run import WorkflowRun
+from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus, AccessLevel
 from fair_platform.backend.api.schema.submission import (
     SubmissionRead,
     SubmissionUpdate,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.services.artifact_manager import get_artifact_manager
 
 router = APIRouter()
 
@@ -49,6 +47,7 @@ def create_submission(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
+    """Create submission and optionally attach existing artifacts."""
     if not db.get(Assignment, payload.assignment_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Assignment not found"
@@ -60,50 +59,49 @@ def create_submission(
             detail="Not authorized to create submission for this user",
         )
 
-    submitted_at = datetime.now(timezone.utc)
-    status_value = SubmissionStatus.pending
+    try:
+        submitted_at = datetime.now(timezone.utc)
+        status_value = SubmissionStatus.pending
+        user_id = uuid4()
 
-    synthetic_user = User(
-        id=uuid4(),
-        name=payload.submitter,
-        email=EmailStr("student@fair.com"),
-        role=UserRole.student,
-    )
-    db.add(synthetic_user)
-    db.commit()
-    db.refresh(synthetic_user)
+        synthetic_user = User(
+            id=user_id,
+            name=payload.submitter,
+            email=EmailStr(f"{user_id}@fair.com"),
+            role=UserRole.student,
+        )
+        db.add(synthetic_user)
+        db.flush()
 
-    sub = Submission(
-        id=uuid4(),
-        assignment_id=payload.assignment_id,
-        submitter_id=synthetic_user.id,
-        submitted_at=submitted_at,
-        status=status_value,
-    )
-    db.add(sub)
-    db.commit()
+        sub = Submission(
+            id=uuid4(),
+            assignment_id=payload.assignment_id,
+            submitter_id=synthetic_user.id,
+            submitted_at=submitted_at,
+            status=status_value,
+        )
+        db.add(sub)
+        db.flush()
 
-    if payload.artifacts_ids:
-        for aid in payload.artifacts_ids:
-            artifact = db.get(Artifact, aid)
-            if not artifact:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Artifact {aid} not found",
-                )
-            artifact.status = ArtifactStatus.attached
-            db.add(artifact)
+        if payload.artifacts_ids:
+            manager = get_artifact_manager(db)
             
-            db.execute(
-                submission_artifacts.insert().values(
-                    id=uuid4(), submission_id=sub.id, artifact_id=aid
-                )
-            )
-            db.refresh(submission_artifacts)
-        db.commit()
+            for aid in payload.artifacts_ids:
+                manager.attach_to_submission(aid, sub.id, current_user)
 
-    db.refresh(sub)
-    return sub
+        db.commit()
+        db.refresh(sub)
+        return sub
+        
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create submission: {str(e)}"
+        )
 
 
 @router.get("/", response_model=List[SubmissionRead])
@@ -116,6 +114,90 @@ def list_submissions(
     return q.all()
 
 
+@router.post("/create-with-files", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
+async def create_submission_with_files(
+    assignment_id: UUID = Form(...),
+    submitter_name: str = Form(...),
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Create a submission with file uploads atomically.
+    
+    This endpoint creates the submission and uploads artifacts in a single
+    transaction. If any step fails, everything is rolled back, preventing
+    orphaned artifacts.
+    
+    Form fields:
+    - assignment_id: UUID of the assignment
+    - submitter_name: Name of the submitter (creates synthetic user)
+    - files: List of files to upload
+    """
+    try:
+        assignment = db.get(Assignment, assignment_id)
+        if not assignment:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Assignment not found"
+            )
+
+        if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to create submission for this user",
+            )
+
+        user_id = uuid4()
+
+        synthetic_user = User(
+            id=user_id,
+            name=submitter_name,
+            email=EmailStr(f"{user_id}@fair.com"),
+            role=UserRole.student,
+        )
+        db.add(synthetic_user)
+        db.flush()
+
+        sub = Submission(
+            id=uuid4(),
+            assignment_id=assignment_id,
+            submitter_id=synthetic_user.id,
+            submitted_at=datetime.now(timezone.utc),
+            status=SubmissionStatus.pending,
+        )
+        db.add(sub)
+        db.flush()
+
+        manager = get_artifact_manager(db)
+        
+        for file in files:
+            artifact = manager.create_artifact(
+                file=file,
+                creator=current_user,
+                status=ArtifactStatus.attached,
+                access_level=AccessLevel.private,
+                course_id=assignment.course_id,
+                assignment_id=assignment_id,
+            )
+            
+            sub.artifacts.append(artifact)
+
+        db.commit()
+        db.refresh(sub)
+        return sub
+        
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create submission with files: {str(e)}"
+        )
+
+
 @router.get("/{submission_id}", response_model=SubmissionRead)
 def get_submission(submission_id: UUID, db: Session = Depends(session_dependency)):
     sub = db.get(Submission, submission_id)
@@ -126,9 +208,6 @@ def get_submission(submission_id: UUID, db: Session = Depends(session_dependency
     return sub
 
 
-# TODO: This endpoint is ugly. It shouldn't be doing so many things at once.
-#  I think it would be better to have a artifacts manager that handles adding/removing artifacts
-#  both in db and storage.
 @router.put("/{submission_id}", response_model=SubmissionRead)
 def update_submission(
     submission_id: UUID,
@@ -148,6 +227,9 @@ def update_submission(
             detail="Not authorized to update this submission",
         )
 
+
+    # TODO: As with run_ids, I don't think people should be able to update these fields.
+    #   These fields should only be managed by the workflow runner service.
     if payload.submitted_at is not None:
         sub.submitted_at = payload.submitted_at
     if payload.status is not None:
@@ -156,32 +238,10 @@ def update_submission(
             if isinstance(payload.status, str)
             else SubmissionStatus.pending
         )
-    if payload.official_run_id is not None:
-        run = db.get(WorkflowRun, payload.official_run_id)
-        if not run:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="official_run_id not found",
-            )
-        sub.official_run_id = payload.official_run_id
-        existing = db.execute(
-            submission_workflow_runs.select().where(
-                submission_workflow_runs.c.submission_id == sub.id,
-                submission_workflow_runs.c.workflow_run_id == payload.official_run_id,
-            )
-        ).first()
-        if not existing:
-            db.execute(
-                submission_workflow_runs.insert().values(
-                    submission_id=sub.id, workflow_run_id=payload.official_run_id
-                )
-            )
-            db.commit()
-
-    db.add(sub)
-    db.commit()
 
     if payload.artifact_ids is not None:
+        manager = get_artifact_manager(db)
+        
         old_artifacts = db.query(Artifact).join(
             submission_artifacts,
             submission_artifacts.c.artifact_id == Artifact.id
@@ -189,70 +249,15 @@ def update_submission(
             submission_artifacts.c.submission_id == sub.id
         ).all()
         
-        db.execute(
-            delete(submission_artifacts).where(
-                lambda: submission_artifacts.c.submission_id == sub.id
-            )
-        )
-        db.commit()
-        
         for artifact in old_artifacts:
-            db.refresh(artifact)
-            if not artifact.assignments and not artifact.submissions:
-                artifact.status = ArtifactStatus.orphaned
-                db.add(artifact)
+            manager.detach_from_submission(artifact.id, sub.id, current_user)
         
         for aid in payload.artifact_ids:
-            artifact = db.get(Artifact, aid)
-            if not artifact:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Artifact {aid} not found",
-                )
-            artifact.status = ArtifactStatus.attached
-            db.add(artifact)
-            
-            db.execute(
-                submission_artifacts.insert().values(
-                    id=uuid4(), submission_id=sub.id, artifact_id=aid
-                )
-            )
+            manager.attach_to_submission(aid, sub.id, current_user)
+        
         db.commit()
-
-    # replaces runs if provided
-    if payload.run_ids is not None:
-        db.execute(
-            delete(submission_workflow_runs).where(
-                lambda: submission_workflow_runs.c.submission_id == sub.id
-            )
-        )
-        db.commit()
-        for rid in payload.run_ids:
-            if not db.get(WorkflowRun, rid):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"WorkflowRun {rid} not found",
-                )
-            db.execute(
-                submission_workflow_runs.insert().values(
-                    submission_id=sub.id, workflow_run_id=rid
-                )
-            )
-        db.commit()
-        if sub.official_run_id is not None:
-            existing = db.execute(
-                submission_workflow_runs.select().where(
-                    submission_workflow_runs.c.submission_id == sub.id,
-                    submission_workflow_runs.c.workflow_run_id == sub.official_run_id,
-                )
-            ).first()
-            if not existing:
-                db.execute(
-                    submission_workflow_runs.insert().values(
-                        submission_id=sub.id, workflow_run_id=sub.official_run_id
-                    )
-                )
-                db.commit()
+        
+    # TODO: I think I won't consider run_ids for now.
 
     db.refresh(sub)
     return sub
