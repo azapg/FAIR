@@ -1,7 +1,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import {Grade} from "@/app/courses/tabs/assignments/assignments";
+import { Grade } from "@/app/courses/tabs/assignments/assignments";
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
@@ -20,7 +20,8 @@ export type CreateAssignmentInput = {
   description?: string | null
   deadline?: string | null
   max_grade?: Grade | null
-  artifacts?: string[]
+  artifacts?: string[]  // Existing artifact IDs
+  files?: File[]        // New files to upload
 }
 
 export type UpdateAssignmentInput = Partial<Omit<CreateAssignmentInput, 'course_id'>> & {
@@ -46,7 +47,37 @@ const fetchAssignment = async (id: string): Promise<Assignment> => {
 }
 
 const createAssignment = async (data: CreateAssignmentInput): Promise<Assignment> => {
-  const res = await api.post('/assignments', data)
+  const formData = new FormData()
+  formData.append('course_id', data.course_id)
+  formData.append('title', data.title)
+
+  if (data.description) {
+    formData.append('description', data.description)
+  }
+
+  if (data.deadline) {
+    formData.append('deadline', data.deadline)
+  }
+
+  if (data.max_grade) {
+    formData.append('max_grade', JSON.stringify(data.max_grade))
+  }
+
+  if (data.artifacts && data.artifacts.length > 0) {
+    formData.append('artifact_ids', JSON.stringify(data.artifacts))
+  }
+
+  if (data.files && data.files.length > 0) {
+    data.files.forEach(file => {
+      formData.append('files', file)
+    })
+  }
+
+  const res = await api.post('/assignments', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
   return res.data
 }
 

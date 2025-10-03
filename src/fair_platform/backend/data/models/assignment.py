@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
 from sqlalchemy import (
     String,
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 assignment_artifacts = Table(
     "assignment_artifacts",
     Base.metadata,
-    Column("id", SAUUID, primary_key=True),
+    Column("id", SAUUID, primary_key=True, default=uuid4),
     Column(
         "assignment_id",
         SAUUID,

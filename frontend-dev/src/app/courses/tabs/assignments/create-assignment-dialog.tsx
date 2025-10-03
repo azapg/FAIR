@@ -11,15 +11,19 @@ import {
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Textarea} from "@/components/ui/textarea";
-import {Plus, FileText, Hourglass} from "lucide-react";
+import {Plus, FileText, X} from "lucide-react";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
-import { useCreateArtifact, type CreateArtifactInput } from "@/hooks/use-artifacts";
-import { useCreateAssignment, type CreateAssignmentInput } from "@/hooks/use-assignments";
-import {CreateAssignmentForm, ArtifactChip, Grade, Assignment} from "@/app/courses/tabs/assignments/assignments";
+import { Assignment, useCreateAssignment, type CreateAssignmentInput } from "@/hooks/use-assignments";
+import {CreateAssignmentForm, Grade} from "@/app/courses/tabs/assignments/assignments";
 
 interface CreateAssignmentDialogProps {
   courseId?: string;
   onAssignmentCreated: (assignment: Assignment) => void;
+}
+
+interface FileItem {
+  file: File;
+  id: string;
 }
 
 export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: CreateAssignmentDialogProps) {
@@ -32,17 +36,15 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
     gradeValue: "",
   });
 
-  // Artifacts state for the creation dialog
-  const [artifactChips, setArtifactChips] = useState<ArtifactChip[]>([]);
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const { mutateAsync: createArtifact } = useCreateArtifact();
-  const { mutateAsync: createAssignment } = useCreateAssignment();
+  const { mutateAsync: createAssignment, isPending } = useCreateAssignment();
 
   const resetForm = () => {
     setForm({title: "", description: "", dueDate: "", gradeType: "", gradeValue: ""});
-    setArtifactChips([]);
+    setFiles([]);
     setSubmissionError(null);
   };
 
@@ -51,102 +53,30 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
     if (!next) resetForm();
   };
 
-  // Infer mime and artifact_type for a limited set of document extensions
-  function getDocMeta(fileName: string, fallbackMime?: string): { mime: string; artifact_type: string } | null {
-    const ext = fileName.toLowerCase().split(".").pop() || "";
-    switch (ext) {
-      case "pdf":
-        return { mime: "application/pdf", artifact_type: "document/pdf" };
-      case "txt":
-        return { mime: "text/plain", artifact_type: "document/text" };
-      case "doc":
-        return { mime: "application/msword", artifact_type: "document/word" };
-      case "docx":
-        return { mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", artifact_type: "document/word" };
-      default: {
-        // Try a conservative fallback if the browser supplied a recognizable text/pdf type
-        if (fallbackMime?.includes("pdf")) return { mime: "application/pdf", artifact_type: "document/pdf" };
-        if (fallbackMime?.includes("text")) return { mime: "text/plain", artifact_type: "document/text" };
-        return null;
-      }
-    }
-  }
+  const handleFilePick = (fileList: FileList | null) => {
+    if (!fileList) return;
+    
+    const newFiles: FileItem[] = Array.from(fileList).map(file => ({
+      file,
+      id: `${file.name}-${Date.now()}-${Math.random()}`,
+    }));
+    
+    setFiles(prev => [...prev, ...newFiles]);
+  };
 
-  async function addArtifactFromFile(file: File) {
-    const meta = getDocMeta(file.name, file.type);
-    if (!meta) {
-      setArtifactChips(prev => [
-        ...prev,
-        {
-          title: file.name,
-          fileName: file.name,
-          mime: "unknown/unknown",
-          artifact_type: "document/unknown",
-          storage_type: "local",
-          storage_path: `local://${file.name}`,
-          status: "error",
-          error: "Unsupported file type. Only .txt, .pdf, .doc, .docx are allowed.",
-        },
-      ]);
-      return;
-    }
-
-    const draft: ArtifactChip = {
-      title: file.name,
-      fileName: file.name,
-      mime: meta.mime,
-      artifact_type: meta.artifact_type,
-      storage_type: "local",
-      storage_path: `local://${file.name}`,
-      status: "uploading",
-    };
-    setArtifactChips(prev => [...prev, draft]);
-
-    try {
-      const payload: CreateArtifactInput = {
-        title: draft.title,                 // could be beautified or derived later
-        artifact_type: draft.artifact_type, // e.g., document/pdf, document/text, document/word
-        mime: draft.mime,                   // limited set handled above
-        storage_type: draft.storage_type,   // local
-        storage_path: draft.storage_path,   // e.g., local://document.pdf
-        meta: { original_name: file.name },
-      };
-      const created = await createArtifact(payload);
-      setArtifactChips(prev =>
-        prev.map(a =>
-          a === draft
-            ? { ...a, id: created.id, status: "uploaded" }
-            : a
-        )
-      );
-    } catch (e: any) {
-      setArtifactChips(prev =>
-        prev.map(a =>
-          a === draft
-            ? { ...a, status: "error", error: e?.message ?? "Failed to upload artifact" }
-            : a
-        )
-      );
-    }
-  }
-
-  const handleFilePick = (files: FileList | null) => {
-    const file = files?.[0];
-    if (file) addArtifactFromFile(file).then();
+  const removeFile = (id: string) => {
+    setFiles(prev => prev.filter(f => f.id !== id));
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setSubmissionError(null); // clear previous
-    if (!form.title.trim()) return;
-
-    // Prevent submission while artifacts are still uploading
-    if (artifactChips.some(a => a.status === "uploading")) {
-      setSubmissionError("Please wait for all resources to finish uploading before submitting.");
+    setSubmissionError(null);
+    
+    if (!form.title.trim()) {
+      setSubmissionError("Title is required");
       return;
     }
 
-    // Map grading to backend shape (only numeric max_grade supported for now)
     let totalPoints: Grade | undefined = undefined;
     if (form.gradeType) {
       switch (form.gradeType) {
@@ -169,28 +99,32 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
       }
     }
 
-    const artifactIds = artifactChips
-      .filter(a => a.id && a.status === "uploaded")
-      .map(a => a.id!);
-
-    // Try to persist via API when possible
     try {
-      if (courseId) {
-        const payload: CreateAssignmentInput = {
-          course_id: courseId,
-          title: form.title.trim(),
-          description: form.description.trim() || null,
-          deadline: form.dueDate || null,
-          max_grade: totalPoints ?? null,
-          artifacts: artifactIds,
-        };
-        await createAssignment(payload);
+      if (!courseId) {
+        throw new Error("Course ID is required");
       }
+
+      const payload: CreateAssignmentInput = {
+        course_id: courseId,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        deadline: form.dueDate || null,
+        max_grade: totalPoints ?? null,
+        files: files.map(f => f.file),
+      };
+      
+      const created = await createAssignment(payload);
+
+      onAssignmentCreated(created);
+      setOpen(false);
+      resetForm();
     } catch (err: any) {
       let msg = "Failed to create assignment.";
-      if (err?.response) {
+      if (err?.response?.data) {
         const data = err.response.data;
-        if (data?.message && typeof data.message === "string") {
+        if (data?.detail && typeof data.detail === "string") {
+          msg = data.detail;
+        } else if (data?.message && typeof data.message === "string") {
           msg = data.message;
         } else if (data?.errors) {
           try {
@@ -198,41 +132,12 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
           } catch {
             msg = String(data.errors);
           }
-        } else {
-          try {
-            msg = JSON.stringify(data);
-          } catch {
-            msg = String(data);
-          }
         }
       } else if (err?.message) {
         msg = err.message;
       }
       setSubmissionError(msg);
-      // stop here - do not close dialog or reset form on error
-      return;
     }
-
-    // On success continue with local UI behavior
-    const id =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : Date.now().toString();
-
-    const now = new Date();
-    const newAssignment: Assignment = {
-      id,
-      title: form.title.trim(),
-      description: form.description.trim() || undefined,
-      dueDate: form.dueDate ? new Date(form.dueDate) : undefined,
-      totalPoints,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    onAssignmentCreated(newAssignment);
-    setOpen(false);
-    resetForm();
   };
 
   return (
@@ -345,25 +250,32 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
               </div>
             ) : null}
 
-            {/* Resources (artifacts) - styled like demo/assignment/page */}
             <div className="grid gap-2">
               <h2 className="text-muted-foreground text-sm">Resources</h2>
-              <div className="flex flex-row flex-wrap gap-1 items-center">
-                {artifactChips.map((a, idx) => (
-                  <Button key={`${a.fileName}-${idx}`} variant="secondary" size="sm" type="button">
-                    {a.status === "uploading" ? <Hourglass className="mr-1 h-4 w-4" /> : <FileText className="mr-1 h-4 w-4" />}
-                    {a.title}
-                    {a.status === "error" ? <span className="ml-2 text-red-600">(error)</span> : null}
+              <div className="flex flex-row flex-wrap gap-2 items-center">
+                {files.map((item) => (
+                  <Button
+                    key={item.id}
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    className="flex items-center gap-1"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className="max-w-[200px] truncate">{item.file.name}</span>
+                    <X
+                      className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive"
+                      onClick={() => removeFile(item.id)}
+                    />
                   </Button>
                 ))}
                 <input
                   ref={fileInputRef}
                   type="file"
                   className="hidden"
-                  accept=".txt,.pdf,.doc,.docx"
+                  multiple
                   onChange={(e) => {
                     handleFilePick(e.target.files);
-                    // allow re-selecting the same file
                     e.currentTarget.value = "";
                   }}
                 />
@@ -372,20 +284,23 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
                   size="sm"
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  title="Add resource"
+                  title="Add resources"
                 >
                   <Plus />
                 </Button>
               </div>
             </div>
 
-            {/* show server / submission errors */}
             {submissionError ? (
-              <div className="text-sm text-red-600">{submissionError}</div>
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
+                {submissionError}
+              </div>
             ) : null}
 
             <DialogFooter>
-              <Button type="submit">Add</Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Creating..." : "Add"}
+              </Button>
             </DialogFooter>
           </form>
 
