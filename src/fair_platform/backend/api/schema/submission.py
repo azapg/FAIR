@@ -5,6 +5,8 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from fair_platform.backend.data.models.submission import SubmissionStatus
+from fair_platform.backend.api.schema.user import UserRead
+from fair_platform.backend.api.schema.artifact import ArtifactRead
 
 
 class SubmissionBase(BaseModel):
@@ -54,6 +56,8 @@ class SubmissionUpdate(BaseModel):
 
 class SubmissionRead(SubmissionBase):
     id: UUID
+    submitter: Optional[UserRead] = None
+    artifacts: List[ArtifactRead] = []
 
 
 __all__ = [

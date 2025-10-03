@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
 from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP, Table, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -32,7 +32,7 @@ submission_workflow_runs = Table(
 submission_artifacts = Table(
     "submission_artifacts",
     Base.metadata,
-    Column("id", SAUUID, primary_key=True),
+    Column("id", SAUUID, primary_key=True, default=uuid4),
     Column(
         "submission_id",
         SAUUID,

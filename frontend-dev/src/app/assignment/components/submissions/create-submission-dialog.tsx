@@ -11,7 +11,7 @@ import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {LoaderIcon, PlusIcon} from "lucide-react";
 import {useState} from "react";
-import api from "@/lib/api";
+import {useCreateSubmission} from "@/hooks/use-submissions";
 
 type CreateSubmissionDialogProps = {
   assignmentId: string;
@@ -20,50 +20,26 @@ type CreateSubmissionDialogProps = {
 export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogProps) {
   const [username, setUsername] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  
+  const createSubmission = useCreateSubmission();
 
-  const handleCreate = () => {
-    setIsLoading(true);
-
-    const formData = new FormData();
-    if (files) {
-      Array.from(files).forEach((file) => {
-        formData.append(`files`, file);
-      })
-
-      api.post("/artifacts", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }).then(async (response) => {
-        const artifactIds = response.data.map((artifact: any) => artifact.id);
-        await api.post("/submissions", {
-          assignment_id: assignmentId,
-          submitter: username,
-          artifact_ids: artifactIds,
-        });
-        setIsLoading(false);
-        setOpen(false);
-      }).catch((error) => {
-        console.error("Error creating artifacts:", error);
-        setIsLoading(false);
-      });
-    } else {
-      api.post("/submissions", {
+  const handleCreate = async () => {
+    try {
+      await createSubmission.mutateAsync({
         assignment_id: assignmentId,
-        submitter: username,
-        artifact_ids: [],
-      }).then(() => {
-        setIsLoading(false);
-        setOpen(false);
-      }).catch((error) => {
-        console.error("Error creating submission:", error);
-        setIsLoading(false);
+        submitter_name: username,
+        files: files ? Array.from(files) : undefined,
       });
+      
+      console.log("Submission created successfully");
+      setUsername("");
+      setFiles(null);
+      setOpen(false);
+    } catch (error: any) {
+      console.error("Error creating submission:", error);
+      alert(error.response?.data?.detail || "Failed to create submission");
     }
-
-
   };
 
   return (
@@ -97,7 +73,19 @@ export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogP
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleCreate} disabled={!username.trim() || isLoading}>{isLoading ? <><LoaderIcon className={"animate-spin"}/>Creating...</> : <>Create</>}</Button>
+          <Button 
+            onClick={handleCreate} 
+            disabled={!username.trim() || createSubmission.isPending}
+          >
+            {createSubmission.isPending ? (
+              <>
+                <LoaderIcon className={"animate-spin"}/>
+                Creating...
+              </>
+            ) : (
+              <>Create</>
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

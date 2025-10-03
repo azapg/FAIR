@@ -2,7 +2,7 @@ import {Button} from "@/components/ui/button";
 import {ArrowUpRight, CircleCheck, ExternalLink, FileText, Hourglass, MoveUpRight, Plus} from "lucide-react";
 import {Separator} from "@/components/ui/separator";
 import {SubmissionsTable} from "@/app/assignment/components/submissions/submissions-table";
-import {columns} from "@/app/assignment/components/submissions/submissions";
+import {columns, Submission as TableSubmission} from "@/app/assignment/components/submissions/submissions";
 import {SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar";
 import {WorkflowsSidebar} from "@/app/assignment/components/sidebar/workflows-sidebar";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
@@ -13,9 +13,10 @@ import {useParams} from "react-router-dom";
 import {useAssignment} from "@/hooks/use-assignments";
 import {useCourse} from "@/hooks/use-courses";
 import {useWorkflowStore} from "@/store/workflows-store";
-import {useEffect} from "react";
+import {useEffect, useMemo} from "react";
 import {CreateSubmissionDialog} from "@/app/assignment/components/submissions/create-submission-dialog";
 import { useArtifacts } from "@/hooks/use-artifacts";
+import { useSubmissions } from "@/hooks/use-submissions";
 
 
 export default function AssignmentPage() {
@@ -30,8 +31,21 @@ export default function AssignmentPage() {
   const {data: artifacts, isLoading: isLoadingArtifacts, isError: isErrorArtifacts, error: errorArtifacts} = useArtifacts({
       assignmentId: assignmentId
     });
+  const {data: submissions, isLoading: isLoadingSubmissions, isError: isErrorSubmissions} = useSubmissions({
+      assignment_id: assignmentId
+    });
 
-  const isOverallLoading = isLoading || isLoadingWorkflows || !workflows || isLoadingArtifacts;
+  const isOverallLoading = isLoading || isLoadingWorkflows || !workflows || isLoadingArtifacts || isLoadingSubmissions;
+
+  const tableSubmissions = useMemo<TableSubmission[]>(() => {
+    if (!submissions) return [];
+    return submissions.map(sub => ({
+      id: sub.id,
+      name: sub.submitter?.name || 'Unknown',
+      status: sub.status,
+      submittedAt: sub.submitted_at ? new Date(sub.submitted_at) : undefined,
+    }));
+  }, [submissions]);
 
   useEffect(() => {
     if (course?.id) {
@@ -46,7 +60,7 @@ export default function AssignmentPage() {
     return <div>Loading...</div>
   }
 
-  if (isError || !assignment || !course || isErrorArtifacts) {
+  if (isError || !assignment || !course || isErrorArtifacts || isErrorSubmissions) {
     return <div>Error loading assignment.</div>
   }
 
@@ -122,7 +136,7 @@ export default function AssignmentPage() {
               <h2 className={"text-xl font-semibold"}>Submissions</h2>
               <CreateSubmissionDialog assignmentId={assignment.id.toString()}/>
             </div>
-            <SubmissionsTable columns={columns} data={[]}/>
+            <SubmissionsTable columns={columns} data={tableSubmissions}/>
           </div>
 
         </div>

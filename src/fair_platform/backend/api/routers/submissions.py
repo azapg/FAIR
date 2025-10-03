@@ -1,9 +1,9 @@
 from uuid import UUID, uuid4
-from typing import List, Optional
+from typing import List
 from datetime import datetime, timezone
+import json
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from pydantic.v1 import EmailStr
 from sqlalchemy.orm import Session
 
@@ -26,29 +26,30 @@ from fair_platform.backend.services.artifact_manager import get_artifact_manager
 router = APIRouter()
 
 
-class SyntheticSubmission(BaseModel):
-    assignment_id: UUID
-    submitter: str
-    artifacts_ids: Optional[List[UUID]] = None
-
-    class Config:
-        from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
-        validate_by_name = True
-
-
-# TODO: Implement enrollments table to be able to check
 @router.post("/", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
-def create_submission(
-    payload: SyntheticSubmission,
+async def create_submission(
+    assignment_id: UUID = Form(...),
+    submitter_name: str = Form(...),
+    artifact_ids: str = Form(None),
+    files: List[UploadFile] = File(None),
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    """Create submission and optionally attach existing artifacts."""
-    if not db.get(Assignment, payload.assignment_id):
+    """
+    Create a submission with optional file uploads and/or existing artifact references.
+    
+    This endpoint supports both multipart/form-data (for file uploads) and can reference
+    existing artifacts by ID. All operations are atomic - if any step fails, everything
+    is rolled back.
+    
+    Form fields:
+    - assignment_id: UUID of the assignment (required)
+    - submitter_name: Name of the submitter (required)
+    - artifact_ids: Optional JSON array of existing artifact UUIDs: ["uuid1", "uuid2"]
+    - files: Optional list of files to upload as new artifacts
+    """
+    assignment = db.get(Assignment, assignment_id)
+    if not assignment:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Assignment not found"
         )
@@ -60,96 +61,19 @@ def create_submission(
         )
 
     try:
-        submitted_at = datetime.now(timezone.utc)
-        status_value = SubmissionStatus.pending
-        user_id = uuid4()
-
-        synthetic_user = User(
-            id=user_id,
-            name=payload.submitter,
-            email=EmailStr(f"{user_id}@fair.com"),
-            role=UserRole.student,
-        )
-        db.add(synthetic_user)
-        db.flush()
-
-        sub = Submission(
-            id=uuid4(),
-            assignment_id=payload.assignment_id,
-            submitter_id=synthetic_user.id,
-            submitted_at=submitted_at,
-            status=status_value,
-        )
-        db.add(sub)
-        db.flush()
-
-        if payload.artifacts_ids:
-            manager = get_artifact_manager(db)
-            
-            for aid in payload.artifacts_ids:
-                manager.attach_to_submission(aid, sub.id, current_user)
-
-        db.commit()
-        db.refresh(sub)
-        return sub
+        existing_artifact_ids = []
+        if artifact_ids:
+            try:
+                existing_artifact_ids = json.loads(artifact_ids)
+                if not isinstance(existing_artifact_ids, list):
+                    raise ValueError("artifact_ids must be an array")
+            except (json.JSONDecodeError, ValueError) as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}"
+                )
         
-    except HTTPException:
-        db.rollback()
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create submission: {str(e)}"
-        )
-
-
-@router.get("/", response_model=List[SubmissionRead])
-def list_submissions(
-    assignment_id: Optional[UUID] = None, db: Session = Depends(session_dependency)
-):
-    q = db.query(Submission)
-    if assignment_id:
-        q = q.filter(Submission.assignment_id == assignment_id)
-    return q.all()
-
-
-@router.post("/create-with-files", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
-async def create_submission_with_files(
-    assignment_id: UUID = Form(...),
-    submitter_name: str = Form(...),
-    files: List[UploadFile] = File(...),
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Create a submission with file uploads atomically.
-    
-    This endpoint creates the submission and uploads artifacts in a single
-    transaction. If any step fails, everything is rolled back, preventing
-    orphaned artifacts.
-    
-    Form fields:
-    - assignment_id: UUID of the assignment
-    - submitter_name: Name of the submitter (creates synthetic user)
-    - files: List of files to upload
-    """
-    try:
-        assignment = db.get(Assignment, assignment_id)
-        if not assignment:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Assignment not found"
-            )
-
-        if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to create submission for this user",
-            )
-
         user_id = uuid4()
-
         synthetic_user = User(
             id=user_id,
             name=submitter_name,
@@ -171,17 +95,27 @@ async def create_submission_with_files(
 
         manager = get_artifact_manager(db)
         
-        for file in files:
-            artifact = manager.create_artifact(
-                file=file,
-                creator=current_user,
-                status=ArtifactStatus.attached,
-                access_level=AccessLevel.private,
-                course_id=assignment.course_id,
-                assignment_id=assignment_id,
-            )
-            
-            sub.artifacts.append(artifact)
+        if existing_artifact_ids:
+            for artifact_id in existing_artifact_ids:
+                try:
+                    manager.attach_to_submission(UUID(artifact_id), sub.id, current_user)
+                except ValueError:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Invalid artifact ID format: {artifact_id}"
+                    )
+        
+        if files:
+            for file in files:
+                artifact = manager.create_artifact(
+                    file=file,
+                    creator=current_user,
+                    status=ArtifactStatus.attached,
+                    access_level=AccessLevel.private,
+                    course_id=assignment.course_id,
+                    assignment_id=assignment_id,
+                )
+                sub.artifacts.append(artifact)
 
         db.commit()
         db.refresh(sub)
@@ -194,18 +128,68 @@ async def create_submission_with_files(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create submission with files: {str(e)}"
+            detail=f"Failed to create submission: {str(e)}"
         )
+
+
+@router.get("/", response_model=List[SubmissionRead])
+def list_submissions(
+    db: Session = Depends(session_dependency),
+    assignment_id: UUID = Query(None, description="Filter submissions by assignment ID"),
+    current_user: User = Depends(get_current_user),
+):
+    """List all submissions, optionally filtered by assignment ID."""
+    query = db.query(Submission)
+    if assignment_id is not None:
+        if not db.get(Assignment, assignment_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
+            )
+        query = query.filter(Submission.assignment_id == assignment_id)
+    
+    submissions = query.all()
+    
+    # Fetch all submitters in one query to avoid N+1
+    submitter_ids = [sub.submitter_id for sub in submissions]
+    submitters = db.query(User).filter(User.id.in_(submitter_ids)).all()
+    submitter_map = {user.id: user for user in submitters}
+    
+    # Manually construct response with submitter data
+    result = []
+    for sub in submissions:
+        sub_dict = {
+            "id": sub.id,
+            "assignment_id": sub.assignment_id,
+            "submitter_id": sub.submitter_id,
+            "submitter": submitter_map.get(sub.submitter_id),
+            "submitted_at": sub.submitted_at,
+            "status": sub.status,
+            "artifacts": sub.artifacts,
+        }
+        result.append(sub_dict)
+    
+    return result
 
 
 @router.get("/{submission_id}", response_model=SubmissionRead)
 def get_submission(submission_id: UUID, db: Session = Depends(session_dependency)):
-    sub = db.get(Submission, submission_id)
+    sub = db.query(Submission).filter(Submission.id == submission_id).first()
     if not sub:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
-    return sub
+    
+    submitter = db.get(User, sub.submitter_id)
+    
+    return {
+        "id": sub.id,
+        "assignment_id": sub.assignment_id,
+        "submitter_id": sub.submitter_id,
+        "submitter": submitter,
+        "submitted_at": sub.submitted_at,
+        "status": sub.status,
+        "artifacts": sub.artifacts,
+    }
 
 
 @router.put("/{submission_id}", response_model=SubmissionRead)
