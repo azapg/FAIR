@@ -12,16 +12,17 @@ import {
   CircleCheck,
   CircleAlert,
   TriangleAlert,
-  Circle
+  Circle, BlocksIcon
 } from "lucide-react";
 import { ReactNode } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
+  DropdownMenuItem, DropdownMenuPortal,
+  DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {PluginSummary, useWorkflowStore, Workflow} from "@/store/workflows-store";
 
 export type SubmissionStatus =
   "pending"
@@ -126,14 +127,78 @@ export const columns: ColumnDef<Submission>[] = [
     id: "actions",
     cell: info => {
       const submission = info.row.original;
+
+      const workflows = useWorkflowStore(state => state.workflows)
+      const activeWorkflow = useWorkflowStore(state => state.drafts[state.activeWorkflowId || ""])
+
+      function runPlugin(plugin?: PluginSummary) {
+        if (!plugin) return;
+        console.log(`Running plugin ${plugin.id}-${plugin.hash}-${plugin.version} on submission ${submission.id} with workflow ${activeWorkflow?.workflowId} and settings`, plugin.settings);
+      }
+
+      function runWorkflow(workflow?: Workflow) {
+        if (!workflow) return;
+        console.log(`Rerunning submission ${submission.id} with workflow ${workflow.id}`, workflow);
+      }
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger className={"cursor-pointer"}>
             <Ellipsis size={18}/>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem><Repeat /> Regrade</DropdownMenuItem>
-            <DropdownMenuItem><ArrowRightLeft size={16}/> Regrade with... <ChevronRight size={16}/></DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className={"gap-2"}>
+                <BlocksIcon size={16} className={"text-muted-foreground"}/> Run plugin...
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  {activeWorkflow?.plugins == undefined && (
+                    <DropdownMenuItem disabled>No plugins available</DropdownMenuItem>
+                  )}
+
+                  {/*TODO: oh my god this is such an ugly code*/}
+                  {activeWorkflow && activeWorkflow?.plugins && activeWorkflow?.plugins?.transcriber && (
+                    <>
+                      <DropdownMenuItem onClick={_ => runPlugin(activeWorkflow.plugins.transcriber)}>{activeWorkflow.plugins.transcriber.settings_schema.title}</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+
+                  {activeWorkflow && activeWorkflow?.plugins && activeWorkflow?.plugins?.grader && (
+                    <>
+                      <DropdownMenuItem onClick={_ => runPlugin(activeWorkflow.plugins.grader)}>{activeWorkflow.plugins.grader.settings_schema.title}</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+
+                  {activeWorkflow && activeWorkflow?.plugins && activeWorkflow?.plugins?.validator && (
+                    <>
+                      <DropdownMenuItem onClick={_ => activeWorkflow.plugins.validator}>{activeWorkflow.plugins.validator.settings_schema.title}</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+              <DropdownMenuSub>
+              <DropdownMenuSubTrigger className={"gap-2"}>
+                <ArrowRightLeft size={16} className={"text-muted-foreground"}/> Rerun with...
+              </DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  {workflows?.map(wf => (
+                    <DropdownMenuItem key={wf.id} onClick={_ => runWorkflow(wf)}>{wf.name}</DropdownMenuItem>
+                  ))}
+                  {workflows?.length === 0 && (
+                    <DropdownMenuItem disabled>No workflows available</DropdownMenuItem>
+                  )}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            {/* TODO: yeah demo code*/}
+            <DropdownMenuItem onClick={_ => runWorkflow((workflows || [])[0])}><Repeat /> Rerun</DropdownMenuItem>
             <DropdownMenuItem><History size={16}/> History</DropdownMenuItem>
             <DropdownMenuSeparator/>
             <DropdownMenuItem ><RotateCw size={16}/> Reset</DropdownMenuItem>
