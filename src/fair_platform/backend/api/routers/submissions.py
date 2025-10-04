@@ -113,7 +113,6 @@ async def create_submission(
                     status=ArtifactStatus.attached,
                     access_level=AccessLevel.private,
                     course_id=assignment.course_id,
-                    assignment_id=assignment_id,
                 )
                 sub.artifacts.append(artifact)
 
