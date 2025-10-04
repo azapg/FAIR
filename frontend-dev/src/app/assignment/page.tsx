@@ -69,7 +69,7 @@ export default function AssignmentPage() {
     <SidebarProvider className={"flex flex-row m-0 p-0 h-auto overflow-none"}>
       <div className={"w-full h-full overflow-auto break-words"}>
         <div className={"flex flex-row justify-between items-center py-2 px-5"}>
-          <BreadcrumbNav baseUrl={"demo"} segments={[{
+          <BreadcrumbNav segments={[{
             label: "Courses",
             slug: "courses"
           }, {

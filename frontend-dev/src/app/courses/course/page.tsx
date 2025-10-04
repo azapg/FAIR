@@ -48,7 +48,7 @@ export default function CourseDetailPage() {
   return (
     <div className="flex flex-col">
       <div className={"py-2 px-5"}>
-        <BreadcrumbNav baseUrl="demo" segments={segments}/>
+        <BreadcrumbNav segments={segments}/>
       </div>
       <Separator/>
       <div className={"px-8 py-5"}>

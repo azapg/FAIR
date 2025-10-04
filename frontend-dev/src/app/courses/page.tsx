@@ -56,7 +56,7 @@ export default function CoursesPage() {
   return (
     <main className="flex flex-col justify-center">
       <div className={"py-2 px-5"}>
-        <BreadcrumbNav baseUrl="demo" segments={[
+        <BreadcrumbNav segments={[
           {
             label: "Courses",
             slug: "courses"
