@@ -15,6 +15,7 @@ from fair_platform.backend.api.routers.plugins import router as plugins_router
 from fair_platform.backend.api.routers.submissions import router as submissions_router
 from fair_platform.backend.api.routers.workflows import router as workflows_router
 from fair_platform.backend.api.routers.auth import router as auth_router
+from fair_platform.backend.api.routers.sessions import router as sessions_router
 
 from fair_platform.sdk import load_storage_plugins
 
@@ -35,10 +36,11 @@ app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
 app.include_router(artifacts_router, prefix="/api/artifacts", tags=["artifacts"])
 app.include_router(assignments_router, prefix="/api/assignments", tags=["assignments"])
-app.include_router(plugins_router, prefix="/api/plugins", tags=["plugins"])
+app.include_router(plugins_router, prefix="/api/plugins", tags=["plugins", "workflows", "sessions"])
 app.include_router(submissions_router, prefix="/api/submissions", tags=["submissions"])
-app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows"])
+app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows", "plugins", "sessions"])
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(sessions_router, prefix="/api/sessions", tags=["sessions", "workflows", "plugins"])
 
 
 @app.get("/health")
