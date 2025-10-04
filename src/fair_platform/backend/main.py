@@ -1,3 +1,4 @@
+import asyncio
 import importlib.resources
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
@@ -55,7 +56,7 @@ def main():
 def run(
     host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False
 ):
-    load_storage_plugins()
+    asyncio.run(load_storage_plugins())
     if not headless:
         frontend_files = importlib.resources.files("fair_platform.frontend")
         dist_dir = frontend_files / "dist"
