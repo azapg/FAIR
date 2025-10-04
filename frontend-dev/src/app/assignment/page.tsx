@@ -1,5 +1,5 @@
 import {Button} from "@/components/ui/button";
-import {ArrowUpRight, CircleCheck, ExternalLink, FileText, Hourglass, MoveUpRight, Plus} from "lucide-react";
+import {ArrowUpRight, CircleCheck, FileText, Hourglass, Plus} from "lucide-react";
 import {Separator} from "@/components/ui/separator";
 import {SubmissionsTable} from "@/app/assignment/components/submissions/submissions-table";
 import {columns, Submission as TableSubmission} from "@/app/assignment/components/submissions/submissions";
@@ -22,13 +22,13 @@ import { useSubmissions } from "@/hooks/use-submissions";
 export default function AssignmentPage() {
   const {assignmentId} = useParams<{ assignmentId: string }>()
   const {data: assignment, isLoading, isError} = useAssignment(assignmentId!);
-  // TODO: This is ugly, try getting course_id from somewhere else, maybe from parents
-  const {data: course} = useCourse(assignment?.course_id!);
+  // TODO: This is ugly, try getting courseId from somewhere else, maybe from parents
+  const {data: course} = useCourse(assignment?.courseId!);
   const setActiveCourseId = useWorkflowStore(state => state.setActiveCourseId)
   const loadWorkflows = useWorkflowStore(state => state.loadWorkflows)
   const isLoadingWorkflows = useWorkflowStore(state => state.isLoadingWorkflows)
   const workflows = useWorkflowStore(state => state.workflows)
-  const {data: artifacts, isLoading: isLoadingArtifacts, isError: isErrorArtifacts, error: errorArtifacts} = useArtifacts({
+  const {data: artifacts, isLoading: isLoadingArtifacts, isError: isErrorArtifacts} = useArtifacts({
       assignmentId: assignmentId
     });
   const {data: submissions, isLoading: isLoadingSubmissions, isError: isErrorSubmissions} = useSubmissions({
@@ -73,8 +73,8 @@ export default function AssignmentPage() {
             label: "Courses",
             slug: "courses"
           }, {
-            label: course?.name || assignment?.course_id.toLocaleString(),
-            slug: course?.id.toLocaleString() || assignment?.course_id.toLocaleString()
+            label: course?.name || assignment?.courseId.toLocaleString(),
+            slug: course?.id.toLocaleString() || assignment?.courseId.toLocaleString()
           }, {
             label: "Assignments",
             slug: "assignments"

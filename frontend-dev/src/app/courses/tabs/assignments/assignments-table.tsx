@@ -5,7 +5,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { useNavigate } from "react-router-dom"
-import type { Assignment } from "@/app/courses/tabs/assignments/assignments"
 import type { KeyboardEvent } from "react"
 
 import {
@@ -16,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {Assignment} from "@/hooks/use-assignments";
 
 interface DataTableProps {
   columns: ColumnDef<Assignment>[]

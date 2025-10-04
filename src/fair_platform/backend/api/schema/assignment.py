@@ -13,7 +13,12 @@ class AssignmentBase(BaseModel):
     max_grade: Optional[Dict[str, Any]] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
+        validate_by_name = True
 
 
 class AssignmentCreate(AssignmentBase):
@@ -28,7 +33,12 @@ class AssignmentUpdate(BaseModel):
     artifacts: Optional[List[UUID]] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
+        validate_by_name = True
 
 
 class AssignmentRead(AssignmentBase):

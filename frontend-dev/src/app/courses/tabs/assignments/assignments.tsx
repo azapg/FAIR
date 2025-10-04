@@ -1,40 +1,17 @@
 import {ColumnDef} from "@tanstack/react-table";
+import {Assignment} from "@/hooks/use-assignments";
 
 export type Grade = {
   type: "percentage" | "points" | "letter" | "pass_fail";
   value: number | string | boolean;
 }
 
-export type Assignment = {
-  id: string;
-  title: string;
-  description?: string;
-  dueDate?: Date;
-  totalPoints?: Grade;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Form state type for create assignment dialog
 export type CreateAssignmentForm = {
   title: string;
   description: string;
   dueDate: string; // yyyy-mm-dd
   gradeType: Grade["type"] | "";
   gradeValue: string; // number/letter/pass|fail as string
-}
-
-// Artifact chip type for file uploads
-export type ArtifactChip = {
-  id: string;
-  title: string;
-  mime: string;
-  artifact_type: string;
-  storage_type: "local";
-  storage_path: string;
-  fileName: string;
-  status: "pending" | "uploading" | "uploaded" | "error";
-  error?: string;
 }
 
 

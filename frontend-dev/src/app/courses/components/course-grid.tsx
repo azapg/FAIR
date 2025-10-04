@@ -1,4 +1,4 @@
-import type { Course, Id } from "@/hooks/use-courses";
+import type { Course } from "@/hooks/use-courses";
 import CourseCard from "@/app/courses/components/course-card";
 import CourseCardSkeleton from "@/app/courses/components/course-card-skeleton";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
@@ -8,7 +8,7 @@ export type CourseGridProps = {
   courses: Course[];
   isPending?: boolean;
   isError?: boolean;
-  onCardClickAction?: (id: Id) => void;
+  onCardClickAction?: (id: string) => void;
   onDeleteAction?: (course: Course) => void;
 };
 

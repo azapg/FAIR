@@ -105,11 +105,11 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
       }
 
       const payload: CreateAssignmentInput = {
-        course_id: courseId,
+        courseId: courseId,
         title: form.title.trim(),
         description: form.description.trim() || null,
         deadline: form.dueDate || null,
-        max_grade: totalPoints ?? null,
+        maxGrade: totalPoints ?? null,
         files: files.map(f => f.file),
       };
       

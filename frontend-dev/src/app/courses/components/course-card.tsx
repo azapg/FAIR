@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MoreVertical } from "lucide-react";
-import type { Course, Id } from "@/hooks/use-courses";
+import type { Course } from "@/hooks/use-courses";
 import { useCreateCourse, useUpdateCourse } from "@/hooks/use-courses";
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
@@ -25,7 +25,7 @@ import {
 
 export type CourseCardProps = {
   course: Course;
-  onClickAction?: (id: Id) => void;
+  onClickAction?: (id: string) => void;
   onDeleteAction?: (course: Course) => void;
 };
 

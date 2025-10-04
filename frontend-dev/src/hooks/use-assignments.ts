@@ -1,43 +1,47 @@
-
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 import api from '@/lib/api'
-import { Grade } from "@/app/courses/tabs/assignments/assignments";
+import {Grade} from "@/app/courses/tabs/assignments/assignments";
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
 export type Assignment = {
   id: string
-  course_id: string
+  courseId: string
+
   title: string
-  description?: string | null
-  deadline: string | null
-  max_grade?: Grade | null
+  description?: string
+
+  deadline?: string
+  maxGrade?: Grade
+
+  createdAt: string
+  updatedAt: string
 }
 
 export type CreateAssignmentInput = {
-  course_id: string
+  courseId: string
   title: string
   description?: string | null
   deadline?: string | null
-  max_grade?: Grade | null
+  maxGrade?: Grade | null
   artifacts?: string[]  // Existing artifact IDs
   files?: File[]        // New files to upload
 }
 
-export type UpdateAssignmentInput = Partial<Omit<CreateAssignmentInput, 'course_id'>> & {
+export type UpdateAssignmentInput = Partial<Omit<CreateAssignmentInput, 'courseId'>> & {
   artifacts?: string[]
 }
 
 export const assignmentsKeys = {
   all: ['assignments'] as const,
   lists: () => [...assignmentsKeys.all, 'list'] as const,
-  list: (params?: ListParams) => [...assignmentsKeys.lists(), { params }] as const,
+  list: (params?: ListParams) => [...assignmentsKeys.lists(), {params}] as const,
   details: () => [...assignmentsKeys.all, 'detail'] as const,
   detail: (id: string) => [...assignmentsKeys.details(), id] as const,
 }
 
 const fetchAssignments = async (params?: ListParams): Promise<Assignment[]> => {
-  const res = await api.get('/assignments', { params })
+  const res = await api.get('/assignments', {params})
   return res.data
 }
 
@@ -48,7 +52,7 @@ const fetchAssignment = async (id: string): Promise<Assignment> => {
 
 const createAssignment = async (data: CreateAssignmentInput): Promise<Assignment> => {
   const formData = new FormData()
-  formData.append('course_id', data.course_id)
+  formData.append('course_id', data.courseId)
   formData.append('title', data.title)
 
   if (data.description) {
@@ -59,8 +63,8 @@ const createAssignment = async (data: CreateAssignmentInput): Promise<Assignment
     formData.append('deadline', data.deadline)
   }
 
-  if (data.max_grade) {
-    formData.append('max_grade', JSON.stringify(data.max_grade))
+  if (data.maxGrade) {
+    formData.append('max_grade', JSON.stringify(data.maxGrade))
   }
 
   if (data.artifacts && data.artifacts.length > 0) {
@@ -112,8 +116,8 @@ export function useCreateAssignment() {
     mutationFn: (data: CreateAssignmentInput) => createAssignment(data),
     onSuccess: (assignment) => {
       // refresh list(s); callers may also refetch course-specific lists via params
-      qc.invalidateQueries({ queryKey: assignmentsKeys.lists() }).then()
-      qc.invalidateQueries({ queryKey: assignmentsKeys.detail(assignment.id) }).then()
+      qc.invalidateQueries({queryKey: assignmentsKeys.lists()}).then()
+      qc.invalidateQueries({queryKey: assignmentsKeys.detail(assignment.id)}).then()
     },
   })
 }
@@ -121,10 +125,10 @@ export function useCreateAssignment() {
 export function useUpdateAssignment() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateAssignmentInput }) => updateAssignment(id, data),
+    mutationFn: ({id, data}: { id: string; data: UpdateAssignmentInput }) => updateAssignment(id, data),
     onSuccess: (_assignment, vars) => {
-      qc.invalidateQueries({ queryKey: assignmentsKeys.detail(vars.id) }).then()
-      qc.invalidateQueries({ queryKey: assignmentsKeys.lists() }).then()
+      qc.invalidateQueries({queryKey: assignmentsKeys.detail(vars.id)}).then()
+      qc.invalidateQueries({queryKey: assignmentsKeys.lists()}).then()
     },
   })
 }
@@ -134,8 +138,8 @@ export function useDeleteAssignment() {
   return useMutation({
     mutationFn: (id: string) => deleteAssignment(id),
     onSuccess: (_void, id) => {
-      qc.invalidateQueries({ queryKey: assignmentsKeys.detail(id) }).then()
-      qc.invalidateQueries({ queryKey: assignmentsKeys.lists() }).then()
+      qc.invalidateQueries({queryKey: assignmentsKeys.detail(id)}).then()
+      qc.invalidateQueries({queryKey: assignmentsKeys.lists()}).then()
     },
   })
 }

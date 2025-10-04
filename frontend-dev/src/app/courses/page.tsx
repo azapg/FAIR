@@ -2,7 +2,7 @@ import {Button} from "@/components/ui/button";
 import {Plus} from "lucide-react";
 import {useNavigate} from "react-router-dom";
 import {useState} from "react";
-import {useCourses, useCreateCourse, useDeleteCourse, Course, Id} from "@/hooks/use-courses";
+import {useCourses, useCreateCourse, useDeleteCourse, Course} from "@/hooks/use-courses";
 import {useAuth} from "@/contexts/auth-context";
 import CourseGrid from "@/app/courses/components/course-grid";
 import CourseFormDialog from "@/app/courses/components/course-form-dialog";
@@ -49,7 +49,7 @@ export default function CoursesPage() {
     await deleteCourse.mutateAsync(course.id);
   };
 
-  const handleCourseClick = (courseId: Id) => {
+  const handleCourseClick = (courseId: string) => {
     navigate(`${courseId}`);
   };
 

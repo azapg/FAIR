@@ -1,24 +1,22 @@
 import {useState, useEffect} from "react";
 import {AssignmentsTable} from "@/app/courses/tabs/assignments/assignments-table";
-import {columns, Assignment} from "@/app/courses/tabs/assignments/assignments";
+import {columns} from "@/app/courses/tabs/assignments/assignments";
 import {CreateAssignmentDialog} from "@/app/courses/tabs/assignments/create-assignment-dialog";
-import type { CourseDetail } from "@/hooks/use-courses";
+import {Assignment} from "@/hooks/use-assignments";
 
-import {mapAssignments} from "@/app/courses/tabs/assignments/assignment-utils";
-
+// TODO: Let's just use react-query here directly to manage assignments state
 export default function AssignmentsTab({
-  assignments: rawAssignments = [],
+  assignments: initialAssignments = [],
   courseId,
 }: {
-  assignments?: CourseDetail["assignments"];
+  assignments?: Assignment[];
   courseId?: string;
 }) {
-  const [assignments, setAssignments] = useState<Assignment[]>(() => mapAssignments(rawAssignments));
+  const [assignments, setAssignments] = useState<Assignment[]>(() => initialAssignments);
 
-  // Keep local list in sync when parent updates the detailed course data
   useEffect(() => {
-    setAssignments(mapAssignments(rawAssignments));
-  }, [rawAssignments]);
+    setAssignments(initialAssignments);
+  }, [initialAssignments]);
 
   const handleAssignmentCreated = (newAssignment: Assignment) => {
     setAssignments(prev => [...prev, newAssignment]);
