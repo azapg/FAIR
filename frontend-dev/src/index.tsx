@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import {Routes, Route} from 'react-router-dom';
 import Home from "@/home";
 import CoursesPage from "@/app/courses/page";
 import LoginPage from "@/app/login/page";
@@ -11,14 +11,11 @@ export function App() {
     <Routes>
       <Route path="/" element={<Home/>}/>
 
-      <Route path={"demo"} element={<Navigate to="/demo/courses" replace/>}  />
-      <Route path={"demo"}>
-        <Route path={"courses"} element={<CoursesPage/>}/>
-        <Route path={"courses/:courseId"} element={<CourseDetailPage/>}/>
-        <Route path={"courses/:courseId/"} element={<CourseDetailPage/>}/>
-        <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage/>}/>
-        <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage />} />
-      </Route>
+      <Route path={"courses"} element={<CoursesPage/>}/>
+      <Route path={"courses/:courseId"} element={<CourseDetailPage/>}/>
+      <Route path={"courses/:courseId/"} element={<CourseDetailPage/>}/>
+      <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage/>}/>
+      <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage/>}/>
 
       <Route path={"login"} element={<LoginPage/>}/>
       <Route path={"register"} element={<RegisterPage/>}/>

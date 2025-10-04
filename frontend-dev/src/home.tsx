@@ -20,10 +20,10 @@ export default function Home() {
           Built by students, for educators and researchers who believe grading should be fair.
         </p>
         <Link
-          to="/demo"
+          to="/courses"
           className="px-4 py-2.5 rounded-xl bg-foreground text-background font-medium hover:bg-opacity-90 transition"
         >
-          Explore the demo
+          Explore the platform
         </Link>
       </div>
     </main>
