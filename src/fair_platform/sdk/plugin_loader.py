@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 from pathlib import Path
 from types import ModuleType
@@ -35,18 +34,7 @@ def get_folder_modules(folder: Path):
     ]
 
 
-async def safe_call(func, *args, timeout=10):
-    try:
-        return await asyncio.wait_for(asyncio.to_thread(func, *args), timeout)
-    except asyncio.TimeoutError:
-        print(f"Plugin {func.__name__} timed out after {timeout}s")
-        return None
-    except Exception as e:
-        print(f"Plugin {func.__name__} failed: {e}")
-        return None
-
-
-async def load_plugin_from_module(module_path: str) -> Optional[ModuleType]:
+def load_plugin_from_module(module_path: str) -> Optional[ModuleType]:
     """
     Load a plugin module from a file path. Registers the module under a unique name
     based on the plugin directory to avoid name collisions (e.g. plugin_<dirname>).
@@ -78,7 +66,7 @@ async def load_plugin_from_module(module_path: str) -> Optional[ModuleType]:
     sys.modules[module_name] = module
 
     try:
-        await safe_call(spec.loader.exec_module, module, timeout=10)
+        spec.loader.exec_module(module)
         return module
     except Exception as e:
         print(f"Error loading module '{module_name}' from '{module_path}': {e}")
@@ -86,7 +74,7 @@ async def load_plugin_from_module(module_path: str) -> Optional[ModuleType]:
         return None
 
 
-async def load_storage_plugins():
+def load_storage_plugins():
     """
     Load plugins from storage.plugins_dir. Each plugin is expected to be a directory
     that does NOT start with '__' or '.' and must contain a 'main.py' file which will be loaded.
@@ -109,7 +97,7 @@ async def load_storage_plugins():
         main_py = os.path.join(full_path, "main.py")
         if os.path.exists(main_py) and os.path.isfile(main_py):
             # TODO: Maybe do a "load_plugin_from_folder", that loads all modules and injects hash metadata into them.
-            await load_plugin_from_module(main_py)
+            load_plugin_from_module(main_py)
 
 
 __all__ = [
