@@ -45,7 +45,7 @@ export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogP
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><PlusIcon/> Add</Button>
+        <Button size="sm"><PlusIcon/> Add</Button>
       </DialogTrigger>
       <DialogContent className={""}>
         <DialogHeader>
