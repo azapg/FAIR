@@ -2,9 +2,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import {RuntimePluginRead} from "@/hooks/use-plugins"
+import {RuntimePlugin, RuntimePluginRead} from "@/hooks/use-plugins"
 import {useState, useCallback} from "react"
-import {PluginSummary, useWorkflowStore, WorkflowDraft} from "@/store/workflows-store";
+import {useWorkflowStore, WorkflowDraft} from "@/store/workflows-store";
 
 interface PydanticProperty {
   type: 'string' | 'number' | 'boolean' | 'object'
@@ -177,12 +177,9 @@ export function PluginSettings({ plugin, values = {}, onChange }: PluginSettings
     setFormValues(newValues)
     onChange?.(newValues)
 
-    const summary: PluginSummary = {
-      id: plugin.id,
-      version: plugin.version,
-      hash: plugin.hash,
+    const summary: RuntimePlugin = {
+      ...plugin,
       settings: newValues,
-      settings_schema: plugin.settings_schema,
     }
 
     const newDraft: WorkflowDraft = {

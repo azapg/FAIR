@@ -22,9 +22,9 @@ export type WorkflowCreate = {
   courseId: string;
   description?: string;
   plugins: {
-    transcriber?: Plugin,
-    grader?: Plugin,
-    validator?: Plugin,
+    transcriber?: RuntimePlugin,
+    grader?: RuntimePlugin,
+    validator?: RuntimePlugin,
   }
 }
 
@@ -35,16 +35,14 @@ export type Workflow = WorkflowCreate & {
   runs?: WorkflowRun[];
 }
 
-export type PluginSummary = Pick<RuntimePlugin, 'id' | 'version' | 'hash' | 'settings' | 'settings_schema'>;
-
 export type WorkflowDraft = {
   workflowId: string;
   name?: string;
   description?: string;
   plugins: {
-    transcriber?: PluginSummary;
-    grader?: PluginSummary;
-    validator?: PluginSummary;
+    transcriber?: RuntimePlugin;
+    grader?: RuntimePlugin;
+    validator?: RuntimePlugin;
   }
 }
 

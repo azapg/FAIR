@@ -1,6 +1,5 @@
 import {ColumnDef} from "@tanstack/react-table"
 import {
-  ChevronRight,
   Ellipsis,
   History,
   Loader,
@@ -22,7 +21,8 @@ import {
   DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {PluginSummary, useWorkflowStore, Workflow} from "@/store/workflows-store";
+import {useWorkflowStore, Workflow} from "@/store/workflows-store";
+import {RuntimePlugin} from "@/hooks/use-plugins";
 
 export type SubmissionStatus =
   "pending"
@@ -131,7 +131,7 @@ export const columns: ColumnDef<Submission>[] = [
       const workflows = useWorkflowStore(state => state.workflows)
       const activeWorkflow = useWorkflowStore(state => state.drafts[state.activeWorkflowId || ""])
 
-      function runPlugin(plugin?: PluginSummary) {
+      function runPlugin(plugin?: RuntimePlugin) {
         if (!plugin) return;
         console.log(`Running plugin ${plugin.id}-${plugin.hash}-${plugin.version} on submission ${submission.id} with workflow ${activeWorkflow?.workflowId} and settings`, plugin.settings);
       }
