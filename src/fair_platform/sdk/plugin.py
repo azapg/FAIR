@@ -6,9 +6,19 @@ from fair_platform.sdk import Submission, SettingsField
 from typing import Any, Type, List, Optional, Dict, Union
 from pydantic import BaseModel, create_model
 
+from fair_platform.sdk.logger import ExtensionLogger
+
 
 class BasePlugin:
     _settings_fields: dict[str, SettingsField[Any]]
+
+    def __init__(self, logger: Optional[ExtensionLogger]) -> None:
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = ExtensionLogger(
+                identifier=self.__class__.__name__, bus=None, _mode="debug"
+            )
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
