@@ -11,7 +11,9 @@ class Plugin(Base):
 
     id: Mapped[str] = mapped_column(String, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     author: Mapped[Optional[str]] = mapped_column(String, nullable=False)
+    author_email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     version: Mapped[Optional[str]] = mapped_column(String, nullable=False)
     hash: Mapped[str] = mapped_column(String, nullable=False)
     source: Mapped[str] = mapped_column(Text, nullable=False)

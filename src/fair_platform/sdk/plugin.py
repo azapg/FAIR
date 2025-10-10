@@ -2,6 +2,8 @@ import inspect
 from abc import ABC, abstractmethod
 from enum import Enum
 
+from fair_platform.backend.data.database import get_session
+from fair_platform.backend.data.models import Plugin
 from fair_platform.sdk import Submission, SettingsField
 from typing import Any, Type, List, Optional, Dict, Union
 from pydantic import BaseModel, create_model
@@ -190,20 +192,30 @@ class FairPlugin:
                 "FairPlugin decorator can only be applied to subclasses of TranscriptionPlugin, GradePlugin, or ValidationPlugin"
             )
 
-        metadata = PluginMeta(
-            id=self.id,
-            name=self.name,
-            author=self.author,
-            description=self.description,
-            version=self.version,
-            hash=extension_hash,
-            source=source,
-            author_email=self.author_email,
-            settings_schema=create_settings_model(cls).model_json_schema(),
-            type=plugin_type,
-        )
+        plugin_args = {
+            "id": self.id,
+            "name": self.name,
+            "author": self.author,
+            "description": self.description,
+            "version": self.version,
+            "hash": extension_hash,
+            "source": source,
+            "author_email": self.author_email,
+            "settings_schema": create_settings_model(cls).model_json_schema(),
+            "type": plugin_type,
+        }
 
-        PLUGINS[self.name] = metadata
+        plugin = Plugin(**plugin_args)
+        runtime_plugin = PluginMeta(**plugin_args)
+
+        # TODO: Bruh, this technically means that extensions can write to the DB
+        #  directly. Until this is fully sandboxed, FAIR shouldn't be marked as production-ready.
+        with get_session() as session:
+            merged_plugin = session.merge(plugin)
+            session.commit()
+            session.refresh(merged_plugin)
+
+        PLUGINS[self.name] = runtime_plugin
         PLUGINS_OBJECTS[self.name] = cls
         return cls
 
