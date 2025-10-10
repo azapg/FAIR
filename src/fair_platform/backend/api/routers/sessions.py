@@ -17,7 +17,7 @@ router = APIRouter()
 
 class SessionCreateRequest(BaseModel):
     workflow_id: Optional[UUID] = None
-    workflow_draft = Optional[WorkflowBase] = False
+    workflow_draft: Optional[WorkflowBase] = False
     submission_ids: List[UUID]
 
 
