@@ -18,6 +18,7 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
   const {data: plugins = [], isLoading, isError} = usePlugins(type);
   const [selectedPlugin, setSelectedPlugin] = useState<RuntimePluginRead | null>(null);
   const saveDraft = useWorkflowStore(state => state.saveDraft);
+  const activeCourseId = useWorkflowStore(state => state.activeCourseId);
   const currentDraft = useWorkflowStore(
     s => (s.activeWorkflowId ? s.drafts[s.activeWorkflowId] : undefined)
   );
@@ -55,6 +56,9 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
     if (plugin) {
       setSelectedPlugin(plugin);
       saveDraft({
+        workflowId: currentDraft?.workflowId || crypto.randomUUID(),
+        name: currentDraft?.name || 'Default Workflow',
+        courseId: activeCourseId || '',
         ...currentDraft,
         plugins: {
           ...(currentDraft?.plugins || {}),

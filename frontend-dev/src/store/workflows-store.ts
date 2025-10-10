@@ -35,15 +35,8 @@ export type Workflow = WorkflowCreate & {
   runs?: WorkflowRun[];
 }
 
-export type WorkflowDraft = {
+export type WorkflowDraft = WorkflowCreate & {
   workflowId: string;
-  name?: string;
-  description?: string;
-  plugins: {
-    transcriber?: RuntimePlugin;
-    grader?: RuntimePlugin;
-    validator?: RuntimePlugin;
-  }
 }
 
 type State = {
@@ -72,7 +65,7 @@ type Actions = {
    * Does not persist to backend until explicitly saved.
    * @param draft The draft data to save.
    */
-  saveDraft: (draft: Partial<WorkflowDraft>) => void;
+  saveDraft: (draft: WorkflowDraft) => void;
   clearDraft: (workflowId: string) => void;
 }
 
@@ -173,7 +166,7 @@ export const useWorkflowStore = create<State & Actions>()(
         }
 
       },
-      saveDraft: (draft: Partial<WorkflowDraft>) => {
+      saveDraft: (draft: WorkflowDraft) => {
         // TODO: I could get a workflowId param instead of relying on activeWorkflowId, or get the draft.workflowId and update that...
         const {activeWorkflowId, drafts} = get();
         if (!activeWorkflowId) {
