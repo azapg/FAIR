@@ -3,30 +3,37 @@ from typing import Optional
 
 from fair_platform.sdk.events import EventBus
 
+# TODO: Maybe a Logger interface so you can have a PluginLogger without a session?
 
-class ExtensionLogger:
-    def __init__(self, identifier: str, *, bus: Optional[EventBus], _mode = "debug"):
-        self._identifier = identifier
-        self._mode = _mode
+class SessionLogger:
+    def __init__(self, session_id: str, bus: EventBus):
+        super().__init__(session_id, bus)
+        self.session_id = session_id
+        self.bus = bus
 
-        if _mode == "bus" and bus is None:
-            raise ValueError("EventBus must be provided when mode is 'bus'")
+    def log(self, level: str, message: str):
+        self.emit("log", {"level": level, "message": message})
 
-        self._bus = bus
+    def data(self, name: str, payload: dict):
+        self.emit("data", {"name": name, "payload": payload})
 
-    def log(self, message: str):
-        self._emit("log", message=message)
+    def emit(self, event_type: str, data: dict):
+        event_name = f"session:{self.session_id}:{event_type}"
+        coro = self.bus.emit(event_name, data=data)
+        try:
+            asyncio.get_event_loop()
+            asyncio.create_task(coro)
+        except RuntimeError:
+            asyncio.run(coro)
 
-    def _emit(self, name: str, *args, **kwargs):
-        if self._mode == "debug":
-            print(f"[{self._identifier}] {name}: ", *args, **kwargs)
-        elif self._mode == "bus" and self._bus is not None:
-            event_name = f"extension:{self._identifier}:{name}"
-            coro = self._bus.emit(event_name, *args, **kwargs)
-            try:
-                loop = asyncio.get_event_loop()
-                asyncio.create_task(coro)
-            except RuntimeError:
-                asyncio.run(coro)
-        else:
-            raise ValueError(f"Unknown mode: {self._mode}")
+    def get_child(self, plugin_id: str):
+        """Return a logger for a specific plugin"""
+        return PluginLogger(plugin_id, self.session_id, bus=self.bus)
+
+class PluginLogger(SessionLogger):
+    def __init__(self, identifier: str, session_id: str, bus: Optional[EventBus]):
+        self.identifier = identifier
+        super().__init__(session_id, bus)
+
+    def log(self, level: str, message: str):
+        self.emit("log", {"level": level, "message": message})

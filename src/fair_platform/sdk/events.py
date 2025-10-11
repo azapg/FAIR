@@ -9,9 +9,13 @@ class EventBus:
     def on(self, event_name: str, callback):
         self.listeners[event_name].append(callback)
 
-    async def emit(self, event_name: str, *args, **kwargs):
+    async def emit(self, event_name: str, data):
         for callback in self.listeners[event_name]:
             if inspect.iscoroutine(callback):
-                await callback(*args, **kwargs)
+                await callback(data=data)
             else:
-                callback(*args, **kwargs)
+                callback(data=data)
+
+class DebugEventBus(EventBus):
+    async def emit(self, event_name: str, data):
+        print(f"[DEBUG] [{event_name}]: {data}")
