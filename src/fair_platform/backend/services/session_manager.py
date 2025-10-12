@@ -16,7 +16,13 @@ class Session:
         self.buffer = []  # Circular buffer for logs (500 max entries)
         # TODO: I think for now I will create a per-session bus, but it could also be a session manager global bus?
         self.bus = EventBus()
+        self.bus.on(f"session:{session_id.hex}:log", self.add_log)
         self.logger = SessionLogger(session_id.hex, self.bus)
+
+    def add_log(self, data: dict):
+        self.buffer.append(data)
+        if len(self.buffer) > 500:
+            self.buffer.pop(0)
 
 
 class SessionManager:

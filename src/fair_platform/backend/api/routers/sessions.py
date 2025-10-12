@@ -103,10 +103,7 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
     event_name = f"session:{session_id.hex}:log"
 
     def _handler(data: dict):
-        asyncio.create_task(websocket.send_json({
-            "event": event_name,
-            "data": data
-        }))
+        asyncio.create_task(websocket.send_json(data))
 
     session.bus.on(event_name, _handler)
 
