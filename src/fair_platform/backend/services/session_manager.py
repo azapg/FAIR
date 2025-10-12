@@ -3,8 +3,7 @@ from typing import List
 from uuid import UUID, uuid4
 
 from fair_platform.backend.data.database import get_session
-from fair_platform.backend.data.models import User, Workflow, Plugin, WorkflowRun, WorkflowRunStatus, Submission
-from fair_platform.sdk import get_plugin_object
+from fair_platform.backend.data.models import User, Workflow,  WorkflowRun, WorkflowRunStatus, Submission, SubmissionStatus
 from fair_platform.sdk.events import EventBus
 from fair_platform.sdk.logger import SessionLogger
 
@@ -57,40 +56,47 @@ class SessionManager:
     async def _run_task(self, session_id: UUID, workflow: Workflow, submission_ids: List[UUID], user: User, parallelism: int = 10):
         session = self.sessions[session_id]
         session.logger.log("info", f"Starting session for workflow {workflow.name} with {len(submission_ids)} submissions")
-        try:
-            if workflow.transcriber_plugin_id:
-                with get_session() as db:
-                    plugin = db.query(Plugin).filter(Plugin.id == workflow.transcriber_plugin_id).first()
 
-                transcription = None
+        with get_session() as db:
+            workflow_run = db.get(WorkflowRun, session_id)
+            if not workflow_run:
+                session.logger.error("Workflow run not found in database")
+                return -1
+            workflow_run.status = WorkflowRunStatus.running
+            db.commit()
 
-                if not plugin:
-                    raise ValueError("Transcriber plugin not found")
+            await session.bus.emit('update', {
+                "object": "workflow_run",
+                "action": "update",
+                "payload": {"id": workflow_run.id, "status": workflow_run.status},
+            })
 
-                plugin_class = get_plugin_object(plugin.name) # TODO: This should look for a plugin with a specific id and hash
+            submissions = db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+            if not submissions or len(submissions) == 0:
+                session.logger.error("No valid submissions found for this session")
+                workflow_run.status = WorkflowRunStatus.failure
+                db.commit()
+                await session.bus.emit('update', {
+                    "object": "workflow_run",
+                    "action": "update",
+                    "payload": {"id": workflow_run.id, "status": workflow_run.status},
+                })
+                return -1
 
-                if not plugin_class:
-                    raise ValueError("Transcriber plugin class not found")
+            for submission in submissions:
+                submission.status = SubmissionStatus.processing
+            db.commit()
 
-                transcriber = plugin_class(session.logger.get_child(plugin_id=plugin.id))
-                transcriber.set_values(workflow.transcriber_settings or {})
-                session.logger.log("info", f"Initialized transcriber plugin {plugin.name}")
+            await session.bus.emit('update', {
+                "object": "submissions",
+                "action": "update",
+                "payload": [{"id": sub.id, "status": sub.status} for sub in submissions],
+            })
 
-                await asyncio.sleep(10)
-                session.logger.log("info", f"Transcription completed")
+            session.logger.info(f"Loaded {len(submissions)} submissions for processing")
 
-            if workflow.grader_plugin_id:
-                session.logger.log("info", f"Starting grading step with plugin {workflow.grader_plugin_id}")
-                await asyncio.sleep(10)
-                session.logger.log("info", f"Grading completed")
-
-            if workflow.validator_plugin_id:
-                session.logger.log("info", f"Starting validation step")
-                await asyncio.sleep(10)
-            return 0
-        except Exception as e:
-            raise
-        finally:
-            pass
+        session.logger.warning("Plugin execution is not yet implemented.")
+        await asyncio.sleep(2)
+        return 0
 
 session_manager = SessionManager()
