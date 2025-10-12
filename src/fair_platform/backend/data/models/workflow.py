@@ -30,11 +30,11 @@ class Workflow(Base):
     transcriber_plugin_id: Mapped[str] = mapped_column(
         Text, ForeignKey("plugins.id"), nullable=True
     )
-    transcriber_setting: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    transcriber_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     grader_plugin_id: Mapped[str] = mapped_column(
         Text, ForeignKey("plugins.id"), nullable=True
     )
-    grader_setting: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    grader_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     validator_plugin_id: Mapped[str] = mapped_column(
         Text, ForeignKey("plugins.id"), nullable=True
     )

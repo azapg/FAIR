@@ -1,13 +1,12 @@
 import asyncio
-from typing import Optional
 
 from fair_platform.sdk.events import EventBus
+
 
 # TODO: Maybe a Logger interface so you can have a PluginLogger without a session?
 
 class SessionLogger:
     def __init__(self, session_id: str, bus: EventBus):
-        super().__init__(session_id, bus)
         self.session_id = session_id
         self.bus = bus
 
@@ -30,10 +29,11 @@ class SessionLogger:
         """Return a logger for a specific plugin"""
         return PluginLogger(plugin_id, self.session_id, bus=self.bus)
 
+
 class PluginLogger(SessionLogger):
-    def __init__(self, identifier: str, session_id: str, bus: Optional[EventBus]):
-        self.identifier = identifier
+    def __init__(self, identifier: str, session_id: str, bus: EventBus):
         super().__init__(session_id, bus)
+        self.identifier = identifier
 
     def log(self, level: str, message: str):
-        self.emit("log", {"level": level, "message": message})
+        self.emit("log", {"level": level, "message": message, "plugin": self.identifier})

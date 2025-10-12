@@ -27,7 +27,7 @@ class WorkflowRun(Base):
         SAUUID, ForeignKey("workflows.id"), nullable=False
     )
     run_by: Mapped[UUID] = mapped_column(SAUUID, ForeignKey("users.id"), nullable=False)
-    started_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=True)
     finished_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     status: Mapped[WorkflowRunStatus] = mapped_column(String, nullable=False)
     logs: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
