@@ -57,6 +57,7 @@ class SubmissionStatus(str, Enum):
     graded = "graded"
     needs_review = "needs_review"
     failure = "failure"
+    processing = "processing"
 
 
 class Submission(Base):

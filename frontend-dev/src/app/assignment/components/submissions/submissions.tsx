@@ -32,7 +32,8 @@ export type SubmissionStatus =
   | "grading"
   | "graded"
   | "needs_review"
-  | "failure";
+  | "failure"
+  | "processing";
 
 export type Submission = {
   id: string;
@@ -63,6 +64,7 @@ const STATUS_META: Record<string, { label: string; color: string; icon?: ReactNo
   graded: {label: "Calificado", color: "blue-500", icon: <CircleCheck size={defaultSize}/>},
   needs_review: {label: "Requiere Revisión", color: "orange-500", icon: <CircleAlert size={defaultSize}/>},
   failure: {label: "Error", color: "red-500", icon: <TriangleAlert size={defaultSize}/> },
+  processing: {label: "Procesando", color: "yellow-500", icon: <Loader className="animate-spin [animation-duration:4.0s]" size={defaultSize}/>},
 };
 
 interface SubmissionStatusLabelProps {
