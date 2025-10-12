@@ -15,12 +15,20 @@ class SessionLogger:
     def log(self, level: str, message: str):
         self.emit("log", {"message": message}, level=level)
 
-    def data(self, name: str, payload: dict):
-        self.emit("data", {"name": name, **payload})
+    def info(self, message: str):
+        self.log("info", message)
+
+    def warning(self, message: str):
+        self.log("warning", message)
+
+    def error(self, message: str):
+        self.log("error", message)
+
+    def debug(self, message: str):
+        self.log("debug", message)
 
     def emit(self, event_type: str, payload: dict, *, level: str = "info"):
-        event_name = f"session:{self.session_id}:{event_type}"
-        coro = self.bus.emit(event_name, data={
+        coro = self.bus.emit(event_type, data={
             "type": "log",
             "index": self.next(),
             "ts": datetime.now().isoformat(),

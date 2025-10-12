@@ -100,12 +100,11 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
     for log in logs:
         await websocket.send_json(log)
 
-    event_name = f"session:{session_id.hex}:log"
-
     def _handler(data: dict):
         asyncio.create_task(websocket.send_json(data))
 
-    session.bus.on(event_name, _handler)
+    # TODO: This should eventually subscribe to any bus event, not just logger's
+    session.bus.on("log", _handler)
 
     try:
         while True:
