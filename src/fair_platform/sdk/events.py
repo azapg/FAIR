@@ -1,5 +1,7 @@
 import inspect
+import uuid
 from collections import defaultdict
+from datetime import date, datetime
 
 
 class EventBus:
@@ -9,12 +11,32 @@ class EventBus:
     def on(self, event_name: str, callback):
         self.listeners[event_name].append(callback)
 
+    def off(self, event_name: str, callback):
+        if callback in self.listeners[event_name]:
+            self.listeners[event_name].remove(callback)
+            if not self.listeners[event_name]:
+                del self.listeners[event_name]
+
     async def emit(self, event_name: str, data):
-        for callback in self.listeners[event_name]:
-            if inspect.iscoroutine(callback):
-                await callback(data=data)
-            else:
-                callback(data=data)
+        def _to_jsonable(obj):
+            if isinstance(obj, uuid.UUID):
+                return str(obj)
+            if isinstance(obj, (datetime, date)):
+                return obj.isoformat()
+            if isinstance(obj, dict):
+                return {k: _to_jsonable(v) for k, v in obj.items()}
+            if isinstance(obj, (list, tuple, set)):
+                return [_to_jsonable(v) for v in obj]
+            return obj
+
+        payload = _to_jsonable(data)
+        for callback in list(self.listeners.get(event_name, [])):
+            try:
+                result = callback(payload)
+            except TypeError:
+                result = callback(data=payload)
+            if inspect.isawaitable(result):
+                await result
 
 class DebugEventBus(EventBus):
     async def emit(self, event_name: str, data):
