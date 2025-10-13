@@ -80,7 +80,7 @@ class SessionManager:
 
             await session.bus.emit('update', {
                 "object": "workflow_run",
-                "action": "type",
+                "type": "update",
                 "payload": {"id": workflow_run.id, "status": workflow_run.status},
             })
 
