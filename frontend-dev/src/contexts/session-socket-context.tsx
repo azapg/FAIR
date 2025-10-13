@@ -1,6 +1,7 @@
 import {useQueryClient} from "@tanstack/react-query";
 import {ReactNode, useEffect, useRef} from "react";
 import {useSessionStore} from "@/store/session-store";
+import {submissionsKeys} from "@/hooks/use-submissions";
 
 export function SessionSocketProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -37,6 +38,19 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
         setSocket(null);
         setCurrentSession(null);
         return;
+      }
+
+      if (data.type == "update") {
+        switch (data.object) {
+          case "submissions":
+            queryClient.invalidateQueries({
+              queryKey: submissionsKeys.lists(),
+              refetchType: 'active'
+            }).then();
+            break;
+          default:
+            break;
+        }
       }
 
     }
