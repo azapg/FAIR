@@ -115,15 +115,30 @@ class SessionManager:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:
                 session.logger.error("Workflow run not found in database at completion")
+                workflow_run.status = WorkflowRunStatus.failure
+                db.commit()
                 return -1
+
             workflow_run.status = WorkflowRunStatus.success
-            db.commit()
 
             await session.bus.emit('update', {
                 "object": "workflow_run",
                 "type": "update",
                 "payload": {"id": workflow_run.id, "status": workflow_run.status},
             })
+
+            submissions = db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+
+            for submission in submissions:
+                submission.status = SubmissionStatus.failure
+
+            await session.bus.emit('update', {
+                "object": "submissions",
+                "type": "update",
+                "payload": [{"id": sub.id, "status": sub.status} for sub in submissions],
+            })
+
+            db.commit()
 
         await session.bus.emit('close', {"reason": "Session completed"})
 
