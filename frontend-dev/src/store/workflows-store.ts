@@ -1,6 +1,6 @@
-import {create} from 'zustand';
+import { createWithEqualityFn } from 'zustand/traditional';
 import {persist} from "zustand/middleware";
-import {RuntimePlugin} from "@/hooks/use-plugins";
+import { RuntimePlugin, RuntimePluginRead } from "@/hooks/use-plugins";
 
 export type WorkflowRunCreate = {
   status: 'pending' | 'running' | 'success' | 'failure' | 'cancelled';
@@ -59,9 +59,19 @@ type Actions = {
    */
   saveDraft: (draft: WorkflowDraft) => void;
   clearDraft: (workflowId: string) => void;
+  /**
+   * Patch a single plugin setting for the active workflow.
+   * Avoids reading drafts from components and updates only the necessary slice.
+   */
+  patchActivePluginSetting: (
+    plugin: RuntimePluginRead,
+    key: string,
+    value: any,
+    fallback?: Record<string, any>
+   ) => void;
 }
 
-export const useWorkflowStore = create<State & Actions>()(
+export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
   persist(
     (set, get) => ({
       drafts: {},
@@ -106,6 +116,31 @@ export const useWorkflowStore = create<State & Actions>()(
           const newDrafts = { ...state.drafts };
           delete newDrafts[workflowId];
           return { drafts: newDrafts };
+        });
+      },
+      patchActivePluginSetting: (plugin, key, value, fallback) => {
+        set((state) => {
+          const workflowId = state.activeWorkflowId || "";
+          const currentDraft = state.drafts[workflowId];
+          if (!workflowId || !currentDraft) return state;
+    
+          const prevPlugin = currentDraft.plugins?.[plugin.type];
+          const prevSettings = prevPlugin?.settings ?? fallback ?? {};
+          const newSettings = { ...prevSettings, [key]: value };
+          const summary: RuntimePlugin = { ...plugin, settings: newSettings };
+    
+          return {
+            drafts: {
+              ...state.drafts,
+              [workflowId]: {
+                ...currentDraft,
+                plugins: {
+                  ...(currentDraft.plugins || {}),
+                  [plugin.type]: summary,
+                }
+              }
+            }
+          };
         });
       }
     }), {

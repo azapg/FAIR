@@ -2,9 +2,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import {RuntimePlugin, RuntimePluginRead} from "@/hooks/use-plugins"
-import {useState, useCallback} from "react"
-import {useWorkflowStore, WorkflowDraft} from "@/store/workflows-store";
+import { RuntimePluginRead } from "@/hooks/use-plugins"
+import {useCallback, useRef} from "react"
+import { useWorkflowStore } from "@/store/workflows-store"
+import { shallow } from "zustand/shallow"
 
 interface PydanticProperty {
   type: 'string' | 'number' | 'boolean' | 'object'
@@ -165,42 +166,43 @@ function createInputComponent(
 
 export function PluginSettings({ plugin, values = {}, onChange }: PluginSettingsProps) {
   const schema = plugin.settingsSchema
-  const saveDraft = useWorkflowStore(state => state.saveDraft)
-  const drafts = useWorkflowStore(state => state.drafts)
-  const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId)
-  const currentDraft = drafts[activeWorkflowId || ""]
+  const patchActivePluginSetting = useWorkflowStore(state => state.patchActivePluginSetting)
 
-  const [formValues, setFormValues] = useState<Record<string, any>>(values)
+  const pluginDraft = useWorkflowStore(
+    useCallback(
+      (state) => state.drafts[state.activeWorkflowId || ""]?.plugins?.[plugin.type],
+      [plugin.type]
+    ),
+    shallow
+  )
 
+  const settings = pluginDraft?.settings ?? values ?? {}
+
+  // TODO: All this mess to avoid re-creating handlers on every render,
+  //  but I am not sure if it's worth it. For now, I even't haven't seen results
+  //  we will see if it stays after fixing parent re-renders.
   const handleFieldChange = useCallback((key: string, value: any) => {
-    const newValues = { ...formValues, [key]: value }
-    setFormValues(newValues)
-    onChange?.(newValues)
-
-    const summary: RuntimePlugin = {
-      ...plugin,
-      settings: newValues,
+    const next = { ...(pluginDraft?.settings ?? values ?? {}), [key]: value }
+    onChange?.(next)
+    patchActivePluginSetting(plugin, key, value, values)
+  }, [plugin, pluginDraft?.settings, values, onChange, patchActivePluginSetting])
+  const handlersRef = useRef<Record<string, (v: any) => void>>({})
+  const getHandler = useCallback((key: string) => {
+    if (!handlersRef.current[key]) {
+      handlersRef.current[key] = (value: any) => handleFieldChange(key, value)
     }
+    return handlersRef.current[key]
+  }, [handleFieldChange])
 
-    const newDraft: WorkflowDraft = {
-      ...currentDraft,
-      plugins: {
-        ...(currentDraft?.plugins || {}),
-        [plugin.type]: summary
-      }
-    }
 
-    saveDraft(newDraft)
-  }, [formValues, onChange, plugin])
-  
-  if (!schema.properties) {
+  if (!schema?.properties) {
     return (
       <div className="text-center py-8">
         <p className="text-sm text-muted-foreground">No settings available</p>
       </div>
     )
   }
-  
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -208,8 +210,8 @@ export function PluginSettings({ plugin, values = {}, onChange }: PluginSettings
           createInputComponent(
             property,
             key,
-            formValues[key],
-            (value) => handleFieldChange(key, value)
+            settings[key],
+            getHandler(key)
           )
         )}
       </div>

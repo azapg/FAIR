@@ -67,7 +67,7 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
             version: plugin.version,
             hash: plugin.hash,
             settings: {},
-            settings_schema: plugin.settingsSchema
+            settingsSchema: plugin.settingsSchema
           }
         }
       });

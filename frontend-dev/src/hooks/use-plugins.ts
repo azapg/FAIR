@@ -1,12 +1,13 @@
 import api from "@/lib/api"
 import { useQuery } from "@tanstack/react-query"
 import {PydanticSchema} from "@/app/assignment/components/sidebar/plugin-settings";
+import { toCamelCase } from "@/lib/casing";
 
 export type Plugin = {
     id: string
     name: string
     author: string
-    author_email?: string | null
+    authorEmail?: string | null
     description?: string | null
     version: string
     hash: string
@@ -32,11 +33,14 @@ export const pluginsKeys = {
     detail: (id: string) => [...pluginsKeys.details(), id] as const,
 }
 
-
 const fetchPlugins = async (type?: PluginType): Promise<RuntimePluginRead[]> => {
     const params = type ? { type_filter: type } : {}
     const res = await api.get('/plugins', { params })
-    return res.data
+
+    // convert snake_case to camelCase
+    const data = toCamelCase(res.data) as RuntimePluginRead[]
+
+    return data
 }
 const fetchPlugin = async (id: string): Promise<RuntimePluginRead> => {
     const res = await api.get(`/plugins/${id}`)
