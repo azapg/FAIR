@@ -15,7 +15,7 @@ export type Plugin = {
 }
 
 export type RuntimePlugin = Plugin & {
-  settings_schema: PydanticSchema
+  settingsSchema: PydanticSchema
   settings: Record<string, any>
 }
 

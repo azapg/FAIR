@@ -13,6 +13,7 @@ import {useParams} from "react-router-dom";
 import {useAssignment} from "@/hooks/use-assignments";
 import {useCourse} from "@/hooks/use-courses";
 import {useWorkflowStore} from "@/store/workflows-store";
+import { useWorkflows } from "@/hooks/use-workflows";
 import {useEffect, useMemo} from "react";
 import {CreateSubmissionDialog} from "@/app/assignment/components/submissions/create-submission-dialog";
 import { useArtifacts } from "@/hooks/use-artifacts";
@@ -25,9 +26,7 @@ export default function AssignmentPage() {
   // TODO: This is ugly, try getting courseId from somewhere else, maybe from parents
   const {data: course} = useCourse(assignment?.courseId!);
   const setActiveCourseId = useWorkflowStore(state => state.setActiveCourseId)
-  const loadWorkflows = useWorkflowStore(state => state.loadWorkflows)
-  const isLoadingWorkflows = useWorkflowStore(state => state.isLoadingWorkflows)
-  const workflows = useWorkflowStore(state => state.workflows)
+  const { isLoading: isLoadingWorkflows } = useWorkflows();
   const {data: artifacts, isLoading: isLoadingArtifacts, isError: isErrorArtifacts} = useArtifacts({
       assignmentId: assignmentId
     });
@@ -35,7 +34,7 @@ export default function AssignmentPage() {
       assignment_id: assignmentId
     });
 
-  const isOverallLoading = isLoading || isLoadingWorkflows || !workflows || isLoadingArtifacts || isLoadingSubmissions;
+  const isOverallLoading = isLoading || isLoadingWorkflows || isLoadingArtifacts || isLoadingSubmissions;
 
   const tableSubmissions = useMemo<TableSubmission[]>(() => {
     if (!submissions) return [];
@@ -49,12 +48,9 @@ export default function AssignmentPage() {
 
   useEffect(() => {
     if (course?.id) {
-      setActiveCourseId(course.id.toString());
-      loadWorkflows().then().catch(err => {
-        console.error(err)
-      });
+      setActiveCourseId(course.id);
     }
-  }, [course, setActiveCourseId]);
+  }, [course]);
 
   if (isOverallLoading) {
     return <div>Loading...</div>

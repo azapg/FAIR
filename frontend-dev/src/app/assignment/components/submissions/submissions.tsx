@@ -13,7 +13,7 @@ import {
   TriangleAlert,
   Circle, BlocksIcon
 } from "lucide-react";
-import { ReactNode } from "react";
+import {ReactNode, useMemo} from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {useWorkflowStore, Workflow} from "@/store/workflows-store";
 import {RuntimePlugin} from "@/hooks/use-plugins";
+import {useWorkflows} from "@/hooks/use-workflows";
 
 export type SubmissionStatus =
   "pending"
@@ -130,12 +131,17 @@ export const columns: ColumnDef<Submission>[] = [
     cell: info => {
       const submission = info.row.original;
 
-      const workflows = useWorkflowStore(state => state.workflows)
-      const activeWorkflow = useWorkflowStore(state => state.drafts[state.activeWorkflowId || ""])
+      // TODO: Oh my god this got even worse
+      const { workflows } = useWorkflows();
+      const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId);
+      const workflow = useMemo(() => {
+        if (activeWorkflowId) return workflows.find(w => w.id === activeWorkflowId);
+        return workflows[0];
+      }, [activeWorkflowId, workflows]);
 
       function runPlugin(plugin?: RuntimePlugin) {
         if (!plugin) return;
-        console.log(`Running plugin ${plugin.id}-${plugin.hash}-${plugin.version} on submission ${submission.id} with workflow ${activeWorkflow?.workflowId} and settings`, plugin.settings);
+        console.log(`Running plugin ${plugin.id}-${plugin.hash}-${plugin.version} on submission ${submission.id} with workflow ${workflow?.id} and settings`, plugin.settings);
       }
 
       function runWorkflow(workflow?: Workflow) {
@@ -155,28 +161,28 @@ export const columns: ColumnDef<Submission>[] = [
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent>
-                  {activeWorkflow?.plugins == undefined && (
+                  {workflow?.plugins == undefined && (
                     <DropdownMenuItem disabled>No plugins available</DropdownMenuItem>
                   )}
 
                   {/*TODO: oh my god this is such an ugly code*/}
-                  {activeWorkflow && activeWorkflow?.plugins && activeWorkflow?.plugins?.transcriber && (
+                  {workflow && workflow?.plugins && workflow?.plugins?.transcriber && (
                     <>
-                      <DropdownMenuItem onClick={_ => runPlugin(activeWorkflow.plugins.transcriber)}>{activeWorkflow.plugins.transcriber.settings_schema.title}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={_ => runPlugin(workflow.plugins.transcriber)}>{workflow.plugins.transcriber.settingsSchema.title}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
                   )}
 
-                  {activeWorkflow && activeWorkflow?.plugins && activeWorkflow?.plugins?.grader && (
+                  {workflow && workflow?.plugins && workflow?.plugins?.grader && (
                     <>
-                      <DropdownMenuItem onClick={_ => runPlugin(activeWorkflow.plugins.grader)}>{activeWorkflow.plugins.grader.settings_schema.title}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={_ => runPlugin(workflow.plugins.grader)}>{workflow.plugins.grader.settingsSchema.title}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
                   )}
 
-                  {activeWorkflow && activeWorkflow?.plugins && activeWorkflow?.plugins?.validator && (
+                  {workflow && workflow?.plugins && workflow?.plugins?.validator && (
                     <>
-                      <DropdownMenuItem onClick={_ => activeWorkflow.plugins.validator}>{activeWorkflow.plugins.validator.settings_schema.title}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={_ => workflow.plugins.validator}>{workflow.plugins.validator.settingsSchema.title}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
                   )}
