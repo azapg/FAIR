@@ -85,8 +85,6 @@ export function WorkflowsSidebar({
       setCurrentSession(response.data.session);
     } catch (error) {
       console.error('Failed to start workflow run', error);
-    } finally {
-      setIsRunning(false);
     }
   }
 

@@ -164,7 +164,7 @@ function createInputComponent(
 }
 
 export function PluginSettings({ plugin, values = {}, onChange }: PluginSettingsProps) {
-  const schema = plugin.settings_schema
+  const schema = plugin.settingsSchema
   const saveDraft = useWorkflowStore(state => state.saveDraft)
   const drafts = useWorkflowStore(state => state.drafts)
   const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId)
