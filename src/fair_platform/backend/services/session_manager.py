@@ -28,6 +28,57 @@ class Session:
             self.buffer.pop(0)
 
 
+async def _update_workflow_run(db, session: Session, workflow_run: WorkflowRun, **updates) -> WorkflowRun:
+    payload = {"id": workflow_run.id}
+
+    if "status" in updates:
+        workflow_run.status = updates["status"]
+    if "started_at" in updates:
+        workflow_run.started_at = updates["started_at"]
+    if "finished_at" in updates:
+        workflow_run.finished_at = updates["finished_at"]
+    db.commit()
+
+    if "status" in updates:
+        payload["status"] = workflow_run.status
+    if "started_at" in updates:
+        payload["started_at"] = workflow_run.started_at.isoformat()
+    if "finished_at" in updates:
+        payload["finished_at"] = workflow_run.finished_at.isoformat()
+
+    await session.bus.emit('update', {
+        "object": "workflow_run",
+        "type": "update",
+        "payload": payload,
+    })
+    return workflow_run
+
+
+async def _update_submissions(db, session: Session, submissions: List[Submission], **updates) -> List[Submission]:
+    for sub in submissions:
+        if "status" in updates:
+            sub.status = updates["status"]
+        if "official_run_id" in updates:
+            sub.official_run_id = updates["official_run_id"]
+    db.commit()
+
+    payload_items = []
+    for sub in submissions:
+        item = {"id": sub.id}
+        if "status" in updates:
+            item["status"] = sub.status
+        if "official_run_id" in updates:
+            item["official_run_id"] = sub.official_run_id
+        payload_items.append(item)
+
+    await session.bus.emit('update', {
+        "object": "submissions",
+        "type": "update",
+        "payload": payload_items,
+    })
+    return submissions
+
+
 class SessionManager:
     def __init__(self):
         self.sessions: dict[UUID, Session] = {}
@@ -74,41 +125,31 @@ class SessionManager:
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:
-                session.logger.error("Workflow run not found in database")
+                await session.bus.emit('close', {"reason": "Workflow run not found in database"})
                 return -1
-            workflow_run.status = WorkflowRunStatus.running
-            workflow_run.started_at = datetime.now()
-            db.commit()
 
-            await session.bus.emit('update', {
-                "object": "workflow_run",
-                "type": "update",
-                "payload": {"id": workflow_run.id, "status": workflow_run.status, "started_at": workflow_run.started_at.isoformat()},
-            })
+            await _update_workflow_run(
+                db, session, workflow_run,
+                status=WorkflowRunStatus.running,
+                started_at=datetime.now(),
+            )
 
             submissions = db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
             if not submissions or len(submissions) == 0:
                 session.logger.error("No valid submissions found for this session")
-                workflow_run.status = WorkflowRunStatus.failure
-                workflow_run.finished_at = datetime.now()
-                db.commit()
-                await session.bus.emit('update', {
-                    "object": "workflow_run",
-                    "type": "update",
-                    "payload": {"id": workflow_run.id, "status": workflow_run.status, "finished_at": workflow_run.finished_at.isoformat()},
-                })
+                await _update_workflow_run(
+                    db, session, workflow_run,
+                    status=WorkflowRunStatus.failure,
+                    finished_at=datetime.now(),
+                )
+                await session.bus.emit('close', {"reason": "No valid submissions found for this session"})
                 return -1
 
-            for submission in submissions:
-                submission.status = SubmissionStatus.processing
-                submission.official_run_id = workflow_run.id
-            db.commit()
-
-            await session.bus.emit('update', {
-                "object": "submissions",
-                "type": "update",
-                "payload": [{"id": sub.id, "status": sub.status, "official_run_id": sub.official_run_id} for sub in submissions],
-            })
+            await _update_submissions(
+                db, session, submissions,
+                status=SubmissionStatus.processing,
+                official_run_id=workflow_run.id,
+            )
 
             session.logger.info(f"Loaded {len(submissions)} submissions for processing")
 
@@ -118,33 +159,21 @@ class SessionManager:
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:
-                session.logger.error("Workflow run not found in database at completion")
-                workflow_run.status = WorkflowRunStatus.failure
-                db.commit()
+                await session.bus.emit('close', {"reason": "Workflow run not found in database at completion"})
                 return -1
 
-            workflow_run.status = WorkflowRunStatus.success
-            workflow_run.finished_at = datetime.now()
-            db.commit()
-
-            await session.bus.emit('update', {
-                "object": "workflow_run",
-                "type": "update",
-                "payload": {"id": workflow_run.id, "status": workflow_run.status, "finished_at": workflow_run.finished_at.isoformat() },
-            })
+            await _update_workflow_run(
+                db, session, workflow_run,
+                status=WorkflowRunStatus.success,
+                finished_at=datetime.now(),
+            )
 
             submissions = db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
 
-            for submission in submissions:
-                submission.status = SubmissionStatus.failure
-
-            await session.bus.emit('update', {
-                "object": "submissions",
-                "type": "update",
-                "payload": [{"id": sub.id, "status": sub.status} for sub in submissions],
-            })
-
-            db.commit()
+            await _update_submissions(
+                db, session, submissions,
+                status=SubmissionStatus.failure,
+            )
 
         await session.bus.emit('close', {"reason": "Session completed"})
         return 0
