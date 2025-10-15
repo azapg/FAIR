@@ -7,6 +7,7 @@ from fair_platform.backend.api.schema.submission import SubmissionBase
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
 from fair_platform.backend.data.database import get_session
 from fair_platform.backend.data.models import User, Workflow,  WorkflowRun, WorkflowRunStatus, Submission, SubmissionStatus
+from fair_platform.sdk import get_plugin_object
 from fair_platform.sdk.events import EventBus
 from fair_platform.sdk.logger import SessionLogger
 
@@ -79,6 +80,33 @@ async def _update_submissions(db, session: Session, submissions: List[Submission
     return submissions
 
 
+async def report_failure(session: Session, session_id: UUID, submission_ids: List[UUID], reason: str, log_message: str | None = None) -> int:
+    if log_message:
+        session.logger.error(log_message)
+    with get_session() as db:
+        workflow_run = db.get(WorkflowRun, session_id)
+        if not workflow_run:
+            await session.bus.emit('close', {"reason": reason})
+            return -1
+
+        await _update_workflow_run(
+            db, session, workflow_run,
+            status=WorkflowRunStatus.failure,
+            finished_at=datetime.now(),
+        )
+
+        if submission_ids:
+            submissions = db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+            if submissions:
+                await _update_submissions(
+                    db, session, submissions,
+                    status=SubmissionStatus.failure,
+                )
+
+    await session.bus.emit('close', {"reason": reason})
+    return -1
+
+
 class SessionManager:
     def __init__(self):
         self.sessions: dict[UUID, Session] = {}
@@ -136,14 +164,13 @@ class SessionManager:
 
             submissions = db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
             if not submissions or len(submissions) == 0:
-                session.logger.error("No valid submissions found for this session")
-                await _update_workflow_run(
-                    db, session, workflow_run,
-                    status=WorkflowRunStatus.failure,
-                    finished_at=datetime.now(),
+                return await report_failure(
+                    session,
+                    session_id,
+                    submission_ids,
+                    reason="No valid submissions found for this session",
+                    log_message="No valid submissions found for this session",
                 )
-                await session.bus.emit('close', {"reason": "No valid submissions found for this session"})
-                return -1
 
             await _update_submissions(
                 db, session, submissions,
@@ -153,8 +180,47 @@ class SessionManager:
 
             session.logger.info(f"Loaded {len(submissions)} submissions for processing")
 
-        session.logger.warning("Plugin execution is not yet implemented.")
-        await asyncio.sleep(10)
+
+        # Transcription
+        if workflow.transcriber_plugin_id:
+            session.logger.info("Starting transcription step")
+            transcriber = get_plugin_object(workflow.transcriber_plugin_id)
+
+            if not transcriber:
+                return await report_failure(
+                    session,
+                    session_id,
+                    submission_ids,
+                    reason="Session failed due to missing transcriber plugin",
+                    log_message="Transcriber plugin not found",
+                )
+
+            transcriber = transcriber(session.logger.get_child(workflow.transcriber_plugin_id))
+            transcriber.set_values(workflow.transcriber_settings or {})
+
+            try:
+                transcriber.transcribe_batch(submissions)
+            except Exception as e:
+                return await report_failure(
+                    session,
+                    session_id,
+                    submission_ids,
+                    reason="Session failed due to transcription error",
+                    log_message=f"Transcription failed: {e}",
+                )
+
+            session.logger.info("Transcription step completed")
+        else:
+            # TODO: This is temporary. I would like to support workflows without transcription in the future,
+            #  but it requires rethinking the flow.
+            return await report_failure(
+                session,
+                session_id,
+                submission_ids,
+                reason="Session failed due to missing transcription step",
+                log_message="No transcription step found. Processing without transcription is not supported.",
+            )
+
         session.logger.info("Session completed.")
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)

@@ -216,21 +216,22 @@ class FairPlugin:
             session.commit()
             session.refresh(merged_plugin)
 
-        PLUGINS[self.name] = runtime_plugin
-        PLUGINS_OBJECTS[self.name] = cls
+        # TODO: Replace id with hash. For now, this is fine to avoid changing workflows schema.
+        PLUGINS[self.id] = runtime_plugin
+        PLUGINS_OBJECTS[self.id] = cls
         return cls
 
 
-def get_plugin_metadata(name: str) -> Optional[PluginMeta]:
-    return PLUGINS.get(name)
+def get_plugin_metadata(id: str) -> Optional[PluginMeta]:
+    return PLUGINS.get(id)
 
 
 def get_plugin_object(
-    name: str,
+    id: str,
 ) -> Optional[
     Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]
 ]:
-    return PLUGINS_OBJECTS.get(name)
+    return PLUGINS_OBJECTS.get(id)
 
 
 def list_plugins(plugin_type: Optional[PluginType] = None) -> List[PluginMeta]:
