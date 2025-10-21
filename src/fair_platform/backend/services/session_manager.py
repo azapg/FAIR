@@ -6,7 +6,14 @@ from uuid import UUID, uuid4
 from fair_platform.backend.api.schema.submission import SubmissionBase
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
 from fair_platform.backend.data.database import get_session
-from fair_platform.backend.data.models import User, Workflow,  WorkflowRun, WorkflowRunStatus, Submission, SubmissionStatus
+from fair_platform.backend.data.models import (
+    User,
+    Workflow,
+    WorkflowRun,
+    WorkflowRunStatus,
+    Submission,
+    SubmissionStatus,
+)
 from fair_platform.sdk import get_plugin_object
 from fair_platform.sdk.events import EventBus
 from fair_platform.sdk.logger import SessionLogger
@@ -29,7 +36,9 @@ class Session:
             self.buffer.pop(0)
 
 
-async def _update_workflow_run(db, session: Session, workflow_run: WorkflowRun, **updates) -> WorkflowRun:
+async def _update_workflow_run(
+    db, session: Session, workflow_run: WorkflowRun, **updates
+) -> WorkflowRun:
     payload = {"id": workflow_run.id}
 
     if "status" in updates:
@@ -47,15 +56,20 @@ async def _update_workflow_run(db, session: Session, workflow_run: WorkflowRun, 
     if "finished_at" in updates:
         payload["finished_at"] = workflow_run.finished_at.isoformat()
 
-    await session.bus.emit('update', {
-        "object": "workflow_run",
-        "type": "update",
-        "payload": payload,
-    })
+    await session.bus.emit(
+        "update",
+        {
+            "object": "workflow_run",
+            "type": "update",
+            "payload": payload,
+        },
+    )
     return workflow_run
 
 
-async def _update_submissions(db, session: Session, submissions: List[Submission], **updates) -> List[Submission]:
+async def _update_submissions(
+    db, session: Session, submissions: List[Submission], **updates
+) -> List[Submission]:
     for sub in submissions:
         if "status" in updates:
             sub.status = updates["status"]
@@ -72,38 +86,53 @@ async def _update_submissions(db, session: Session, submissions: List[Submission
             item["official_run_id"] = sub.official_run_id
         payload_items.append(item)
 
-    await session.bus.emit('update', {
-        "object": "submissions",
-        "type": "update",
-        "payload": payload_items,
-    })
+    await session.bus.emit(
+        "update",
+        {
+            "object": "submissions",
+            "type": "update",
+            "payload": payload_items,
+        },
+    )
     return submissions
 
 
-async def report_failure(session: Session, session_id: UUID, submission_ids: List[UUID], reason: str, log_message: str | None = None) -> int:
+async def report_failure(
+    session: Session,
+    session_id: UUID,
+    submission_ids: List[UUID],
+    reason: str,
+    log_message: str | None = None,
+) -> int:
     if log_message:
         session.logger.error(log_message)
     with get_session() as db:
         workflow_run = db.get(WorkflowRun, session_id)
         if not workflow_run:
-            await session.bus.emit('close', {"reason": reason})
+            await session.bus.emit("close", {"reason": reason})
             return -1
 
         await _update_workflow_run(
-            db, session, workflow_run,
+            db,
+            session,
+            workflow_run,
             status=WorkflowRunStatus.failure,
             finished_at=datetime.now(),
         )
 
         if submission_ids:
-            submissions = db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+            submissions = (
+                db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+            )
             if submissions:
                 await _update_submissions(
-                    db, session, submissions,
+                    db,
+                    session,
+                    submissions,
                     status=SubmissionStatus.failure,
                 )
 
-    await session.bus.emit('close', {"reason": reason})
+    await session.bus.emit("close", {"reason": reason})
     return -1
 
 
@@ -111,7 +140,13 @@ class SessionManager:
     def __init__(self):
         self.sessions: dict[UUID, Session] = {}
 
-    def create_session(self, workflow_id: UUID, submission_ids: List[UUID], user: User, parallelism: int = 10) -> WorkflowRunRead:
+    def create_session(
+        self,
+        workflow_id: UUID,
+        submission_ids: List[UUID],
+        user: User,
+        parallelism: int = 10,
+    ) -> WorkflowRunRead:
         with get_session() as db:
             workflow = db.get(Workflow, workflow_id)
 
@@ -119,10 +154,14 @@ class SessionManager:
                 raise ValueError("Workflow not found")
 
             session_id = uuid4()
-            task = asyncio.create_task(self._run_task(session_id, workflow, submission_ids, user, parallelism))
+            task = asyncio.create_task(
+                self._run_task(session_id, workflow, submission_ids, user, parallelism)
+            )
             self.sessions[session_id] = Session(session_id, task)
 
-            submissions = db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+            submissions = (
+                db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+            )
 
             workflow_run = WorkflowRun(
                 id=session_id,
@@ -146,23 +185,43 @@ class SessionManager:
             submissions=[SubmissionBase.model_validate(sub) for sub in submissions],
         )
 
-    async def _run_task(self, session_id: UUID, workflow: Workflow, submission_ids: List[UUID], user: User, parallelism: int = 10):
-        session = self.sessions[session_id]
-        session.logger.log("info", f"Starting session for workflow {workflow.name} with {len(submission_ids)} submissions")
+    async def _run_task(
+        self,
+        session_id: UUID,
+        workflow: Workflow,
+        submission_ids: List[UUID],
+        user: User,
+        parallelism: int = 10,
+    ):
+        session = self.sessions.get(session_id)
+
+        if not session:
+            return -1
+
+        session.logger.log(
+            "info",
+            f"Starting session for workflow {workflow.name} with {len(submission_ids)} submissions",
+        )
 
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:
-                await session.bus.emit('close', {"reason": "Workflow run not found in database"})
+                await session.bus.emit(
+                    "close", {"reason": "Workflow run not found in database"}
+                )
                 return -1
 
             await _update_workflow_run(
-                db, session, workflow_run,
+                db,
+                session,
+                workflow_run,
                 status=WorkflowRunStatus.running,
                 started_at=datetime.now(),
             )
 
-            submissions = db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+            submissions = (
+                db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+            )
             if not submissions or len(submissions) == 0:
                 return await report_failure(
                     session,
@@ -173,13 +232,14 @@ class SessionManager:
                 )
 
             await _update_submissions(
-                db, session, submissions,
+                db,
+                session,
+                submissions,
                 status=SubmissionStatus.processing,
                 official_run_id=workflow_run.id,
             )
 
             session.logger.info(f"Loaded {len(submissions)} submissions for processing")
-
 
         # Transcription
         if workflow.transcriber_plugin_id:
@@ -195,7 +255,9 @@ class SessionManager:
                     log_message="Transcriber plugin not found",
                 )
 
-            transcriber = transcriber(session.logger.get_child(workflow.transcriber_plugin_id))
+            transcriber = transcriber(
+                session.logger.get_child(workflow.transcriber_plugin_id)
+            )
             transcriber.set_values(workflow.transcriber_settings or {})
 
             try:
@@ -225,23 +287,33 @@ class SessionManager:
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:
-                await session.bus.emit('close', {"reason": "Workflow run not found in database at completion"})
+                await session.bus.emit(
+                    "close",
+                    {"reason": "Workflow run not found in database at completion"},
+                )
                 return -1
 
             await _update_workflow_run(
-                db, session, workflow_run,
+                db,
+                session,
+                workflow_run,
                 status=WorkflowRunStatus.success,
                 finished_at=datetime.now(),
             )
 
-            submissions = db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+            submissions = (
+                db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
+            )
 
             await _update_submissions(
-                db, session, submissions,
+                db,
+                session,
+                submissions,
                 status=SubmissionStatus.failure,
             )
 
-        await session.bus.emit('close', {"reason": "Session completed"})
+        await session.bus.emit("close", {"reason": "Session completed"})
         return 0
+
 
 session_manager = SessionManager()
