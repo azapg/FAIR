@@ -1,42 +1,42 @@
-import { createWithEqualityFn } from 'zustand/traditional';
-import {persist} from "zustand/middleware";
+import { createWithEqualityFn } from "zustand/traditional";
+import { persist } from "zustand/middleware";
 import { RuntimePlugin, RuntimePluginRead } from "@/hooks/use-plugins";
 
 export type WorkflowRunCreate = {
-  status: 'pending' | 'running' | 'success' | 'failure' | 'cancelled';
+  status: "pending" | "running" | "success" | "failure" | "cancelled";
   runBy: string;
   logs: any;
   submissions: any; // TODO: submission object
-}
+};
 
 export type WorkflowRun = WorkflowRunCreate & {
   id: string;
   workflowId: string;
   startedAt: string;
   finishedAt: string | null;
-}
+};
 
 export type WorkflowCreate = {
   name: string;
   courseId: string;
   description?: string;
   plugins: {
-    transcriber?: RuntimePlugin,
-    grader?: RuntimePlugin,
-    validator?: RuntimePlugin,
-  }
-}
+    transcriber?: RuntimePlugin;
+    grader?: RuntimePlugin;
+    validator?: RuntimePlugin;
+  };
+};
 
 export type Workflow = WorkflowCreate & {
   id: string;
   createdAt: string;
   creatorId: string;
   runs?: WorkflowRun[];
-}
+};
 
 export type WorkflowDraft = WorkflowCreate & {
   workflowId: string;
-}
+};
 
 type State = {
   /**
@@ -47,7 +47,7 @@ type State = {
   coursesActiveWorkflows: Record<string, string>; // courseId -> workflowId
   activeCourseId?: string;
   activeWorkflowId?: string;
-}
+};
 
 type Actions = {
   setActiveCourseId: (courseId: string) => void;
@@ -67,9 +67,9 @@ type Actions = {
     plugin: RuntimePluginRead,
     key: string,
     value: any,
-    fallback?: Record<string, any>
-   ) => void;
-}
+    fallback?: Record<string, any>,
+  ) => void;
+};
 
 export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
   persist(
@@ -78,7 +78,8 @@ export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
       activeCourseId: undefined,
       activeWorkflowId: undefined,
       coursesActiveWorkflows: {},
-      setActiveCourseId: (courseId: string) => set({activeCourseId: courseId}),
+      setActiveCourseId: (courseId: string) =>
+        set({ activeCourseId: courseId }),
       setActiveWorkflowId: (workflowId: string) => {
         const { activeCourseId } = get();
         set({ activeWorkflowId: workflowId });
@@ -100,19 +101,19 @@ export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
           ...draft,
           plugins: {
             ...existingDraft?.plugins,
-            ...draft.plugins
-          }
+            ...draft.plugins,
+          },
         };
 
-        set(state => ({
+        set((state) => ({
           drafts: {
             ...state.drafts,
-            [draft.workflowId]: updatedDraft
-          }
+            [draft.workflowId]: updatedDraft,
+          },
         }));
       },
-      clearDraft: (workflowId: string ) => {
-        set(state => {
+      clearDraft: (workflowId: string) => {
+        set((state) => {
           const newDrafts = { ...state.drafts };
           delete newDrafts[workflowId];
           return { drafts: newDrafts };
@@ -123,12 +124,12 @@ export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
           const workflowId = state.activeWorkflowId || "";
           const currentDraft = state.drafts[workflowId];
           if (!workflowId || !currentDraft) return state;
-    
+
           const prevPlugin = currentDraft.plugins?.[plugin.type];
           const prevSettings = prevPlugin?.settings ?? fallback ?? {};
           const newSettings = { ...prevSettings, [key]: value };
           const summary: RuntimePlugin = { ...plugin, settings: newSettings };
-    
+
           return {
             drafts: {
               ...state.drafts,
@@ -137,18 +138,20 @@ export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
                 plugins: {
                   ...(currentDraft.plugins || {}),
                   [plugin.type]: summary,
-                }
-              }
-            }
+                },
+              },
+            },
           };
         });
-      }
-    }), {
-      name: 'workflows-store',
+      },
+    }),
+    {
+      name: "workflows-store",
       partialize: (state) => ({
         coursesActiveWorkflows: state.coursesActiveWorkflows,
         drafts: state.drafts,
-      })
-    }
-  )
-)
+        activeWorkflowId: state.activeWorkflowId, // TODO: Couldn't I just access coursesActiveWorkflows[courseId].id?
+      }),
+    },
+  ),
+);
