@@ -30,6 +30,10 @@ class EventBus:
             return obj
 
         payload = _to_jsonable(data)
+        if isinstance(payload, dict):
+            if "type" not in payload:
+                payload["type"] = event_name
+
         for callback in list(self.listeners.get(event_name, [])):
             try:
                 result = callback(payload)
