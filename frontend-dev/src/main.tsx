@@ -1,11 +1,11 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import { Providers } from './providers'
-import {App} from './index'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { Providers } from "./providers";
+import { App } from "./index";
 import Header from "@/components/header";
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Providers>
       <BrowserRouter>
@@ -15,5 +15,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </div>
       </BrowserRouter>
     </Providers>
-  </React.StrictMode>
-)
+  </React.StrictMode>,
+);
