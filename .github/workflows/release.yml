@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   release:
@@ -23,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -38,6 +38,9 @@ jobs:
       - name: Synchronise project version from tag
         run: python scripts/sync_version.py --version "${{ github.ref_name }}"
 
+      - name: Make build.sh executable
+        run: chmod +x build.sh
+ 
       - name: Run build pipeline
         run: ./build.sh
 
