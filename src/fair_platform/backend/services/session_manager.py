@@ -1,7 +1,9 @@
 import asyncio
+
 from datetime import datetime
 from typing import List
 from uuid import UUID, uuid4
+
 
 from fair_platform.backend.api.schema.submission import SubmissionBase
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
@@ -32,6 +34,29 @@ class Session:
 
     def add_log(self, data: dict):
         self.buffer.append(data)
+
+        # TODO: omg i hate this, i think the best thing would be to save logs on error or completion only
+        with get_session() as db:
+            workflow_run = db.get(WorkflowRun, self.session_id)
+            if workflow_run:
+                current_logs = workflow_run.logs or {"history": []}
+                history = list(current_logs.get("history", []))
+                history.append(data)
+                workflow_run.logs = {"history": history}
+
+                try:
+                    db.commit()
+                    db.refresh(workflow_run)
+                except Exception as e:
+                    try:
+                        self.logger.error(f"Failed to commit workflow run logs: {e}")
+                    except Exception:
+                        pass
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
+
         if len(self.buffer) > 500:
             self.buffer.pop(0)
 
@@ -255,14 +280,24 @@ class SessionManager:
                     log_message="Transcriber plugin not found",
                 )
 
+            session.logger.debug(
+                f"Using transcriber plugin: {workflow.transcriber_plugin_id}"
+            )
+
             transcriber = transcriber(
                 session.logger.get_child(workflow.transcriber_plugin_id)
             )
             transcriber.set_values(workflow.transcriber_settings or {})
 
+            session.logger.debug(
+                f"Transcriber initialized with settings {workflow.transcriber_settings}"
+            )
+
             try:
+                session.logger.debug("Beginning transcription...")
                 transcriber.transcribe_batch(submissions)
             except Exception as e:
+                session.logger.debug(f"Transcription failed: {e}")
                 return await report_failure(
                     session,
                     session_id,
@@ -293,7 +328,7 @@ class SessionManager:
                 )
                 return -1
 
-            await _update_workflow_run(
+            _ = await _update_workflow_run(
                 db,
                 session,
                 workflow_run,
@@ -305,7 +340,7 @@ class SessionManager:
                 db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
             )
 
-            await _update_submissions(
+            _ = await _update_submissions(
                 db,
                 session,
                 submissions,
