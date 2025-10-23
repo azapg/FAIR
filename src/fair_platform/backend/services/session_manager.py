@@ -17,7 +17,7 @@ from fair_platform.backend.data.models import (
     SubmissionStatus,
 )
 from fair_platform.sdk import get_plugin_object
-from fair_platform.sdk.events import EventBus
+from fair_platform.sdk.events import IndexedEventBus
 from fair_platform.sdk.logger import SessionLogger
 
 
@@ -26,7 +26,7 @@ class Session:
         self.session_id = session_id
         self.task = task
         self.buffer = []  # Circular buffer for logs (500 max entries)
-        self.bus = EventBus()
+        self.bus = IndexedEventBus()
         self.bus.on("log", self.add_log)
         self.bus.on("close", self.add_log)
         self.bus.on("update", self.add_log)

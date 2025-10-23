@@ -38,6 +38,23 @@ class EventBus:
             if inspect.isawaitable(result):
                 await result
 
+
+class IndexedEventBus(EventBus):
+    def __init__(self):
+        super().__init__()
+        self._index = 0
+
+    async def emit(self, event_name: str, data):
+        current_index = self._index
+        self._index += 1
+        if isinstance(data, dict):
+            payload = dict(data)
+            payload["index"] = current_index
+        else:
+            payload = data
+        await super().emit(event_name, payload)
+
+
 class DebugEventBus(EventBus):
     async def emit(self, event_name: str, data):
         print(f"[DEBUG] [{event_name}]: {data}")
