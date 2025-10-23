@@ -6,6 +6,12 @@ from uuid import UUID, uuid4
 
 
 from fair_platform.backend.api.schema.submission import SubmissionBase
+from fair_platform.sdk import (
+    Submitter as SDKSubmitter,
+    Assignment as SDKAssignment,
+    Artifact as SDKArtifact,
+    Submission as SDKSubmission,
+)
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
 from fair_platform.backend.data.database import get_session
 from fair_platform.backend.data.models import (
@@ -16,8 +22,12 @@ from fair_platform.backend.data.models import (
     Submission,
     SubmissionStatus,
 )
+
+from sqlalchemy.orm import joinedload
 from fair_platform.sdk import get_plugin_object
+
 from fair_platform.sdk.events import IndexedEventBus
+
 from fair_platform.sdk.logger import SessionLogger
 
 
@@ -271,9 +281,9 @@ class SessionManager:
         # Transcription
         if workflow.transcriber_plugin_id:
             await session.logger.info("Starting transcription step")
-            transcriber = get_plugin_object(workflow.transcriber_plugin_id)
+            transcriber_cls = get_plugin_object(workflow.transcriber_plugin_id)
 
-            if not transcriber:
+            if not transcriber_cls:
                 return await report_failure(
                     session,
                     session_id,
@@ -286,10 +296,11 @@ class SessionManager:
                 f"Using transcriber plugin: {workflow.transcriber_plugin_id}"
             )
 
-            transcriber = transcriber(
+            transcriber_instance = transcriber_cls(
                 session.logger.get_child(workflow.transcriber_plugin_id)
             )
-            transcriber.set_values(workflow.transcriber_settings or {})
+
+            transcriber_instance.set_values(workflow.transcriber_settings or {})
 
             await session.logger.debug(
                 f"Transcriber initialized with settings {workflow.transcriber_settings}"
@@ -297,7 +308,87 @@ class SessionManager:
 
             try:
                 await session.logger.debug("Beginning transcription...")
-                transcriber.transcribe_batch(submissions)
+
+                # TODO: this is so ugly. the only reason I made it this way is to have a nice SDK schema, but damn...
+                with get_session() as db:
+                    db_submissions = (
+                        db.query(Submission)
+                        .filter(Submission.id.in_(submission_ids))
+                        .options(
+                            joinedload(Submission.artifacts),
+                            joinedload(Submission.assignment),
+                        )
+                        .all()
+                    )
+                    submitter_ids = [s.submitter_id for s in db_submissions]
+                    submitters = db.query(User).filter(User.id.in_(submitter_ids)).all()
+                    submitter_map = {u.id: u for u in submitters}
+
+                    sdk_submissions: List[SDKSubmission] = []
+                    for sub in db_submissions:
+                        user_obj = submitter_map.get(sub.submitter_id)
+                        sdk_submitter = SDKSubmitter(
+                            id=str(user_obj.id) if user_obj else "",
+                            name=user_obj.name if user_obj else "",
+                            email=str(user_obj.email) if user_obj else "",
+                        )
+
+                        assign_obj = sub.assignment
+                        # TODO: Score is a more complex object in the future, I am just using
+                        # this because I set that in the SDK in the past for some reason
+                        max_score = 0.0
+                        try:
+                            if assign_obj and assign_obj.max_grade is not None:
+                                value = assign_obj.max_grade.get("value")
+                                if isinstance(value, (int, float)):
+                                    max_score = float(value)
+                        except Exception:
+                            max_score = 0.0
+
+                        sdk_assignment = SDKAssignment(
+                            id=str(assign_obj.id) if assign_obj else "",
+                            title=assign_obj.title if assign_obj else "",
+                            description=assign_obj.description
+                            if assign_obj and assign_obj.description
+                            else "",
+                            deadline=assign_obj.deadline.isoformat()
+                            if assign_obj and assign_obj.deadline
+                            else "",
+                            max_score=max_score,
+                        )
+
+                        sdk_artifacts = [
+                            SDKArtifact(
+                                title=a.title,
+                                artifact_type=a.artifact_type,
+                                mime=a.mime,
+                                storage_path=a.storage_path,
+                                storage_type=a.storage_type,
+                                meta=a.meta,
+                            )
+                            for a in sub.artifacts
+                        ]
+
+                        sdk_submissions.append(
+                            SDKSubmission(
+                                id=str(sub.id),
+                                submitter=sdk_submitter,
+                                submitted_at=sub.submitted_at.isoformat()
+                                if sub.submitted_at
+                                else "",
+                                assignment=sdk_assignment,
+                                artifacts=sdk_artifacts,
+                                meta={
+                                    "status": sub.status.value
+                                    if hasattr(sub.status, "value")
+                                    else str(sub.status)
+                                },
+                            )
+                        )
+
+                result = transcriber_instance.transcribe_batch(sdk_submissions)
+                session.logger.debug("Transcription completed, processing results...")
+                session.logger.debug(f"Transcription result: {result}")
             except Exception as e:
                 await session.logger.debug(f"Transcription failed: {e}")
                 return await report_failure(
