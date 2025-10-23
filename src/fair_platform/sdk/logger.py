@@ -5,6 +5,7 @@ from fair_platform.sdk.events import EventBus
 
 
 # TODO: Maybe a Logger interface so you can have a PluginLogger without a session?
+# TODO: Bro what? Why the base logger is a session logger?
 
 
 class SessionLogger:
@@ -13,22 +14,22 @@ class SessionLogger:
         self.bus = bus
 
     def log(self, level: str, message: str):
-        self.emit("log", {"message": message}, level=level)
+        return self.emit("log", {"message": message}, level=level)
 
     def info(self, message: str):
-        self.log("info", message)
+        return self.log("info", message)
 
     def warning(self, message: str):
-        self.log("warning", message)
+        return self.log("warning", message)
 
     def error(self, message: str):
-        self.log("error", message)
+        return self.log("error", message)
 
     def debug(self, message: str):
-        self.log("debug", message)
+        return self.log("debug", message)
 
-    def emit(self, event_type: str, payload: dict, *, level: str = "info"):
-        coro = self.bus.emit(
+    async def _emit_async(self, event_type: str, payload: dict, *, level: str = "info"):
+        await self.bus.emit(
             event_type,
             data={
                 "type": "log",
@@ -37,11 +38,19 @@ class SessionLogger:
                 "payload": payload,
             },
         )
+
+    def emit(self, event_type: str, payload: dict, *, level: str = "info"):
+        coro = self._emit_async(event_type, payload, level=level)
+
         try:
-            asyncio.get_event_loop()
-            asyncio.create_task(coro)
+            asyncio.get_running_loop()
         except RuntimeError:
-            asyncio.run(coro)
+            # no running loop (plain sync context)
+            return asyncio.run(coro)
+
+        # If already inside an event loop, fire-and-forget
+        asyncio.create_task(coro)
+        return coro  # this allows awaiting if caller wants
 
     def get_child(self, plugin_id: str):
         """Return a logger for a specific plugin"""

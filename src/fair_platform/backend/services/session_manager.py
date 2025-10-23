@@ -223,7 +223,7 @@ class SessionManager:
         if not session:
             return -1
 
-        session.logger.log(
+        await session.logger.log(
             "info",
             f"Starting session for workflow {workflow.name} with {len(submission_ids)} submissions",
         )
@@ -264,11 +264,13 @@ class SessionManager:
                 official_run_id=workflow_run.id,
             )
 
-            session.logger.info(f"Loaded {len(submissions)} submissions for processing")
+            await session.logger.info(
+                f"Loaded {len(submissions)} submissions for processing"
+            )
 
         # Transcription
         if workflow.transcriber_plugin_id:
-            session.logger.info("Starting transcription step")
+            await session.logger.info("Starting transcription step")
             transcriber = get_plugin_object(workflow.transcriber_plugin_id)
 
             if not transcriber:
@@ -280,7 +282,7 @@ class SessionManager:
                     log_message="Transcriber plugin not found",
                 )
 
-            session.logger.debug(
+            await session.logger.debug(
                 f"Using transcriber plugin: {workflow.transcriber_plugin_id}"
             )
 
@@ -289,15 +291,15 @@ class SessionManager:
             )
             transcriber.set_values(workflow.transcriber_settings or {})
 
-            session.logger.debug(
+            await session.logger.debug(
                 f"Transcriber initialized with settings {workflow.transcriber_settings}"
             )
 
             try:
-                session.logger.debug("Beginning transcription...")
+                await session.logger.debug("Beginning transcription...")
                 transcriber.transcribe_batch(submissions)
             except Exception as e:
-                session.logger.debug(f"Transcription failed: {e}")
+                await session.logger.debug(f"Transcription failed: {e}")
                 return await report_failure(
                     session,
                     session_id,
@@ -306,7 +308,7 @@ class SessionManager:
                     log_message=f"Transcription failed: {e}",
                 )
 
-            session.logger.info("Transcription step completed")
+            await session.logger.info("Transcription step completed")
         else:
             # TODO: This is temporary. I would like to support workflows without transcription in the future,
             #  but it requires rethinking the flow.
@@ -318,7 +320,7 @@ class SessionManager:
                 log_message="No transcription step found. Processing without transcription is not supported.",
             )
 
-        session.logger.info("Session completed.")
+        await session.logger.info("Session completed.")
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:
