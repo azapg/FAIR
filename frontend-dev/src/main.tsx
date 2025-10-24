@@ -15,7 +15,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Header />
         </ErrorBoundary>
         <div className={"pt-16 h-full"}>
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="bottom-left" />
           <ErrorBoundary>
             <App />
           </ErrorBoundary>
