@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 
 from datetime import datetime
 from typing import List
@@ -386,15 +387,51 @@ class SessionManager:
                             )
                         )
 
-                result = transcriber_instance.transcribe_batch(sdk_submissions)
-                await session.logger.debug(
-                    "Transcription completed, processing results..."
+                semaphore = asyncio.Semaphore(parallelism)
+
+                async def transcribe_wrapper(submission):
+                    async with semaphore:
+                        if inspect.iscoroutinefunction(transcriber_instance.transcribe):
+                            return await transcriber_instance.transcribe(submission)
+                        else:
+                            loop = asyncio.get_running_loop()
+                            return await loop.run_in_executor(
+                                None, transcriber_instance.transcribe, submission
+                            )
+
+                results = await asyncio.gather(
+                    *[transcribe_wrapper(sub) for sub in sdk_submissions],
+                    return_exceptions=True,
                 )
-                await session.logger.debug(f"Transcription result: {result}")
+
+                await session.logger.debug("Transcription completed")
+                await session.logger.debug(f"Transcription result: {results}")
 
                 with get_session() as db:
                     submissions = []
-                    for res in result:
+                    for res in results:
+                        if isinstance(res, Exception):
+                            db_sub = db.get(
+                                Submission, UUID(sdk_submissions[results.index(res)].id)
+                            )
+                            if not db_sub:
+                                await session.logger.warning(
+                                    f"Transcription result for unknown submission {sdk_submissions[results.index(res)].id}, skipping."
+                                )
+                                continue
+
+                            await session.logger.error(
+                                f"Transcription failed for submission {db_sub.id}: {res}"
+                            )
+
+                            await _update_submissions(
+                                db,
+                                session,
+                                [db_sub],
+                                status=SubmissionStatus.failure,
+                            )
+                            continue
+
                         sub_id = UUID(res.original_submission.id)
                         db_submission = db.get(Submission, sub_id)
                         if not db_submission:
@@ -404,12 +441,13 @@ class SessionManager:
                             continue
                         submissions.append(db_submission)
 
-                    await _update_submissions(
-                        db,
-                        session,
-                        submissions,
-                        status=SubmissionStatus.transcribed,
-                    )
+                    if submissions:
+                        await _update_submissions(
+                            db,
+                            session,
+                            submissions,
+                            status=SubmissionStatus.transcribed,
+                        )
 
             except Exception as e:
                 await session.logger.debug(f"Transcription failed: {e}")
@@ -433,7 +471,6 @@ class SessionManager:
                 log_message="No transcription step found. Processing without transcription is not supported.",
             )
 
-        await session.logger.info("Session completed.")
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:

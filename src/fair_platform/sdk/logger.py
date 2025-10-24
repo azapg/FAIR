@@ -45,12 +45,10 @@ class SessionLogger:
         try:
             asyncio.get_running_loop()
         except RuntimeError:
-            # no running loop (plain sync context)
             return asyncio.run(coro)
 
-        # If already inside an event loop, fire-and-forget
-        asyncio.create_task(coro)
-        return coro  # this allows awaiting if caller wants
+        task = asyncio.create_task(coro)
+        return task
 
     def get_child(self, plugin_id: str):
         """Return a logger for a specific plugin"""
@@ -63,4 +61,6 @@ class PluginLogger(SessionLogger):
         self.identifier = identifier
 
     def log(self, level: str, message: str):
-        self.emit("log", {"message": message, "plugin": self.identifier}, level=level)
+        return self.emit(
+            "log", {"message": message, "plugin": self.identifier}, level=level
+        )
