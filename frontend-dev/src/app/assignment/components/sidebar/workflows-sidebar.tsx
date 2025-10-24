@@ -13,7 +13,14 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { LoaderIcon, PlusIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  Clock,
+  LoaderIcon,
+  PlusIcon,
+  Save,
+  Trash,
+} from "lucide-react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import PluginSection from "@/app/assignment/components/sidebar/plugin-section";
 import { useEffect, useMemo, useState } from "react";
@@ -24,6 +31,16 @@ import {
   usePersistWorkflowDrafts,
   useWorkflows,
 } from "@/hooks/use-workflows";
+import { ButtonGroup } from "@/components/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ExecutionLogsView } from "@/app/assignment/components/sidebar/execution-logs-view";
 
 export function WorkflowsSidebar({
   side,
@@ -47,8 +64,11 @@ export function WorkflowsSidebar({
   }, [activeWorkflowId, workflows]);
 
   const setCurrentSession = useSessionStore((state) => state.setCurrentSession);
+  const clearLogs = useSessionStore((state) => state.clearLogs);
+  const currentSession = useSessionStore((state) => state.currentSession);
 
   const [isRunning, setIsRunning] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
 
   const { mutateAsync: createWorkflow } = useCreateWorkflow();
   const { mutateAsync: persistDrafts } = usePersistWorkflowDrafts();
@@ -62,10 +82,7 @@ export function WorkflowsSidebar({
     //  So I will just make the user create one manually, though I would like a better UX for this.
   }, [activeWorkflowId, workflows]);
 
-  if (isLoading && !workflow) {
-    // TODO: Skeleton loader
-    return <></>;
-  }
+  // Remove early return so footer is always visible even while loading
 
   const onCreateWorkflow = async () => {
     const name = prompt("Enter workflow name", "Untitled Workflow");
@@ -77,6 +94,9 @@ export function WorkflowsSidebar({
   const runWorkflow = async () => {
     if (isRunning || !workflow || !activeWorkflowId) return;
     setIsRunning(true);
+    // Open logs immediately and clear any stale logs to avoid flicker from previous sessions
+    clearLogs();
+    setShowLogs(true);
     try {
       await persistDrafts();
 
@@ -94,36 +114,47 @@ export function WorkflowsSidebar({
     }
   };
 
+  // When the session ends (SessionSocketProvider sets it to null on close), stop showing running state
+  useEffect(() => {
+    if (!currentSession) {
+      setIsRunning(false);
+    }
+  }, [currentSession?.id]);
+
   return (
     <Sidebar side={side} className={className} {...sidebarProps}>
-      <SidebarHeader className="py-4 flex-row items-center justify-between gap-2 px-2.5">
-        <Select value={workflow?.id} onValueChange={setActiveWorkflowId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select workflow" />
-          </SelectTrigger>
-          <SelectContent
-            position="popper"
-            className="w-[--radix-select-trigger-width]"
-          >
-            {workflows.map((w) => (
-              <SelectItem key={w.id} value={w.id}>
-                {w.name}
-              </SelectItem>
-            ))}
-            {workflows.length === 0 && (
-              <SelectItem value="no-workflows" disabled>
-                No workflows available
-              </SelectItem>
-            )}
-          </SelectContent>
-        </Select>
+      {showLogs ? null : (
+        <SidebarHeader className="py-4 flex-row items-center justify-between gap-2 px-2.5">
+          <Select value={workflow?.id} onValueChange={setActiveWorkflowId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select workflow" />
+            </SelectTrigger>
+            <SelectContent
+              position="popper"
+              className="w-[--radix-select-trigger-width]"
+            >
+              {workflows.map((w) => (
+                <SelectItem key={w.id} value={w.id}>
+                  {w.name}
+                </SelectItem>
+              ))}
+              {workflows.length === 0 && (
+                <SelectItem value="no-workflows" disabled>
+                  No workflows available
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
 
-        <Button variant="outline" size="icon" onClick={onCreateWorkflow}>
-          <PlusIcon />
-        </Button>
-      </SidebarHeader>
+          <Button variant="outline" size="icon" onClick={onCreateWorkflow}>
+            <PlusIcon />
+          </Button>
+        </SidebarHeader>
+      )}
       <Separator />
-      {workflow && draft ? (
+      {showLogs ? (
+        <ExecutionLogsView onBack={() => setShowLogs(false)} />
+      ) : workflow && draft ? (
         <>
           <SidebarContent>
             <PluginSection
@@ -145,18 +176,6 @@ export function WorkflowsSidebar({
             />
             <Separator />
           </SidebarContent>
-          <SidebarFooter className={"py-4 px-2.5"}>
-            <Separator />
-            <Button onClick={runWorkflow} disabled={isRunning}>
-              {isRunning ? (
-                <>
-                  <LoaderIcon className={"animate-spin"} /> Running
-                </>
-              ) : (
-                <>Run Workflow</>
-              )}
-            </Button>
-          </SidebarFooter>
         </>
       ) : (
         <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
@@ -175,6 +194,67 @@ export function WorkflowsSidebar({
           )}
         </div>
       )}
+      {/* Footer is always visible */}
+      <SidebarFooter className={"px-2.5"}>
+        <Separator />
+        <WorkflowSidebarRunButton
+          isRunning={isRunning}
+          onRun={runWorkflow}
+          onShowLogs={() => setShowLogs(true)}
+        />
+      </SidebarFooter>
     </Sidebar>
   );
 }
+
+const WorkflowSidebarRunButton = ({
+  isRunning,
+  onRun,
+  onShowLogs,
+}: {
+  isRunning: boolean;
+  onRun: () => void;
+  onShowLogs: () => void;
+}) => {
+  return (
+    <ButtonGroup className="flex w-full my-2">
+      <Button
+        onClick={onRun}
+        disabled={isRunning}
+        className="flex-1"
+        variant="outline"
+      >
+        {isRunning ? (
+          <>
+            <LoaderIcon className={"animate-spin"} /> Running
+          </>
+        ) : (
+          <>Run Workflow</>
+        )}
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline">
+            <ChevronDownIcon />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={onShowLogs}>
+              <Clock /> View Execution Logs
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Save /> Save Workflow
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem disabled={!isRunning} variant="destructive">
+              <Trash /> Abort Workflow
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </ButtonGroup>
+  );
+};

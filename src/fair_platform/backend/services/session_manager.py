@@ -236,7 +236,7 @@ class SessionManager:
 
         await session.logger.log(
             "info",
-            f"Starting session for workflow {workflow.name} with {len(submission_ids)} submissions",
+            f"Starting session for workflow {workflow.name} for {len(submission_ids)} submissions",
         )
 
         with get_session() as db:
@@ -294,7 +294,7 @@ class SessionManager:
                 )
 
             await session.logger.debug(
-                f"Using transcriber plugin: {workflow.transcriber_plugin_id}"
+                f"Transcriber Plugin: {workflow.transcriber_plugin_id}"
             )
 
             transcriber_instance = transcriber_cls(
@@ -303,13 +303,7 @@ class SessionManager:
 
             transcriber_instance.set_values(workflow.transcriber_settings or {})
 
-            await session.logger.debug(
-                f"Transcriber initialized with settings {workflow.transcriber_settings}"
-            )
-
             try:
-                await session.logger.debug("Beginning transcription...")
-
                 # TODO: this is so ugly. the only reason I made it this way is to have a nice SDK schema, but damn...
                 with get_session() as db:
                     db_submissions = (
@@ -403,9 +397,6 @@ class SessionManager:
                     *[transcribe_wrapper(sub) for sub in sdk_submissions],
                     return_exceptions=True,
                 )
-
-                await session.logger.debug("Transcription completed")
-                await session.logger.debug(f"Transcription result: {results}")
 
                 with get_session() as db:
                     submissions = []
