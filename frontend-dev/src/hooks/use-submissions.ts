@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { toast } from 'sonner'
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
-export type SubmissionStatus = 
+export type SubmissionStatus =
   | "pending"
   | "submitted"
   | "transcribing"
@@ -72,20 +73,20 @@ const fetchSubmission = async (id: string): Promise<Submission> => {
 
 const createSubmission = async (data: CreateSubmissionInput): Promise<Submission> => {
   const formData = new FormData()
-  
+
   formData.append('assignment_id', data.assignment_id)
   formData.append('submitter_name', data.submitter_name)
-  
+
   if (data.artifact_ids && data.artifact_ids.length > 0) {
     formData.append('artifact_ids', JSON.stringify(data.artifact_ids))
   }
-  
+
   if (data.files && data.files.length > 0) {
     data.files.forEach(file => {
       formData.append('files', file)
     })
   }
-  
+
   const res = await api.post('/submissions', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -122,35 +123,53 @@ export function useSubmission(id: string) {
 
 export function useCreateSubmission() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: createSubmission,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Submission create successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to create Submission', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
 export function useUpdateSubmission() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateSubmissionInput }) =>
       updateSubmission(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: submissionsKeys.detail(variables.id) })
       queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Submission updated successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to update Submission', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
 export function useDeleteSubmission() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: deleteSubmission,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Submission deleted successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to delete Submission', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }

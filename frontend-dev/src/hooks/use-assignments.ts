@@ -1,6 +1,7 @@
-import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import {Grade} from "@/app/courses/tabs/assignments/assignments";
+import { Grade } from "@/app/courses/tabs/assignments/assignments";
+import { toast } from 'sonner';
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
@@ -35,13 +36,13 @@ export type UpdateAssignmentInput = Partial<Omit<CreateAssignmentInput, 'courseI
 export const assignmentsKeys = {
   all: ['assignments'] as const,
   lists: () => [...assignmentsKeys.all, 'list'] as const,
-  list: (params?: ListParams) => [...assignmentsKeys.lists(), {params}] as const,
+  list: (params?: ListParams) => [...assignmentsKeys.lists(), { params }] as const,
   details: () => [...assignmentsKeys.all, 'detail'] as const,
   detail: (id: string) => [...assignmentsKeys.details(), id] as const,
 }
 
 const fetchAssignments = async (params?: ListParams): Promise<Assignment[]> => {
-  const res = await api.get('/assignments', {params})
+  const res = await api.get('/assignments', { params })
   return res.data
 }
 
@@ -116,20 +117,32 @@ export function useCreateAssignment() {
     mutationFn: (data: CreateAssignmentInput) => createAssignment(data),
     onSuccess: (assignment) => {
       // refresh list(s); callers may also refetch course-specific lists via params
-      qc.invalidateQueries({queryKey: assignmentsKeys.lists()}).then()
-      qc.invalidateQueries({queryKey: assignmentsKeys.detail(assignment.id)}).then()
+      qc.invalidateQueries({ queryKey: assignmentsKeys.lists() })
+      qc.invalidateQueries({ queryKey: assignmentsKeys.detail(assignment.id) })
+      toast.success('Assignment created successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to create Assignment', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
 export function useUpdateAssignment() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({id, data}: { id: string; data: UpdateAssignmentInput }) => updateAssignment(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateAssignmentInput }) => updateAssignment(id, data),
     onSuccess: (_assignment, vars) => {
-      qc.invalidateQueries({queryKey: assignmentsKeys.detail(vars.id)}).then()
-      qc.invalidateQueries({queryKey: assignmentsKeys.lists()}).then()
+      qc.invalidateQueries({ queryKey: assignmentsKeys.detail(vars.id) })
+      qc.invalidateQueries({ queryKey: assignmentsKeys.lists() })
+      toast.success('Assignment updated successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to update Assignment', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
@@ -138,9 +151,15 @@ export function useDeleteAssignment() {
   return useMutation({
     mutationFn: (id: string) => deleteAssignment(id),
     onSuccess: (_void, id) => {
-      qc.invalidateQueries({queryKey: assignmentsKeys.detail(id)}).then()
-      qc.invalidateQueries({queryKey: assignmentsKeys.lists()}).then()
+      qc.invalidateQueries({ queryKey: assignmentsKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: assignmentsKeys.lists() })
+      toast.success('Assignment deleted successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to delete Assignment', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
