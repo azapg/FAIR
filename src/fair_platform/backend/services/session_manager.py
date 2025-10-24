@@ -141,7 +141,7 @@ async def report_failure(
     log_message: str | None = None,
 ) -> int:
     if log_message:
-        session.logger.error(log_message)
+        await session.logger.error(log_message)
     with get_session() as db:
         workflow_run = db.get(WorkflowRun, session_id)
         if not workflow_run:
@@ -301,7 +301,16 @@ class SessionManager:
                 session.logger.get_child(workflow.transcriber_plugin_id)
             )
 
-            transcriber_instance.set_values(workflow.transcriber_settings or {})
+            try:
+                transcriber_instance.set_values(workflow.transcriber_settings or {})
+            except Exception as e:
+                return await report_failure(
+                    session,
+                    session_id,
+                    submission_ids,
+                    reason="Session failed due to transcriber configuration error",
+                    log_message=f"Transcriber configuration error: {e}",
+                )
 
             try:
                 # TODO: this is so ugly. the only reason I made it this way is to have a nice SDK schema, but damn...
