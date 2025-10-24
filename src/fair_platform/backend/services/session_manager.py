@@ -391,6 +391,26 @@ class SessionManager:
                     "Transcription completed, processing results..."
                 )
                 await session.logger.debug(f"Transcription result: {result}")
+
+                with get_session() as db:
+                    submissions = []
+                    for res in result:
+                        sub_id = UUID(res.original_submission.id)
+                        db_submission = db.get(Submission, sub_id)
+                        if not db_submission:
+                            await session.logger.warning(
+                                f"Transcription result for unknown submission {sub_id}, skipping."
+                            )
+                            continue
+                        submissions.append(db_submission)
+
+                    await _update_submissions(
+                        db,
+                        session,
+                        submissions,
+                        status=SubmissionStatus.transcribed,
+                    )
+
             except Exception as e:
                 await session.logger.debug(f"Transcription failed: {e}")
                 return await report_failure(
@@ -429,17 +449,6 @@ class SessionManager:
                 workflow_run,
                 status=WorkflowRunStatus.success,
                 finished_at=datetime.now(),
-            )
-
-            submissions = (
-                db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
-            )
-
-            _ = await _update_submissions(
-                db,
-                session,
-                submissions,
-                status=SubmissionStatus.failure,
             )
 
         await session.bus.emit("close", {"reason": "Session completed"})
