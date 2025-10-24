@@ -387,8 +387,10 @@ class SessionManager:
                         )
 
                 result = transcriber_instance.transcribe_batch(sdk_submissions)
-                session.logger.debug("Transcription completed, processing results...")
-                session.logger.debug(f"Transcription result: {result}")
+                await session.logger.debug(
+                    "Transcription completed, processing results..."
+                )
+                await session.logger.debug(f"Transcription result: {result}")
             except Exception as e:
                 await session.logger.debug(f"Transcription failed: {e}")
                 return await report_failure(
