@@ -16,6 +16,7 @@ plugins:
         - locale: en
           name: English
           build: true
+          default: true
         - locale: es
           name: Español
           build: true

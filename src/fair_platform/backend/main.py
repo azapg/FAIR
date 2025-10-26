@@ -28,8 +28,7 @@ async def lifespan(_ignored: FastAPI):
         # teardown?
         pass
 
-
-app = FastAPI(title="Fair Platform Backend", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Fair Platform Backend", version="0.1.0", lifespan=lifespan, openapi_url=None, docs_url=None, redoc_url=None)
 
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
