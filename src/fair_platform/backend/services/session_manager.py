@@ -25,6 +25,7 @@ from fair_platform.backend.data.models import (
     Submission,
     SubmissionStatus,
 )
+from fair_platform.backend.data.models import SubmissionResult
 
 from sqlalchemy.orm import joinedload
 from fair_platform.sdk import get_plugin_object
@@ -133,6 +134,55 @@ async def _update_submissions(
         },
     )
     return submissions
+
+
+async def _upsert_submission_result(
+    db,
+    session: Session,
+    submission_id: UUID,
+    workflow_run_id: UUID,
+    **updates,
+) -> SubmissionResult:
+    """Create or update a SubmissionResult for a given submission + workflow run.
+
+    Accepts fields: transcription, transcription_confidence, transcribed_at,
+    score, feedback, grading_meta, graded_at.
+    """
+    result = (
+        db.query(SubmissionResult)
+        .filter(
+            SubmissionResult.submission_id == submission_id,
+            SubmissionResult.workflow_run_id == workflow_run_id,
+        )
+        .first()
+    )
+
+    if not result:
+        result = SubmissionResult(
+            submission_id=submission_id, workflow_run_id=workflow_run_id
+        )
+        db.add(result)
+
+    # Set supported fields if provided
+    for key in (
+        "transcription",
+        "transcription_confidence",
+        "transcribed_at",
+        "score",
+        "feedback",
+        "grading_meta",
+        "graded_at",
+    ):
+        if key in updates:
+            setattr(result, key, updates[key])
+
+    db.commit()
+    db.refresh(result)
+
+    await session.logger.debug(
+        f"Persisted result for submission {submission_id} in run {workflow_run_id}"
+    )
+    return result
 
 
 async def report_failure(
@@ -457,6 +507,17 @@ class SessionManager:
                                 f"Transcription result for unknown submission {sub_id}, skipping."
                             )
                             continue
+                        # Persist transcription result
+                        await _upsert_submission_result(
+                            db,
+                            session,
+                            submission_id=sub_id,
+                            workflow_run_id=session_id,
+                            transcription=transcribed.transcription,
+                            transcription_confidence=transcribed.confidence,
+                            transcribed_at=datetime.now(),
+                        )
+
                         updated_submissions.append(db_submission)
 
                     if updated_submissions:
@@ -597,6 +658,18 @@ class SessionManager:
                                         f"Grader result for unknown submission {original_id}, skipping."
                                     )
                                     continue
+
+                                # Persist grade result (upsert on existing submission_result)
+                                await _upsert_submission_result(
+                                    db,
+                                    session,
+                                    submission_id=original_id,
+                                    workflow_run_id=session_id,
+                                    score=grade_result.score,
+                                    feedback=grade_result.feedback,
+                                    grading_meta=grade_result.meta,
+                                    graded_at=datetime.now(),
+                                )
 
                                 to_update_success.append(db_sub)
 
