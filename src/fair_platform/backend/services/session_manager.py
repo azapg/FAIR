@@ -299,9 +299,18 @@ class SessionManager:
                 f"Transcriber Plugin: {workflow.transcriber_plugin_id}"
             )
 
-            transcriber_instance = transcriber_cls(
-                session.logger.get_child(workflow.transcriber_plugin_id)
-            )
+            try:
+                transcriber_instance = transcriber_cls(
+                    session.logger.get_child(workflow.transcriber_plugin_id)
+                )
+            except Exception as e:
+                return await report_failure(
+                    session,
+                    session_id,
+                    submission_ids,
+                    reason="Session failed due to transcriber plugin initialization error",
+                    log_message=f"Transcriber plugin initialization error: {e}",
+                )
 
             try:
                 transcriber_instance.set_values(workflow.transcriber_settings or {})
