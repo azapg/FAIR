@@ -26,6 +26,26 @@ fi
 cp -r frontend-dev/dist src/fair_platform/frontend/dist
 echo "Frontend assets copied to src/fair_platform/frontend"
 
+echo "Building documentation..."
+uvx --with mkdocs-static-i18n mkdocs build --config-file mkdocs.yml
+
+if [ ! -d "site" ]; then
+    echo "Error: MkDocs build did not produce a site directory"
+    exit 1
+fi
+
+DOCS_DEST="src/fair_platform/frontend/dist/docs"
+
+if [ -d "$DOCS_DEST" ]; then
+    rm -rf "$DOCS_DEST"
+fi
+
+mkdir -p "$(dirname "$DOCS_DEST")"
+cp -r site "$DOCS_DEST"
+rm -rf site
+
+echo "Documentation copied to $DOCS_DEST"
+
 echo "Building Python package..."
 uv build
 

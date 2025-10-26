@@ -74,3 +74,6 @@ python scripts/sync_version.py --version 0.0.0-dev
 The script keeps version numbers aligned, while `./build.sh` reproduces the same
 sequence of frontend and packaging steps that the workflow runs in CI. Clean the
 repository afterwards if you do not want to keep the temporary version change.
+
+> Looking for another language? A Spanish summary of this page lives under
+> **Desarrollo → Automatización de lanzamientos**.

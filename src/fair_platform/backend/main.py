@@ -67,6 +67,12 @@ def run(
             )
             app.mount("/data", StaticFiles(directory=dist_path / "data"), name="data")
 
+            docs_path = dist_path / "docs"
+            if docs_path.exists():
+                app.mount(
+                    "/docs", StaticFiles(directory=docs_path, html=True), name="docs"
+                )
+
         @app.middleware("http")
         async def spa_fallback(request, call_next):
             try:
