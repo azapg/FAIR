@@ -541,11 +541,16 @@ class SessionManager:
                     ) -> Tuple[SDKSubmission, TranscribedSubmission, GradeResult]:
                         async with semaphore:
                             if inspect.iscoroutinefunction(grader_instance.grade):
-                                result = await grader_instance.grade(transcribed_result)
+                                result = await grader_instance.grade(
+                                    transcribed_result, original
+                                )
                             else:
                                 loop = asyncio.get_running_loop()
                                 result = await loop.run_in_executor(
-                                    None, grader_instance.grade, transcribed_result
+                                    None,
+                                    grader_instance.grade,
+                                    transcribed_result,
+                                    original,
                                 )
                         return (original, transcribed_result, result)
 

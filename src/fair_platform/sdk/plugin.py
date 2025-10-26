@@ -5,7 +5,7 @@ from enum import Enum
 from fair_platform.backend.data.database import get_session
 from fair_platform.backend.data.models import Plugin
 from fair_platform.sdk import Submission, SettingsField
-from typing import Any, Type, List, Optional, Dict, Union
+from typing import Any, Type, List, Optional, Dict, Union, Tuple
 from pydantic import BaseModel, create_model
 
 from fair_platform.sdk.events import DebugEventBus
@@ -20,7 +20,9 @@ class BasePlugin:
             self.logger = logger
         else:
             self.logger = PluginLogger(
-                identifier=self.__class__.__name__, session_id="debug", bus=DebugEventBus()
+                identifier=self.__class__.__name__,
+                session_id="debug",
+                bus=DebugEventBus(),
             )
 
     def __init_subclass__(cls, **kwargs) -> None:
@@ -67,7 +69,6 @@ def create_settings_model(
 class TranscribedSubmission(BaseModel):
     transcription: str
     confidence: float
-    original_submission: Submission
 
 
 class TranscriptionPlugin(BasePlugin, ABC):
@@ -90,14 +91,16 @@ class GradeResult(BaseModel):
 
 class GradePlugin(BasePlugin, ABC):
     @abstractmethod
-    def grade(self, submission: TranscribedSubmission) -> GradeResult:
+    def grade(
+        self, transcribed: TranscribedSubmission, original: Submission
+    ) -> GradeResult:
         pass
 
     @abstractmethod
     def grade_batch(
-        self, submissions: List[TranscribedSubmission]
+        self, submissions: List[Tuple[TranscribedSubmission, Submission]]
     ) -> List[GradeResult]:
-        return [self.grade(submission=sub) for sub in submissions]
+        return [self.grade(*sub) for sub in submissions]
 
 
 class ValidationPlugin(BasePlugin, ABC):
