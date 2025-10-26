@@ -76,7 +76,6 @@ class TranscriptionPlugin(BasePlugin, ABC):
     def transcribe(self, submission: Submission) -> TranscribedSubmission:
         pass
 
-    @abstractmethod
     def transcribe_batch(
         self, submissions: List[Submission]
     ) -> List[TranscribedSubmission]:
@@ -96,7 +95,6 @@ class GradePlugin(BasePlugin, ABC):
     ) -> GradeResult:
         pass
 
-    @abstractmethod
     def grade_batch(
         self, submissions: List[Tuple[TranscribedSubmission, Submission]]
     ) -> List[GradeResult]:
@@ -110,7 +108,6 @@ class ValidationPlugin(BasePlugin, ABC):
     def validate_one(self, grade_result: Any) -> bool:
         pass
 
-    @abstractmethod
     def validate_batch(self, grade_results: List[Any]) -> List[bool]:
         # TODO: What if validate_one is not implemented? Some authors might
         #  only implement batch processing...
