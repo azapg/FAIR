@@ -17,10 +17,9 @@ class SettingsField(Generic[T], ABC):
 
     def __set_name__(self, owner: type, name: str) -> None:
         self.name = name
-        if not hasattr(owner, "_settings_fields"):
+        if "_settings_fields" not in owner.__dict__:
             owner._settings_fields = {}
         owner._settings_fields[name] = self
-
     @abstractmethod
     def to_pydantic_field(self):
         pass
