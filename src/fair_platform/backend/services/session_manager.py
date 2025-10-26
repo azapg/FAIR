@@ -2,16 +2,18 @@ import asyncio
 import inspect
 
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 from uuid import UUID, uuid4
 
 
 from fair_platform.backend.api.schema.submission import SubmissionBase
 from fair_platform.sdk import (
+    GradeResult,
     Submitter as SDKSubmitter,
     Assignment as SDKAssignment,
     Artifact as SDKArtifact,
     Submission as SDKSubmission,
+    TranscribedSubmission,
 )
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
 from fair_platform.backend.data.database import get_session
@@ -255,10 +257,10 @@ class SessionManager:
                 started_at=datetime.now(),
             )
 
-            submissions = (
+            updated_submissions = (
                 db.query(Submission).filter(Submission.id.in_(submission_ids)).all()
             )
-            if not submissions or len(submissions) == 0:
+            if not updated_submissions or len(updated_submissions) == 0:
                 return await report_failure(
                     session,
                     session_id,
@@ -270,13 +272,13 @@ class SessionManager:
             await _update_submissions(
                 db,
                 session,
-                submissions,
+                updated_submissions,
                 status=SubmissionStatus.processing,
                 official_run_id=workflow_run.id,
             )
 
             await session.logger.info(
-                f"Loaded {len(submissions)} submissions for processing"
+                f"Loaded {len(updated_submissions)} submissions for processing"
             )
 
         # Transcription
@@ -392,31 +394,37 @@ class SessionManager:
 
                 semaphore = asyncio.Semaphore(parallelism)
 
-                async def transcribe_wrapper(submission):
+                async def transcribe_wrapper(
+                    submission: SDKSubmission,
+                ) -> Tuple[SDKSubmission, TranscribedSubmission]:
                     async with semaphore:
                         if inspect.iscoroutinefunction(transcriber_instance.transcribe):
-                            return await transcriber_instance.transcribe(submission)
+                            result = await transcriber_instance.transcribe(submission)
                         else:
                             loop = asyncio.get_running_loop()
-                            return await loop.run_in_executor(
+                            result = await loop.run_in_executor(
                                 None, transcriber_instance.transcribe, submission
                             )
+                        return (submission, result)
 
-                results = await asyncio.gather(
+                transcription_results = await asyncio.gather(
                     *[transcribe_wrapper(sub) for sub in sdk_submissions],
                     return_exceptions=True,
                 )
 
                 with get_session() as db:
-                    submissions = []
-                    for res in results:
+                    updated_submissions = []
+                    for res in transcription_results:
                         if isinstance(res, Exception):
                             db_sub = db.get(
-                                Submission, UUID(sdk_submissions[results.index(res)].id)
+                                Submission,
+                                UUID(
+                                    sdk_submissions[transcription_results.index(res)].id
+                                ),
                             )
                             if not db_sub:
                                 await session.logger.warning(
-                                    f"Transcription result for unknown submission {sdk_submissions[results.index(res)].id}, skipping."
+                                    f"Transcription result for unknown submission {sdk_submissions[transcription_results.index(res)].id}, skipping."
                                 )
                                 continue
 
@@ -432,20 +440,21 @@ class SessionManager:
                             )
                             continue
 
-                        sub_id = UUID(res.original_submission.id)
+                        original, transcribed = res
+                        sub_id = UUID(original.id)
                         db_submission = db.get(Submission, sub_id)
                         if not db_submission:
                             await session.logger.warning(
                                 f"Transcription result for unknown submission {sub_id}, skipping."
                             )
                             continue
-                        submissions.append(db_submission)
+                        updated_submissions.append(db_submission)
 
-                    if submissions:
+                    if updated_submissions:
                         await _update_submissions(
                             db,
                             session,
-                            submissions,
+                            updated_submissions,
                             status=SubmissionStatus.transcribed,
                         )
 
@@ -470,6 +479,151 @@ class SessionManager:
                 reason="Session failed due to missing transcription step",
                 log_message="No transcription step found. Processing without transcription is not supported.",
             )
+
+        if workflow.grader_plugin_id:
+            await session.logger.info("Starting grading step")
+            grader_cls = get_plugin_object(workflow.grader_plugin_id)
+            if not grader_cls:
+                return await report_failure(
+                    session,
+                    session_id,
+                    submission_ids,
+                    reason="Session failed due to missing grader plugin",
+                    log_message="Grader plugin not found",
+                )
+
+            await session.logger.debug(f"Grader Plugin: {workflow.grader_plugin_id}")
+
+            try:
+                grader_instance = grader_cls(
+                    session.logger.get_child(workflow.grader_plugin_id)
+                )
+            except Exception as e:
+                return await report_failure(
+                    session,
+                    session_id,
+                    submission_ids,
+                    reason="Session failed due to grader plugin initialization error",
+                    log_message=f"Grader plugin initialization error: {e}",
+                )
+
+            try:
+                grader_instance.set_values(workflow.grader_settings or {})
+            except Exception as e:
+                return await report_failure(
+                    session,
+                    session_id,
+                    submission_ids,
+                    reason="Session failed due to grader configuration error",
+                    log_message=f"Grader configuration error: {e}",
+                )
+
+            try:
+                await session.logger.info("Preparing submissions for grading")
+
+                valid_t_results = [
+                    tr for tr in transcription_results if not isinstance(tr, Exception)
+                ]
+
+                if not valid_t_results:
+                    await session.logger.info(
+                        "No submissions to grade, skipping grading step"
+                    )
+                    grading_results = []
+                else:
+                    semaphore = asyncio.Semaphore(parallelism)
+
+                    # I want to have a reference of the original and the transcribed result after grading,
+                    # and because I can't pass them directly to asyncio.gather, I just wrap them here
+                    async def grade_wrapper(
+                        original: SDKSubmission,
+                        transcribed_result: TranscribedSubmission,
+                    ) -> Tuple[SDKSubmission, TranscribedSubmission, GradeResult]:
+                        async with semaphore:
+                            if inspect.iscoroutinefunction(grader_instance.grade):
+                                result = await grader_instance.grade(transcribed_result)
+                            else:
+                                loop = asyncio.get_running_loop()
+                                result = await loop.run_in_executor(
+                                    None, grader_instance.grade, transcribed_result
+                                )
+                        return (original, transcribed_result, result)
+
+                    grading_results = await asyncio.gather(
+                        *[grade_wrapper(*tr) for tr in valid_t_results],
+                        return_exceptions=True,
+                    )
+
+                    try:
+                        with get_session() as db:
+                            to_update_success = []
+                            to_update_failure = []
+
+                            for idx, res in enumerate(grading_results):
+                                if isinstance(res, Exception):
+                                    sub_id = UUID(valid_t_results[idx][0].id)
+                                    db_sub = db.get(Submission, sub_id)
+                                    if db_sub:
+                                        await session.logger.error(
+                                            f"Grading failed for submission {db_sub.id}: {res}"
+                                        )
+                                        to_update_failure.append(db_sub)
+                                    else:
+                                        await session.logger.warning(
+                                            f"Grading result for unknown submission {sdk_submissions[idx].id}, skipping."
+                                        )
+                                    continue
+
+                                original, _, grade_result = res
+                                original_id = UUID(original.id)
+
+                                db_sub = db.get(Submission, original_id)
+                                if not db_sub:
+                                    await session.logger.warning(
+                                        f"Grader result for unknown submission {original_id}, skipping."
+                                    )
+                                    continue
+
+                                to_update_success.append(db_sub)
+
+                            if to_update_failure:
+                                await _update_submissions(
+                                    db,
+                                    session,
+                                    to_update_failure,
+                                    status=SubmissionStatus.failure,
+                                )
+
+                            if to_update_success:
+                                await _update_submissions(
+                                    db,
+                                    session,
+                                    to_update_success,
+                                    status=SubmissionStatus.graded,
+                                )
+                    except Exception as e:
+                        await session.logger.debug(
+                            f"Grading result persistence failed: {e}"
+                        )
+                        return await report_failure(
+                            session,
+                            session_id,
+                            submission_ids,
+                            reason="Session failed while persisting grading results",
+                            log_message=f"Failed to persist grading results: {e}",
+                        )
+
+            except Exception as e:
+                await session.logger.debug(f"Grading failed: {e}")
+                return await report_failure(
+                    session,
+                    session_id,
+                    submission_ids,
+                    reason="Session failed due to grading error",
+                    log_message=f"Grading failed: {e}",
+                )
+
+            await session.logger.info("Grading step completed")
 
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
