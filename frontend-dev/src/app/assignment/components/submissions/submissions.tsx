@@ -146,7 +146,7 @@ export const columns: ColumnDef<Submission>[] = [
     },
   },
   {
-    accessorKey: "grade",
+    accessorKey: "officialResult.score",
     header: "Calificación",
     cell: (info) => {
       const grade = info.getValue();
@@ -162,7 +162,7 @@ export const columns: ColumnDef<Submission>[] = [
     },
   },
   {
-    accessorKey: "feedback",
+    accessorKey: "officialResult.feedback",
     header: "Retroalimentación",
     cell: (info) => {
       const feedback = info.getValue();

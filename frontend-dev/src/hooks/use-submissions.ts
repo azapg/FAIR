@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { Artifact } from "@/hooks/use-artifacts"
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
-export type SubmissionStatus = 
+export type SubmissionStatus =
   | "pending"
   | "submitted"
   | "transcribing"
@@ -13,13 +14,6 @@ export type SubmissionStatus =
   | "needs_review"
   | "failure"
 
-export type Artifact = {
-  id: string
-  title: string
-  content_type: string
-  created_at: string
-}
-
 export type Submitter = {
   id: string
   name: string
@@ -27,14 +21,30 @@ export type Submitter = {
   role: string
 }
 
+export type SubmissionResult = {
+  id: string
+  submissionId: string
+  workflowRunId: string
+
+  transcription?: string | null
+  transcriptionConfidence?: number | null
+  transcribedAt?: string | null
+
+  score?: number | null
+  feedback?: string | null
+  gradedAt?: string | null
+  gradingMeta?: Record<string, unknown> | null
+}
+
 export type Submission = {
   id: string
-  assignment_id: string
-  submitter_id: string
+  assignmentId: string
+  submitterId: string
   submitter?: Submitter
-  submitted_at: string
+  submittedAt: string
   status: SubmissionStatus
-  official_run_id?: string | null
+  officialRunId?: string | null
+  officialResult: SubmissionResult
   artifacts: Artifact[]
 }
 
@@ -62,6 +72,7 @@ export const submissionsKeys = {
 
 const fetchSubmissions = async (params?: ListParams): Promise<Submission[]> => {
   const res = await api.get('/submissions', { params })
+  console.log({data: res.data})
   return res.data
 }
 
@@ -72,20 +83,20 @@ const fetchSubmission = async (id: string): Promise<Submission> => {
 
 const createSubmission = async (data: CreateSubmissionInput): Promise<Submission> => {
   const formData = new FormData()
-  
+
   formData.append('assignment_id', data.assignment_id)
   formData.append('submitter_name', data.submitter_name)
-  
+
   if (data.artifact_ids && data.artifact_ids.length > 0) {
     formData.append('artifact_ids', JSON.stringify(data.artifact_ids))
   }
-  
+
   if (data.files && data.files.length > 0) {
     data.files.forEach(file => {
       formData.append('files', file)
     })
   }
-  
+
   const res = await api.post('/submissions', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -122,7 +133,7 @@ export function useSubmission(id: string) {
 
 export function useCreateSubmission() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: createSubmission,
     onSuccess: () => {
@@ -133,7 +144,7 @@ export function useCreateSubmission() {
 
 export function useUpdateSubmission() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateSubmissionInput }) =>
       updateSubmission(id, data),
@@ -146,7 +157,7 @@ export function useUpdateSubmission() {
 
 export function useDeleteSubmission() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: deleteSubmission,
     onSuccess: () => {
