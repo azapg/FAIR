@@ -19,7 +19,7 @@ import {
   LoaderIcon,
   PlusIcon,
   Save,
-  Trash,
+  Ban,
 } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import PluginSection from "@/app/assignment/components/sidebar/plugin-section";
@@ -250,7 +250,7 @@ const WorkflowSidebarRunButton = ({
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem disabled={!isRunning} variant="destructive">
-              <Trash /> Abort Workflow
+              <Ban /> Abort Workflow
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
