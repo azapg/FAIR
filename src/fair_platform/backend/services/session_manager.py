@@ -179,9 +179,6 @@ async def _upsert_submission_result(
     db.commit()
     db.refresh(result)
 
-    await session.logger.debug(
-        f"Persisted result for submission {submission_id} in run {workflow_run_id}"
-    )
     return result
 
 
@@ -286,8 +283,7 @@ class SessionManager:
         if not session:
             return -1
 
-        await session.logger.log(
-            "info",
+        await session.logger.info(
             f"Starting session for workflow {workflow.name} for {len(submission_ids)} submissions",
         )
 
@@ -327,10 +323,6 @@ class SessionManager:
                 official_run_id=workflow_run.id,
             )
 
-            await session.logger.info(
-                f"Loaded {len(updated_submissions)} submissions for processing"
-            )
-
         # Transcription
         if workflow.transcriber_plugin_id:
             await session.logger.info("Starting transcription step")
@@ -344,10 +336,6 @@ class SessionManager:
                     reason="Session failed due to missing transcriber plugin",
                     log_message="Transcriber plugin not found",
                 )
-
-            await session.logger.debug(
-                f"Transcriber Plugin: {workflow.transcriber_plugin_id}"
-            )
 
             try:
                 transcriber_instance = transcriber_cls(
@@ -385,6 +373,14 @@ class SessionManager:
                         )
                         .all()
                     )
+
+                    await _update_submissions(
+                        db,
+                        session,
+                        db_submissions,
+                        status=SubmissionStatus.transcribing,
+                    )
+
                     submitter_ids = [s.submitter_id for s in db_submissions]
                     submitters = db.query(User).filter(User.id.in_(submitter_ids)).all()
                     submitter_map = {u.id: u for u in submitters}
@@ -475,20 +471,17 @@ class SessionManager:
                     updated_submissions = []
                     for res in transcription_results:
                         if isinstance(res, Exception):
-                            db_sub = db.get(
-                                Submission,
-                                UUID(
-                                    sdk_submissions[transcription_results.index(res)].id
-                                ),
-                            )
+                            sdk_sub = sdk_submissions[transcription_results.index(res)]
+                            submitter = sdk_sub.submitter.name
+                            db_sub = db.get(Submission, UUID(sdk_sub.id))
                             if not db_sub:
                                 await session.logger.warning(
-                                    f"Transcription result for unknown submission {sdk_submissions[transcription_results.index(res)].id}, skipping."
+                                    f"Can't find {submitter}'s submission, skipping."
                                 )
                                 continue
 
                             await session.logger.error(
-                                f"Transcription failed for submission {db_sub.id}: {res}"
+                                f"Transcription failed for {submitter}'s submission: {res}"
                             )
 
                             await _update_submissions(
@@ -504,7 +497,7 @@ class SessionManager:
                         db_submission = db.get(Submission, sub_id)
                         if not db_submission:
                             await session.logger.warning(
-                                f"Transcription result for unknown submission {sub_id}, skipping."
+                                f"Can't find {original.submitter.name}'s submission, skipping."
                             )
                             continue
                         # Persist transcription result
@@ -529,7 +522,6 @@ class SessionManager:
                         )
 
             except Exception as e:
-                await session.logger.debug(f"Transcription failed: {e}")
                 return await report_failure(
                     session,
                     session_id,
@@ -562,8 +554,6 @@ class SessionManager:
                     log_message="Grader plugin not found",
                 )
 
-            await session.logger.debug(f"Grader Plugin: {workflow.grader_plugin_id}")
-
             try:
                 grader_instance = grader_cls(
                     session.logger.get_child(workflow.grader_plugin_id)
@@ -589,14 +579,26 @@ class SessionManager:
                 )
 
             try:
-                await session.logger.info("Preparing submissions for grading")
-
                 valid_t_results = [
                     tr for tr in transcription_results if not isinstance(tr, Exception)
                 ]
 
+                db_subs = []
+                with get_session() as db:
+                    for result in valid_t_results:
+                        db_sub = db.get(Submission, UUID(result[0].id))
+                        if db_sub:
+                            db_subs.append(db_sub)
+
+                    await _update_submissions(
+                        db,
+                        session,
+                        list(db_subs),
+                        status=SubmissionStatus.grading,
+                    )
+
                 if not valid_t_results:
-                    await session.logger.info(
+                    await session.logger.warning(
                         "No submissions to grade, skipping grading step"
                     )
                     grading_results = []
@@ -635,17 +637,19 @@ class SessionManager:
                             to_update_failure = []
 
                             for idx, res in enumerate(grading_results):
+                                sdk_sub = valid_t_results[idx][0]
+                                submitter = sdk_sub.submitter.name
                                 if isinstance(res, Exception):
                                     sub_id = UUID(valid_t_results[idx][0].id)
                                     db_sub = db.get(Submission, sub_id)
                                     if db_sub:
                                         await session.logger.error(
-                                            f"Grading failed for submission {db_sub.id}: {res}"
+                                            f"Grading failed for {submitter}'s submission: {res}"
                                         )
                                         to_update_failure.append(db_sub)
                                     else:
                                         await session.logger.warning(
-                                            f"Grading result for unknown submission {sdk_submissions[idx].id}, skipping."
+                                            f"Can't find {submitter}'s submission, skipping."
                                         )
                                     continue
 
@@ -655,7 +659,7 @@ class SessionManager:
                                 db_sub = db.get(Submission, original_id)
                                 if not db_sub:
                                     await session.logger.warning(
-                                        f"Grader result for unknown submission {original_id}, skipping."
+                                        f"Can't find {original.submitter.name}'s submission, skipping."
                                     )
                                     continue
 
@@ -689,9 +693,6 @@ class SessionManager:
                                     status=SubmissionStatus.graded,
                                 )
                     except Exception as e:
-                        await session.logger.debug(
-                            f"Grading result persistence failed: {e}"
-                        )
                         return await report_failure(
                             session,
                             session_id,
@@ -701,7 +702,6 @@ class SessionManager:
                         )
 
             except Exception as e:
-                await session.logger.debug(f"Grading failed: {e}")
                 return await report_failure(
                     session,
                     session_id,

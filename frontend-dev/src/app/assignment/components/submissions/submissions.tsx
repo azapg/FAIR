@@ -31,6 +31,7 @@ import { RuntimePlugin } from "@/hooks/use-plugins";
 import { useWorkflows } from "@/hooks/use-workflows";
 import { SubmissionStatus, Submission } from "@/hooks/use-submissions";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { isNumber } from "util";
 
 function formatShortDate(date: Date) {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -151,7 +152,7 @@ export const columns: ColumnDef<Submission>[] = [
     header: "Calificación",
     cell: (info) => {
       const grade = info.getValue();
-      return grade !== undefined ? `${grade}/100` : "—";
+      return typeof grade === 'number' ? `${grade}/100` : "—";
     },
   },
   {
