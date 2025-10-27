@@ -41,6 +41,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ExecutionLogsView } from "@/app/assignment/components/sidebar/execution-logs-view";
+import { setHeapSnapshotNearHeapLimit } from "node:v8";
 
 export function WorkflowsSidebar({
   side,
@@ -111,6 +112,9 @@ export function WorkflowsSidebar({
       setCurrentSession(response.data.session);
     } catch (error) {
       console.error("Failed to start workflow run", error);
+      setIsRunning(false);
+      setShowLogs(false);
+      alert(`Failed to start workflow run. Please try again. Error: ${error}`);
     }
   };
 

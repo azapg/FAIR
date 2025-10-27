@@ -84,11 +84,8 @@ export default function PluginSection({
         plugins: {
           ...(currentDraft?.plugins || {}),
           [type]: {
-            id: plugin.id,
-            version: plugin.version,
-            hash: plugin.hash,
+            ...plugin,
             settings: {},
-            settingsSchema: plugin.settingsSchema,
           },
         },
       });

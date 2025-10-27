@@ -72,7 +72,6 @@ export const submissionsKeys = {
 
 const fetchSubmissions = async (params?: ListParams): Promise<Submission[]> => {
   const res = await api.get('/submissions', { params })
-  console.log({data: res.data})
   return res.data
 }
 
