@@ -2,13 +2,28 @@ import inspect
 from abc import ABC, abstractmethod
 from enum import Enum
 
+from fair_platform.backend.data.database import get_session
+from fair_platform.backend.data.models import Plugin
 from fair_platform.sdk import Submission, SettingsField
-from typing import Any, Type, List, Optional, Dict, Union
+from typing import Any, Type, List, Optional, Dict, Union, Tuple
 from pydantic import BaseModel, create_model
+
+from fair_platform.sdk.events import DebugEventBus
+from fair_platform.sdk.logger import PluginLogger
 
 
 class BasePlugin:
     _settings_fields: dict[str, SettingsField[Any]]
+
+    def __init__(self, logger: Optional[PluginLogger]) -> None:
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = PluginLogger(
+                identifier=self.__class__.__name__,
+                session_id="debug",
+                bus=DebugEventBus(),
+            )
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -54,7 +69,6 @@ def create_settings_model(
 class TranscribedSubmission(BaseModel):
     transcription: str
     confidence: float
-    original_submission: Submission
 
 
 class TranscriptionPlugin(BasePlugin, ABC):
@@ -62,7 +76,6 @@ class TranscriptionPlugin(BasePlugin, ABC):
     def transcribe(self, submission: Submission) -> TranscribedSubmission:
         pass
 
-    @abstractmethod
     def transcribe_batch(
         self, submissions: List[Submission]
     ) -> List[TranscribedSubmission]:
@@ -77,14 +90,15 @@ class GradeResult(BaseModel):
 
 class GradePlugin(BasePlugin, ABC):
     @abstractmethod
-    def grade(self, submission: TranscribedSubmission) -> GradeResult:
+    def grade(
+        self, transcribed: TranscribedSubmission, original: Submission
+    ) -> GradeResult:
         pass
 
-    @abstractmethod
     def grade_batch(
-        self, submissions: List[TranscribedSubmission]
+        self, submissions: List[Tuple[TranscribedSubmission, Submission]]
     ) -> List[GradeResult]:
-        return [self.grade(submission=sub) for sub in submissions]
+        return [self.grade(*sub) for sub in submissions]
 
 
 class ValidationPlugin(BasePlugin, ABC):
@@ -94,7 +108,6 @@ class ValidationPlugin(BasePlugin, ABC):
     def validate_one(self, grade_result: Any) -> bool:
         pass
 
-    @abstractmethod
     def validate_batch(self, grade_results: List[Any]) -> List[bool]:
         # TODO: What if validate_one is not implemented? Some authors might
         #  only implement batch processing...
@@ -180,34 +193,45 @@ class FairPlugin:
                 "FairPlugin decorator can only be applied to subclasses of TranscriptionPlugin, GradePlugin, or ValidationPlugin"
             )
 
-        metadata = PluginMeta(
-            id=self.id,
-            name=self.name,
-            author=self.author,
-            description=self.description,
-            version=self.version,
-            hash=extension_hash,
-            source=source,
-            author_email=self.author_email,
-            settings_schema=create_settings_model(cls).model_json_schema(),
-            type=plugin_type,
-        )
+        plugin_args = {
+            "id": self.id,
+            "name": self.name,
+            "author": self.author,
+            "description": self.description,
+            "version": self.version,
+            "hash": extension_hash,
+            "source": source,
+            "author_email": self.author_email,
+            "settings_schema": create_settings_model(cls).model_json_schema(),
+            "type": plugin_type,
+        }
 
-        PLUGINS[self.name] = metadata
-        PLUGINS_OBJECTS[self.name] = cls
+        plugin = Plugin(**plugin_args)
+        runtime_plugin = PluginMeta(**plugin_args)
+
+        # TODO: Bruh, this technically means that extensions can write to the DB
+        #  directly. Until this is fully sandboxed, FAIR shouldn't be marked as production-ready.
+        with get_session() as session:
+            merged_plugin = session.merge(plugin)
+            session.commit()
+            session.refresh(merged_plugin)
+
+        # TODO: Replace id with hash. For now, this is fine to avoid changing workflows schema.
+        PLUGINS[self.id] = runtime_plugin
+        PLUGINS_OBJECTS[self.id] = cls
         return cls
 
 
-def get_plugin_metadata(name: str) -> Optional[PluginMeta]:
-    return PLUGINS.get(name)
+def get_plugin_metadata(id: str) -> Optional[PluginMeta]:
+    return PLUGINS.get(id)
 
 
 def get_plugin_object(
-    name: str,
+    id: str,
 ) -> Optional[
     Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]
 ]:
-    return PLUGINS_OBJECTS.get(name)
+    return PLUGINS_OBJECTS.get(id)
 
 
 def list_plugins(plugin_type: Optional[PluginType] = None) -> List[PluginMeta]:

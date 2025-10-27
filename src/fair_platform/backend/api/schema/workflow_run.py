@@ -43,7 +43,7 @@ class WorkflowRunUpdate(BaseModel):
 class WorkflowRunRead(WorkflowRunBase):
     id: UUID
     run_by: UUID
-    started_at: datetime
+    started_at: Optional[datetime]
     finished_at: Optional[datetime] = None
 
 

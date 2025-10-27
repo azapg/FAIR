@@ -1,32 +1,55 @@
-import {PluginType, usePlugins, RuntimePluginRead} from "@/hooks/use-plugins";
-import {PropsWithChildren, useEffect, useState} from "react";
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {PluginSettings} from "@/app/assignment/components/sidebar/plugin-settings";
-import {Button} from "@/components/ui/button";
-import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
-import {SidebarGroup, SidebarGroupContent, SidebarGroupLabel} from "@/components/ui/sidebar";
-import {Plus} from "lucide-react";
-import {useWorkflowStore} from "@/store/workflows-store";
+import { PluginType, usePlugins, RuntimePluginRead } from "@/hooks/use-plugins";
+import { PropsWithChildren, useEffect, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PluginSettings } from "@/app/assignment/components/sidebar/plugin-settings";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+} from "@/components/ui/sidebar";
+import { Plus } from "lucide-react";
+import { useWorkflowStore } from "@/store/workflows-store";
 
 type PluginSectionProps = {
   title: string;
   action: string;
   type: PluginType;
-}
+};
 
-export default function PluginSection({title, action, type}: PluginSectionProps) {
-  const {data: plugins = [], isLoading, isError} = usePlugins(type);
-  const [selectedPlugin, setSelectedPlugin] = useState<RuntimePluginRead | null>(null);
-  const saveDraft = useWorkflowStore(state => state.saveDraft);
-  const currentDraft = useWorkflowStore(
-    s => (s.activeWorkflowId ? s.drafts[s.activeWorkflowId] : undefined)
+export default function PluginSection({
+  title,
+  action,
+  type,
+}: PluginSectionProps) {
+  const { data: plugins = [], isLoading, isError } = usePlugins(type);
+  const [selectedPlugin, setSelectedPlugin] =
+    useState<RuntimePluginRead | null>(null);
+  const saveDraft = useWorkflowStore((state) => state.saveDraft);
+  const activeCourseId = useWorkflowStore((state) => state.activeCourseId);
+  const currentDraft = useWorkflowStore((s) =>
+    s.activeWorkflowId ? s.drafts[s.activeWorkflowId] : undefined,
   );
-
 
   useEffect(() => {
     const pluginInDraft = currentDraft?.plugins[type];
     if (pluginInDraft) {
-      const plugin = plugins.find((p) => p.id === pluginInDraft.id && p.hash === pluginInDraft.hash);
+      const plugin = plugins.find(
+        // TODO: We should also check the hash, but I haven't implemented a good way to let the user know the difference yet.
+        (p) => p.id === pluginInDraft.id /*&& p.hash === pluginInDraft.hash*/,
+      );
+
       if (plugin) {
         setSelectedPlugin(plugin);
       } else {
@@ -37,7 +60,6 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
     }
   }, [currentDraft, plugins]);
 
-
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -47,38 +69,44 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
   }
 
   const runStep = () => {
-    console.log({currentDraft});
-  }
+    console.log({ currentDraft });
+  };
 
   const onSelectPluginChange = (id: string) => {
     const plugin = plugins.find((p) => p.id === id);
     if (plugin) {
       setSelectedPlugin(plugin);
       saveDraft({
+        workflowId: currentDraft?.workflowId || crypto.randomUUID(),
+        name: currentDraft?.name || "Default Workflow",
+        courseId: activeCourseId || "",
         ...currentDraft,
         plugins: {
           ...(currentDraft?.plugins || {}),
           [type]: {
-            id: plugin.id,
-            version: plugin.version,
-            hash: plugin.hash,
+            ...plugin,
             settings: {},
-            settings_schema: plugin.settings_schema
-          }
-        }
+          },
+        },
       });
     } else {
       setSelectedPlugin(null);
     }
-  }
+  };
 
   return (
     <SectionContainer title={title}>
-      <Select onValueChange={onSelectPluginChange} value={selectedPlugin?.id || ''}>
+      <Select
+        onValueChange={onSelectPluginChange}
+        value={selectedPlugin?.id || ""}
+      >
         <SelectTrigger className="w-full" size={"sm"}>
           <SelectValue placeholder="Select plugin" />
         </SelectTrigger>
-        <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
+        <SelectContent
+          position="popper"
+          className="w-[--radix-select-trigger-width]"
+        >
           {plugins?.map((option) => (
             <SelectItem key={option.id} value={option.id}>
               {option.name}
@@ -87,28 +115,37 @@ export default function PluginSection({title, action, type}: PluginSectionProps)
         </SelectContent>
       </Select>
 
-      {selectedPlugin && currentDraft && <PluginSettings
+      {selectedPlugin && currentDraft && (
+        <PluginSettings
           key={`${type}-settings-${selectedPlugin.id}-${selectedPlugin.hash}`}
           plugin={selectedPlugin}
           values={currentDraft.plugins[type]?.settings}
-      />}
-      <Button variant={"secondary"} onClick={runStep}>{action}</Button>
+        />
+      )}
+      <Button variant={"secondary"} onClick={runStep}>
+        {action}
+      </Button>
     </SectionContainer>
-  )
+  );
 }
 
 type SectionContainerProps = PropsWithChildren<{
-  title: string
-  defaultOpen?: boolean
-  className?: string
-}>
+  title: string;
+  defaultOpen?: boolean;
+  className?: string;
+}>;
 
-function SectionContainer({title, defaultOpen = true, className, children}: SectionContainerProps) {
+function SectionContainer({
+  title,
+  defaultOpen = true,
+  className,
+  children,
+}: SectionContainerProps) {
   return (
     <Collapsible defaultOpen={defaultOpen} className="group/collapsible">
       <SidebarGroup className={`group/section ${className ?? ""}`}>
         <SidebarGroupLabel>
-          <SectionTrigger title={title}/>
+          <SectionTrigger title={title} />
         </SidebarGroupLabel>
         <CollapsibleContent>
           <SidebarGroupContent className="flex flex-col pt-2 px-2 gap-6">
@@ -117,16 +154,20 @@ function SectionContainer({title, defaultOpen = true, className, children}: Sect
         </CollapsibleContent>
       </SidebarGroup>
     </Collapsible>
-  )
+  );
 }
 
 type SectionTriggerProps = {
-  title: string
-  className?: string
-  iconSize?: number
-}
+  title: string;
+  className?: string;
+  iconSize?: number;
+};
 
-function SectionTrigger({ title, className, iconSize = 12 }: SectionTriggerProps) {
+function SectionTrigger({
+  title,
+  className,
+  iconSize = 12,
+}: SectionTriggerProps) {
   return (
     <CollapsibleTrigger
       className={`group/trigger flex w-full justify-between items-center text-base text-foreground cursor-pointer ${className ?? ""}`}
@@ -142,5 +183,5 @@ function SectionTrigger({ title, className, iconSize = 12 }: SectionTriggerProps
         />
       </span>
     </CollapsibleTrigger>
-  )
+  );
 }

@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .assignment import Assignment
     from .workflow_run import WorkflowRun
     from .artifact import Artifact
+    from .submission_result import SubmissionResult
 
 submission_workflow_runs = Table(
     "submission_workflow_runs",
@@ -57,6 +58,7 @@ class SubmissionStatus(str, Enum):
     graded = "graded"
     needs_review = "needs_review"
     failure = "failure"
+    processing = "processing"
 
 
 class Submission(Base):
@@ -98,4 +100,11 @@ class Submission(Base):
         "Artifact",
         secondary="submission_artifacts",
         back_populates="submissions",
+    )
+
+    # Processing results (per workflow run)
+    results: Mapped[List["SubmissionResult"]] = relationship(
+        "SubmissionResult",
+        back_populates="submission",
+        cascade="all, delete-orphan",
     )

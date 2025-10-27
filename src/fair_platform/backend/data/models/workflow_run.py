@@ -9,6 +9,7 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .submission import Submission
+    from .submission_result import SubmissionResult
 
 
 class WorkflowRunStatus(str, Enum):
@@ -27,7 +28,7 @@ class WorkflowRun(Base):
         SAUUID, ForeignKey("workflows.id"), nullable=False
     )
     run_by: Mapped[UUID] = mapped_column(SAUUID, ForeignKey("users.id"), nullable=False)
-    started_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=True)
     finished_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     status: Mapped[WorkflowRunStatus] = mapped_column(String, nullable=False)
     logs: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
@@ -40,6 +41,9 @@ class WorkflowRun(Base):
         back_populates="runs",
     )
     runner = relationship("User", back_populates="workflow_runs")
+    results: Mapped[List["SubmissionResult"]] = relationship(
+        "SubmissionResult", back_populates="workflow_run", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<WorkflowRun id={self.id} workflow_id={self.workflow_id} status={self.status}>"

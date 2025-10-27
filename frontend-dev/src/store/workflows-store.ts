@@ -1,56 +1,44 @@
-import {create} from 'zustand';
-import {persist} from "zustand/middleware";
-import {Plugin, RuntimePlugin} from "@/hooks/use-plugins";
-import api from "@/lib/api";
+import { createWithEqualityFn } from "zustand/traditional";
+import { persist } from "zustand/middleware";
+import { RuntimePlugin, RuntimePluginRead } from "@/hooks/use-plugins";
 
 export type WorkflowRunCreate = {
-  status: 'pending' | 'running' | 'success' | 'failure' | 'cancelled';
+  status: "pending" | "running" | "success" | "failure" | "cancelled";
   runBy: string;
   logs: any;
   submissions: any; // TODO: submission object
-}
+};
 
 export type WorkflowRun = WorkflowRunCreate & {
   id: string;
   workflowId: string;
   startedAt: string;
   finishedAt: string | null;
-}
+};
 
 export type WorkflowCreate = {
   name: string;
   courseId: string;
   description?: string;
   plugins: {
-    transcriber?: Plugin,
-    grader?: Plugin,
-    validator?: Plugin,
-  }
-}
+    transcriber?: RuntimePlugin;
+    grader?: RuntimePlugin;
+    validator?: RuntimePlugin;
+  };
+};
 
 export type Workflow = WorkflowCreate & {
   id: string;
   createdAt: string;
   creatorId: string;
   runs?: WorkflowRun[];
-}
+};
 
-export type PluginSummary = Pick<RuntimePlugin, 'id' | 'version' | 'hash' | 'settings' | 'settings_schema'>;
-
-export type WorkflowDraft = {
+export type WorkflowDraft = WorkflowCreate & {
   workflowId: string;
-  name?: string;
-  description?: string;
-  plugins: {
-    transcriber?: PluginSummary;
-    grader?: PluginSummary;
-    validator?: PluginSummary;
-  }
-}
+};
 
 type State = {
-  workflows?: Workflow[]; // TODO: made optional for initial load, but i should probably add a "isLoaded" flag or something
-  isLoadingWorkflows?: boolean;
   /**
    * Represents the active workflows in each course being edited but not yet saved to the backend.
    * This allows users to make changes and see a preview before committing.
@@ -59,160 +47,111 @@ type State = {
   coursesActiveWorkflows: Record<string, string>; // courseId -> workflowId
   activeCourseId?: string;
   activeWorkflowId?: string;
-}
+};
 
 type Actions = {
-  loadWorkflows: () => Promise<void>;
-  createWorkflow: (name: string, description?: string) => Promise<void>;
-
   setActiveCourseId: (courseId: string) => void;
   setActiveWorkflowId: (workflowId: string) => void;
-  getActiveWorkflow: () => Workflow | undefined;
-
   /**
    * Save or update the draft for the currently active workflow.
    * Does not persist to backend until explicitly saved.
    * @param draft The draft data to save.
    */
-  saveDraft: (draft: Partial<WorkflowDraft>) => void;
+  saveDraft: (draft: WorkflowDraft) => void;
   clearDraft: (workflowId: string) => void;
-}
+  /**
+   * Patch a single plugin setting for the active workflow.
+   * Avoids reading drafts from components and updates only the necessary slice.
+   */
+  patchActivePluginSetting: (
+    plugin: RuntimePluginRead,
+    key: string,
+    value: any,
+    fallback?: Record<string, any>,
+  ) => void;
+};
 
-export const useWorkflowStore = create<State & Actions>()(
+export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
   persist(
     (set, get) => ({
-      workflows: undefined,
       drafts: {},
       activeCourseId: undefined,
       activeWorkflowId: undefined,
       coursesActiveWorkflows: {},
-      isLoadingWorkflows: false,
-
-      loadWorkflows: async () => {
-        const { activeCourseId: course_id, activeWorkflowId } = get();
-        if (!course_id) {
-          throw new Error('No active course selected');
-        }
-
-        try {
-          set({isLoadingWorkflows: true });
-          const response = await api.get('/workflows', {params: {course_id: course_id}}) as { data: Workflow[] };
-
-          if (response.data.length === 0) {
-            const { createWorkflow } = get();
-            await createWorkflow('Default Workflow', 'This is your default workflow. You can edit it as needed.');
-          } else {
-            set({workflows: response.data});
-          }
-
-          if (activeWorkflowId) {
-            const exists = response.data.some(w => w.id === activeWorkflowId);
-            if (!exists) {
-              set({activeWorkflowId: undefined});
-            }
-          } else {
-            const lastActiveId = get().coursesActiveWorkflows[course_id];
-            if (lastActiveId) {
-              const exists = response.data.some(w => w.id === lastActiveId);
-              if (exists) {
-                set({activeWorkflowId: lastActiveId});
-              }
-            }
-          }
-        } catch (error) {
-          throw new Error('Failed to load workflows', {cause: error});
-        }
-
-        set({isLoadingWorkflows: false});
-      },
-      setActiveCourseId: (courseId: string) => set({activeCourseId: courseId}),
+      setActiveCourseId: (courseId: string) =>
+        set({ activeCourseId: courseId }),
       setActiveWorkflowId: (workflowId: string) => {
-        const { workflows = [], activeCourseId } = get()
-        const workflow = workflows.find(w => w.id === workflowId)
-
-        if (workflow) {
-          set({activeWorkflowId: workflowId})
-          if (activeCourseId) {
-            set(state => ({
-              coursesActiveWorkflows: {
-                ...state.coursesActiveWorkflows,
-                [activeCourseId]: workflowId
-              }
-            }))
-          }
+        const { activeCourseId } = get();
+        set({ activeWorkflowId: workflowId });
+        if (activeCourseId) {
+          set((state) => ({
+            coursesActiveWorkflows: {
+              ...state.coursesActiveWorkflows,
+              [activeCourseId]: workflowId,
+            },
+          }));
         }
       },
-      getActiveWorkflow: () => {
-        const {workflows = [], activeCourseId, coursesActiveWorkflows, activeWorkflowId} = get()
-        let active = workflows.find(w => w.id === activeWorkflowId)
-        if (!active && activeCourseId) {
-          const lastActiveId = coursesActiveWorkflows[activeCourseId]
-          active = workflows.find(w => w.id === lastActiveId)
-        }
-        return active
-      },
+      saveDraft: (draft: WorkflowDraft) => {
+        const { drafts } = get();
 
-      createWorkflow: async (name: string, description?: string): Promise<void> => {
-        const { activeCourseId, workflows = [], setActiveWorkflowId } = get()
-
-        if (!activeCourseId) {
-          throw new Error('No active course selected')
-        }
-
-        const newWorkflow: WorkflowCreate = {
-          courseId: activeCourseId,
-          name,
-          description: description || '',
-          plugins: {}
-        }
-
-        try {
-          const created = await api.post('/workflows', newWorkflow) as { data: Workflow }
-          set({workflows: [...workflows, created.data]})
-          setActiveWorkflowId(created.data.id)
-        } catch (error) {
-          throw new Error('Failed to create workflow', {cause: error})
-        }
-
-      },
-      saveDraft: (draft: Partial<WorkflowDraft>) => {
-        // TODO: I could get a workflowId param instead of relying on activeWorkflowId, or get the draft.workflowId and update that...
-        const {activeWorkflowId, drafts} = get();
-        if (!activeWorkflowId) {
-          throw new Error('No active workflow selected');
-        }
-
-        const existingDraft = drafts ? drafts[activeWorkflowId] : undefined;
+        const existingDraft = drafts ? drafts[draft.workflowId] : undefined;
         const updatedDraft = {
           ...existingDraft,
           ...draft,
-          workflowId: activeWorkflowId,
           plugins: {
             ...existingDraft?.plugins,
-            ...draft.plugins
-          }
+            ...draft.plugins,
+          },
         };
 
-        set(state => ({
+        set((state) => ({
           drafts: {
             ...state.drafts,
-            [activeWorkflowId]: updatedDraft
-          }
+            [draft.workflowId]: updatedDraft,
+          },
         }));
       },
-      clearDraft: (workflowId: string ) => {
-        set(state => {
+      clearDraft: (workflowId: string) => {
+        set((state) => {
           const newDrafts = { ...state.drafts };
           delete newDrafts[workflowId];
           return { drafts: newDrafts };
         });
-      }
-    }), {
-      name: 'WorkflowsStore',
+      },
+      patchActivePluginSetting: (plugin, key, value, fallback) => {
+        set((state) => {
+          const workflowId = state.activeWorkflowId || "";
+          const currentDraft = state.drafts[workflowId];
+          if (!workflowId || !currentDraft) return state;
+
+          const prevPlugin = currentDraft.plugins?.[plugin.type];
+          const prevSettings = prevPlugin?.settings ?? fallback ?? {};
+          const newSettings = { ...prevSettings, [key]: value };
+          const summary: RuntimePlugin = { ...plugin, settings: newSettings };
+
+          return {
+            drafts: {
+              ...state.drafts,
+              [workflowId]: {
+                ...currentDraft,
+                plugins: {
+                  ...(currentDraft.plugins || {}),
+                  [plugin.type]: summary,
+                },
+              },
+            },
+          };
+        });
+      },
+    }),
+    {
+      name: "workflows-store",
       partialize: (state) => ({
         coursesActiveWorkflows: state.coursesActiveWorkflows,
         drafts: state.drafts,
-      })
-    }
-  )
-)
+        activeWorkflowId: state.activeWorkflowId, // TODO: Couldn't I just access coursesActiveWorkflows[courseId].id?
+      }),
+    },
+  ),
+);

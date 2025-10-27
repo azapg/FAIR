@@ -1,6 +1,5 @@
-import {ColumnDef} from "@tanstack/react-table"
+import { ColumnDef } from "@tanstack/react-table";
 import {
-  ChevronRight,
   Ellipsis,
   History,
   Loader,
@@ -12,36 +11,27 @@ import {
   CircleCheck,
   CircleAlert,
   TriangleAlert,
-  Circle, BlocksIcon
+  Circle,
+  BlocksIcon,
 } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem, DropdownMenuPortal,
-  DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
+  DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {PluginSummary, useWorkflowStore, Workflow} from "@/store/workflows-store";
-
-export type SubmissionStatus =
-  "pending"
-  | "submitted"
-  | "transcribing"
-  | "transcribed"
-  | "grading"
-  | "graded"
-  | "needs_review"
-  | "failure";
-
-export type Submission = {
-  id: string;
-  name: string;
-  status: SubmissionStatus; // simplified
-  grade?: number; // TODO: This could be more complex (e.g., letter grade, percentage, etc.).
-  feedback?: string;
-  submittedAt?: Date;
-}
+} from "@/components/ui/dropdown-menu";
+import { useWorkflowStore, Workflow } from "@/store/workflows-store";
+import { RuntimePlugin } from "@/hooks/use-plugins";
+import { useWorkflows } from "@/hooks/use-workflows";
+import { SubmissionStatus, Submission } from "@/hooks/use-submissions";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { isNumber } from "util";
 
 function formatShortDate(date: Date) {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -54,23 +44,83 @@ function formatShortDate(date: Date) {
 
 const defaultSize = 14;
 
-const STATUS_META: Record<string, { label: string; color: string; icon?: ReactNode }> = {
-  pending: {label: "Pendiente", color: "black", icon: <SquircleDashed size={defaultSize}/>},
-  submitted: {label: "Entregado", color: "gray-500", icon: <Circle size={defaultSize}/> },
-  transcribing: {label: "Transcribiendo", color: "yellow-500", icon: <Loader className="animate-spin [animation-duration:4.0s]" size={defaultSize}/>},
-  transcribed: {label: "Transcrito", color: "blue-500", icon: <CircleCheck size={defaultSize}/>},
-  grading: {label: "Calificando", color: "yellow-500", icon: <Loader className="animate-spin [animation-duration:4.0s]" size={defaultSize}/>},
-  graded: {label: "Calificado", color: "blue-500", icon: <CircleCheck size={defaultSize}/>},
-  needs_review: {label: "Requiere Revisión", color: "orange-500", icon: <CircleAlert size={defaultSize}/>},
-  failure: {label: "Error", color: "red-500", icon: <TriangleAlert size={defaultSize}/> },
+const STATUS_META: Record<
+  string,
+  { label: string; color: string; icon?: ReactNode }
+> = {
+  pending: {
+    label: "Pendiente",
+    color: "black",
+    icon: <SquircleDashed size={defaultSize} />,
+  },
+  submitted: {
+    label: "Entregado",
+    color: "gray-500",
+    icon: <Circle size={defaultSize} />,
+  },
+  transcribing: {
+    label: "Transcribiendo",
+    color: "yellow-500",
+    icon: (
+      <Loader
+        className="animate-spin [animation-duration:4.0s]"
+        size={defaultSize}
+      />
+    ),
+  },
+  transcribed: {
+    label: "Transcrito",
+    color: "blue-500",
+    icon: <CircleCheck size={defaultSize} />,
+  },
+  grading: {
+    label: "Calificando",
+    color: "yellow-500",
+    icon: (
+      <Loader
+        className="animate-spin [animation-duration:4.0s]"
+        size={defaultSize}
+      />
+    ),
+  },
+  graded: {
+    label: "Calificado",
+    color: "blue-500",
+    icon: <CircleCheck size={defaultSize} />,
+  },
+  needs_review: {
+    label: "Requiere Revisión",
+    color: "orange-500",
+    icon: <CircleAlert size={defaultSize} />,
+  },
+  failure: {
+    label: "Error",
+    color: "red-500",
+    icon: <TriangleAlert size={defaultSize} />,
+  },
+  processing: {
+    label: "Procesando",
+    color: "yellow-500",
+    icon: (
+      <Loader
+        className="animate-spin [animation-duration:4.0s]"
+        size={defaultSize}
+      />
+    ),
+  },
 };
 
 interface SubmissionStatusLabelProps {
   status: SubmissionStatus | string;
 }
 
-export const SubmissionStatusLabel = ({status}: SubmissionStatusLabelProps) => {
-  const meta = STATUS_META[status] ?? {label: "Desconocido", color: "gray-500"};
+export const SubmissionStatusLabel = ({
+  status,
+}: SubmissionStatusLabelProps) => {
+  const meta = STATUS_META[status] ?? {
+    label: "Desconocido",
+    color: "gray-500",
+  };
 
   return (
     <span
@@ -78,134 +128,204 @@ export const SubmissionStatusLabel = ({status}: SubmissionStatusLabelProps) => {
         text-${meta.color} bg-${meta.color}/10`}
     >
       {meta.icon}
-      <span className="text-foreground">
-        {meta.label}
-      </span>
+      <span className="text-foreground">{meta.label}</span>
     </span>
   );
-}
+};
 
 export const columns: ColumnDef<Submission>[] = [
   {
-    accessorKey: "name",
+    accessorKey: "submitter.name",
     header: "Nombre del Estudiante",
-    cell: info => info.getValue(),
+    cell: (info) => info.getValue(),
   },
   {
     accessorKey: "status",
     header: "Estado",
-    cell: info => {
+    cell: (info) => {
       const status = info.getValue() as SubmissionStatus;
-      return <SubmissionStatusLabel status={status}/>;
-    }
+      return <SubmissionStatusLabel status={status} />;
+    },
   },
   {
-    accessorKey: "grade",
+    accessorKey: "officialResult.score",
     header: "Calificación",
-    cell: info => {
+    cell: (info) => {
       const grade = info.getValue();
-      return grade !== undefined ? `${grade}/100` : "—";
-    }
+      return typeof grade === 'number' ? `${grade}/100` : "—";
+    },
   },
   {
     accessorKey: "submittedAt",
     header: "Fecha de Entrega",
-    cell: info => {
+    cell: (info) => {
       const date = info.getValue() as Date;
       return date ? formatShortDate(new Date(date)) : "—";
-    }
+    },
   },
   {
-    accessorKey: "feedback",
+    accessorKey: "officialResult.feedback",
     header: "Retroalimentación",
-    cell: info => {
-      const feedback = info.getValue();
-      return feedback ? feedback : "—";
-    }
+    cell: (info) => {
+      const feedback = info.getValue() as string | undefined;
+      if (!feedback) return "—";
+
+      const maxLength = 50;
+      const abbreviated = feedback.length > maxLength
+        ? `${feedback.slice(0, maxLength)}...`
+        : feedback;
+
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-default truncate block max-w-xs">
+              {abbreviated}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-sm whitespace-pre-wrap">{feedback}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    },
   },
   {
     id: "actions",
-    cell: info => {
+    cell: (info) => {
       const submission = info.row.original;
 
-      const workflows = useWorkflowStore(state => state.workflows)
-      const activeWorkflow = useWorkflowStore(state => state.drafts[state.activeWorkflowId || ""])
+      // TODO: Oh my god this got even worse
+      const { workflows } = useWorkflows();
+      const activeWorkflowId = useWorkflowStore(
+        (state) => state.activeWorkflowId,
+      );
+      const workflow = useMemo(() => {
+        if (activeWorkflowId)
+          return workflows.find((w) => w.id === activeWorkflowId);
+        return workflows[0];
+      }, [activeWorkflowId, workflows]);
 
-      function runPlugin(plugin?: PluginSummary) {
+      function runPlugin(plugin?: RuntimePlugin) {
         if (!plugin) return;
-        console.log(`Running plugin ${plugin.id}-${plugin.hash}-${plugin.version} on submission ${submission.id} with workflow ${activeWorkflow?.workflowId} and settings`, plugin.settings);
+        console.log(
+          `Running plugin ${plugin.id}-${plugin.hash}-${plugin.version} on submission ${submission.id} with workflow ${workflow?.id} and settings`,
+          plugin.settings,
+        );
       }
 
       function runWorkflow(workflow?: Workflow) {
         if (!workflow) return;
-        console.log(`Rerunning submission ${submission.id} with workflow ${workflow.id}`, workflow);
+        console.log(
+          `Rerunning submission ${submission.id} with workflow ${workflow.id}`,
+          workflow,
+        );
       }
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger className={"cursor-pointer"}>
-            <Ellipsis size={18}/>
+            <Ellipsis size={18} />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className={"gap-2"}>
-                <BlocksIcon size={16} className={"text-muted-foreground"}/> Run plugin...
+                <BlocksIcon size={16} className={"text-muted-foreground"} /> Run
+                plugin...
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent>
-                  {activeWorkflow?.plugins == undefined && (
-                    <DropdownMenuItem disabled>No plugins available</DropdownMenuItem>
+                  {workflow?.plugins == undefined && (
+                    <DropdownMenuItem disabled>
+                      No plugins available
+                    </DropdownMenuItem>
                   )}
 
                   {/*TODO: oh my god this is such an ugly code*/}
-                  {activeWorkflow && activeWorkflow?.plugins && activeWorkflow?.plugins?.transcriber && (
-                    <>
-                      <DropdownMenuItem onClick={_ => runPlugin(activeWorkflow.plugins.transcriber)}>{activeWorkflow.plugins.transcriber.settings_schema.title}</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
+                  {workflow &&
+                    workflow?.plugins &&
+                    workflow?.plugins?.transcriber && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={(_) =>
+                            runPlugin(workflow.plugins.transcriber)
+                          }
+                        >
+                          {workflow.plugins.transcriber.settingsSchema.title}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
 
-                  {activeWorkflow && activeWorkflow?.plugins && activeWorkflow?.plugins?.grader && (
-                    <>
-                      <DropdownMenuItem onClick={_ => runPlugin(activeWorkflow.plugins.grader)}>{activeWorkflow.plugins.grader.settings_schema.title}</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
+                  {workflow &&
+                    workflow?.plugins &&
+                    workflow?.plugins?.grader && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={(_) => runPlugin(workflow.plugins.grader)}
+                        >
+                          {workflow.plugins.grader.settingsSchema.title}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
 
-                  {activeWorkflow && activeWorkflow?.plugins && activeWorkflow?.plugins?.validator && (
-                    <>
-                      <DropdownMenuItem onClick={_ => activeWorkflow.plugins.validator}>{activeWorkflow.plugins.validator.settings_schema.title}</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-
+                  {workflow &&
+                    workflow?.plugins &&
+                    workflow?.plugins?.validator && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={(_) => workflow.plugins.validator}
+                        >
+                          {workflow.plugins.validator.settingsSchema.title}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>
-              <DropdownMenuSub>
+            <DropdownMenuSub>
               <DropdownMenuSubTrigger className={"gap-2"}>
-                <ArrowRightLeft size={16} className={"text-muted-foreground"}/> Rerun with...
+                <ArrowRightLeft size={16} className={"text-muted-foreground"} />{" "}
+                Rerun with...
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent>
-                  {workflows?.map(wf => (
-                    <DropdownMenuItem key={wf.id} onClick={_ => runWorkflow(wf)}>{wf.name}</DropdownMenuItem>
+                  {workflows?.map((wf) => (
+                    <DropdownMenuItem
+                      key={wf.id}
+                      onClick={(_) => runWorkflow(wf)}
+                    >
+                      {wf.name}
+                    </DropdownMenuItem>
                   ))}
                   {workflows?.length === 0 && (
-                    <DropdownMenuItem disabled>No workflows available</DropdownMenuItem>
+                    <DropdownMenuItem disabled>
+                      No workflows available
+                    </DropdownMenuItem>
                   )}
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>
             {/* TODO: yeah demo code*/}
-            <DropdownMenuItem onClick={_ => runWorkflow((workflows || [])[0])}><Repeat /> Rerun</DropdownMenuItem>
-            <DropdownMenuItem><History size={16}/> History</DropdownMenuItem>
-            <DropdownMenuSeparator/>
-            <DropdownMenuItem ><RotateCw size={16}/> Reset</DropdownMenuItem>
-            <DropdownMenuItem variant={"destructive"}><Trash size={16}/> Remove</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(_) => runWorkflow((workflows || [])[0])}
+            >
+              <Repeat /> Rerun
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <History size={16} /> History
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <RotateCw size={16} /> Reset
+            </DropdownMenuItem>
+            <DropdownMenuItem variant={"destructive"}>
+              <Trash size={16} /> Remove
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      )
-    }
-  }
-]
+      );
+    },
+  },
+];

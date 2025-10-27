@@ -1,5 +1,5 @@
 from uuid import UUID, uuid4
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 import json
 
@@ -20,6 +20,7 @@ from fair_platform.backend.api.schema.submission import (
     SubmissionRead,
     SubmissionUpdate,
 )
+from fair_platform.backend.api.schema.submission_result import SubmissionResultRead
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 
@@ -135,6 +136,9 @@ async def create_submission(
 def list_submissions(
     db: Session = Depends(session_dependency),
     assignment_id: UUID = Query(None, description="Filter submissions by assignment ID"),
+    include_results: bool = Query(
+        True, description="Include all results in response (optional)"
+    ),
     current_user: User = Depends(get_current_user),
 ):
     """List all submissions, optionally filtered by assignment ID."""
@@ -165,13 +169,41 @@ def list_submissions(
             "status": sub.status,
             "artifacts": sub.artifacts,
         }
+
+        # Attach official_result if present
+        if sub.official_run_id and include_results:
+            # Lazy import to avoid circulars
+            from fair_platform.backend.data.models import SubmissionResult as SRModel
+
+            sr = (
+                db.query(SRModel)
+                .filter(
+                    SRModel.submission_id == sub.id,
+                    SRModel.workflow_run_id == sub.official_run_id,
+                )
+                .first()
+            )
+            if sr:
+                sub_dict["official_result"] = SubmissionResultRead.model_validate(
+                    sr
+                )
+            else:
+                sub_dict["official_result"] = None
+        else:
+            sub_dict["official_result"] = None
         result.append(sub_dict)
     
     return result
 
 
 @router.get("/{submission_id}", response_model=SubmissionRead)
-def get_submission(submission_id: UUID, db: Session = Depends(session_dependency)):
+def get_submission(
+    submission_id: UUID,
+    run_id: Optional[UUID] = Query(
+        None, description="If provided, return result for this workflow run"
+    ),
+    db: Session = Depends(session_dependency),
+):
     sub = db.query(Submission).filter(Submission.id == submission_id).first()
     if not sub:
         raise HTTPException(
@@ -180,7 +212,7 @@ def get_submission(submission_id: UUID, db: Session = Depends(session_dependency
     
     submitter = db.get(User, sub.submitter_id)
     
-    return {
+    response = {
         "id": sub.id,
         "assignment_id": sub.assignment_id,
         "submitter_id": sub.submitter_id,
@@ -189,6 +221,27 @@ def get_submission(submission_id: UUID, db: Session = Depends(session_dependency
         "status": sub.status,
         "artifacts": sub.artifacts,
     }
+
+    selected_run_id = run_id or sub.official_run_id
+    if selected_run_id:
+        from fair_platform.backend.data.models import SubmissionResult as SRModel
+
+        sr = (
+            db.query(SRModel)
+            .filter(
+                SRModel.submission_id == sub.id,
+                SRModel.workflow_run_id == selected_run_id,
+            )
+            .first()
+        )
+        if sr:
+            response["official_result"] = SubmissionResultRead.model_validate(sr)
+        else:
+            response["official_result"] = None
+    else:
+        response["official_result"] = None
+
+    return response
 
 
 @router.put("/{submission_id}", response_model=SubmissionRead)
@@ -207,7 +260,6 @@ def update_submission(
     if current_user.role != UserRole.admin and current_user.id != sub.submitter_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this submission",
         )
 
 

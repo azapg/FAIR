@@ -34,11 +34,17 @@ class SimpleTranscriber(TranscriptionPlugin, ABC):
             f"{self.instructions.value} [Transcribed content from {submission.id}]"
         )
         confidence = 0.95
+        self.logger.log("Transcription completed.")
         return TranscribedSubmission(
             transcription=transcription,
             confidence=confidence,
             original_submission=submission,
         )
+
+    def transcribe_batch(
+        self, submissions: List[Submission]
+    ) -> List[TranscribedSubmission]:
+        return [self.transcribe(sub) for sub in submissions]
 
 
 @FairPlugin(
@@ -83,6 +89,7 @@ class ComplexPlugin(TranscriptionPlugin, ABC):
     file = FileField(label="Reference File", required=False, file_types=["txt", "pdf"])
 
     def transcribe(self, submission) -> TranscribedSubmission:
+        self.logger.log("Starting transcription process.")
         transcription = (
             f"{self.instructions.value} [Transcribed content from {submission.id}]"
         )

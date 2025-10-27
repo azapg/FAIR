@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from fair_platform.backend.data.models.submission import SubmissionStatus
 from fair_platform.backend.api.schema.user import UserRead
 from fair_platform.backend.api.schema.artifact import ArtifactRead
+from fair_platform.backend.api.schema.submission_result import SubmissionResultRead
 
 
 class SubmissionBase(BaseModel):
@@ -58,6 +59,7 @@ class SubmissionRead(SubmissionBase):
     id: UUID
     submitter: Optional[UserRead] = None
     artifacts: List[ArtifactRead] = []
+    official_result: Optional[SubmissionResultRead] = None
 
 
 __all__ = [

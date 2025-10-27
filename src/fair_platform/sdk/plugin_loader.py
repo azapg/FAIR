@@ -1,4 +1,6 @@
+import contextlib
 import hashlib
+import threading
 from pathlib import Path
 from types import ModuleType
 
@@ -9,8 +11,21 @@ import os
 import sys
 from typing import Optional
 
+from fair_platform.sdk.loader_utils import venv_exists, create_venv, simple_check_requirements, load_requirements, \
+    install_requirements, get_site_packages_path
+
+sys_path_lock = threading.Lock()
+
 excluded = {".DS_Store", "__pycache__"}
 
+@contextlib.contextmanager
+def temporary_sys_path(path):
+    old_path = sys.path.copy()
+    sys.path.insert(0, path)
+    try:
+        yield
+    finally:
+        sys.path[:] = old_path
 
 def hash_extension_folder(folder: Path):
     hash_builder = hashlib.sha256()
@@ -34,7 +49,7 @@ def get_folder_modules(folder: Path):
     ]
 
 
-def load_plugin_from_module(module_path: str) -> Optional[ModuleType]:
+def load_plugin_from_module(module_path: str, venv_path: Optional[str] = None) -> Optional[ModuleType]:
     """
     Load a plugin module from a file path. Registers the module under a unique name
     based on the plugin directory to avoid name collisions (e.g. plugin_<dirname>).
@@ -66,8 +81,10 @@ def load_plugin_from_module(module_path: str) -> Optional[ModuleType]:
     sys.modules[module_name] = module
 
     try:
-        spec.loader.exec_module(module)
-        return module
+        if venv_path and venv_exists(venv_path):
+            with sys_path_lock, temporary_sys_path(get_site_packages_path(venv_path)):
+                spec.loader.exec_module(module)
+                return module
     except Exception as e:
         print(f"Error loading module '{module_name}' from '{module_path}': {e}")
         del sys.modules[module_name]
@@ -94,10 +111,30 @@ def load_storage_plugins():
         if not os.path.isdir(full_path):
             continue
 
+        print(f"Processing extension '{entry}'...")
+
+        venv_path = os.path.join(full_path, ".venv")
+        if venv_exists(venv_path):
+            print(f"Found extension '{entry}' virtual environment")
+        else:
+            print(f"Creating extension '{entry}' virtual environment...'")
+            create_venv(venv_path)
+            print(f"Created extension '{entry}' virtual environment")
+
+        extension_requirements = load_requirements(os.path.join(full_path, "requirements.txt"))
+        if not simple_check_requirements(venv_path, extension_requirements):
+            print(f"Installing extension '{entry}' requirements...'")
+            install_requirements(venv_path, extension_requirements)
+            print(f"Installed extension '{entry}' requirements")
+
         main_py = os.path.join(full_path, "main.py")
         if os.path.exists(main_py) and os.path.isfile(main_py):
             # TODO: Maybe do a "load_plugin_from_folder", that loads all modules and injects hash metadata into them.
-            load_plugin_from_module(main_py)
+            module = load_plugin_from_module(main_py, venv_path=venv_path)
+            if module:
+                print(f"Loaded extension '{entry}'")
+            else:
+                print(f"Failed to load extension '{entry}'")
 
 
 __all__ = [

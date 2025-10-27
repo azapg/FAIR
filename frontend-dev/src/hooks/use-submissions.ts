@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { Artifact } from "@/hooks/use-artifacts"
 import { toast } from 'sonner'
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
@@ -14,13 +15,6 @@ export type SubmissionStatus =
   | "needs_review"
   | "failure"
 
-export type Artifact = {
-  id: string
-  title: string
-  content_type: string
-  created_at: string
-}
-
 export type Submitter = {
   id: string
   name: string
@@ -28,14 +22,30 @@ export type Submitter = {
   role: string
 }
 
+export type SubmissionResult = {
+  id: string
+  submissionId: string
+  workflowRunId: string
+
+  transcription?: string | null
+  transcriptionConfidence?: number | null
+  transcribedAt?: string | null
+
+  score?: number | null
+  feedback?: string | null
+  gradedAt?: string | null
+  gradingMeta?: Record<string, unknown> | null
+}
+
 export type Submission = {
   id: string
-  assignment_id: string
-  submitter_id: string
+  assignmentId: string
+  submitterId: string
   submitter?: Submitter
-  submitted_at: string
+  submittedAt: string
   status: SubmissionStatus
-  official_run_id?: string | null
+  officialRunId?: string | null
+  officialResult: SubmissionResult
   artifacts: Artifact[]
 }
 

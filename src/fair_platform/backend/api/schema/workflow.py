@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from fair_platform.backend.api.schema.plugin import PluginBase
+from fair_platform.backend.api.schema.plugin import RuntimePlugin
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunBase
 
 
@@ -12,7 +12,7 @@ class WorkflowBase(BaseModel):
     name: str
     course_id: UUID
     description: Optional[str] = None
-    plugins: Optional[Dict[str, PluginBase]] = None
+    plugins: Optional[Dict[str, RuntimePlugin]] = None
 
     class Config:
         from_attributes = True
@@ -30,7 +30,7 @@ class WorkflowCreate(WorkflowBase):
 class WorkflowUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    plugins: Optional[Dict[str, PluginBase]] = None
+    plugins: Optional[Dict[str, RuntimePlugin]] = None
 
     class Config:
         from_attributes = True

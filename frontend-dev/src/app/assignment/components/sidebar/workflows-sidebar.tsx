@@ -2,108 +2,263 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarHeader
-} from "@/components/ui/sidebar"
+  SidebarHeader,
+} from "@/components/ui/sidebar";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import {Separator} from "@/components/ui/separator"
-import {Button} from "@/components/ui/button"
-import {LoaderIcon, PlusIcon} from "lucide-react";
-import {useWorkflowStore} from "@/store/workflows-store";
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import {
+  ChevronDownIcon,
+  Clock,
+  LoaderIcon,
+  PlusIcon,
+  Save,
+  Ban,
+} from "lucide-react";
+import { useWorkflowStore } from "@/store/workflows-store";
 import PluginSection from "@/app/assignment/components/sidebar/plugin-section";
-import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
-import {useEffect, useState} from "react";
-
+import { useEffect, useMemo, useState } from "react";
+import api from "@/lib/api";
+import { useSessionStore } from "@/store/session-store";
+import {
+  useCreateWorkflow,
+  usePersistWorkflowDrafts,
+  useWorkflows,
+} from "@/hooks/use-workflows";
+import { ButtonGroup } from "@/components/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ExecutionLogsView } from "@/app/assignment/components/sidebar/execution-logs-view";
+import { setHeapSnapshotNearHeapLimit } from "node:v8";
 
 export function WorkflowsSidebar({
-                                   side,
-                                   className,
-                                   ...sidebarProps
-                                 }: {
-  side?: "left" | "right"
-  className?: string
+  side,
+  className,
+  ...sidebarProps
+}: {
+  side?: "left" | "right";
+  className?: string;
 }) {
-  const {workflows = [], createWorkflow, getActiveWorkflow, setActiveWorkflowId} = useWorkflowStore();
-  const drafts = useWorkflowStore(state => state.drafts);
-  const activeWorkflowId = useWorkflowStore(state => state.activeWorkflowId);
-  const draft = drafts[activeWorkflowId || ""];
-  const workflow = getActiveWorkflow();
+  const { workflows, isLoading } = useWorkflows();
+  const drafts = useWorkflowStore((state) => state.drafts);
+  const activeWorkflowId = useWorkflowStore((state) => state.activeWorkflowId);
+  const setActiveWorkflowId = useWorkflowStore(
+    (state) => state.setActiveWorkflowId,
+  );
+  const draft = activeWorkflowId ? drafts[activeWorkflowId] : undefined;
+  const workflow = useMemo(() => {
+    if (activeWorkflowId)
+      return workflows.find((w) => w.id === activeWorkflowId);
+    return workflows[0];
+  }, [activeWorkflowId, workflows]);
+
+  const setCurrentSession = useSessionStore((state) => state.setCurrentSession);
+  const clearLogs = useSessionStore((state) => state.clearLogs);
+  const currentSession = useSessionStore((state) => state.currentSession);
 
   const [isRunning, setIsRunning] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+
+  const { mutateAsync: createWorkflow } = useCreateWorkflow();
+  const { mutateAsync: persistDrafts } = usePersistWorkflowDrafts();
 
   useEffect(() => {
-    if(!workflow && workflows.length > 0) {
+    if (!activeWorkflowId && workflows.length > 0) {
       setActiveWorkflowId(workflows[0].id);
-    } else {
-      setActiveWorkflowId(workflows[0].id); // TODO: this is weird, in the future I will manage the store better
     }
-  }, [workflow]);
 
-  if(!workflow) {
-    // TODO: Skeleton loader
-    return <></>
-  }
+    // TODO: Workflows state is so awful that creating a default workflow if none exist is too complicated for now.
+    //  So I will just make the user create one manually, though I would like a better UX for this.
+  }, [activeWorkflowId, workflows]);
 
-  const onCreateWorkflow = () => {
+  // Remove early return so footer is always visible even while loading
+
+  const onCreateWorkflow = async () => {
     const name = prompt("Enter workflow name", "Untitled Workflow");
     if (name) {
-      createWorkflow(name).then(_ => {});
+      await createWorkflow({ name });
     }
-  }
+  };
 
-  const runWorkflow = () => {
-    if(isRunning) return;
+  const runWorkflow = async () => {
+    if (isRunning || !workflow || !activeWorkflowId) return;
     setIsRunning(true);
-    console.log({draft});
-  }
+    // Open logs immediately and clear any stale logs to avoid flicker from previous sessions
+    clearLogs();
+    setShowLogs(true);
+    try {
+      await persistDrafts();
+
+      const response = await api.post("/sessions", {
+        workflow_id: activeWorkflowId,
+        submission_ids: [
+          "4bb239473f634f5c80c5887554180d2d",
+          "21b9196d7e154ecd881910a0389cd7a0",
+          "a28d0dab9ba143e283be47d6d58d558a",
+        ],
+      });
+      setCurrentSession(response.data.session);
+    } catch (error) {
+      console.error("Failed to start workflow run", error);
+      setIsRunning(false);
+      setShowLogs(false);
+      alert(`Failed to start workflow run. Please try again. Error: ${error}`);
+    }
+  };
+
+  // When the session ends (SessionSocketProvider sets it to null on close), stop showing running state
+  useEffect(() => {
+    if (!currentSession) {
+      setIsRunning(false);
+    }
+  }, [currentSession?.id]);
 
   return (
     <Sidebar side={side} className={className} {...sidebarProps}>
-      <SidebarHeader className="py-4 flex-row items-center justify-between gap-2 px-2.5">
-        <Select value={workflow?.id} onValueChange={setActiveWorkflowId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select workflow"/>
-          </SelectTrigger>
-          <SelectContent position="popper" className="w-[--radix-select-trigger-width]">
-            {workflows.map((w) => (
-              <SelectItem key={w.id} value={w.id}>
-                {w.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {showLogs ? null : (
+        <SidebarHeader className="py-4 flex-row items-center justify-between gap-2 px-2.5">
+          <Select value={workflow?.id} onValueChange={setActiveWorkflowId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select workflow" />
+            </SelectTrigger>
+            <SelectContent
+              position="popper"
+              className="w-[--radix-select-trigger-width]"
+            >
+              {workflows.map((w) => (
+                <SelectItem key={w.id} value={w.id}>
+                  {w.name}
+                </SelectItem>
+              ))}
+              {workflows.length === 0 && (
+                <SelectItem value="no-workflows" disabled>
+                  No workflows available
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="outline" size="icon" onClick={onCreateWorkflow} disabled>
-              <PlusIcon/>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>This feature is disabled during beta preview.</p>
-          </TooltipContent>
-        </Tooltip>
-      </SidebarHeader>
-      <Separator/>
-      <SidebarContent>
-        <PluginSection title={"Transcriber"} action={"Transcribe all"} type={"transcriber"} />
-        <Separator/>
-        <PluginSection title={"Grader"} action={"Grade all"} type={"grader"} />
-        <Separator/>
-        <PluginSection title={"Validator"} action={"Validate all"} type={"validator"} />
-        <Separator/>
-      </SidebarContent>
-      <SidebarFooter className={"py-4 px-2.5"}>
-        <Separator/>
-        <Button onClick={runWorkflow} disabled={isRunning}>
-          {isRunning ? <><LoaderIcon className={"animate-spin"} /> Running</> : <>Run Workflow</>}
-        </Button>
+          <Button variant="outline" size="icon" onClick={onCreateWorkflow}>
+            <PlusIcon />
+          </Button>
+        </SidebarHeader>
+      )}
+      <Separator />
+      {showLogs ? (
+        <ExecutionLogsView onBack={() => setShowLogs(false)} />
+      ) : workflow && draft ? (
+        <>
+          <SidebarContent>
+            <PluginSection
+              title={"Transcriber"}
+              action={"Transcribe all"}
+              type={"transcriber"}
+            />
+            <Separator />
+            <PluginSection
+              title={"Grader"}
+              action={"Grade all"}
+              type={"grader"}
+            />
+            <Separator />
+            <PluginSection
+              title={"Validator"}
+              action={"Validate all"}
+              type={"validator"}
+            />
+            <Separator />
+          </SidebarContent>
+        </>
+      ) : (
+        <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
+          {workflows.length === 0 ? (
+            <div>
+              <p>No workflows available.</p>
+              <p>Create one using the "+" button above.</p>
+            </div>
+          ) : !activeWorkflowId ? (
+            <div>
+              <p>No workflow selected.</p>
+              <p>Select one from the dropdown above.</p>
+            </div>
+          ) : (
+            <div>Workflow details go here.</div>
+          )}
+        </div>
+      )}
+      {/* Footer is always visible */}
+      <SidebarFooter className={"px-2.5"}>
+        <Separator />
+        <WorkflowSidebarRunButton
+          isRunning={isRunning}
+          onRun={runWorkflow}
+          onShowLogs={() => setShowLogs(true)}
+        />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
+
+const WorkflowSidebarRunButton = ({
+  isRunning,
+  onRun,
+  onShowLogs,
+}: {
+  isRunning: boolean;
+  onRun: () => void;
+  onShowLogs: () => void;
+}) => {
+  return (
+    <ButtonGroup className="flex w-full my-2">
+      <Button
+        onClick={onRun}
+        disabled={isRunning}
+        className="flex-1"
+        variant="outline"
+      >
+        {isRunning ? (
+          <>
+            <LoaderIcon className={"animate-spin"} /> Running
+          </>
+        ) : (
+          <>Run Workflow</>
+        )}
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline">
+            <ChevronDownIcon />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={onShowLogs}>
+              <Clock /> View Execution Logs
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Save /> Save Workflow
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem disabled={!isRunning} variant="destructive">
+              <Ban /> Abort Workflow
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </ButtonGroup>
+  );
+};

@@ -17,10 +17,9 @@ class SettingsField(Generic[T], ABC):
 
     def __set_name__(self, owner: type, name: str) -> None:
         self.name = name
-        if not hasattr(owner, "_settings_fields"):
+        if "_settings_fields" not in owner.__dict__:
             owner._settings_fields = {}
         owner._settings_fields[name] = self
-
     @abstractmethod
     def to_pydantic_field(self):
         pass
@@ -56,6 +55,35 @@ class TextField(SettingsField[str]):
             ),
         )
 
+class SensitiveTextField(SettingsField[str]):
+    def __init__(
+        self,
+        label: str,
+        default: str,
+        required: bool = False,
+        inline: bool = False,
+        min_length: Optional[int] = 0,
+        max_length: Optional[int] = None,
+        pattern: Optional[str] = None,
+    ):
+        super().__init__(label, default, required)
+        self.inline = inline
+        self.min_length = min_length
+        self.max_length = max_length
+        self.pattern = pattern
+
+    def to_pydantic_field(self):
+        return (
+            str,
+            Field(
+                default=self.default,
+                title="SensitiveTextField",
+                description=self.label,
+                min_length=self.min_length if self.required else 0,
+                max_length=self.max_length,
+                pattern=self.pattern,
+            ),
+        )
 
 class NumberField(SettingsField[float]):
     def __init__(
