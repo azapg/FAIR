@@ -21,6 +21,7 @@ from fair_platform.sdk.plugin import (
     PluginType,
 )
 from fair_platform.sdk.plugin_loader import load_storage_plugins
+from fair_platform.sdk.util import get_artifact_local_path
 
 __all__ = [
     "Submission",
@@ -45,4 +46,6 @@ __all__ = [
     "get_plugin_object",
     "list_plugins",
     "PluginType",
+
+    "get_artifact_local_path",
 ]
