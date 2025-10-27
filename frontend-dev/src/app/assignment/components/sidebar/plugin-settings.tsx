@@ -58,6 +58,25 @@ function TextField({ property, value, onChange, name }: BaseInputProps) {
   );
 }
 
+function SensitiveTextField({ property, value, onChange, name }: BaseInputProps) {
+  return (
+    <div className="space-y-2">
+      {property.description && (
+        <p className="text-xs text-muted-foreground">{property.description}</p>
+      )}
+      <Input
+        id={name}
+        type="password"
+        placeholder={property.default?.toString() || ""}
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        minLength={property.minLength}
+        maxLength={property.maxLength}
+      />
+    </div>
+  );
+}
+
 function NumberField({ property, value, onChange, name }: BaseInputProps) {
   return (
     <div className="space-y-2">
@@ -133,6 +152,7 @@ function UnsupportedField({
 // Component factory
 const INPUT_COMPONENTS = {
   TextField,
+  SensitiveTextField,
   NumberField,
   SwitchField,
   FileField,
