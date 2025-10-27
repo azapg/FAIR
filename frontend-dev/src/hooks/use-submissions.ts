@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Artifact } from "@/hooks/use-artifacts"
+import { toast } from 'sonner'
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
@@ -137,7 +138,13 @@ export function useCreateSubmission() {
     mutationFn: createSubmission,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Submission create successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to create Submission', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
@@ -150,7 +157,13 @@ export function useUpdateSubmission() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: submissionsKeys.detail(variables.id) })
       queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Submission updated successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to update Submission', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
@@ -161,6 +174,12 @@ export function useDeleteSubmission() {
     mutationFn: deleteSubmission,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Submission deleted successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to delete Submission', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }

@@ -1,6 +1,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { toast } from 'sonner';
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
@@ -106,9 +107,15 @@ export function useCreateArtifact() {
   return useMutation({
     mutationFn: (data: CreateArtifactInput) => createArtifact(data),
     onSuccess: (artifact) => {
-      qc.invalidateQueries({ queryKey: artifactsKeys.lists() }).then()
-      qc.invalidateQueries({ queryKey: artifactsKeys.detail(artifact.id) }).then()
+      qc.invalidateQueries({ queryKey: artifactsKeys.lists() })
+      qc.invalidateQueries({ queryKey: artifactsKeys.detail(artifact.id) })
+      toast.success('Artifact created successfully', { description: artifact.title });
     },
+    onError: (error: Error) => {
+      toast.error('Failed to create artifact', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
@@ -117,9 +124,15 @@ export function useUpdateArtifact() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateArtifactInput }) => updateArtifact(id, data),
     onSuccess: (_artifact, vars) => {
-      qc.invalidateQueries({ queryKey: artifactsKeys.detail(vars.id) }).then()
-      qc.invalidateQueries({ queryKey: artifactsKeys.lists() }).then()
+      qc.invalidateQueries({ queryKey: artifactsKeys.detail(vars.id) })
+      qc.invalidateQueries({ queryKey: artifactsKeys.lists() })
+      toast.success('Artifact updated successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to update artifact', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
@@ -128,9 +141,16 @@ export function useDeleteArtifact() {
   return useMutation({
     mutationFn: (id: string) => deleteArtifact(id),
     onSuccess: (_void, id) => {
-      qc.invalidateQueries({ queryKey: artifactsKeys.detail(id) }).then()
-      qc.invalidateQueries({ queryKey: artifactsKeys.lists() }).then()
+      qc.invalidateQueries({ queryKey: artifactsKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: artifactsKeys.lists() })
+      toast.success('Artifact deleted Successfully', {
+        description: 'The artifact has been permanently removed'
+      })
     },
+    onError: (error: Error) => {
+      toast.error('Failed to delete artifact', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
-

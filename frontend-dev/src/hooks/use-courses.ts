@@ -1,6 +1,7 @@
-import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import {Assignment} from "@/hooks/use-assignments";
+import { Assignment } from "@/hooks/use-assignments";
+import { toast } from 'sonner';
 
 export type Course = {
   id: string
@@ -44,13 +45,13 @@ export type ListParams = Record<string, string | number | boolean | null | undef
 export const coursesKeys = {
   all: ['courses'] as const,
   lists: () => [...coursesKeys.all, 'list'] as const,
-  list: (params?: ListParams) => [...coursesKeys.lists(), {params}] as const,
+  list: (params?: ListParams) => [...coursesKeys.lists(), { params }] as const,
   details: () => [...coursesKeys.all, 'detail'] as const,
   detail: (id: string) => [...coursesKeys.details(), id] as const,
 }
 
 const fetchCourses = async (params?: ListParams): Promise<Course[]> => {
-  const res = await api.get('/courses', {params})
+  const res = await api.get('/courses', { params })
   return res.data
 }
 
@@ -84,8 +85,8 @@ export function useCourses(params?: ListParams, enabled = true) {
 export function useCourse(id?: string, enabled = true, detailed = false) {
   return useQuery({
     queryKey: id != null
-      ? [...coursesKeys.detail(id), {detailed}]
-      : [...coursesKeys.detail('unknown'), {detailed}],
+      ? [...coursesKeys.detail(id), { detailed }]
+      : [...coursesKeys.detail('unknown'), { detailed }],
     queryFn: () => fetchCourse(id as string, detailed),
     enabled: enabled && id != null,
   })
@@ -96,19 +97,31 @@ export function useCreateCourse() {
   return useMutation({
     mutationFn: (data: CreateCourseInput) => createCourse(data),
     onSuccess: () => {
-      qc.invalidateQueries({queryKey: coursesKeys.lists()}).then()
+      qc.invalidateQueries({ queryKey: coursesKeys.lists() })
+      toast.success('Course created successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to create Course', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
 export function useUpdateCourse() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({id, data}: { id: string; data: UpdateCourseInput }) => updateCourse(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateCourseInput }) => updateCourse(id, data),
     onSuccess: (_course, vars) => {
-      qc.invalidateQueries({queryKey: coursesKeys.detail(vars.id)}).then()
-      qc.invalidateQueries({queryKey: coursesKeys.lists()}).then()
+      qc.invalidateQueries({ queryKey: coursesKeys.detail(vars.id) })
+      qc.invalidateQueries({ queryKey: coursesKeys.lists() })
+      toast.success('Course updated successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to update Course', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
 
@@ -117,8 +130,14 @@ export function useDeleteCourse() {
   return useMutation({
     mutationFn: (id: string) => deleteCourse(id),
     onSuccess: (_void, id) => {
-      qc.invalidateQueries({queryKey: coursesKeys.detail(id)}).then()
-      qc.invalidateQueries({queryKey: coursesKeys.lists()}).then()
+      qc.invalidateQueries({ queryKey: coursesKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: coursesKeys.lists() })
+      toast.success('Course deleted successfully');
     },
+    onError: (error: Error) => {
+      toast.error('Failed to delete Course', {
+        description: error.message || 'Something went wrong'
+      });
+    }
   })
 }
