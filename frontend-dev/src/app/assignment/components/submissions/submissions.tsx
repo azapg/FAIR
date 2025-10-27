@@ -30,6 +30,7 @@ import { useWorkflowStore, Workflow } from "@/store/workflows-store";
 import { RuntimePlugin } from "@/hooks/use-plugins";
 import { useWorkflows } from "@/hooks/use-workflows";
 import { SubmissionStatus, Submission } from "@/hooks/use-submissions";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 function formatShortDate(date: Date) {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -165,8 +166,26 @@ export const columns: ColumnDef<Submission>[] = [
     accessorKey: "officialResult.feedback",
     header: "Retroalimentación",
     cell: (info) => {
-      const feedback = info.getValue();
-      return feedback ? feedback : "—";
+      const feedback = info.getValue() as string | undefined;
+      if (!feedback) return "—";
+
+      const maxLength = 50;
+      const abbreviated = feedback.length > maxLength
+        ? `${feedback.slice(0, maxLength)}...`
+        : feedback;
+
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-default truncate block max-w-xs">
+              {abbreviated}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-sm whitespace-pre-wrap">{feedback}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
     },
   },
   {
