@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import api from "@/lib/api";
 import { useWorkflowStore } from "@/store/workflows-store";
 import type { Workflow } from "@/store/workflows-store";
+import { toast } from "sonner";
 
 const keys = {
   workflows: (courseId: string) => ["workflows", courseId] as const,
@@ -109,13 +110,21 @@ export function usePersistWorkflowDrafts() {
 
       await Promise.all(
         entries.map(async ([workflowId, draft]) => {
-          const payload = {
-            name: draft.name,
-            description: draft.description ?? "",
-            plugins: draft.plugins ?? {},
-          };
-          await api.put(`/workflows/${workflowId}`, payload);
-          touchedCourses.add(draft.courseId);
+          try {
+            const payload = {
+              name: draft.name,
+              description: draft.description ?? "",
+              plugins: draft.plugins ?? {},
+            };
+            await api.put(`/workflows/${workflowId}`, payload);
+            touchedCourses.add(draft.courseId);
+          } catch (error: any) {
+            if (error?.response?.status === 404) {
+              toast.error(`Can't find workflow '${draft.name || workflowId}'. It may have been deleted.`);
+            } else {
+              throw error;
+            }
+          }
         })
       );
 
