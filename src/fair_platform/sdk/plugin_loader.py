@@ -18,14 +18,14 @@ sys_path_lock = threading.Lock()
 
 excluded = {".DS_Store", "__pycache__"}
 
-@contextlib.contextmanager
-def temporary_sys_path(path):
-    old_path = sys.path.copy()
-    sys.path.insert(0, path)
-    try:
-        yield
-    finally:
-        sys.path[:] = old_path
+def add_plugin_site_packages(venv_dir: str) -> None:
+    venv_site_packages = get_site_packages_path(venv_dir)
+
+    if venv_site_packages and Path(venv_site_packages).is_dir():
+        if venv_site_packages not in sys.path:
+            sys.path.insert(0, venv_site_packages)
+    else:
+        print(f"Warning: Could not find site-packages directory for venv at {venv_dir}")
 
 def hash_extension_folder(folder: Path):
     hash_builder = hashlib.sha256()
@@ -82,9 +82,12 @@ def load_plugin_from_module(module_path: str, venv_path: Optional[str] = None) -
 
     try:
         if venv_path and venv_exists(venv_path):
-            with sys_path_lock, temporary_sys_path(get_site_packages_path(venv_path)):
-                spec.loader.exec_module(module)
-                return module
+            add_plugin_site_packages(venv_path)
+            spec.loader.exec_module(module)
+            return module
+        else:
+            spec.loader.exec_module(module)
+            return module
     except Exception as e:
         print(f"Error loading module '{module_name}' from '{module_path}': {e}")
         del sys.modules[module_name]
