@@ -58,7 +58,17 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
     // New session: proactively clear any stale logs before connecting
     clearLogs();
 
-    const wsUrl = `ws://localhost:8000/api/sessions/${currentSession.id}`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const hostname = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    let host = hostname + port;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      if(port == ":3000") {
+        host = `localhost:8000`;
+      }
+    }
+
+    const wsUrl = `${protocol}//${host}/api/sessions/${currentSession.id}`;
     const newSocket = new WebSocket(wsUrl);
     setSocket(newSocket);
 
