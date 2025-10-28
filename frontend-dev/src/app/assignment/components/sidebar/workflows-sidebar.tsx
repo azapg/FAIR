@@ -41,17 +41,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ExecutionLogsView } from "@/app/assignment/components/sidebar/execution-logs-view";
-import { setHeapSnapshotNearHeapLimit } from "node:v8";
+import { useSubmissions } from "@/hooks/use-submissions";
+import { toast } from "sonner"
 
 export function WorkflowsSidebar({
   side,
+  assignmentId,
   className,
   ...sidebarProps
 }: {
   side?: "left" | "right";
   className?: string;
+  assignmentId: string;
 }) {
-  const { workflows, isLoading } = useWorkflows();
+  const { workflows } = useWorkflows();
   const drafts = useWorkflowStore((state) => state.drafts);
   const activeWorkflowId = useWorkflowStore((state) => state.activeWorkflowId);
   const setActiveWorkflowId = useWorkflowStore(
@@ -63,6 +66,7 @@ export function WorkflowsSidebar({
       return workflows.find((w) => w.id === activeWorkflowId);
     return workflows[0];
   }, [activeWorkflowId, workflows]);
+  const {data: submissions} = useSubmissions({assignment_id: assignmentId})
 
   const setCurrentSession = useSessionStore((state) => state.setCurrentSession);
   const clearLogs = useSessionStore((state) => state.clearLogs);
@@ -103,18 +107,14 @@ export function WorkflowsSidebar({
 
       const response = await api.post("/sessions", {
         workflow_id: activeWorkflowId,
-        submission_ids: [
-          "4bb239473f634f5c80c5887554180d2d",
-          "21b9196d7e154ecd881910a0389cd7a0",
-          "a28d0dab9ba143e283be47d6d58d558a",
-        ],
+        submission_ids: submissions?.map(s => s.id) || [],
       });
       setCurrentSession(response.data.session);
     } catch (error) {
       console.error("Failed to start workflow run", error);
       setIsRunning(false);
       setShowLogs(false);
-      alert(`Failed to start workflow run. Please try again. Error: ${error}`);
+      toast.error(`Failed to start workflow run. Please try again. Error: ${error}`);
     }
   };
 
