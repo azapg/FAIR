@@ -33,11 +33,13 @@ export const useVersionCheck = () => {
     // If we have data and there's a new version available
     if (data && data.current !== data.latest) {
       try {
-        // Simple version comparison
-        const currentParts = data.current.split(/[.-]/).map(p => parseInt(p, 10) || 0);
-        const latestParts = data.latest.split(/[.-]/).map(p => parseInt(p, 10) || 0);
+        // Simple numeric version comparison (e.g., "0.5.0" vs "0.6.0")
+        // Note: This splits on dots and hyphens to handle versions like "1.0.0-alpha"
+        // For precise semver comparison, a library like 'semver' could be used
+        const currentParts = data.current.split(/[.\-]/).map(p => parseInt(p, 10) || 0);
+        const latestParts = data.latest.split(/[.\-]/).map(p => parseInt(p, 10) || 0);
         
-        // Compare major, minor, patch
+        // Compare major, minor, patch numerically
         let isNewer = false;
         for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
           const current = currentParts[i] || 0;
