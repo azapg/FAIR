@@ -4,7 +4,13 @@ import {AuthProvider} from "@/contexts/auth-context";
 import {ThemeProvider} from "@/components/theme-provider"
 import {ReactNode} from "react";
 import {SessionSocketProvider} from "@/contexts/session-socket-context";
+import {useVersionCheck} from "@/hooks/use-version";
 
+
+function VersionChecker() {
+  useVersionCheck();
+  return null;
+}
 
 export function Providers({children}: { children: ReactNode }) {
   return (
@@ -12,6 +18,7 @@ export function Providers({children}: { children: ReactNode }) {
       <SessionSocketProvider>
         <ThemeProvider defaultTheme={"system"}>
           <AuthProvider>
+            <VersionChecker />
             {children}
           </AuthProvider>
         </ThemeProvider>

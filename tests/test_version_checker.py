@@ -1,9 +1,7 @@
 """Tests for version checking functionality."""
 import json
-import os
 from datetime import datetime, timedelta
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 import pytest
 import httpx
@@ -17,8 +15,6 @@ from fair_platform.utils.version import (
     should_check_for_updates,
     save_check_timestamp,
     check_for_updates,
-    CACHE_FILE,
-    CACHE_DIR,
 )
 
 

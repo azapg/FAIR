@@ -111,9 +111,9 @@ def check_for_updates() -> None:
             from packaging import version as pkg_version
             if pkg_version.parse(latest) > pkg_version.parse(current):
                 print(f"🔔 New version available: {latest} (current: {current})")
-                print(f"   Run: pip install -U fair-platform")
+                print("   Run: pip install -U fair-platform")
         except Exception:
             # If packaging is not available or comparison fails, just compare strings
             if latest > current:
                 print(f"🔔 New version available: {latest} (current: {current})")
-                print(f"   Run: pip install -U fair-platform")
+                print("   Run: pip install -U fair-platform")
