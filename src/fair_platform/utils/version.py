@@ -56,7 +56,7 @@ def save_check_timestamp(latest_version: str):
 def get_latest_version_from_pypi() -> Optional[str]:
     """Fetch the latest version from PyPI JSON API."""
     try:
-        with httpx.Client(timeout=5.0) as client:
+        with httpx.Client(timeout=2.0) as client:
             response = client.get("https://pypi.org/pypi/fair-platform/json")
             response.raise_for_status()
             data = response.json()
@@ -88,18 +88,20 @@ def check_for_updates() -> None:
     current = get_current_version()
     latest = get_latest_version_from_pypi()
     
-    # Save the check timestamp (even if fetch failed)
-    if latest:
-        save_check_timestamp(latest)
+    # If we couldn't fetch the latest version, don't proceed
+    if not latest:
+        return
     
     # Compare versions and notify if update available
-    if latest and latest != current:
+    if latest != current:
         # Simple version comparison (works for semantic versioning)
         try:
             from packaging import version as pkg_version
             if pkg_version.parse(latest) > pkg_version.parse(current):
                 print(f"🔔 New version available: {latest} (current: {current})")
                 print("   Run: pip install -U fair-platform")
+                # Only save timestamp if we showed a notification
+                save_check_timestamp(latest)
         except Exception:
             # Fail silently if version comparison fails
             pass

@@ -16,7 +16,7 @@ const fetchVersion = async (): Promise<VersionInfo> => {
 };
 
 export const useVersionCheck = () => {
-  const { data, isError } = useQuery({
+  const { data } = useQuery({
     queryKey: ['version'],
     queryFn: fetchVersion,
     staleTime: 6 * 60 * 60 * 1000, // 6 hours
@@ -48,6 +48,8 @@ export const useVersionCheck = () => {
             isNewer = true;
             break;
           } else if (latest < current) {
+            // Current version is newer, don't show notification
+            isNewer = false;
             break;
           }
         }

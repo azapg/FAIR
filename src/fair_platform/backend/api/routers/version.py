@@ -19,7 +19,7 @@ CACHE_DURATION = timedelta(hours=6)
 
 
 async def get_latest_version_from_pypi() -> Optional[str]:
-    """Fetch the latest version from PyPI JSON API."""
+    """Fetch the latest version from PyPI JSON API with caching."""
     global _version_cache, _cache_timestamp
     
     # Check cache
@@ -29,7 +29,7 @@ async def get_latest_version_from_pypi() -> Optional[str]:
     
     # Fetch from PyPI
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=2.0) as client:
             response = await client.get("https://pypi.org/pypi/fair-platform/json")
             response.raise_for_status()
             data = response.json()
