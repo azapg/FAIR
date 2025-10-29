@@ -5,7 +5,6 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
-from importlib.metadata import version, PackageNotFoundError
 
 import httpx
 
@@ -20,21 +19,10 @@ CACHE_DURATION = timedelta(hours=24)
 def get_current_version() -> str:
     """Get the current installed version of fair-platform."""
     try:
-        return version("fair-platform")
-    except PackageNotFoundError:
-        # Fallback for development environments
-        import tomllib
-        
-        path = Path(__file__).resolve()
-        for parent in path.parents:
-            candidate = parent / "pyproject.toml"
-            if candidate.exists():
-                try:
-                    with candidate.open("rb") as f:
-                        data = tomllib.load(f)
-                    return data.get("project", {}).get("version", "0.0.0")
-                except Exception:
-                    break
+        # Use the __version__ from the package itself
+        from fair_platform import __version__
+        return __version__
+    except ImportError:
         return "0.0.0"
 
 
@@ -113,7 +101,5 @@ def check_for_updates() -> None:
                 print(f"🔔 New version available: {latest} (current: {current})")
                 print("   Run: pip install -U fair-platform")
         except Exception:
-            # If packaging is not available or comparison fails, just compare strings
-            if latest > current:
-                print(f"🔔 New version available: {latest} (current: {current})")
-                print("   Run: pip install -U fair-platform")
+            # Fail silently if version comparison fails
+            pass

@@ -2,10 +2,11 @@
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
-from importlib.metadata import version, PackageNotFoundError
 
 from fastapi import APIRouter
 import httpx
+
+from fair_platform.utils.version import get_current_version
 
 logger = logging.getLogger(__name__)
 
@@ -15,28 +16,6 @@ router = APIRouter()
 _version_cache: Optional[dict] = None
 _cache_timestamp: Optional[datetime] = None
 CACHE_DURATION = timedelta(hours=6)
-
-
-def get_current_version() -> str:
-    """Get the current installed version of fair-platform."""
-    try:
-        return version("fair-platform")
-    except PackageNotFoundError:
-        # Fallback for development environments
-        from pathlib import Path
-        import tomllib
-        
-        path = Path(__file__).resolve()
-        for parent in path.parents:
-            candidate = parent / "pyproject.toml"
-            if candidate.exists():
-                try:
-                    with candidate.open("rb") as f:
-                        data = tomllib.load(f)
-                    return data.get("project", {}).get("version", "0.0.0")
-                except Exception:
-                    break
-        return "0.0.0"
 
 
 async def get_latest_version_from_pypi() -> Optional[str]:
