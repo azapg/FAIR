@@ -53,7 +53,15 @@ def serve(
     dev: Annotated[
         bool, typer.Option("--dev", "-d", help="Run in development mode")
     ] = False,
+    no_update_check: Annotated[
+        bool, typer.Option("--no-update-check", help="Disable version update check")
+    ] = False,
 ):
+    # Check for updates unless disabled
+    if not no_update_check:
+        from fair_platform.utils.version import check_for_updates
+        check_for_updates()
+    
     from fair_platform.backend.main import run
 
     run(host="127.0.0.1", port=port, headless=headless, dev=dev)

@@ -1,0 +1,119 @@
+"""Version checking utilities for CLI."""
+import json
+import logging
+import os
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Optional
+from importlib.metadata import version, PackageNotFoundError
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
+# Cache location
+CACHE_DIR = Path.home() / ".cache" / "fair"
+CACHE_FILE = CACHE_DIR / "last_update_check"
+CACHE_DURATION = timedelta(hours=24)
+
+
+def get_current_version() -> str:
+    """Get the current installed version of fair-platform."""
+    try:
+        return version("fair-platform")
+    except PackageNotFoundError:
+        # Fallback for development environments
+        import tomllib
+        
+        path = Path(__file__).resolve()
+        for parent in path.parents:
+            candidate = parent / "pyproject.toml"
+            if candidate.exists():
+                try:
+                    with candidate.open("rb") as f:
+                        data = tomllib.load(f)
+                    return data.get("project", {}).get("version", "0.0.0")
+                except Exception:
+                    break
+        return "0.0.0"
+
+
+def should_check_for_updates() -> bool:
+    """Check if enough time has passed since the last update check."""
+    if not CACHE_FILE.exists():
+        return True
+    
+    try:
+        with open(CACHE_FILE, "r") as f:
+            data = json.load(f)
+            last_check = datetime.fromisoformat(data.get("last_check", ""))
+            return datetime.now() - last_check >= CACHE_DURATION
+    except Exception:
+        return True
+
+
+def save_check_timestamp(latest_version: str):
+    """Save the timestamp and latest version of the last update check."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(CACHE_FILE, "w") as f:
+            json.dump({
+                "last_check": datetime.now().isoformat(),
+                "latest_version": latest_version
+            }, f)
+    except Exception as e:
+        logger.debug(f"Failed to save update check timestamp: {e}")
+
+
+def get_latest_version_from_pypi() -> Optional[str]:
+    """Fetch the latest version from PyPI JSON API."""
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get("https://pypi.org/pypi/fair-platform/json")
+            response.raise_for_status()
+            data = response.json()
+            return data.get("info", {}).get("version")
+    except Exception as e:
+        logger.debug(f"Failed to fetch version from PyPI: {e}")
+        return None
+
+
+def check_for_updates() -> None:
+    """
+    Check for FAIR platform updates and notify the user if a new version is available.
+    
+    This function:
+    - Respects the FAIR_DISABLE_UPDATE_CHECK environment variable
+    - Caches checks for 24 hours
+    - Fails silently if offline or if PyPI is unavailable
+    - Only prints a message if a newer version is available
+    """
+    # Check if update checking is disabled
+    if os.getenv("FAIR_DISABLE_UPDATE_CHECK"):
+        return
+    
+    # Check if we should perform an update check
+    if not should_check_for_updates():
+        return
+    
+    # Get current and latest versions
+    current = get_current_version()
+    latest = get_latest_version_from_pypi()
+    
+    # Save the check timestamp (even if fetch failed)
+    if latest:
+        save_check_timestamp(latest)
+    
+    # Compare versions and notify if update available
+    if latest and latest != current:
+        # Simple version comparison (works for semantic versioning)
+        try:
+            from packaging import version as pkg_version
+            if pkg_version.parse(latest) > pkg_version.parse(current):
+                print(f"🔔 New version available: {latest} (current: {current})")
+                print(f"   Run: pip install -U fair-platform")
+        except Exception:
+            # If packaging is not available or comparison fails, just compare strings
+            if latest > current:
+                print(f"🔔 New version available: {latest} (current: {current})")
+                print(f"   Run: pip install -U fair-platform")
