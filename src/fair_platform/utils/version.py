@@ -3,15 +3,16 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Optional
 
 import httpx
 
+from fair_platform.backend.data.storage import storage
+
 logger = logging.getLogger(__name__)
 
-# Cache location
-CACHE_DIR = Path.home() / ".cache" / "fair"
+# Cache location using storage manager
+CACHE_DIR = storage.cache_dir
 CACHE_FILE = CACHE_DIR / "last_update_check"
 CACHE_DURATION = timedelta(hours=24)
 
@@ -66,6 +67,28 @@ def get_latest_version_from_pypi() -> Optional[str]:
         return None
 
 
+def is_version_outdated(current: str, latest: str) -> bool:
+    """
+    Check if the current version is outdated compared to the latest.
+    
+    Args:
+        current: Current version string
+        latest: Latest version string
+        
+    Returns:
+        True if current version is outdated, False otherwise
+    """
+    if current == latest:
+        return False
+    
+    try:
+        from packaging import version as pkg_version
+        return pkg_version.parse(latest) > pkg_version.parse(current)
+    except Exception:
+        # Fail silently if version comparison fails
+        return False
+
+
 def check_for_updates() -> None:
     """
     Check for FAIR platform updates and notify the user if a new version is available.
@@ -93,15 +116,8 @@ def check_for_updates() -> None:
         return
     
     # Compare versions and notify if update available
-    if latest != current:
-        # Simple version comparison (works for semantic versioning)
-        try:
-            from packaging import version as pkg_version
-            if pkg_version.parse(latest) > pkg_version.parse(current):
-                print(f"🔔 New version available: {latest} (current: {current})")
-                print("   Run: pip install -U fair-platform")
-                # Only save timestamp if we showed a notification
-                save_check_timestamp(latest)
-        except Exception:
-            # Fail silently if version comparison fails
-            pass
+    if is_version_outdated(current, latest):
+        print(f"🔔 New version available: {latest} (current: {current})")
+        print("   Run: pip install -U fair-platform")
+        # Only save timestamp if we showed a notification
+        save_check_timestamp(latest)

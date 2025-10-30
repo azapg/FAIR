@@ -7,11 +7,12 @@ import pytest
 import httpx
 
 from fair_platform.backend.api.routers.version import (
-    get_current_version,
-    get_latest_version_from_pypi,
     check_version,
 )
 from fair_platform.utils.version import (
+    get_current_version,
+    get_latest_version_from_pypi,
+    is_version_outdated,
     should_check_for_updates,
     save_check_timestamp,
     check_for_updates,
@@ -21,14 +22,6 @@ from fair_platform.utils.version import (
 class TestBackendVersionEndpoint:
     """Test the backend /api/version endpoint."""
 
-    @pytest.fixture(autouse=True)
-    def clear_cache(self):
-        """Clear the cache before each test."""
-        from fair_platform.backend.api.routers import version as version_module
-        version_module._version_cache = None
-        version_module._cache_timestamp = None
-        yield
-
     def test_get_current_version(self):
         """Test getting the current version."""
         version = get_current_version()
@@ -37,8 +30,7 @@ class TestBackendVersionEndpoint:
         # Should be a valid version string
         assert len(version) > 0
 
-    @pytest.mark.asyncio
-    async def test_get_latest_version_from_pypi_success(self):
+    def test_get_latest_version_from_pypi_success(self):
         """Test successful PyPI version fetch."""
         mock_response = Mock()
         mock_response.json.return_value = {
@@ -46,19 +38,18 @@ class TestBackendVersionEndpoint:
         }
         mock_response.raise_for_status = Mock()
         
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+        with patch("httpx.Client") as mock_client:
+            mock_client.return_value.__enter__.return_value.get.return_value = mock_response
             
-            latest = await get_latest_version_from_pypi()
+            latest = get_latest_version_from_pypi()
             assert latest == "1.0.0"
 
-    @pytest.mark.asyncio
-    async def test_get_latest_version_from_pypi_failure(self):
+    def test_get_latest_version_from_pypi_failure(self):
         """Test PyPI fetch failure handling."""
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.side_effect = httpx.TimeoutException("Timeout")
+        with patch("httpx.Client") as mock_client:
+            mock_client.return_value.__enter__.return_value.get.side_effect = httpx.TimeoutException("Timeout")
             
-            latest = await get_latest_version_from_pypi()
+            latest = get_latest_version_from_pypi()
             assert latest is None
 
     @pytest.mark.asyncio
@@ -68,8 +59,10 @@ class TestBackendVersionEndpoint:
         
         assert "current" in result
         assert "latest" in result
+        assert "outdated" in result
         assert isinstance(result["current"], str)
         assert isinstance(result["latest"], str)
+        assert isinstance(result["outdated"], bool)
 
     @pytest.mark.asyncio
     async def test_check_version_offline_fallback(self):
@@ -80,32 +73,23 @@ class TestBackendVersionEndpoint:
         ):
             result = await check_version()
             
-            # When offline, latest should equal current
+            # When offline, latest should equal current and outdated should be False
             assert result["current"] == result["latest"]
+            assert result["outdated"] is False
 
-    @pytest.mark.asyncio
-    async def test_version_caching(self):
-        """Test that version results are cached."""
-        # First call should hit PyPI
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_response = Mock()
-            mock_response.json.return_value = {"info": {"version": "1.5.0"}}
-            mock_response.raise_for_status = Mock()
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
-            
-            latest1 = await get_latest_version_from_pypi()
-            assert latest1 == "1.5.0"
-            
-            # Reset cache timestamp to make it valid
-            from fair_platform.backend.api.routers import version as version_module
-            version_module._cache_timestamp = datetime.now()
-            
-            # Second call should use cache (no PyPI hit)
-            latest2 = await get_latest_version_from_pypi()
-            assert latest2 == "1.5.0"
-            
-            # Verify PyPI was only called once
-            assert mock_client.return_value.__aenter__.return_value.get.call_count == 1
+    def test_is_version_outdated(self):
+        """Test version outdated comparison."""
+        # Same version - not outdated
+        assert is_version_outdated("1.0.0", "1.0.0") is False
+        
+        # Newer version available - outdated
+        assert is_version_outdated("1.0.0", "2.0.0") is True
+        
+        # Dev version - not outdated
+        assert is_version_outdated("1.0.0a1", "1.0.0") is True
+        
+        # Current version newer - not outdated
+        assert is_version_outdated("2.0.0", "1.0.0") is False
 
 
 class TestCLIVersionChecker:

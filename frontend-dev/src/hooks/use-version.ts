@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 interface VersionInfo {
   current: string;
   latest: string;
+  outdated: boolean;
 }
 
 const VERSION_CHECK_KEY = 'fair_version_check_done';
@@ -30,41 +31,16 @@ export const useVersionCheck = () => {
     const hasChecked = sessionStorage.getItem(VERSION_CHECK_KEY);
     if (hasChecked) return;
 
-    // If we have data and there's a new version available
-    if (data && data.current !== data.latest) {
-      try {
-        // Simple numeric version comparison (e.g., "0.5.0" vs "0.6.0")
-        // Note: This splits on dots and hyphens to handle versions like "1.0.0-alpha"
-        // For precise semver comparison, a library like 'semver' could be used
-        const currentParts = data.current.split(/[.\-]/).map(p => parseInt(p, 10) || 0);
-        const latestParts = data.latest.split(/[.\-]/).map(p => parseInt(p, 10) || 0);
-        
-        // Compare major, minor, patch numerically
-        let isNewer = false;
-        for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
-          const current = currentParts[i] || 0;
-          const latest = latestParts[i] || 0;
-          if (latest > current) {
-            isNewer = true;
-            break;
-          } else if (latest < current) {
-            // Current version is newer, don't show notification
-            isNewer = false;
-            break;
-          }
-        }
+    // If we have data and backend says it's outdated
+    if (data && data.outdated) {
+      toast.info('New FAIR version available', {
+        description: `Version ${data.latest} is available. Update with: pip install -U fair-platform`,
+        duration: 10000,
+      });
+    }
 
-        if (isNewer) {
-          toast.info('New FAIR version available', {
-            description: `Version ${data.latest} is available. Update with: pip install -U fair-platform`,
-            duration: 10000,
-          });
-        }
-      } catch {
-        // Silent failure on version comparison error
-      }
-
-      // Mark as checked for this session
+    // Mark as checked for this session (even if not outdated)
+    if (data) {
       sessionStorage.setItem(VERSION_CHECK_KEY, 'true');
     }
   }, [data]);
