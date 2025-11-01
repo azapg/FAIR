@@ -94,7 +94,7 @@ class TestAtomicSubmissionCreation:
         """Test successful atomic submission creation with file uploads by professor"""
         data = self.setup_test_assignment(test_db)
         
-        # Get professor auth token (only professors/admins can create submissions in new design)
+        # Get professor auth token (only professors/admins can create submissions)
         token = get_auth_token(test_client, data["professor_email"])
         headers = {"Authorization": f"Bearer {token}"}
         
