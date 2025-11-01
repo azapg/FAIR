@@ -5,6 +5,7 @@ from fair_platform.backend.api.schema.user import UserCreate, UserRead
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.database import session_dependency
@@ -15,14 +16,33 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 SECRET_KEY = "fair_dont.worry--this.is.a.fake.key-6u392h"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+# New token lifetimes
+DEFAULT_TOKEN_EXPIRE_HOURS = 24
+REMEMBER_ME_TOKEN_EXPIRE_DAYS = 31
+
+# Password hashing context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt"""
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against a hash"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_access_token(data: dict, remember_me: bool = False):
+    """Create a JWT access token with variable expiry"""
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (
-        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
+    if remember_me:
+        expires_delta = timedelta(days=REMEMBER_ME_TOKEN_EXPIRE_DAYS)
+    else:
+        expires_delta = timedelta(hours=DEFAULT_TOKEN_EXPIRE_HOURS)
+    
+    expire = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -47,21 +67,28 @@ def get_current_user(
 # TODO: I will leave POST /users for testing, but I am not sure whether I should keep it and just leave this
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
-    # THIS IS JUST FOR TESTING, NO PASSWORD CHECKS NOR PASSWORD HASHING
-    # it will get updated post-mvp
+    """Register a new user with password hashing"""
     existing = db.query(User).filter(User.email == user_in.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # TODO: Implement proper password hashing. For now, we ignore the password
-    user = User(id=uuid4(), name=user_in.name, email=user_in.email, role=user_in.role)
+    # Hash password before storing
+    password_hash = hash_password(user_in.password)
+    
+    user = User(
+        id=uuid4(),
+        name=user_in.name,
+        email=user_in.email,
+        role=user_in.role,
+        password_hash=password_hash
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
 
     access_token = create_access_token(
         {"sub": str(user.id), "role": user.role},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        remember_me=False
     )
     return {"access_token": access_token, "token_type": "bearer", "user": user}
 
@@ -71,19 +98,22 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(session_dependency),
 ):
-    """Login endpoint with password validation (will fail until proper password hashing is implemented)"""
+    """Login endpoint with proper password verification"""
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # TODO: Implement proper password verification with hashing
-    if form_data.password != "test_password_123":
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials - password verification not implemented",
-        )
+    # Verify hashed password
+    if not user.password_hash or not verify_password(form_data.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    access_token = create_access_token({"sub": str(user.id), "role": user.role})
+    # Check for remember_me in scopes (OAuth2 form allows scope field)
+    remember_me = "remember_me" in form_data.scopes
+
+    access_token = create_access_token(
+        {"sub": str(user.id), "role": user.role},
+        remember_me=remember_me
+    )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
