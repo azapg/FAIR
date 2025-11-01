@@ -115,7 +115,7 @@ class TestAtomicSubmissionCreation:
         
         # Make atomic submission request
         response = test_client.post(
-            "/api/submissions/",  # Changed from create-with-files
+            "/api/submissions/",
             data=form_data,
             files=files,
             headers=headers
