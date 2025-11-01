@@ -1,3 +1,4 @@
+import os  
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
@@ -10,32 +11,28 @@ from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
+from dotenv import load_dotenv
+load_dotenv()
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
-# TODO: Move to environment variable for production
-# This key is for development/testing only as noted in the design doc
-SECRET_KEY = "fair_dont.worry--this.is.a.fake.key-6u392h"
+SECRET_KEY = os.getenv("SECRET_KEY") or "fair-insecure-default-key"
 ALGORITHM = "HS256"
-# New token lifetimes
 DEFAULT_TOKEN_EXPIRE_HOURS = 24
 REMEMBER_ME_TOKEN_EXPIRE_DAYS = 31
 
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
-    # Encode password to bytes and hash
     password_bytes = password.encode('utf-8')
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password_bytes, salt)
-    # Return as string for database storage
     return hashed.decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""
-    # Encode both to bytes
     password_bytes = plain_password.encode('utf-8')
     hashed_bytes = hashed_password.encode('utf-8')
     return bcrypt.checkpw(password_bytes, hashed_bytes)
@@ -78,7 +75,6 @@ def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Hash password before storing
     password_hash = hash_password(user_in.password)
     
     user = User(
@@ -109,11 +105,9 @@ def login(
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Verify hashed password
     if not user.password_hash or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Check for remember_me in scopes (OAuth2 form allows scope field)
     remember_me = "remember_me" in form_data.scopes
 
     access_token = create_access_token(
