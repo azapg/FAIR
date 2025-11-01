@@ -11,13 +11,14 @@ export default function LoginPage() {
   const { login, loading } = useAuth()
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
+  const [rememberMe, setRememberMe] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     try {
-      await login({ username: email, password })
+      await login({ username: email, password, remember_me: rememberMe })
       navigate('/')
     } catch (err) {
       setError('Unable to login. Please check your credentials and try again.')
@@ -58,6 +59,19 @@ export default function LoginPage() {
                 required
                 disabled={loading}
               />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                disabled={loading}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer">
+                Remember me for 31 days
+              </Label>
             </div>
             {error && (
               <p className="text-sm text-red-600">{error}</p>
