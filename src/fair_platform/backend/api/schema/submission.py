@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from fair_platform.backend.data.models.submission import SubmissionStatus
-from fair_platform.backend.api.schema.user import UserRead
+from fair_platform.backend.api.schema.submitter import SubmitterRead
 from fair_platform.backend.api.schema.artifact import ArtifactRead
 from fair_platform.backend.api.schema.submission_result import SubmissionResultRead
 
@@ -13,6 +13,7 @@ from fair_platform.backend.api.schema.submission_result import SubmissionResultR
 class SubmissionBase(BaseModel):
     assignment_id: UUID
     submitter_id: UUID
+    created_by_id: UUID
     submitted_at: Optional[datetime] = None
     status: SubmissionStatus = SubmissionStatus.pending
     official_run_id: Optional[UUID] = None
@@ -57,7 +58,7 @@ class SubmissionUpdate(BaseModel):
 
 class SubmissionRead(SubmissionBase):
     id: UUID
-    submitter: Optional[UserRead] = None
+    submitter: Optional[SubmitterRead] = None
     artifacts: List[ArtifactRead] = []
     official_result: Optional[SubmissionResultRead] = None
 

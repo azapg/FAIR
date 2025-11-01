@@ -14,7 +14,7 @@ export type AuthUser = {
   role: AuthUserRole
 }
 
-type LoginInput = { username: string; password: string }
+type LoginInput = { username: string; password: string; remember_me?: boolean }
 type RegisterInput = { name: string; email: string; password: string }
 
 type AuthContextValue = {
@@ -113,7 +113,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       form.append('username', input.username)
       form.append('password', input.password)
       form.append('grant_type', 'password')
-      form.append('scope', '')
+      // OAuth2 way to pass remember_me flag
+      form.append('scope', input.remember_me ? 'remember_me' : '')
 
       const loginRes = await api.post('/auth/login', form, {
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},

@@ -5,35 +5,10 @@ from sqlalchemy.orm import Session
 
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.data.models.user import User, UserRole
-from fair_platform.backend.api.schema.user import UserCreate, UserRead, UserUpdate
+from fair_platform.backend.api.schema.user import UserRead, UserUpdate
 from fair_platform.backend.data.database import session_dependency
 
 router = APIRouter()
-
-
-@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def create_user(
-    user: UserCreate,
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    if current_user.role != UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can create users",
-        )
-
-    role_value = (
-        user.role
-        if isinstance(user.role, str)
-        else getattr(user.role, "value", user.role)
-    )
-    db_user = User(id=uuid4(), name=user.name, email=user.email, role=role_value)
-    db.add(db_user)
-
-    db.commit()
-    db.refresh(db_user)
-    return db_user
 
 
 @router.get("/", response_model=list[UserRead])

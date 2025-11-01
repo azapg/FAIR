@@ -1,5 +1,6 @@
 from enum import Enum
 from uuid import UUID
+from typing import Optional
 
 from pydantic import EmailStr
 from sqlalchemy import String, UUID as SAUUID
@@ -13,6 +14,8 @@ if TYPE_CHECKING:
     from .workflow import Workflow
     from .workflow_run import WorkflowRun
     from .artifact import Artifact
+    from .submitter import Submitter
+    from .submission import Submission
 
 
 class UserRole(str, Enum):
@@ -28,6 +31,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[EmailStr] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False)
+    password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Relationship to courses where this user is the instructor
     courses: Mapped[List["Course"]] = relationship(
@@ -41,6 +45,14 @@ class User(Base):
     )
     created_artifacts: Mapped[List["Artifact"]] = relationship(
         "Artifact", back_populates="creator"
+    )
+    # Relationship to submitters that link to this user account
+    submitters: Mapped[List["Submitter"]] = relationship(
+        "Submitter", back_populates="user"
+    )
+    # Relationship to submissions created by this user (professor/admin)
+    created_submissions: Mapped[List["Submission"]] = relationship(
+        "Submission", back_populates="created_by", foreign_keys="Submission.created_by_id"
     )
 
     def __repr__(self) -> str:

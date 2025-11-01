@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
-from pydantic.v1 import EmailStr
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.database import session_dependency
@@ -13,6 +12,7 @@ from fair_platform.backend.data.models.submission import (
     SubmissionStatus,
     submission_artifacts,
 )
+from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.user import User, UserRole
 from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus, AccessLevel
@@ -74,20 +74,22 @@ async def create_submission(
                     detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}"
                 )
         
-        user_id = uuid4()
-        synthetic_user = User(
-            id=user_id,
+        submitter = Submitter(
+            id=uuid4(),
             name=submitter_name,
-            email=EmailStr(f"{user_id}@fair.com"),
-            role=UserRole.student,
+            email=None,  # No email for synthetic submitters
+            user_id=None,  # Not linked to any user account
+            is_synthetic=True,
+            created_at=datetime.now(timezone.utc)
         )
-        db.add(synthetic_user)
+        db.add(submitter)
         db.flush()
 
         sub = Submission(
             id=uuid4(),
             assignment_id=assignment_id,
-            submitter_id=synthetic_user.id,
+            submitter_id=submitter.id,
+            created_by_id=current_user.id,  # Track who created this submission
             submitted_at=datetime.now(timezone.utc),
             status=SubmissionStatus.pending,
         )
@@ -154,8 +156,8 @@ def list_submissions(
     
     # Fetch all submitters in one query to avoid N+1
     submitter_ids = [sub.submitter_id for sub in submissions]
-    submitters = db.query(User).filter(User.id.in_(submitter_ids)).all()
-    submitter_map = {user.id: user for user in submitters}
+    submitters = db.query(Submitter).filter(Submitter.id.in_(submitter_ids)).all()
+    submitter_map = {submitter.id: submitter for submitter in submitters}
     
     # Manually construct response with submitter data
     result = []
@@ -164,6 +166,7 @@ def list_submissions(
             "id": sub.id,
             "assignment_id": sub.assignment_id,
             "submitter_id": sub.submitter_id,
+            "created_by_id": sub.created_by_id,
             "submitter": submitter_map.get(sub.submitter_id),
             "submitted_at": sub.submitted_at,
             "status": sub.status,
@@ -210,12 +213,13 @@ def get_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
     
-    submitter = db.get(User, sub.submitter_id)
+    submitter = db.get(Submitter, sub.submitter_id)
     
     response = {
         "id": sub.id,
         "assignment_id": sub.assignment_id,
         "submitter_id": sub.submitter_id,
+        "created_by_id": sub.created_by_id,
         "submitter": submitter,
         "submitted_at": sub.submitted_at,
         "status": sub.status,

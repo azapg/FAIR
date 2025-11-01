@@ -12,6 +12,8 @@ if TYPE_CHECKING:
     from .workflow_run import WorkflowRun
     from .artifact import Artifact
     from .submission_result import SubmissionResult
+    from .submitter import Submitter
+    from .user import User
 
 submission_workflow_runs = Table(
     "submission_workflow_runs",
@@ -69,6 +71,9 @@ class Submission(Base):
         SAUUID, ForeignKey("assignments.id"), nullable=False
     )
     submitter_id: Mapped[UUID] = mapped_column(
+        SAUUID, ForeignKey("submitters.id"), nullable=False
+    )
+    created_by_id: Mapped[UUID] = mapped_column(
         SAUUID, ForeignKey("users.id"), nullable=False
     )
     submitted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
@@ -81,6 +86,10 @@ class Submission(Base):
 
     assignment: Mapped["Assignment"] = relationship(
         "Assignment", back_populates="submissions"
+    )
+    submitter: Mapped["Submitter"] = relationship("Submitter")
+    created_by: Mapped["User"] = relationship(
+        "User", back_populates="created_submissions", foreign_keys=[created_by_id]
     )
     # Many-to-many: a submission can have multiple runs linked
     runs: Mapped[List["WorkflowRun"]] = relationship(

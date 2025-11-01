@@ -19,6 +19,7 @@ from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
 from fair_platform.backend.data.database import get_session
 from fair_platform.backend.data.models import (
     User,
+    Submitter,
     Workflow,
     WorkflowRun,
     WorkflowRunStatus,
@@ -382,16 +383,16 @@ class SessionManager:
                     )
 
                     submitter_ids = [s.submitter_id for s in db_submissions]
-                    submitters = db.query(User).filter(User.id.in_(submitter_ids)).all()
-                    submitter_map = {u.id: u for u in submitters}
+                    submitters = db.query(Submitter).filter(Submitter.id.in_(submitter_ids)).all()
+                    submitter_map = {s.id: s for s in submitters}
 
                     sdk_submissions: List[SDKSubmission] = []
                     for sub in db_submissions:
-                        user_obj = submitter_map.get(sub.submitter_id)
+                        submitter_obj = submitter_map.get(sub.submitter_id)
                         sdk_submitter = SDKSubmitter(
-                            id=str(user_obj.id) if user_obj else "",
-                            name=user_obj.name if user_obj else "",
-                            email=str(user_obj.email) if user_obj else "",
+                            id=str(submitter_obj.id) if submitter_obj else "",
+                            name=submitter_obj.name if submitter_obj else "",
+                            email=str(submitter_obj.email) if submitter_obj and submitter_obj.email else "",
                         )
 
                         assign_obj = sub.assignment
