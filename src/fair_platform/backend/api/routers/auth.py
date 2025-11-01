@@ -18,6 +18,8 @@ router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 SECRET_KEY = os.getenv("SECRET_KEY") or "fair-insecure-default-key"
+if SECRET_KEY == "fair-insecure-default-key":
+    print("WARNING: Using insecure default SECRET_KEY. Set SECRET_KEY environment variable for better security.")
 ALGORITHM = "HS256"
 DEFAULT_TOKEN_EXPIRE_HOURS = 24
 REMEMBER_ME_TOKEN_EXPIRE_DAYS = 31
