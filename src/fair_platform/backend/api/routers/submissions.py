@@ -74,7 +74,6 @@ async def create_submission(
                     detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}"
                 )
         
-        # Create a Submitter instead of a synthetic User
         submitter = Submitter(
             id=uuid4(),
             name=submitter_name,
