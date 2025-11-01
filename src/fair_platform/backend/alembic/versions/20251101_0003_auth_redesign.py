@@ -135,23 +135,27 @@ def downgrade() -> None:
         try:
             batch_op.drop_index("ix_submissions_created_by_id")
         except Exception:
+            # Index may not exist if migration was partially applied; safe to ignore
             pass
         
         # Drop new FK constraints
         try:
             batch_op.drop_constraint("fk_submissions_created_by_id", type_="foreignkey")
         except Exception:
+            # Constraint may not exist if migration was partially applied; safe to ignore
             pass
         
         try:
             batch_op.drop_constraint("fk_submissions_submitter_id", type_="foreignkey")
         except Exception:
+            # Constraint may not exist if migration was partially applied; safe to ignore
             pass
         
         # Drop created_by_id column
         try:
             batch_op.drop_column("created_by_id")
         except Exception:
+            # Column may not exist if migration was partially applied; safe to ignore
             pass
         
         # Recreate old FK to users
