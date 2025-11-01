@@ -107,19 +107,9 @@ def student_user(test_db):
         return user
 
 
-def get_auth_token(test_client: TestClient, user: User) -> str:
-    """Helper function to get authentication token for a user"""
-    user_data = {
-        "name": user.name,
-        "email": user.email,
-        "role": user.role,
-        "password": "test_password_123",
-    }
-    register_response = test_client.post("/api/auth/register", json=user_data)
-    if register_response.status_code != 201:
-        pass
-
-    login_data = {"username": user.email, "password": "test_password_123"}
+def get_auth_token(test_client: TestClient, email: str, password: str = "test_password_123") -> str:
+    """Helper function to get authentication token for a user by email"""
+    login_data = {"username": email, "password": password}
     response = test_client.post("/api/auth/login", data=login_data)
 
     if response.status_code != 200:
