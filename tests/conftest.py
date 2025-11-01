@@ -56,9 +56,14 @@ def test_client(test_db):
 @pytest.fixture
 def admin_user(test_db):
     """Create an admin user for testing"""
+    from fair_platform.backend.api.routers.auth import hash_password
     with test_db() as session:
         user = User(
-            id=uuid4(), name=fake.name(), email="admin@test.com", role=UserRole.admin
+            id=uuid4(),
+            name=fake.name(),
+            email="admin@test.com",
+            role=UserRole.admin,
+            password_hash=hash_password("test_password_123")
         )
         session.add(user)
         session.commit()
@@ -69,12 +74,14 @@ def admin_user(test_db):
 @pytest.fixture
 def professor_user(test_db):
     """Create a professor user for testing"""
+    from fair_platform.backend.api.routers.auth import hash_password
     with test_db() as session:
         user = User(
             id=uuid4(),
             name=fake.name(),
             email="professor@test.com",
             role=UserRole.professor,
+            password_hash=hash_password("test_password_123")
         )
         session.add(user)
         session.commit()
@@ -85,12 +92,14 @@ def professor_user(test_db):
 @pytest.fixture
 def student_user(test_db):
     """Create a student user for testing"""
+    from fair_platform.backend.api.routers.auth import hash_password
     with test_db() as session:
         user = User(
             id=uuid4(),
             name=fake.name(),
             email="student@test.com",
             role=UserRole.student,
+            password_hash=hash_password("test_password_123")
         )
         session.add(user)
         session.commit()
