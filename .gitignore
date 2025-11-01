@@ -57,3 +57,4 @@ src/fair_platform/frontend/dist
 # IDEs
 **/.idea
 **/.vscodefrontend-dev/package-lock.json
+.vscode

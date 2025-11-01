@@ -71,7 +71,6 @@ def get_current_user(
     return user
 
 
-# TODO: I will leave POST /users for testing, but I am not sure whether I should keep it and just leave this
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
     """Register a new user with password hashing"""
