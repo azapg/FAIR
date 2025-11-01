@@ -14,6 +14,8 @@ from fair_platform.backend.data.models import User
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
+# TODO: Move to environment variable for production
+# This key is for development/testing only as noted in the design doc
 SECRET_KEY = "fair_dont.worry--this.is.a.fake.key-6u392h"
 ALGORITHM = "HS256"
 # New token lifetimes

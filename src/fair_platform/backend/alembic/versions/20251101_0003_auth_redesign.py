@@ -99,8 +99,7 @@ def upgrade() -> None:
         
         # Now make created_by_id non-nullable and update FK
         with op.batch_alter_table("submissions", schema=None) as batch_op:
-            # Recreate FK to submitters instead of users
-            batch_op.drop_constraint("fk_submissions_submitter_id", type_="foreignkey")
+            # Recreate FK to submitters instead of users (already dropped above)
             batch_op.create_foreign_key(
                 "fk_submissions_submitter_id",
                 "submitters",
