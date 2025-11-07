@@ -121,6 +121,10 @@ export function usePersistWorkflowDrafts() {
           } catch (error: any) {
             if (error?.response?.status === 404) {
               toast.error(`Can't find workflow '${draft.name || workflowId}'. It may have been deleted.`);
+            } else if (error?.response?.status === 403) {
+              // TODO: Because this attempts to persist all drafts, in case you switched account but your browser still has drafts
+              //  from the previous user, you may get a lot of these errors. We should either remove the drafts on user switch, or just persist
+              //  just the active course drafts or at least just the active workflow's draft.  
             } else {
               throw error;
             }
