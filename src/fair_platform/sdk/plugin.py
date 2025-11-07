@@ -101,17 +101,31 @@ class GradePlugin(BasePlugin, ABC):
         return [self.grade(*sub) for sub in submissions]
 
 
+class ValidationResult(BaseModel):
+    is_valid: bool
+    modified_score: Optional[float] = None
+    modified_feedback: Optional[str] = None
+    validation_notes: Optional[str] = None
+    meta: dict[str, Any] = {}
+
+
 class ValidationPlugin(BasePlugin, ABC):
     # TODO: I think validation should become "post-processing", but for now
     #  we keep it as is.
     @abstractmethod
-    def validate_one(self, grade_result: Any) -> bool:
+    def validate_one(
+        self,
+        original: "Submission",
+        transcribed: "TranscribedSubmission",
+        grade_result: "GradeResult",
+    ) -> "ValidationResult":
         pass
 
-    def validate_batch(self, grade_results: List[Any]) -> List[bool]:
-        # TODO: What if validate_one is not implemented? Some authors might
-        #  only implement batch processing...
-        return [self.validate_one(grade_result=gr) for gr in grade_results]
+    def validate_batch(
+        self,
+        items: List[Tuple["Submission", "TranscribedSubmission", "GradeResult"]],
+    ) -> List["ValidationResult"]:
+        return [self.validate_one(*item) for item in items]
 
 
 class PluginType(str, Enum):
@@ -246,6 +260,7 @@ __all__ = [
     "TranscriptionPlugin",
     "GradePlugin",
     "ValidationPlugin",
+    "ValidationResult",
     "TranscribedSubmission",
     "GradeResult",
     "PluginMeta",

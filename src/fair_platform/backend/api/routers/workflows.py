@@ -224,7 +224,7 @@ def update_workflow(
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
         raise HTTPException(
             status_code=403,
-            detail="Only the course instructor or admin can update this workflow",
+            detail=f"Only the course instructor or admin can update this workflow. role: {current_user.role}, instructor_id: {course.instructor_id}, current_user.id: {current_user.id}",
         )
 
     if payload.name is not None:

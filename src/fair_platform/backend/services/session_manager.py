@@ -15,6 +15,12 @@ from fair_platform.sdk import (
     Submission as SDKSubmission,
     TranscribedSubmission,
 )
+from fair_platform.sdk import (
+    TranscriptionPlugin,
+    GradePlugin,
+    ValidationPlugin,
+    ValidationResult,
+)
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
 from fair_platform.backend.data.database import get_session
 from fair_platform.backend.data.models import (
@@ -34,6 +40,15 @@ from fair_platform.sdk import get_plugin_object
 from fair_platform.sdk.events import IndexedEventBus
 
 from fair_platform.sdk.logger import SessionLogger
+
+
+def is_method_overridden(instance, method_name: str, base_class) -> bool:
+    """Check if a method was overridden in the instance's class."""
+    instance_method = getattr(type(instance), method_name, None)
+    base_method = getattr(base_class, method_name, None)
+    if instance_method is None or base_method is None:
+        return False
+    return instance_method != base_method
 
 
 class Session:
@@ -326,7 +341,7 @@ class SessionManager:
 
         # Transcription
         if workflow.transcriber_plugin_id:
-            await session.logger.info("Starting transcription step")
+            await session.logger.info("Starting transcription step...")
             transcriber_cls = get_plugin_object(workflow.transcriber_plugin_id)
 
             if not transcriber_cls:
@@ -448,79 +463,162 @@ class SessionManager:
                             )
                         )
 
-                semaphore = asyncio.Semaphore(parallelism)
-
-                async def transcribe_wrapper(
-                    submission: SDKSubmission,
-                ) -> Tuple[SDKSubmission, TranscribedSubmission]:
-                    async with semaphore:
-                        if inspect.iscoroutinefunction(transcriber_instance.transcribe):
-                            result = await transcriber_instance.transcribe(submission)
-                        else:
-                            loop = asyncio.get_running_loop()
-                            result = await loop.run_in_executor(
-                                None, transcriber_instance.transcribe, submission
-                            )
-                        return (submission, result)
-
-                transcription_results = await asyncio.gather(
-                    *[transcribe_wrapper(sub) for sub in sdk_submissions],
-                    return_exceptions=True,
+                use_batch_transcribe = is_method_overridden(
+                    transcriber_instance, "transcribe_batch", TranscriptionPlugin
                 )
 
-                with get_session() as db:
-                    updated_submissions = []
-                    for res in transcription_results:
-                        if isinstance(res, Exception):
-                            sdk_sub = sdk_submissions[transcription_results.index(res)]
-                            submitter = sdk_sub.submitter.name
-                            db_sub = db.get(Submission, UUID(sdk_sub.id))
-                            if not db_sub:
+                # We'll reuse this variable after the step
+                transcription_results: List[
+                    Tuple[SDKSubmission, TranscribedSubmission]
+                ] = []
+
+                if use_batch_transcribe:
+                    await session.logger.info(
+                        "Using batch transcription. Parallelism setting will be ignored."
+                    )
+                    # Call batch method with sync/async support
+                    if inspect.iscoroutinefunction(
+                        transcriber_instance.transcribe_batch
+                    ):
+                        batch_results = await transcriber_instance.transcribe_batch(
+                            sdk_submissions
+                        )
+                    else:
+                        loop = asyncio.get_running_loop()
+                        batch_results = await loop.run_in_executor(
+                            None,
+                            transcriber_instance.transcribe_batch,
+                            sdk_submissions,
+                        )
+
+                    if not isinstance(batch_results, list) or len(batch_results) != len(
+                        sdk_submissions
+                    ):
+                        raise RuntimeError(
+                            "Batch transcription returned unexpected result length"
+                        )
+
+                    with get_session() as db:
+                        to_update: List[Submission] = []
+                        for idx, tr in enumerate(batch_results):
+                            original = sdk_submissions[idx]
+                            sub_id = UUID(original.id)
+                            db_submission = db.get(Submission, sub_id)
+                            if not db_submission:
                                 await session.logger.warning(
-                                    f"Can't find {submitter}'s submission, skipping."
+                                    f"Can't find {original.submitter.name}'s submission, skipping."
                                 )
                                 continue
-
-                            await session.logger.error(
-                                f"Transcription failed for {submitter}'s submission: {res}"
+                            await _upsert_submission_result(
+                                db,
+                                session,
+                                submission_id=sub_id,
+                                workflow_run_id=session_id,
+                                transcription=tr.transcription,
+                                transcription_confidence=tr.confidence,
+                                transcribed_at=datetime.now(),
                             )
+                            to_update.append(db_submission)
+                            transcription_results.append((original, tr))
 
+                        if to_update:
                             await _update_submissions(
                                 db,
                                 session,
-                                [db_sub],
-                                status=SubmissionStatus.failure,
+                                to_update,
+                                status=SubmissionStatus.transcribed,
                             )
-                            continue
+                else:
+                    await session.logger.info(
+                        "Transcribing submissions individually..."
+                    )
+                    semaphore = asyncio.Semaphore(parallelism)
 
-                        original, transcribed = res
-                        sub_id = UUID(original.id)
-                        db_submission = db.get(Submission, sub_id)
-                        if not db_submission:
-                            await session.logger.warning(
-                                f"Can't find {original.submitter.name}'s submission, skipping."
-                            )
-                            continue
-                        # Persist transcription result
-                        await _upsert_submission_result(
-                            db,
-                            session,
-                            submission_id=sub_id,
-                            workflow_run_id=session_id,
-                            transcription=transcribed.transcription,
-                            transcription_confidence=transcribed.confidence,
-                            transcribed_at=datetime.now(),
-                        )
+                    async def transcribe_one_and_persist(
+                        submission: SDKSubmission,
+                        semaphore: asyncio.Semaphore,
+                    ) -> Tuple[SDKSubmission, TranscribedSubmission] | None:
+                        async with semaphore:
+                            try:
+                                if inspect.iscoroutinefunction(
+                                    transcriber_instance.transcribe
+                                ):
+                                    result = await transcriber_instance.transcribe(
+                                        submission
+                                    )
+                                else:
+                                    loop = asyncio.get_running_loop()
+                                    result = await loop.run_in_executor(
+                                        None,
+                                        transcriber_instance.transcribe,
+                                        submission,
+                                    )
 
-                        updated_submissions.append(db_submission)
+                                sub_id = UUID(submission.id)
+                                with get_session() as db:
+                                    db_submission = db.get(Submission, sub_id)
+                                    if not db_submission:
+                                        await session.logger.warning(
+                                            f"Can't find {submission.submitter.name}'s submission"
+                                        )
+                                        return None
 
-                    if updated_submissions:
-                        await _update_submissions(
-                            db,
-                            session,
-                            updated_submissions,
-                            status=SubmissionStatus.transcribed,
-                        )
+                                    await _upsert_submission_result(
+                                        db,
+                                        session,
+                                        sub_id,
+                                        session_id,
+                                        transcription=result.transcription,
+                                        transcription_confidence=result.confidence,
+                                        transcribed_at=datetime.now(),
+                                    )
+
+                                    db_submission.status = SubmissionStatus.transcribed
+                                    db.commit()
+                                    await session.bus.emit(
+                                        "update",
+                                        {
+                                            # TODO: frontend expects "submissions", in plural, to invalidate that query. Should we change that?
+                                            "object": "submissions",
+                                            "type": "update",
+                                            "payload": {
+                                                "id": db_submission.id,
+                                                "status": db_submission.status,
+                                            },
+                                        },
+                                    )
+
+                                return (submission, result)
+                            except Exception as e:
+                                sub_id = UUID(submission.id)
+                                with get_session() as db:
+                                    db_sub = db.get(Submission, sub_id)
+                                    if db_sub:
+                                        await session.logger.error(
+                                            f"Transcription failed for {submission.submitter.name}'s submission: {e}"
+                                        )
+                                        db_sub.status = SubmissionStatus.failure
+                                        db.commit()
+                                        await session.bus.emit(
+                                            "update",
+                                            {
+                                                "object": "submissions",
+                                                "type": "update",
+                                                "payload": {
+                                                    "id": db_sub.id,
+                                                    "status": db_sub.status,
+                                                },
+                                            },
+                                        )
+                                return None
+
+                    results = await asyncio.gather(
+                        *[
+                            transcribe_one_and_persist(sub, semaphore)
+                            for sub in sdk_submissions
+                        ]
+                    )
+                    transcription_results = [r for r in results if r is not None]
 
             except Exception as e:
                 return await report_failure(
@@ -580,14 +678,15 @@ class SessionManager:
                 )
 
             try:
-                valid_t_results = [
-                    tr for tr in transcription_results if not isinstance(tr, Exception)
+                # Filter out successful transcriptions (already shaped accordingly)
+                valid_t_results: List[Tuple[SDKSubmission, TranscribedSubmission]] = [
+                    (o, t) for (o, t) in transcription_results
                 ]
 
                 db_subs = []
                 with get_session() as db:
-                    for result in valid_t_results:
-                        db_sub = db.get(Submission, UUID(result[0].id))
+                    for original, _ in valid_t_results:
+                        db_sub = db.get(Submission, UUID(original.id))
                         if db_sub:
                             db_subs.append(db_sub)
 
@@ -602,69 +701,47 @@ class SessionManager:
                     await session.logger.warning(
                         "No submissions to grade, skipping grading step"
                     )
-                    grading_results = []
+                    grading_results: List[
+                        Tuple[SDKSubmission, TranscribedSubmission, GradeResult]
+                    ] = []
                 else:
-                    semaphore = asyncio.Semaphore(parallelism)
-
-                    # I want to have a reference of the original and the transcribed result after grading,
-                    # and because I can't pass them directly to asyncio.gather, I just wrap them here
-                    async def grade_wrapper(
-                        original: SDKSubmission,
-                        transcribed_result: TranscribedSubmission,
-                    ) -> Tuple[SDKSubmission, TranscribedSubmission, GradeResult]:
-                        async with semaphore:
-                            if inspect.iscoroutinefunction(grader_instance.grade):
-                                result = await grader_instance.grade(
-                                    transcribed_result, original
-                                )
-                            else:
-                                loop = asyncio.get_running_loop()
-                                result = await loop.run_in_executor(
-                                    None,
-                                    grader_instance.grade,
-                                    transcribed_result,
-                                    original,
-                                )
-                        return (original, transcribed_result, result)
-
-                    grading_results = await asyncio.gather(
-                        *[grade_wrapper(*tr) for tr in valid_t_results],
-                        return_exceptions=True,
+                    use_batch_grade = is_method_overridden(
+                        grader_instance, "grade_batch", GradePlugin
                     )
 
-                    try:
+                    grading_results: List[
+                        Tuple[SDKSubmission, TranscribedSubmission, GradeResult]
+                    ] = []
+
+                    if use_batch_grade:
+                        await session.logger.info(
+                            "Using batch grading (plugin override detected)"
+                        )
+                        pairs = [(t, o) for (o, t) in valid_t_results]
+                        if inspect.iscoroutinefunction(grader_instance.grade_batch):
+                            batch = await grader_instance.grade_batch(pairs)
+                        else:
+                            loop = asyncio.get_running_loop()
+                            batch = await loop.run_in_executor(
+                                None, grader_instance.grade_batch, pairs
+                            )
+                        if not isinstance(batch, list) or len(batch) != len(
+                            valid_t_results
+                        ):
+                            raise RuntimeError(
+                                "Batch grading returned unexpected result length"
+                            )
                         with get_session() as db:
-                            to_update_success = []
-                            to_update_failure = []
-
-                            for idx, res in enumerate(grading_results):
-                                sdk_sub = valid_t_results[idx][0]
-                                submitter = sdk_sub.submitter.name
-                                if isinstance(res, Exception):
-                                    sub_id = UUID(valid_t_results[idx][0].id)
-                                    db_sub = db.get(Submission, sub_id)
-                                    if db_sub:
-                                        await session.logger.error(
-                                            f"Grading failed for {submitter}'s submission: {res}"
-                                        )
-                                        to_update_failure.append(db_sub)
-                                    else:
-                                        await session.logger.warning(
-                                            f"Can't find {submitter}'s submission, skipping."
-                                        )
-                                    continue
-
-                                original, _, grade_result = res
+                            to_update_success: List[Submission] = []
+                            for idx, grade_result in enumerate(batch):
+                                original, transcribed = valid_t_results[idx]
                                 original_id = UUID(original.id)
-
                                 db_sub = db.get(Submission, original_id)
                                 if not db_sub:
                                     await session.logger.warning(
                                         f"Can't find {original.submitter.name}'s submission, skipping."
                                     )
                                     continue
-
-                                # Persist grade result (upsert on existing submission_result)
                                 await _upsert_submission_result(
                                     db,
                                     session,
@@ -675,17 +752,10 @@ class SessionManager:
                                     grading_meta=grade_result.meta,
                                     graded_at=datetime.now(),
                                 )
-
                                 to_update_success.append(db_sub)
-
-                            if to_update_failure:
-                                await _update_submissions(
-                                    db,
-                                    session,
-                                    to_update_failure,
-                                    status=SubmissionStatus.failure,
+                                grading_results.append(
+                                    (original, transcribed, grade_result)
                                 )
-
                             if to_update_success:
                                 await _update_submissions(
                                     db,
@@ -693,14 +763,105 @@ class SessionManager:
                                     to_update_success,
                                     status=SubmissionStatus.graded,
                                 )
-                    except Exception as e:
-                        return await report_failure(
-                            session,
-                            session_id,
-                            submission_ids,
-                            reason="Session failed while persisting grading results",
-                            log_message=f"Failed to persist grading results: {e}",
+                    else:
+                        await session.logger.info(
+                            "Using individual grading with streaming"
                         )
+                        semaphore = asyncio.Semaphore(parallelism)
+
+                        async def grade_one_and_persist(
+                            original: SDKSubmission,
+                            transcribed_result: TranscribedSubmission,
+                            semaphore: asyncio.Semaphore,
+                        ) -> Tuple[SDKSubmission, TranscribedSubmission, GradeResult] | None:
+                            async with semaphore:
+                                try:
+                                    if inspect.iscoroutinefunction(
+                                        grader_instance.grade
+                                    ):
+                                        result = await grader_instance.grade(
+                                            transcribed_result, original
+                                        )
+                                    else:
+                                        loop = asyncio.get_running_loop()
+                                        result = await loop.run_in_executor(
+                                            None,
+                                            grader_instance.grade,
+                                            transcribed_result,
+                                            original,
+                                        )
+
+                                    original_id = UUID(original.id)
+                                    with get_session() as db:
+                                        db_sub = db.get(Submission, original_id)
+                                        if not db_sub:
+                                            await session.logger.warning(
+                                                f"Can't find {original.submitter.name}'s submission, skipping."
+                                            )
+                                            return None
+
+                                        await _upsert_submission_result(
+                                            db,
+                                            session,
+                                            submission_id=original_id,
+                                            workflow_run_id=session_id,
+                                            score=result.score,
+                                            feedback=result.feedback,
+                                            grading_meta=result.meta,
+                                            graded_at=datetime.now(),
+                                        )
+
+                                        db_sub.status = SubmissionStatus.graded
+                                        db.commit()
+                                        await session.bus.emit(
+                                            "update",
+                                            {
+                                                "object": "submissions",
+                                                "type": "update",
+                                                "payload": {
+                                                    "id": db_sub.id,
+                                                    "status": db_sub.status,
+                                                },
+                                            },
+                                        )
+
+                                    return (
+                                        original,
+                                        transcribed_result,
+                                        result,
+                                    )
+                                except Exception as e:
+                                    original_id = UUID(original.id)
+                                    with get_session() as db:
+                                        db_sub = db.get(Submission, original_id)
+                                        if db_sub:
+                                            await session.logger.error(
+                                                f"Grading failed for {original.submitter.name}'s submission: {e}"
+                                            )
+                                            db_sub.status = SubmissionStatus.failure
+                                            db.commit()
+                                            await session.bus.emit(
+                                                "update",
+                                                {
+                                                    "object": "submissions",
+                                                    "type": "update",
+                                                    "payload": {
+                                                        "id": db_sub.id,
+                                                        "status": db_sub.status,
+                                                    },
+                                                },
+                                            )
+                                    return None
+
+                        graded_streamed = await asyncio.gather(
+                            *[
+                                grade_one_and_persist(o, t, semaphore)
+                                for (o, t) in valid_t_results
+                            ]
+                        )
+                        grading_results = [
+                            r for r in graded_streamed if r is not None
+                        ]
 
             except Exception as e:
                 return await report_failure(
@@ -712,6 +873,146 @@ class SessionManager:
                 )
 
             await session.logger.info("Grading step completed")
+
+        # Validation step
+        if getattr(workflow, "validator_plugin_id", None):
+            await session.logger.info("Starting validation step")
+            validator_cls = get_plugin_object(workflow.validator_plugin_id)
+            if not validator_cls:
+                await session.logger.warning("Validator plugin not found, skipping")
+            else:
+                try:
+                    validator_instance = validator_cls(
+                        session.logger.get_child(workflow.validator_plugin_id)
+                    )
+                    validator_instance.set_values(workflow.validator_settings or {})
+
+                    # Build inputs from grading_results (if any)
+                    # grading_results should be defined from previous block
+                    if 'grading_results' not in locals():
+                        grading_results = []  # type: ignore
+
+                    use_batch_validate = is_method_overridden(
+                        validator_instance, "validate_batch", ValidationPlugin
+                    )
+
+                    async def apply_validation_to_db(
+                        sub_id: UUID, validation: ValidationResult
+                    ) -> None:
+                        with get_session() as db:
+                            db_sub = db.get(Submission, sub_id)
+                            if not db_sub:
+                                return
+                            result = (
+                                db.query(SubmissionResult)
+                                .filter(
+                                    SubmissionResult.submission_id == sub_id,
+                                    SubmissionResult.workflow_run_id == session_id,
+                                )
+                                .first()
+                            )
+                            if result:
+                                if validation.modified_score is not None:
+                                    result.score = validation.modified_score
+                                if validation.modified_feedback is not None:
+                                    result.feedback = validation.modified_feedback
+                                meta = result.grading_meta or {}
+                                meta["validation"] = {
+                                    "is_valid": validation.is_valid,
+                                    "notes": validation.validation_notes,
+                                    "meta": validation.meta,
+                                }
+                                result.grading_meta = meta
+                                result.graded_at = result.graded_at or datetime.now()
+                                db.commit()
+                                await session.bus.emit(
+                                    "update",
+                                    {
+                                        "object": "submissions",
+                                        "type": "update",
+                                        "payload": {"id": db_sub.id},
+                                    },
+                                )
+
+                    if not grading_results:
+                        await session.logger.info(
+                            "No graded submissions to validate, skipping"
+                        )
+                    elif use_batch_validate:
+                        await session.logger.info(
+                            "Using batch validation..."
+                        )
+                        items = [(o, t, g) for (o, t, g) in grading_results]
+                        if inspect.iscoroutinefunction(
+                            validator_instance.validate_batch
+                        ):
+                            v_results = await validator_instance.validate_batch(items)
+                        else:
+                            loop = asyncio.get_running_loop()
+                            v_results = await loop.run_in_executor(
+                                None, validator_instance.validate_batch, items
+                            )
+                        # Emit a single batch update after persisting
+                        batched_payload = []
+                        for idx, v in enumerate(v_results):
+                            original, _, _ = grading_results[idx]
+                            sub_id = UUID(original.id)
+                            await apply_validation_to_db(sub_id, v)
+                            batched_payload.append({"id": sub_id})
+                        if batched_payload:
+                            await session.bus.emit(
+                                "update",
+                                {
+                                    "object": "submissions",
+                                    "type": "update",
+                                    "payload": batched_payload,
+                                },
+                            )
+                    else:
+                        await session.logger.info(
+                            "Using individual validation with streaming"
+                        )
+                        semaphore = asyncio.Semaphore(parallelism)
+
+                        async def validate_one_and_persist(
+                            original: SDKSubmission,
+                            transcribed: TranscribedSubmission,
+                            graded: GradeResult,
+                            semaphore: asyncio.Semaphore,
+                        ) -> None:
+                            async with semaphore:
+                                try:
+                                    if inspect.iscoroutinefunction(
+                                        validator_instance.validate_one
+                                    ):
+                                        v = await validator_instance.validate_one(
+                                            original, transcribed, graded
+                                        )
+                                    else:
+                                        loop = asyncio.get_running_loop()
+                                        v = await loop.run_in_executor(
+                                            None,
+                                            validator_instance.validate_one,
+                                            original,
+                                            transcribed,
+                                            graded,
+                                        )
+                                    await apply_validation_to_db(UUID(original.id), v)
+                                except Exception as e:
+                                    await session.logger.error(
+                                        f"Validation failed for {original.submitter.name}'s submission: {e}"
+                                    )
+
+                        await asyncio.gather(
+                            *[
+                                validate_one_and_persist(o, t, g, semaphore)
+                                for (o, t, g) in grading_results
+                            ]
+                        )
+                except Exception as e:
+                    await session.logger.error(
+                        f"Validation step failed: {e} — continuing to finalize run"
+                    )
 
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
