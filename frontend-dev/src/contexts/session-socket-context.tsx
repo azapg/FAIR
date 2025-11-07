@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ReactNode, useEffect, useRef } from "react";
 import { useSessionStore } from "@/store/session-store";
 import { submissionsKeys } from "@/hooks/use-submissions";
+import { getWebSocketUrl } from "@/lib/api";
 
 function shapeIncomingLog(data: any) {
   // Accept both normalized messages (with payload) and raw ones (e.g., close reason at root)
@@ -58,17 +59,7 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
     // New session: proactively clear any stale logs before connecting
     clearLogs();
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const hostname = window.location.hostname;
-    const port = window.location.port ? `:${window.location.port}` : '';
-    let host = hostname + port;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      if(port == ":3000") {
-        host = `localhost:8000`;
-      }
-    }
-
-    const wsUrl = `${protocol}//${host}/api/sessions/${currentSession.id}`;
+    const wsUrl = getWebSocketUrl(`/api/sessions/${currentSession.id}`);
     const newSocket = new WebSocket(wsUrl);
     setSocket(newSocket);
 

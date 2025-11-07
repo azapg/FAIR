@@ -56,5 +56,8 @@ src/fair_platform/frontend/dist
 
 # IDEs
 **/.idea
-**/.vscodefrontend-dev/package-lock.json
+**/.vscode
 .vscode
+
+# npm (project uses bun)
+frontend-dev/package-lock.json
