@@ -32,7 +32,6 @@ export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogP
         files: files ? Array.from(files) : undefined,
       });
       
-      console.log("Submission created successfully");
       setUsername("");
       setFiles(null);
       setOpen(false);
