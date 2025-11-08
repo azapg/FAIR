@@ -53,7 +53,7 @@ async def create_submission(
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Assignment not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
         )
 
     if current_user.role == UserRole.admin:
