@@ -41,11 +41,8 @@ class SubmissionCreate(SubmissionBase):
 
 
 class SubmissionUpdate(BaseModel):
-    submitted_at: Optional[datetime] = None
-    status: Optional[SubmissionStatus] = None
     official_run_id: Optional[UUID] = None
     artifact_ids: Optional[List[UUID]] = None  # full replace if provided
-    run_ids: Optional[List[UUID]] = None  # full replace if provided
 
     class Config:
         from_attributes = True

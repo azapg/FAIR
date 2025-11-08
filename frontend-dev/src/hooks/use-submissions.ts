@@ -57,9 +57,6 @@ export type CreateSubmissionInput = {
 }
 
 export type UpdateSubmissionInput = {
-  submitted_at?: string
-  status?: SubmissionStatus
-  official_run_id?: string | null
   artifact_ids?: string[]
 }
 
