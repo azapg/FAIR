@@ -230,17 +230,11 @@ def list_submissions(
 @router.get("/{submission_id}", response_model=SubmissionRead)
 
 def get_submission(
-
     submission_id: UUID,
-
     run_id: Optional[UUID] = Query(
-
         None, description="If provided, return result for this workflow run"
-
     ),
-
     db: Session = Depends(session_dependency),
-
     current_user: User = Depends(get_current_user),
 ):
 
@@ -250,8 +244,6 @@ def get_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
-
-    # Permission: admin sees all; instructors see submissions for their courses; others see only their own
     if current_user.role != UserRole.admin:
         if current_user.role == UserRole.professor:
             assignment = db.get(Assignment, sub.assignment_id)
@@ -318,7 +310,6 @@ def update_submission(
         )
 
 
-    # Permission: only admin or the course instructor can update a submission
     if current_user.role != UserRole.admin:
         assignment = db.get(Assignment, sub.assignment_id)
         course = db.get(Course, assignment.course_id) if assignment else None
@@ -329,19 +320,6 @@ def update_submission(
 
                 detail="Only the course instructor or admin can update this submission",
             )
-
-
-
-    # TODO: As with run_ids, I don't think people should be able to update these fields.
-    #   These fields should only be managed by the workflow runner service.
-    if payload.submitted_at is not None:
-        sub.submitted_at = payload.submitted_at
-    if payload.status is not None:
-        sub.status = (
-            payload.status
-            if isinstance(payload.status, str)
-            else SubmissionStatus.pending
-        )
 
     if payload.artifact_ids is not None:
         manager = get_artifact_manager(db)
@@ -361,8 +339,6 @@ def update_submission(
 
         db.commit()
 
-    # TODO: I think I won't consider run_ids for now.
-
     db.refresh(sub)
     return sub
 
@@ -380,7 +356,6 @@ def delete_submission(
         )
 
 
-    # Permission: only admin or the course instructor can delete a submission
     if current_user.role != UserRole.admin:
         assignment = db.get(Assignment, sub.assignment_id)
         course = db.get(Course, assignment.course_id) if assignment else None
