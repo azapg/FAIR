@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
 export default defineConfig({
@@ -42,7 +43,11 @@ export default defineConfig({
 			],
 			components: {
 				SiteTitle: './src/components/header-title.astro',
-			}
+				ThemeSelect: './src/components/theme-select.astro',
+			},
 		}),
 	],
+	vite: {
+		plugins: [tailwindcss()],
+	}
 });
