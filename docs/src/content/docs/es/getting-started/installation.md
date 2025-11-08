@@ -3,8 +3,6 @@ title: Instalación
 description: Cómo instalar y configurar FAIR Platform
 ---
 
-# Instalación
-
 Esta guía te ayudará a instalar y configurar FAIR Platform en tu sistema.
 
 ## Requisitos

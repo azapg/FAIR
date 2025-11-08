@@ -2,9 +2,6 @@
 title: Welcome to FAIR Platform
 description: Open-source platform for AI-powered grading systems
 ---
-
-# Welcome to FAIR Platform
-
 FAIR (or _The Fair Platform_) is an open-source platform that makes it easy to experiment with automatic grading systems using AI. It provides a flexible and extensible environment for building, testing, and comparing grading approaches, from interpreters and rubrics to agent-based systems and research datasets.
 
 The goal is to support researchers, educators, and students who want to explore how AI can improve assessment, reduce manual grading workload, and enable reproducible experiments in educational technology.

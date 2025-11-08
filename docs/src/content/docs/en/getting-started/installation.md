@@ -3,8 +3,6 @@ title: Installation
 description: How to install and set up FAIR Platform
 ---
 
-# Installation
-
 This guide will help you install and set up FAIR Platform on your system.
 
 ## Requirements

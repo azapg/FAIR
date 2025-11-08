@@ -3,8 +3,6 @@ title: Automatización de Lanzamientos
 description: Cómo funciona el pipeline de lanzamientos en FAIR Platform
 ---
 
-# Automatización de Lanzamientos
-
 Este proyecto incluye un pipeline ligero de lanzamientos que se ejecuta cada vez que se sube una etiqueta Git que comienza con `v` a GitHub. El flujo de trabajo se encuentra en [`.github/workflows/release.yml`](https://github.com/azapg/FAIR/blob/main/.github/workflows/release.yml) y se encarga de los metadatos de versión, validación de compilación, creación de lanzamiento y publicación opcional de paquetes.
 
 ## Gestión de Versiones Basada en Etiquetas
