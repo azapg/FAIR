@@ -18,9 +18,6 @@ export default defineConfig({
 					lang: 'es',
 				},
 			},
-			logo: {
-				src: './src/assets/logo.svg',
-			},
 			social: {
 				github: 'https://github.com/azapg/FAIR',
 			},
@@ -43,6 +40,9 @@ export default defineConfig({
 			customCss: [
 				'./src/styles/custom.css',
 			],
+			components: {
+				SiteTitle: './src/components/header-title.astro',
+			}
 		}),
 	],
 });
