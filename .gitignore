@@ -61,3 +61,15 @@ src/fair_platform/frontend/dist
 
 # npm (project uses bun)
 frontend-dev/package-lock.json
+
+# DOCS
+
+# dependencies
+docs/node_modules
+docs/.astro
+
+# production
+docs/dist
+
+# misc
+docs/.DS_Store
