@@ -22,6 +22,8 @@ pip install fair-platform
 fair serve
 ```
 
+For detailed installation instructions, troubleshooting, and more, visit the [documentation](docs/) (available in English and Spanish).
+
 ### Development Requirements
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)

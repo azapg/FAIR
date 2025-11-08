@@ -1,0 +1,122 @@
+/* Import fonts from platform */
+@font-face {
+    font-family: 'Host Grotesk';
+    src: url('/fonts/host-grotesk/HostGrotesk-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Host Grotesk';
+    src: url('/fonts/host-grotesk/HostGrotesk-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Host Grotesk';
+    src: url('/fonts/host-grotesk/HostGrotesk-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Host Grotesk';
+    src: url('/fonts/host-grotesk/HostGrotesk-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Host Grotesk';
+    src: url('/fonts/host-grotesk/HostGrotesk-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Remark';
+    src: url('/fonts/remark/LTRemark-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Remark';
+    src: url('/fonts/remark/LTRemark-Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Remark';
+    src: url('/fonts/remark/LTRemark-Black.otf') format('opentype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Apply platform color scheme and fonts */
+:root {
+    --sl-font: 'Host Grotesk', sans-serif;
+    --sl-font-headings: 'Remark', serif;
+    
+    /* Light mode colors matching platform */
+    --sl-color-white: oklch(1 0 0);
+    --sl-color-gray-1: oklch(0.97 0 0);
+    --sl-color-gray-2: oklch(0.955 0 89.876);
+    --sl-color-gray-3: oklch(0.922 0 0);
+    --sl-color-gray-4: oklch(0.708 0 0);
+    --sl-color-gray-5: oklch(0.556 0 0);
+    --sl-color-gray-6: oklch(0.205 0 0);
+    --sl-color-black: oklch(0.145 0 0);
+    
+    --sl-color-accent-low: oklch(0.97 0 0);
+    --sl-color-accent: oklch(0.205 0 0);
+    --sl-color-accent-high: oklch(0.985 0 0);
+    
+    --sl-color-text: oklch(0.145 0 0);
+    --sl-color-text-accent: oklch(0.205 0 0);
+    
+    /* Border radius matching platform */
+    --sl-border-radius: 0.625rem;
+}
+
+:root[data-theme='dark'] {
+    /* Dark mode colors matching platform */
+    --sl-color-white: oklch(0.145 0 0);
+    --sl-color-gray-1: oklch(0.269 0 0);
+    --sl-color-gray-2: oklch(0.205 0 0);
+    --sl-color-gray-3: oklch(1 0 0 / 10%);
+    --sl-color-gray-4: oklch(0.556 0 0);
+    --sl-color-gray-5: oklch(0.708 0 0);
+    --sl-color-gray-6: oklch(0.922 0 0);
+    --sl-color-black: oklch(0.985 0 0);
+    
+    --sl-color-accent-low: oklch(0.269 0 0);
+    --sl-color-accent: oklch(0.922 0 0);
+    --sl-color-accent-high: oklch(0.205 0 0);
+    
+    --sl-color-text: oklch(0.985 0 0);
+    --sl-color-text-accent: oklch(0.922 0 0);
+}
+
+/* Typography refinements */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Remark', serif;
+}
+
+body {
+    font-family: 'Host Grotesk', sans-serif;
+}
+
+code {
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+}
