@@ -14,6 +14,7 @@ from fair_platform.backend.data.models.submission import (
 )
 from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.assignment import Assignment
+from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.user import User, UserRole
 from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus, AccessLevel
 from fair_platform.backend.api.schema.submission import (
@@ -38,11 +39,11 @@ async def create_submission(
 ):
     """
     Create a submission with optional file uploads and/or existing artifact references.
-    
+
     This endpoint supports both multipart/form-data (for file uploads) and can reference
     existing artifacts by ID. All operations are atomic - if any step fails, everything
     is rolled back.
-    
+
     Form fields:
     - assignment_id: UUID of the assignment (required)
     - submitter_name: Name of the submitter (required)
@@ -55,11 +56,24 @@ async def create_submission(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Assignment not found"
         )
 
-    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
+    if current_user.role == UserRole.admin:
+        pass
+    elif current_user.role == UserRole.professor:
+
+        course = db.get(Course, assignment.course_id)
+        if not course or course.instructor_id != current_user.id:
+            raise HTTPException(
+
+                status_code=status.HTTP_403_FORBIDDEN,
+
+                detail="Only the course instructor or admin can create submissions for this assignment",
+            )
+    else:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to create submission for this user",
+            detail="Only instructors or admin can create submissions",
         )
+
 
     try:
         existing_artifact_ids = []
@@ -73,7 +87,7 @@ async def create_submission(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}"
                 )
-        
+
         submitter = Submitter(
             id=uuid4(),
             name=submitter_name,
@@ -97,7 +111,7 @@ async def create_submission(
         db.flush()
 
         manager = get_artifact_manager(db)
-        
+
         if existing_artifact_ids:
             for artifact_id in existing_artifact_ids:
                 try:
@@ -107,7 +121,7 @@ async def create_submission(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Invalid artifact ID format: {artifact_id}"
                     )
-        
+
         if files:
             for file in files:
                 artifact = manager.create_artifact(
@@ -122,7 +136,7 @@ async def create_submission(
         db.commit()
         db.refresh(sub)
         return sub
-        
+
     except HTTPException:
         db.rollback()
         raise
@@ -145,20 +159,33 @@ def list_submissions(
 ):
     """List all submissions, optionally filtered by assignment ID."""
     query = db.query(Submission)
+
+    if current_user.role == UserRole.admin:
+        pass
+    elif current_user.role == UserRole.professor:
+        query = (
+            query.join(Assignment, Submission.assignment_id == Assignment.id)
+                 .join(Course, Assignment.course_id == Course.id)
+                 .filter(Course.instructor_id == current_user.id)
+        )
+    else:
+        query = query.filter(Submission.created_by_id == current_user.id)
+
     if assignment_id is not None:
         if not db.get(Assignment, assignment_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
             )
         query = query.filter(Submission.assignment_id == assignment_id)
-    
+
     submissions = query.all()
-    
+
+
     # Fetch all submitters in one query to avoid N+1
     submitter_ids = [sub.submitter_id for sub in submissions]
     submitters = db.query(Submitter).filter(Submitter.id.in_(submitter_ids)).all()
     submitter_map = {submitter.id: submitter for submitter in submitters}
-    
+
     # Manually construct response with submitter data
     result = []
     for sub in submissions:
@@ -195,26 +222,55 @@ def list_submissions(
         else:
             sub_dict["official_result"] = None
         result.append(sub_dict)
-    
+
     return result
 
 
+
 @router.get("/{submission_id}", response_model=SubmissionRead)
+
 def get_submission(
+
     submission_id: UUID,
+
     run_id: Optional[UUID] = Query(
+
         None, description="If provided, return result for this workflow run"
+
     ),
+
     db: Session = Depends(session_dependency),
+
+    current_user: User = Depends(get_current_user),
 ):
+
     sub = db.query(Submission).filter(Submission.id == submission_id).first()
     if not sub:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
-    
+
+
+    # Permission: admin sees all; instructors see submissions for their courses; others see only their own
+    if current_user.role != UserRole.admin:
+        if current_user.role == UserRole.professor:
+            assignment = db.get(Assignment, sub.assignment_id)
+            course = db.get(Course, assignment.course_id) if assignment else None
+            if not course or course.instructor_id != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Not authorized to view this submission",
+                )
+        else:
+            if sub.created_by_id != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Not authorized to view this submission",
+                )
+
     submitter = db.get(Submitter, sub.submitter_id)
-    
+
+
     response = {
         "id": sub.id,
         "assignment_id": sub.assignment_id,
@@ -261,10 +317,19 @@ def update_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
-    if current_user.role != UserRole.admin and current_user.id != sub.submitter_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-        )
+
+    # Permission: only admin or the course instructor can update a submission
+    if current_user.role != UserRole.admin:
+        assignment = db.get(Assignment, sub.assignment_id)
+        course = db.get(Course, assignment.course_id) if assignment else None
+        if not course or course.instructor_id != current_user.id:
+            raise HTTPException(
+
+                status_code=status.HTTP_403_FORBIDDEN,
+
+                detail="Only the course instructor or admin can update this submission",
+            )
+
 
 
     # TODO: As with run_ids, I don't think people should be able to update these fields.
@@ -280,22 +345,22 @@ def update_submission(
 
     if payload.artifact_ids is not None:
         manager = get_artifact_manager(db)
-        
+
         old_artifacts = db.query(Artifact).join(
             submission_artifacts,
             submission_artifacts.c.artifact_id == Artifact.id
         ).filter(
             submission_artifacts.c.submission_id == sub.id
         ).all()
-        
+
         for artifact in old_artifacts:
             manager.detach_from_submission(artifact.id, sub.id, current_user)
-        
+
         for aid in payload.artifact_ids:
             manager.attach_to_submission(aid, sub.id, current_user)
-        
+
         db.commit()
-        
+
     # TODO: I think I won't consider run_ids for now.
 
     db.refresh(sub)
@@ -314,11 +379,20 @@ def delete_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
-    if current_user.role != UserRole.admin and current_user.id != sub.submitter_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this submission",
-        )
+
+    # Permission: only admin or the course instructor can delete a submission
+    if current_user.role != UserRole.admin:
+        assignment = db.get(Assignment, sub.assignment_id)
+        course = db.get(Course, assignment.course_id) if assignment else None
+        if not course or course.instructor_id != current_user.id:
+            raise HTTPException(
+
+                status_code=status.HTTP_403_FORBIDDEN,
+
+                detail="Only the course instructor or admin can delete this submission",
+
+            )
+
 
     db.delete(sub)
     db.commit()
