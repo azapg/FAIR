@@ -191,11 +191,22 @@ def get_workflow(
     if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
         raise HTTPException(status_code=403, detail="Not authorized to get workflow")
 
-    # TODO: we should also check if the professor is the instructor of the course related to this workflow
     wf = db.get(Workflow, workflow_id)
     if not wf:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
+        )
+
+    course = db.get(Course, wf.course_id)
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
+        )
+
+    if current_user.role == UserRole.professor and course.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to get this workflow",
         )
     return _db_workflow_to_read(wf, db)
 
