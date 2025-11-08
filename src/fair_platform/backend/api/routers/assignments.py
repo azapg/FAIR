@@ -37,11 +37,11 @@ async def create_assignment(
 ):
     """
     Create an assignment with optional file uploads and/or existing artifact references.
-    
+
     This endpoint supports both multipart/form-data (for file uploads) and can reference
     existing artifacts by ID. All operations are atomic - if any step fails, everything
     is rolled back.
-    
+
     Form fields:
     - course_id: UUID of the course (required)
     - title: Assignment title (required)
@@ -72,7 +72,7 @@ async def create_assignment(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid max_grade JSON. Expected format: {\"type\": \"points\", \"value\": 100}"
                 )
-        
+
         existing_artifact_ids = []
         if artifact_ids:
             try:
@@ -84,7 +84,7 @@ async def create_assignment(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}"
                 )
-        
+
         deadline_dt = None
         if deadline:
             try:
@@ -94,7 +94,7 @@ async def create_assignment(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid deadline format. Use ISO format (YYYY-MM-DDTHH:MM:SS)"
                 )
-        
+
         assignment = Assignment(
             id=uuid4(),
             course_id=course_id,
@@ -105,9 +105,9 @@ async def create_assignment(
         )
         db.add(assignment)
         db.flush()
-        
+
         manager = get_artifact_manager(db)
-        
+
         if existing_artifact_ids:
             for artifact_id in existing_artifact_ids:
                 try:
@@ -117,7 +117,7 @@ async def create_assignment(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Invalid artifact ID format: {artifact_id}"
                     )
-        
+
         if files:
             for file in files:
                 artifact = manager.create_artifact(
@@ -129,11 +129,11 @@ async def create_assignment(
                     assignment_id=assignment.id,
                 )
                 assignment.artifacts.append(artifact)
-        
+
         db.commit()
         db.refresh(assignment)
         return assignment
-        
+
     except HTTPException:
         db.rollback()
         raise
@@ -165,16 +165,28 @@ def list_assignments(
             return query.all()
         else:
             # TODO: Check enrollment once implemented
-            return query.join(Course).filter(Course.instructor_id == current_user.id).all() 
+            return query.join(Course).filter(Course.instructor_id == current_user.id).all()
 
 @router.get("/{assignment_id}", response_model=AssignmentRead)
-def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency)):
+def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
         )
-    # TODO: Permission checks
+
+    course = db.get(Course, assignment.course_id)
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Can't find this assignment's course."
+        )
+
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can view this assignment",
+        )
+
     return assignment
 
 
@@ -214,7 +226,7 @@ def update_assignment(
 
     db.add(assignment)
     db.commit()
-    
+
     # TODO: Handle artifact updates if provided in payload
 
     db.refresh(assignment)
