@@ -200,7 +200,7 @@ def get_workflow(
     course = db.get(Course, wf.course_id)
     if not course:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
     if current_user.role == UserRole.professor and course.instructor_id != current_user.id:

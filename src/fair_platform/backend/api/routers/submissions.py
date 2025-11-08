@@ -63,9 +63,7 @@ async def create_submission(
         course = db.get(Course, assignment.course_id)
         if not course or course.instructor_id != current_user.id:
             raise HTTPException(
-
                 status_code=status.HTTP_403_FORBIDDEN,
-
                 detail="Only the course instructor or admin can create submissions for this assignment",
             )
     else:
@@ -361,11 +359,8 @@ def delete_submission(
         course = db.get(Course, assignment.course_id) if assignment else None
         if not course or course.instructor_id != current_user.id:
             raise HTTPException(
-
                 status_code=status.HTTP_403_FORBIDDEN,
-
                 detail="Only the course instructor or admin can delete this submission",
-
             )
 
 

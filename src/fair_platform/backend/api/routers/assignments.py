@@ -178,7 +178,7 @@ def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency
     course = db.get(Course, assignment.course_id)
     if not course:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Can't find this assignment's course."
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
