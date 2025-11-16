@@ -45,7 +45,7 @@
 :root {
     --sl-font: 'Host Grotesk', sans-serif;
     --sl-font-headings: 'Remark', serif;
-    
+
     --sl-color-white: oklch(1 0 0);
     --sl-color-gray-1: oklch(0.97 0 0);
     --sl-color-gray-2: oklch(0.955 0 89.876);
@@ -54,18 +54,18 @@
     --sl-color-gray-5: oklch(0.556 0 0);
     --sl-color-gray-6: oklch(0.205 0 0);
     --sl-color-black: oklch(0.145 0 0);
-    
+
     --sl-color-accent-low: oklch(0.97 0 0);
     --sl-color-accent: oklch(0.205 0 0);
     --sl-color-accent-high: oklch(0.97 0 0);
-    
+
     --sl-color-text: oklch(0.145 0 0);
     --sl-color-text-accent: oklch(0.205 0 0);
-    
+
     --sl-color-bg: oklch(1 0 0);
     --sl-color-bg-nav: oklch(0.988 0 89.876);
     --sl-color-bg-sidebar: oklch(0.988 0 89.876);
-    
+
     --sl-border-radius: 0.625rem;
 }
 
@@ -80,4 +80,26 @@ body {
 
 code {
     font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+}
+
+/* Responsive 16:9 YouTube/Vimeo embeds */
+.sl-markdown-content iframe[src*="youtube.com"],
+.sl-markdown-content iframe[src*="youtu.be"],
+.sl-markdown-content iframe[src*="vimeo.com"] {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto !important; /* computed from aspect-ratio */
+  max-width: 800px;         /* optional max width */
+  display: block;
+  border: 0;
+}
+
+.sl-markdown-content ul {
+    list-style-type: disc;
+    margin-left: 1.5rem;
+}
+
+.sl-markdown-content ol {
+    list-style-type: lower-roman;
+    margin-left: 1.5rem;
 }

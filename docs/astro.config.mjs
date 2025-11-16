@@ -5,7 +5,9 @@ import tailwindcss from "@tailwindcss/vite";
 // https://astro.build/config
 export default defineConfig({
   redirects: {
-    '/': '/en'
+    '/': '/en/introduction',
+    '/en': '/en/introduction',
+    '/es': '/es/introduction'
   },
   integrations: [
     starlight({
@@ -26,6 +28,13 @@ export default defineConfig({
         github: "https://github.com/azapg/FAIR",
       },
       sidebar: [
+        {
+          slug: "introduction",
+          label: "Introduction",
+          translations: {
+            es: "Introducción"
+          }
+        },
         {
           label: "Getting Started",
           translations: {
