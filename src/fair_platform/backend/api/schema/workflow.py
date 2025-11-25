@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from fair_platform.backend.api.schema.plugin import RuntimePlugin
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunBase
+from fair_platform.backend.api.schema.utils import to_camel_case
 
 
 class WorkflowBase(BaseModel):
@@ -16,10 +17,7 @@ class WorkflowBase(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 
@@ -34,10 +32,7 @@ class WorkflowUpdate(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from fair_platform.backend.api.schema.submission import SubmissionBase
 from fair_platform.backend.data.models.workflow_run import WorkflowRunStatus
+from fair_platform.backend.api.schema.utils import to_camel_case
 
 
 class WorkflowRunBase(BaseModel):
@@ -15,10 +16,7 @@ class WorkflowRunBase(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 
@@ -33,10 +31,7 @@ class WorkflowRunUpdate(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 

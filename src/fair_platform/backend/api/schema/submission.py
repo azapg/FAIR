@@ -8,6 +8,7 @@ from fair_platform.backend.data.models.submission import SubmissionStatus
 from fair_platform.backend.api.schema.submitter import SubmitterRead
 from fair_platform.backend.api.schema.artifact import ArtifactRead
 from fair_platform.backend.api.schema.submission_result import SubmissionResultRead
+from fair_platform.backend.api.schema.utils import to_camel_case
 
 
 class SubmissionBase(BaseModel):
@@ -20,10 +21,7 @@ class SubmissionBase(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 
@@ -33,10 +31,7 @@ class SubmissionCreate(SubmissionBase):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 
@@ -46,10 +41,7 @@ class SubmissionUpdate(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 

@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr
 
 from fair_platform.backend.data.models.user import UserRole
+from fair_platform.backend.api.schema.utils import to_camel_case
 
 
 class UserBase(BaseModel):
@@ -14,10 +15,7 @@ class UserBase(BaseModel):
     class Config:
         use_enum_values = True
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 
@@ -33,10 +31,7 @@ class UserUpdate(BaseModel):
     class Config:
         use_enum_values = True
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 

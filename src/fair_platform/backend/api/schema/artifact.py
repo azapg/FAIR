@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import datetime
 
 from pydantic import BaseModel
+from fair_platform.backend.api.schema.utils import to_camel_case
 
 
 class ArtifactBase(BaseModel):
@@ -11,10 +12,7 @@ class ArtifactBase(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 
@@ -36,10 +34,7 @@ class ArtifactUpdate(BaseModel):
 
     class Config:
         from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
+        alias_generator = to_camel_case
         populate_by_name = True
 
 
