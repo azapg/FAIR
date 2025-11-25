@@ -22,7 +22,7 @@ class PluginBase(BaseModel):
             word.capitalize() if i > 0 else word
             for i, word in enumerate(field_name.split("_"))
         )
-        validate_by_name = True
+        populate_by_name = True
 
 class RuntimePlugin(PluginBase):
     settings: Optional[Dict[str, Any]] = None

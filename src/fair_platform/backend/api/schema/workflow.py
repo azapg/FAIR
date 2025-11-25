@@ -20,7 +20,7 @@ class WorkflowBase(BaseModel):
             word.capitalize() if i > 0 else word
             for i, word in enumerate(field_name.split("_"))
         )
-        validate_by_name = True
+        populate_by_name = True
 
 
 class WorkflowCreate(WorkflowBase):
@@ -38,7 +38,7 @@ class WorkflowUpdate(BaseModel):
             word.capitalize() if i > 0 else word
             for i, word in enumerate(field_name.split("_"))
         )
-        validate_by_name = True
+        populate_by_name = True
 
 
 class WorkflowRead(WorkflowBase):

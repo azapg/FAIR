@@ -15,7 +15,7 @@ class ArtifactBase(BaseModel):
             word.capitalize() if i > 0 else word
             for i, word in enumerate(field_name.split("_"))
         )
-        validate_by_name = True
+        populate_by_name = True
 
 
 class ArtifactCreate(ArtifactBase):
@@ -40,7 +40,7 @@ class ArtifactUpdate(BaseModel):
             word.capitalize() if i > 0 else word
             for i, word in enumerate(field_name.split("_"))
         )
-        validate_by_name = True
+        populate_by_name = True
 
 
 class ArtifactRead(ArtifactBase):

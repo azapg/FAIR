@@ -13,7 +13,12 @@ class UserBase(BaseModel):
 
     class Config:
         use_enum_values = True
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
+        populate_by_name = True
 
 
 class UserCreate(UserBase):
@@ -27,7 +32,12 @@ class UserUpdate(BaseModel):
 
     class Config:
         use_enum_values = True
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
+        populate_by_name = True
 
 
 class UserRead(UserBase):

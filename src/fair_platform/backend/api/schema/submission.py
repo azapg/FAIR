@@ -24,7 +24,7 @@ class SubmissionBase(BaseModel):
             word.capitalize() if i > 0 else word
             for i, word in enumerate(field_name.split("_"))
         )
-        validate_by_name = True
+        populate_by_name = True
 
 
 class SubmissionCreate(SubmissionBase):
@@ -37,7 +37,7 @@ class SubmissionCreate(SubmissionBase):
             word.capitalize() if i > 0 else word
             for i, word in enumerate(field_name.split("_"))
         )
-        validate_by_name = True
+        populate_by_name = True
 
 
 class SubmissionUpdate(BaseModel):
@@ -50,7 +50,7 @@ class SubmissionUpdate(BaseModel):
             word.capitalize() if i > 0 else word
             for i, word in enumerate(field_name.split("_"))
         )
-        validate_by_name = True
+        populate_by_name = True
 
 
 class SubmissionRead(SubmissionBase):

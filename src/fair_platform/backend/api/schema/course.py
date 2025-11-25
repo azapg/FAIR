@@ -12,7 +12,12 @@ class CourseBase(BaseModel):
     instructor_id: UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
+        populate_by_name = True
 
 
 class CourseCreate(CourseBase):
@@ -25,7 +30,12 @@ class CourseUpdate(BaseModel):
     instructor_id: Optional[UUID] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
+        populate_by_name = True
 
 
 class CourseRead(CourseBase):
@@ -43,7 +53,12 @@ class CourseDetailRead(BaseModel):
     workflows: List[WorkflowRead] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        alias_generator = lambda field_name: "".join(
+            word.capitalize() if i > 0 else word
+            for i, word in enumerate(field_name.split("_"))
+        )
+        populate_by_name = True
 
 
 __all__ = [
