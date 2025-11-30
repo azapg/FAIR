@@ -9,7 +9,6 @@ from pydantic.alias_generators import to_camel
 # - from_attributes: Enable ORM mode for SQLAlchemy models
 # - alias_generator: Convert snake_case to camelCase for frontend (using Pydantic's built-in)
 # - validate_by_name: Accept both field names and aliases as input
-#   (Note: populate_by_name is deprecated and scheduled for removal in V3)
 schema_config = ConfigDict(
     from_attributes=True,
     alias_generator=to_camel,
