@@ -13,6 +13,7 @@ schema_config = ConfigDict(
     from_attributes=True,
     alias_generator=to_camel,
     validate_by_name=True,
+    validate_by_alias=True,
 )
 
 # Configuration for schemas that also need enum values serialized
@@ -20,6 +21,7 @@ schema_config_with_enum = ConfigDict(
     from_attributes=True,
     alias_generator=to_camel,
     validate_by_name=True,
+    validate_by_alias=True,
     use_enum_values=True,
 )
 
