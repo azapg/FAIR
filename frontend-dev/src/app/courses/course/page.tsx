@@ -75,11 +75,11 @@ export default function CourseDetailPage() {
         <TabsContent value={"assignments"} className={"px-8 py-3"}>
           <AssignmentsTab assignments={courseAssignments} courseId={courseId}/>
         </TabsContent>
-        <TabsContent value={"participants"} className={"px-8"}>{t("tabs.participants").toLowerCase()}</TabsContent>
-        <TabsContent value={"runs"} className={"px-8"}>{t("tabs.runs").toLowerCase()}</TabsContent>
-        <TabsContent value={"artifacts"} className={"px-8"}>{t("tabs.artifacts").toLowerCase()}</TabsContent>
-        <TabsContent value={"workflows"} className={"px-8"}>{t("tabs.workflows").toLowerCase()}</TabsContent>
-        <TabsContent value={"plugins"} className={"px-8"}>{t("tabs.plugins").toLowerCase()}</TabsContent>
+        <TabsContent value={"participants"} className={"px-8"}>{t("tabs.participants")}</TabsContent>
+        <TabsContent value={"runs"} className={"px-8"}>{t("tabs.runs")}</TabsContent>
+        <TabsContent value={"artifacts"} className={"px-8"}>{t("tabs.artifacts")}</TabsContent>
+        <TabsContent value={"workflows"} className={"px-8"}>{t("tabs.workflows")}</TabsContent>
+        <TabsContent value={"plugins"} className={"px-8"}>{t("tabs.plugins")}</TabsContent>
       </Tabs>
     </div>
   );
