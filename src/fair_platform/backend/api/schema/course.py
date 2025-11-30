@@ -4,15 +4,15 @@ from pydantic import BaseModel
 from fair_platform.backend.api.schema.user import UserRead
 from fair_platform.backend.api.schema.assignment import AssignmentRead
 from fair_platform.backend.api.schema.workflow import WorkflowRead
+from fair_platform.backend.api.schema.utils import schema_config
 
 
 class CourseBase(BaseModel):
+    model_config = schema_config
+    
     name: str
     description: Optional[str] = None
     instructor_id: UUID
-
-    class Config:
-        orm_mode = True
 
 
 class CourseCreate(CourseBase):
@@ -20,12 +20,11 @@ class CourseCreate(CourseBase):
 
 
 class CourseUpdate(BaseModel):
+    model_config = schema_config
+    
     name: Optional[str] = None
     description: Optional[str] = None
     instructor_id: Optional[UUID] = None
-
-    class Config:
-        orm_mode = True
 
 
 class CourseRead(CourseBase):
@@ -35,15 +34,14 @@ class CourseRead(CourseBase):
 
 
 class CourseDetailRead(BaseModel):
+    model_config = schema_config
+    
     id: UUID
     name: str
     description: Optional[str] = None
     instructor: UserRead
     assignments: List[AssignmentRead] = []
     workflows: List[WorkflowRead] = []
-
-    class Config:
-        orm_mode = True
 
 
 __all__ = [

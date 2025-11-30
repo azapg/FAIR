@@ -3,19 +3,14 @@ from uuid import UUID
 from datetime import datetime
 
 from pydantic import BaseModel
+from fair_platform.backend.api.schema.utils import schema_config
 
 
 class ArtifactBase(BaseModel):
+    model_config = schema_config
+    
     title: str
     meta: Optional[Dict[str, Any]] = None
-
-    class Config:
-        from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
-        validate_by_name = True
 
 
 class ArtifactCreate(ArtifactBase):
@@ -27,20 +22,14 @@ class ArtifactCreate(ArtifactBase):
 
 
 class ArtifactUpdate(BaseModel):
+    model_config = schema_config
+    
     title: Optional[str] = None
     course_id: Optional[UUID] = None
     assignment_id: Optional[UUID] = None
     access_level: Optional[str] = None
     status: Optional[str] = None
     meta: Optional[Dict[str, Any]] = None
-
-    class Config:
-        from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
-        validate_by_name = True
 
 
 class ArtifactRead(ArtifactBase):
