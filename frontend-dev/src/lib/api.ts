@@ -50,7 +50,11 @@ export const clearAuthData = () => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Don't trigger session expiry for auth endpoints (login/register)
+    // as 401 there means invalid credentials, not an expired session
+    const isAuthEndpoint = error.config?.url?.startsWith('/auth/login') || 
+                           error.config?.url?.startsWith('/auth/register')
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       clearAuthData();
     }
     return Promise.reject(error);

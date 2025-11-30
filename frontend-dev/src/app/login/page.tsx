@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
+import { AxiosError } from 'axios'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -12,16 +14,16 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [rememberMe, setRememberMe] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
     try {
       await login({ username: email, password, remember_me: rememberMe })
       navigate('/')
     } catch (err) {
-      setError('Unable to login. Please check your credentials and try again.')
+      const axiosError = err as AxiosError<{ detail?: string }>
+      const message = axiosError.response?.data?.detail || 'Unable to login. Please check your credentials and try again.'
+      toast.error('Login failed', { description: message })
     }
   }
 
@@ -73,9 +75,6 @@ export default function LoginPage() {
                 Remember me for 31 days
               </Label>
             </div>
-            {error && (
-              <p className="text-sm text-red-600">{error}</p>
-            )}
             <Button type="submit" disabled={loading}>
               {loading ? 'Wait...' : 'Sign in'}
             </Button>
