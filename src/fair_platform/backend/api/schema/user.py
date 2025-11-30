@@ -1,17 +1,14 @@
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr
 
 from fair_platform.backend.data.models.user import UserRole
-from fair_platform.backend.api.schema.utils import schema_config
+from fair_platform.backend.api.schema.utils import schema_config_with_enum
 
 
 class UserBase(BaseModel):
-    model_config = ConfigDict(
-        **schema_config,
-        use_enum_values=True,
-    )
+    model_config = schema_config_with_enum
     
     name: str
     email: EmailStr
@@ -23,10 +20,7 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
-    model_config = ConfigDict(
-        **schema_config,
-        use_enum_values=True,
-    )
+    model_config = schema_config_with_enum
     
     name: Optional[str] = None
     email: Optional[EmailStr] = None
