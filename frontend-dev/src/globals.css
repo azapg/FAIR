@@ -35,6 +35,7 @@
     --color-secondary: var(--secondary);
     --color-primary-foreground: var(--primary-foreground);
     --color-primary: var(--primary);
+    --color-primary-gradient: var(--primary-gradient);
     --color-popover-foreground: var(--popover-foreground);
     --color-popover: var(--popover);
     --color-card-foreground: var(--card-foreground);
@@ -62,6 +63,28 @@
     --accent: oklch(0.97 0 0);
     --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.245 27.325);
+
+    /* Primary button variables */
+    --primary-gradient: linear-gradient(0deg, var(--color-zinc-900), var(--color-zinc-700));
+    --primary-hover: linear-gradient(0deg, var(--color-zinc-800), var(--color-zinc-700));
+    --primary-shadow: inset 0 1px 0 var(--color-zinc-600), 0 4px 10px rgba(0, 0, 0, 0.1);
+    --primary-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --primary-border: var(--color-zinc-800);
+
+    /* Secondary button variables */
+    --secondary-gradient: linear-gradient(0deg, var(--color-zinc-200), var(--color-zinc-100));
+    --secondary-hover: linear-gradient(0deg, var(--color-gray-200), var(--color-zinc-50));
+    --secondary-shadow: inset 0 1px 0 var(--color-white), 0 4px 10px rgba(0, 0, 0, 0.05);
+    --secondary-shadow-active: inset 0 1px 2px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.2);
+    --secondary-border: var(--color-zinc-300);
+
+    /* Destructive button variables */
+    --destructive-gradient: linear-gradient(0deg, var(--color-red-800), var(--color-red-700));
+    --destructive-hover: linear-gradient(0deg, var(--color-red-800), var(--color-red-600));
+    --destructive-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.1), 0 2px 6px rgba(220, 38, 38, 0.4);
+    --destructive-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(220, 38, 38, 0.5);
+    --destructive-border: oklch(50% 0.15 30);
+
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
     --ring: oklch(0.708 0 0);
@@ -96,6 +119,27 @@
     --accent: oklch(0.269 0 0);
     --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.704 0.191 22.216);
+
+    /* Primary button variables - dark mode */
+    --primary-gradient: linear-gradient(0deg, var(--color-zinc-400), var(--color-zinc-200));
+    --primary-hover: linear-gradient(0deg, var(--color-gray-400), var(--color-zinc-50));
+    --primary-shadow: inset 0 1px 0 var(--color-white), 0 4px 10px rgba(0, 0, 0, 0.05);
+    --primary-btn-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0, 0, 0, 0.1);
+    --primary-border: var(--color-zinc-500);
+
+    /* Secondary button variables - dark mode */
+    --secondary-gradient: linear-gradient(0deg, var(--color-zinc-900), var(--color-zinc-800));
+    --secondary-hover: linear-gradient(0deg, var(--color-zinc-800), var(--color-zinc-700));
+    --secondary-shadow: inset 0 1px 0 var(--color-zinc-700), 0 2px 8px rgba(0, 0, 0, 0.1);
+    --secondary-shadow-active: inset 0 1px 2px rgba(3, 2, 2, 0.2), 0 1px 4px rgba(0, 0, 0, 0.4);
+    --secondary-border: var(--color-black);
+
+    --destructive-gradient: linear-gradient(0deg, var(--color-red-900), var(--color-red-800));
+    --destructive-hover: linear-gradient(0deg, var(--color-red-900), var(--color-red-700));
+    --destructive-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.1), 0 1px 1px rgba(220, 38, 38, 0.4);
+    --destructive-shadow-active: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 2px 2px rgba(220, 38, 38, 0.5);
+    --destructive-border: oklch(50% 0.15 30);
+
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
@@ -124,11 +168,26 @@
     }
 }
 
+@layer utilities {
+    .bg-primary {
+        background: var(--primary-gradient);
+    }
+
+    .bg-secondary {
+        background: var(--secondary-gradient);
+    }
+
+    .bg-destructive {
+        background: var(--destructive-gradient);
+    }
+
+}
+
 @source inline('{text}-{gray,orange,red,yellow,green,blue}-{500}');
 @source inline('{bg}-{gray,orange,red,yellow,green,blue}-{500}/10');
 
 /* Workaround for https://github.com/shadcn-ui/ui/issues/977 */
-html > body[data-scroll-locked] {
+html>body[data-scroll-locked] {
     overflow: visible !important;
     margin-right: 0 !important;
 }
