@@ -25,6 +25,7 @@ import { useWorkflowStore } from "@/store/workflows-store";
 import PluginSection from "@/app/assignment/components/sidebar/plugin-section";
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
+import { isAxiosError } from "axios";
 import { useSessionStore } from "@/store/session-store";
 import {
   useCreateWorkflow,
@@ -106,17 +107,17 @@ export function WorkflowsSidebar({
     setShowLogs(true);
     try {
       await persistDrafts();
-
-      const response = await api.post("/sessions", {
+      await api.post("/sessions", {
         workflow_id: activeWorkflowId,
         submission_ids: submissions?.map(s => s.id) || [],
       });
-      setCurrentSession(response.data.session);
     } catch (error) {
-      console.error("Failed to start workflow run", error);
+      const errorMessage = isAxiosError(error) ? error.response?.data?.detail : undefined;
+      toast.error(t("workflow.failedToStart"), {
+        description: errorMessage || undefined,
+      });
       setIsRunning(false);
       setShowLogs(false);
-      toast.error(t("workflow.failedToStart"));
     }
   };
 
