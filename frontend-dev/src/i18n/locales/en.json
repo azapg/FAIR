@@ -11,7 +11,8 @@
     "add": "Add",
     "wait": "Wait...",
     "notFound": "Not Found",
-    "noDeadline": "No deadline"
+    "noDeadline": "No deadline",
+    "home": "Home"
   },
   "header": {
     "title": "The Fair Platform",

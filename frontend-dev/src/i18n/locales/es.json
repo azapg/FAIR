@@ -11,7 +11,8 @@
     "add": "Agregar",
     "wait": "Espera...",
     "notFound": "No encontrado",
-    "noDeadline": "Sin fecha límite"
+    "noDeadline": "Sin fecha límite",
+    "home": "Inicio"
   },
   "header": {
     "title": "The Fair Platform",
@@ -30,7 +31,7 @@
     "password": "Contraseña",
     "name": "Nombre",
     "namePlaceholder": "Tu nombre",
-    "emailPlaceholder": "tu@ejemplo.com",
+    "emailPlaceholder": "tu@correo.com",
     "signIn": "Iniciar sesión",
     "createAccount": "Crear cuenta",
     "rememberMe": "Recuérdame por 31 días",
