@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
+import { AxiosError } from 'axios'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -12,16 +14,16 @@ export default function RegisterPage() {
   const [name, setName] = React.useState('')
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
-  const [error, setError] = React.useState<string | null>(null)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
     try {
       await register({ name, email, password })
       navigate('/')
     } catch (err) {
-      setError('Unable to register. Please try again.')
+      const axiosError = err as AxiosError<{ detail?: string }>
+      const message = axiosError.response?.data?.detail || 'Unable to register. Please try again.'
+      toast.error('Registration failed', { description: message })
     }
   }
 
@@ -73,9 +75,6 @@ export default function RegisterPage() {
                 disabled={loading}
               />
             </div>
-            {error && (
-              <p className="text-sm text-red-600">{error}</p>
-            )}
             <Button type="submit" disabled={loading}>
               {loading ? 'Wait...' : 'Create account'}
             </Button>

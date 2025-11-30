@@ -46,11 +46,20 @@ export const clearAuthData = () => {
   window.dispatchEvent(new CustomEvent('auth:session-expired'))
 }
 
+// Auth endpoints that should not trigger session expiry on 401
+// (401 on these means invalid credentials, not an expired session)
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register']
+
 // Response interceptor to handle session expiry
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const url = error.config?.url || ''
+    // Check if the URL matches any auth endpoint (accounting for query params)
+    const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint => 
+      url === endpoint || url.startsWith(`${endpoint}?`)
+    )
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       clearAuthData();
     }
     return Promise.reject(error);
