@@ -226,7 +226,6 @@ const WorkflowSidebarRunButton = ({
         onClick={onRun}
         disabled={isRunning}
         className="flex-1"
-        variant="outline"
       >
         {isRunning ? (
           <>
@@ -238,7 +237,7 @@ const WorkflowSidebarRunButton = ({
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline">
+          <Button size={"icon"}>
             <ChevronDownIcon />
           </Button>
         </DropdownMenuTrigger>
