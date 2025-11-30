@@ -53,7 +53,7 @@ export default defineConfig({
       customCss: ["./src/styles/custom.css"],
       components: {
         SiteTitle: "./src/components/header-title.astro",
-        ThemeSelect: "./src/components/theme-select.astro",
+        Search: "./src/components/header-search.astro",
       },
     }),
   ],

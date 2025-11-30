@@ -41,7 +41,6 @@
     font-display: swap;
 }
 
-/* Platform color scheme and Starlight overrides */
 :root {
     --sl-font: 'Host Grotesk', sans-serif;
     --sl-font-headings: 'Remark', serif;
@@ -56,17 +55,28 @@
     --sl-color-black: oklch(0.145 0 0);
 
     --sl-color-accent-low: oklch(0.97 0 0);
-    --sl-color-accent: oklch(0.205 0 0);
+    --sl-color-accent: oklch(0.985 0 0);
     --sl-color-accent-high: oklch(0.97 0 0);
 
-    --sl-color-text: oklch(0.145 0 0);
-    --sl-color-text-accent: oklch(0.205 0 0);
+    --sl-color-text: oklch(1 0 0);
+    --sl-color-text-accent: oklch(0.556 0 0);
 
-    --sl-color-bg: oklch(1 0 0);
-    --sl-color-bg-nav: oklch(0.988 0 89.876);
-    --sl-color-bg-sidebar: oklch(0.988 0 89.876);
+    --sl-color-bg: oklch(0.145 0 0);
+    --sl-color-bg-nav: oklch(0.145 0 0) ;
+    --sl-color-bg-sidebar: oklch(0.164 0 89.876);
 
     --sl-border-radius: 0.625rem;
+
+    --border: oklch(1 0 0 / 10%);
+}
+
+@layer overrides {
+    .header {
+        @apply border-b border-[var(--border)];
+        @apply m-0 p-0;
+    }
+
+
 }
 
 /* Typography refinements */
