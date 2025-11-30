@@ -7,10 +7,12 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
+import { useTranslation } from 'react-i18next'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const { login, loading } = useAuth()
+  const { t } = useTranslation()
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [rememberMe, setRememberMe] = React.useState(false)
@@ -22,8 +24,8 @@ export default function LoginPage() {
       navigate('/')
     } catch (err) {
       const axiosError = err as AxiosError<{ detail?: string }>
-      const message = axiosError.response?.data?.detail || 'Unable to login. Please check your credentials and try again.'
-      toast.error('Login failed', { description: message })
+      const message = axiosError.response?.data?.detail || t('auth.unableToLogin')
+      toast.error(t('auth.loginFailed'), { description: message })
     }
   }
 
@@ -31,19 +33,19 @@ export default function LoginPage() {
     <div className="h-full flex items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription className="font-sans">Login to The Fair Platform</CardDescription>
+          <CardTitle className="text-2xl">{t('auth.welcomeBack')}</CardTitle>
+          <CardDescription className="font-sans">{t('auth.loginToFair')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('auth.email')}</Label>
               <Input
                 id="email"
                 type="email"
                 inputMode="email"
                 autoComplete="email"
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -51,7 +53,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -72,19 +74,19 @@ export default function LoginPage() {
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer">
-                Remember me for 31 days
+                {t('auth.rememberMe')}
               </Label>
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Wait...' : 'Sign in'}
+              {loading ? t('common.wait') : t('auth.signIn')}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
+            {t('auth.noAccount')}{' '}
             <Link to="/register" className="underline underline-offset-4">
-              Create one
+              {t('auth.createOne')}
             </Link>
           </p>
         </CardFooter>
@@ -92,4 +94,3 @@ export default function LoginPage() {
     </div>
   )
 }
-

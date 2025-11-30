@@ -43,6 +43,7 @@ import {
 import { ExecutionLogsView } from "@/app/assignment/components/sidebar/execution-logs-view";
 import { useSubmissions } from "@/hooks/use-submissions";
 import { toast } from "sonner"
+import { useTranslation } from "react-i18next";
 
 export function WorkflowsSidebar({
   side,
@@ -67,6 +68,7 @@ export function WorkflowsSidebar({
     return workflows[0];
   }, [activeWorkflowId, workflows]);
   const {data: submissions} = useSubmissions({assignment_id: assignmentId})
+  const { t } = useTranslation();
 
   const setCurrentSession = useSessionStore((state) => state.setCurrentSession);
   const clearLogs = useSessionStore((state) => state.clearLogs);
@@ -114,7 +116,7 @@ export function WorkflowsSidebar({
       console.error("Failed to start workflow run", error);
       setIsRunning(false);
       setShowLogs(false);
-      toast.error(`Failed to start workflow run. Please try again. Error: ${error}`);
+      toast.error(t("workflow.failedToStart"));
     }
   };
 
@@ -131,7 +133,7 @@ export function WorkflowsSidebar({
         <SidebarHeader className="py-4 flex-row items-center justify-between gap-2 px-2.5">
           <Select value={workflow?.id} onValueChange={setActiveWorkflowId}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select workflow" />
+              <SelectValue placeholder={t("workflow.selectWorkflow")} />
             </SelectTrigger>
             <SelectContent
               position="popper"
@@ -144,7 +146,7 @@ export function WorkflowsSidebar({
               ))}
               {workflows.length === 0 && (
                 <SelectItem value="no-workflows" disabled>
-                  No workflows available
+                  {t("workflow.noWorkflows")}
                 </SelectItem>
               )}
             </SelectContent>
@@ -162,20 +164,20 @@ export function WorkflowsSidebar({
         <>
           <SidebarContent>
             <PluginSection
-              title={"Transcriber"}
-              action={"Transcribe all"}
+              title={t("plugins.transcriber")}
+              action={t("plugins.transcribeAll")}
               type={"transcriber"}
             />
             <Separator />
             <PluginSection
-              title={"Grader"}
-              action={"Grade all"}
+              title={t("plugins.grader")}
+              action={t("plugins.gradeAll")}
               type={"grader"}
             />
             <Separator />
             <PluginSection
-              title={"Validator"}
-              action={"Validate all"}
+              title={t("plugins.validator")}
+              action={t("plugins.validateAll")}
               type={"validator"}
             />
             <Separator />
@@ -185,16 +187,16 @@ export function WorkflowsSidebar({
         <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
           {workflows.length === 0 ? (
             <div>
-              <p>No workflows available.</p>
-              <p>Create one using the "+" button above.</p>
+              <p>{t("workflow.noWorkflows")}</p>
+              <p>{t("workflow.createWithButton")}</p>
             </div>
           ) : !activeWorkflowId ? (
             <div>
-              <p>No workflow selected.</p>
-              <p>Select one from the dropdown above.</p>
+              <p>{t("workflow.noWorkflowSelected")}</p>
+              <p>{t("workflow.selectFromDropdown")}</p>
             </div>
           ) : (
-            <div>Workflow details go here.</div>
+            <div>{t("workflow.workflowDetails")}</div>
           )}
         </div>
       )}
@@ -220,6 +222,8 @@ const WorkflowSidebarRunButton = ({
   onRun: () => void;
   onShowLogs: () => void;
 }) => {
+  const { t } = useTranslation();
+  
   return (
     <ButtonGroup className="flex w-full my-2">
       <Button
@@ -230,10 +234,10 @@ const WorkflowSidebarRunButton = ({
       >
         {isRunning ? (
           <>
-            <LoaderIcon className={"animate-spin"} /> Running
+            <LoaderIcon className={"animate-spin"} /> {t("workflow.running")}
           </>
         ) : (
-          <>Run Workflow</>
+          <>{t("workflow.runWorkflow")}</>
         )}
       </Button>
       <DropdownMenu>
@@ -245,16 +249,16 @@ const WorkflowSidebarRunButton = ({
         <DropdownMenuContent>
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={onShowLogs}>
-              <Clock /> View Execution Logs
+              <Clock /> {t("workflow.viewLogs")}
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Save /> Save Workflow
+              <Save /> {t("workflow.saveWorkflow")}
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem disabled={!isRunning} variant="destructive">
-              <Ban /> Abort Workflow
+              <Ban /> {t("workflow.abortWorkflow")}
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
