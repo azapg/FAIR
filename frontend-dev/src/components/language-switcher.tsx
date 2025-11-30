@@ -7,10 +7,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Languages } from "lucide-react";
+import { IconSpain, IconUnitedStates } from "nucleo-flags"
 
 const languages = [
-  { code: "en", name: "English", flag: "🇺🇸" },
-  { code: "es", name: "Español", flag: "🇪🇸" },
+  { code: "en", name: "English", flag: <IconUnitedStates /> },
+  { code: "es", name: "Español", flag: <IconSpain /> },
 ];
 
 export function LanguageSwitcher() {
@@ -36,11 +37,10 @@ export function LanguageSwitcher() {
           <DropdownMenuItem
             key={lang.code}
             onClick={() => changeLanguage(lang.code)}
-            className={`cursor-pointer ${
-              currentLanguage.code === lang.code ? "bg-accent" : ""
-            }`}
+            className={`cursor-pointer ${currentLanguage.code === lang.code ? "bg-accent" : ""
+              }`}
           >
-            <span className="mr-2">{lang.flag}</span>
+            <span>{lang.flag}</span>
             {lang.name}
           </DropdownMenuItem>
         ))}
