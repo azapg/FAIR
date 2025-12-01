@@ -15,6 +15,7 @@ import {Plus, FileText, X} from "lucide-react";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import { Assignment, useCreateAssignment, type CreateAssignmentInput } from "@/hooks/use-assignments";
 import {CreateAssignmentForm, Grade} from "@/app/courses/tabs/assignments/assignments";
+import {useTranslation} from "react-i18next";
 
 interface CreateAssignmentDialogProps {
   courseId?: string;
@@ -39,6 +40,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
   const [files, setFiles] = useState<FileItem[]>([]);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const {t} = useTranslation();
 
   const { mutateAsync: createAssignment, isPending } = useCreateAssignment();
 
@@ -73,7 +75,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
     setSubmissionError(null);
     
     if (!form.title.trim()) {
-      setSubmissionError("Title is required");
+      setSubmissionError(t("assignments.titleRequired"));
       return;
     }
 
@@ -101,7 +103,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
 
     try {
       if (!courseId) {
-        throw new Error("Course ID is required");
+        throw new Error(t("assignments.courseIdRequired"));
       }
 
       const payload: CreateAssignmentInput = {
@@ -119,7 +121,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
       setOpen(false);
       resetForm();
     } catch (err: any) {
-      let msg = "Failed to create assignment.";
+      let msg = t("assignments.failedToCreate");
       if (err?.response?.data) {
         const data = err.response.data;
         if (data?.detail && typeof data.detail === "string") {
@@ -145,12 +147,12 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2"/>
-          Create
+          {t("common.create")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[60%] h-[90%]">
         <DialogHeader>
-          <DialogTitle>New Assignment</DialogTitle>
+          <DialogTitle>{t("assignments.newAssignment")}</DialogTitle>
         </DialogHeader>
         <ScrollArea className="h-full w-full">
           <form
@@ -158,28 +160,28 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
             onSubmit={handleSubmit}
           >
             <div className="grid gap-2">
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="title">{t("assignments.titleLabel")}</Label>
               <Input
                 id="title"
                 value={form.title}
                 onChange={e => setForm(f => ({...f, title: e.target.value}))}
                 required
-                placeholder="e.g., Essay 2"
+                placeholder={t("assignments.titlePlaceholder")}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t("assignments.description")}</Label>
               <Textarea
                 id="description"
                 value={form.description}
                 onChange={e => setForm(f => ({...f, description: e.target.value}))}
-                placeholder="Brief details..."
+                placeholder={t("assignments.descriptionPlaceholder")}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="due">Due date</Label>
+              <Label htmlFor="due">{t("assignments.dueDate")}</Label>
               <Input
                 id="due"
                 type="date"
@@ -189,7 +191,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="gradeType">Grading type</Label>
+              <Label htmlFor="gradeType">{t("assignments.gradingType")}</Label>
               <select
                 id="gradeType"
                 className="w-full rounded-md border px-3 py-2 text-sm"
@@ -202,18 +204,18 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
                   }))
                 }
               >
-                <option value="">None</option>
-                <option value="points">Points</option>
-                <option value="percentage">Percentage</option>
-                <option value="letter">Letter</option>
-                <option value="pass_fail">Pass/Fail</option>
+                <option value="">{t("assignments.none")}</option>
+                <option value="points">{t("assignments.points")}</option>
+                <option value="percentage">{t("assignments.percentage")}</option>
+                <option value="letter">{t("assignments.letter")}</option>
+                <option value="pass_fail">{t("assignments.passFail")}</option>
               </select>
             </div>
 
             {form.gradeType === "points" || form.gradeType === "percentage" ? (
               <div className="grid gap-2">
                 <Label htmlFor="gradeValue">
-                  {form.gradeType === "points" ? "Points" : "Percentage"}
+                  {form.gradeType === "points" ? t("assignments.points") : t("assignments.percentage")}
                 </Label>
                 <Input
                   id="gradeValue"
@@ -226,7 +228,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
               </div>
             ) : form.gradeType === "letter" ? (
               <div className="grid gap-2">
-                <Label htmlFor="gradeLetter">Letter grade</Label>
+                <Label htmlFor="gradeLetter">{t("assignments.letterGrade")}</Label>
                 <Input
                   id="gradeLetter"
                   value={form.gradeValue}
@@ -236,22 +238,22 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
               </div>
             ) : form.gradeType === "pass_fail" ? (
               <div className="grid gap-2">
-                <Label htmlFor="pf">Result</Label>
+                <Label htmlFor="pf">{t("assignments.result")}</Label>
                 <select
                   id="pf"
                   className="w-full rounded-md border px-3 py-2 text-sm"
                   value={form.gradeValue}
                   onChange={e => setForm(f => ({...f, gradeValue: e.target.value}))}
                 >
-                  <option value="">Select</option>
-                  <option value="pass">Pass</option>
-                  <option value="fail">Fail</option>
+                  <option value="">{t("assignments.select")}</option>
+                  <option value="pass">{t("assignments.pass")}</option>
+                  <option value="fail">{t("assignments.fail")}</option>
                 </select>
               </div>
             ) : null}
 
             <div className="grid gap-2">
-              <h2 className="text-muted-foreground text-sm">Resources</h2>
+              <h2 className="text-muted-foreground text-sm">{t("assignments.resources")}</h2>
               <div className="flex flex-row flex-wrap gap-2 items-center">
                 {files.map((item) => (
                   <Button
@@ -284,7 +286,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
                   size="sm"
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  title="Add resources"
+                  title={t("assignments.addResources")}
                 >
                   <Plus />
                 </Button>
@@ -299,7 +301,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
 
             <DialogFooter>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Creating..." : "Add"}
+                {isPending ? t("assignments.creating") : t("common.add")}
               </Button>
             </DialogFooter>
           </form>

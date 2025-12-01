@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import {Link} from "react-router-dom";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 export type BreadcrumbSegment = {
   label: string;
@@ -23,13 +24,13 @@ type Crumb = {
 };
 
 // Normalize and strongly type the generator
-const generateBreadcrumbs = (baseUrl: string, segments: BreadcrumbSegment[]): Crumb[] => {
+const generateBreadcrumbs = (baseUrl: string, segments: BreadcrumbSegment[], home: string = "Home"): Crumb[] => {
   const normalizeBase = (s: string) => {
     if (!s || s === "/") return "";
     return `/${s}`.replace(/\/+/g, "/").replace(/\/$/, "");
   };
 
-  const crumbs: Array<Omit<Crumb, "isLast">> = [{ label: "Home", href: "/" }];
+  const crumbs: Array<Omit<Crumb, "isLast">> = [{ label: home, href: "/" }];
 
   let currentPath = normalizeBase(baseUrl);
 
@@ -47,7 +48,9 @@ const generateBreadcrumbs = (baseUrl: string, segments: BreadcrumbSegment[]): Cr
 };
 
 export function BreadcrumbNav({className, segments, baseUrl = ""}: { className?: string, baseUrl?: string, segments: BreadcrumbSegment[] }) {
-  const breadcrumbs = React.useMemo(() => generateBreadcrumbs(baseUrl, segments ?? []), [baseUrl, segments]);
+  const { t } = useTranslation();
+
+  const breadcrumbs = React.useMemo(() => generateBreadcrumbs(baseUrl, segments ?? [], t("common.home")), [baseUrl, segments, t]);
   return (
     <Breadcrumb className={className}>
       <BreadcrumbList>

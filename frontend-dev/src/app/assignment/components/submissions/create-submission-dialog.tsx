@@ -12,6 +12,7 @@ import {Input} from "@/components/ui/input";
 import {LoaderIcon, PlusIcon} from "lucide-react";
 import {useState} from "react";
 import {useCreateSubmission} from "@/hooks/use-submissions";
+import {useTranslation} from "react-i18next";
 
 type CreateSubmissionDialogProps = {
   assignmentId: string;
@@ -21,6 +22,7 @@ export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogP
   const [username, setUsername] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
   const [open, setOpen] = useState(false);
+  const {t} = useTranslation();
   
   const createSubmission = useCreateSubmission();
 
@@ -37,23 +39,23 @@ export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogP
       setOpen(false);
     } catch (error: any) {
       console.error("Error creating submission:", error);
-      alert(error.response?.data?.detail || "Failed to create submission");
+      alert(error.response?.data?.detail || t("submissions.failedToCreate"));
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm"><PlusIcon/> Add</Button>
+        <Button size="sm"><PlusIcon/> {t("common.add")}</Button>
       </DialogTrigger>
       <DialogContent className={""}>
         <DialogHeader>
-          <DialogTitle>Add a submission</DialogTitle>
-          <DialogDescription>Create a synthetic submission for a student</DialogDescription>
+          <DialogTitle>{t("submissions.addSubmission")}</DialogTitle>
+          <DialogDescription>{t("submissions.createSynthetic")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium">Student Name</label>
+            <label className="mb-1 block text-sm font-medium">{t("submissions.studentName")}</label>
             <Input
               placeholder="Allan Zapata"
               value={username}
@@ -62,7 +64,7 @@ export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogP
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">Files</label>
+            <label className="mb-1 block text-sm font-medium">{t("submissions.files")}</label>
             <Input
               type="file"
               multiple
@@ -79,10 +81,10 @@ export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogP
             {createSubmission.isPending ? (
               <>
                 <LoaderIcon className={"animate-spin"}/>
-                Creating...
+                {t("submissions.creating")}
               </>
             ) : (
-              <>Create</>
+              <>{t("common.create")}</>
             )}
           </Button>
         </DialogFooter>

@@ -7,10 +7,12 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
+import { useTranslation } from 'react-i18next'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
   const { register, loading } = useAuth()
+  const { t } = useTranslation()
   const [name, setName] = React.useState('')
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
@@ -22,8 +24,8 @@ export default function RegisterPage() {
       navigate('/')
     } catch (err) {
       const axiosError = err as AxiosError<{ detail?: string }>
-      const message = axiosError.response?.data?.detail || 'Unable to register. Please try again.'
-      toast.error('Registration failed', { description: message })
+      const message = axiosError.response?.data?.detail || t('auth.unableToRegister')
+      toast.error(t('auth.registrationFailed'), { description: message })
     }
   }
 
@@ -31,18 +33,18 @@ export default function RegisterPage() {
     <div className="h-full flex items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl">Welcome</CardTitle>
-          <CardDescription className="font-sans">Create your account</CardDescription>
+          <CardTitle className="text-2xl">{t('auth.welcome')}</CardTitle>
+          <CardDescription className="font-sans">{t('auth.createYourAccount')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">{t('auth.name')}</Label>
               <Input
                 id="name"
                 type="text"
                 autoComplete="name"
-                placeholder="Your name"
+                placeholder={t('auth.namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -50,13 +52,13 @@ export default function RegisterPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('auth.email')}</Label>
               <Input
                 id="email"
                 type="email"
                 inputMode="email"
                 autoComplete="email"
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -64,7 +66,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('auth.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -76,15 +78,15 @@ export default function RegisterPage() {
               />
             </div>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Wait...' : 'Create account'}
+              {loading ? t('common.wait') : t('auth.createAccount')}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground">
-            Already have an account?{' '}
+            {t('auth.haveAccount')}{' '}
             <Link to="/login" className="underline underline-offset-4">
-              Sign in
+              {t('auth.signIn')}
             </Link>
           </p>
         </CardFooter>
@@ -92,4 +94,3 @@ export default function RegisterPage() {
     </div>
   )
 }
-

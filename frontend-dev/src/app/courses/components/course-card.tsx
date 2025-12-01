@@ -22,6 +22,7 @@ import {
   AlertDialogTitle as ConfirmTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useTranslation } from "react-i18next";
 
 export type CourseCardProps = {
   course: Course;
@@ -35,6 +36,7 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
   const { user, isAuthenticated } = useAuth();
   const updateCourse = useUpdateCourse();
   const createCourse = useCreateCourse();
+  const { t } = useTranslation();
 
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("edit");
@@ -88,33 +90,33 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
           <AlertDialog onOpenChange={(isOpen) => { if (!isOpen) setConfirmName(""); }}>
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" tabIndex={0} aria-label="Course actions">
+                <Button variant="ghost" size="icon" tabIndex={0} aria-label={t("actions.courseActions")}>
                   <MoreVertical className="w-5 h-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DialogTrigger asChild>
-                  <DropdownMenuItem onClick={setupEdit}>Edit</DropdownMenuItem>
+                  <DropdownMenuItem onClick={setupEdit}>{t("common.edit")}</DropdownMenuItem>
                 </DialogTrigger>
                 <DialogTrigger asChild>
-                  <DropdownMenuItem onClick={setupClone}>Clone</DropdownMenuItem>
+                  <DropdownMenuItem onClick={setupClone}>{t("common.clone")}</DropdownMenuItem>
                 </DialogTrigger>
                 <AlertDialogTrigger asChild>
-                  <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                  <DropdownMenuItem className="text-red-600">{t("common.delete")}</DropdownMenuItem>
                 </AlertDialogTrigger>
               </DropdownMenuContent>
             </DropdownMenu>
 
             <ConfirmContent onClick={(e) => e.stopPropagation()}>
               <ConfirmHeader>
-                <ConfirmTitle>Delete course</ConfirmTitle>
+                <ConfirmTitle>{t("courses.deleteCourse")}</ConfirmTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. To confirm deletion, type the course name exactly:
+                  {t("courses.deleteConfirmation")}
                   <span className="font-medium"> {course.name}</span>
                 </AlertDialogDescription>
               </ConfirmHeader>
               <div className="space-y-2">
-                <Label htmlFor={`confirm-name-${course.id}`}>Course name</Label>
+                <Label htmlFor={`confirm-name-${course.id}`}>{t("courses.courseName")}</Label>
                 <Input
                   id={`confirm-name-${course.id}`}
                   value={confirmName}
@@ -124,7 +126,7 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
                 />
               </div>
               <ConfirmFooter>
-                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+                <AlertDialogCancel onClick={(e) => e.stopPropagation()}>{t("common.cancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   disabled={!isConfirmCorrect}
                   onClick={(e) => {
@@ -135,7 +137,7 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
                     onDeleteAction?.(course);
                   }}
                 >
-                  Delete
+                  {t("common.delete")}
                 </AlertDialogAction>
               </ConfirmFooter>
             </ConfirmContent>
@@ -143,31 +145,31 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
 
           <DialogContent onClick={(e) => e.stopPropagation()}>
             <DialogHeader>
-              <DialogTitle>{mode === "edit" ? "Edit course" : "Clone course"}</DialogTitle>
+              <DialogTitle>{mode === "edit" ? t("courses.editCourse") : t("courses.cloneCourse")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor={`course-name-${course.id}`}>Name</Label>
+                <Label htmlFor={`course-name-${course.id}`}>{t("courses.name")}</Label>
                 <Input
                   id={`course-name-${course.id}`}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Intro to AI"
+                  placeholder={t("courses.namePlaceholder")}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`course-description-${course.id}`}>Description</Label>
+                <Label htmlFor={`course-description-${course.id}`}>{t("courses.description")}</Label>
                 <Textarea
                   id={`course-description-${course.id}`}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional short description"
+                  placeholder={t("courses.descriptionPlaceholder")}
                 />
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={isDisabled}>
-                  {isSubmitting ? "Wait..." : mode === "edit" ? "Save" : "Clone"}
+                  {isSubmitting ? t("common.wait") : mode === "edit" ? t("common.save") : t("common.clone")}
                 </Button>
               </DialogFooter>
             </form>
@@ -183,8 +185,8 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
       </CardContent>
       <CardFooter>
         <span className="text-sm text-muted-foreground">
-          By {course.instructor_name}
-          {course.assignments_count > 0 && ` • ${course.assignments_count} assignment${course.assignments_count > 1 ? "s" : ""}`}
+          {t("courses.by")} {course.instructor_name}
+          {course.assignments_count > 0 && ` • ${course.assignments_count} ${course.assignments_count > 1 ? t("courses.assignments") : t("courses.assignment")}`}
         </span>
       </CardFooter>
     </Card>

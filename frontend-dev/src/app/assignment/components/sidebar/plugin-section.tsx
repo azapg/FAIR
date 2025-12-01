@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Plus } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflows-store";
+import { useTranslation } from "react-i18next";
 
 type PluginSectionProps = {
   title: string;
@@ -41,6 +42,7 @@ export default function PluginSection({
   const currentDraft = useWorkflowStore((s) =>
     s.activeWorkflowId ? s.drafts[s.activeWorkflowId] : undefined,
   );
+  const { t } = useTranslation();
 
   useEffect(() => {
     const pluginInDraft = currentDraft?.plugins[type];
@@ -61,11 +63,11 @@ export default function PluginSection({
   }, [currentDraft, plugins]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div>{t("plugins.loadingPlugins")}</div>;
   }
 
   if (isError) {
-    return <div>Error loading plugins</div>;
+    return <div>{t("plugins.errorLoadingPlugins")}</div>;
   }
 
   const runStep = () => {
@@ -101,7 +103,7 @@ export default function PluginSection({
         value={selectedPlugin?.id || ""}
       >
         <SelectTrigger className="w-full" size={"sm"}>
-          <SelectValue placeholder="Select plugin" />
+          <SelectValue placeholder={t("workflow.selectPlugin")} />
         </SelectTrigger>
         <SelectContent
           position="popper"
