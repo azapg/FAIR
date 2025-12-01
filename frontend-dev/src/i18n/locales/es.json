@@ -170,5 +170,11 @@
     "reloadPage": "Recargar página",
     "reload": "Recargar",
     "errorLoadingAssignment": "Error al cargar la tarea."
+  },
+  "theme": {
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema",
+    "toggleTheme": "Cambiar tema"
   }
 }

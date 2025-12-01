@@ -170,5 +170,11 @@
     "reloadPage": "Reload Page",
     "reload": "Reload",
     "errorLoadingAssignment": "Error loading assignment."
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "toggleTheme": "Toggle theme"
   }
 }
