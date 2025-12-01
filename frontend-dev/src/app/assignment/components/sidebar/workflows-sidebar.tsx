@@ -107,10 +107,11 @@ export function WorkflowsSidebar({
     setShowLogs(true);
     try {
       await persistDrafts();
-      await api.post("/sessions", {
+      const response = await api.post("/sessions", {
         workflow_id: activeWorkflowId,
         submission_ids: submissions?.map(s => s.id) || [],
       });
+      setCurrentSession(response.data.session);
     } catch (error) {
       const errorMessage = isAxiosError(error) ? error.response?.data?.detail : undefined;
       toast.error(t("workflow.failedToStart"), {
