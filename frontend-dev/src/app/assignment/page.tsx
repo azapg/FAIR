@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { SubmissionsTable } from "@/app/assignment/components/submissions/submissions-table";
-import { columns } from "@/app/assignment/components/submissions/submissions";
+import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { WorkflowsSidebar } from "@/app/assignment/components/sidebar/workflows-sidebar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -56,6 +56,8 @@ export default function AssignmentPage() {
     isLoadingWorkflows ||
     isLoadingArtifacts ||
     isLoadingSubmissions;
+
+  const columns = useSubmissionColumns();
 
   useEffect(() => {
     if (course?.id) {

@@ -1,6 +1,6 @@
 import {useState, useEffect} from "react";
 import {AssignmentsTable} from "@/app/courses/tabs/assignments/assignments-table";
-import {columns} from "@/app/courses/tabs/assignments/assignments";
+import {useAssignmentColumns} from "@/app/courses/tabs/assignments/assignments";
 import {CreateAssignmentDialog} from "@/app/courses/tabs/assignments/create-assignment-dialog";
 import {Assignment} from "@/hooks/use-assignments";
 import {useTranslation} from "react-i18next";
@@ -15,6 +15,7 @@ export default function AssignmentsTab({
 }) {
   const [assignments, setAssignments] = useState<Assignment[]>(() => initialAssignments);
   const {t} = useTranslation();
+  const columns = useAssignmentColumns();
 
   useEffect(() => {
     setAssignments(initialAssignments);
