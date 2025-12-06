@@ -75,6 +75,11 @@ def run(
             )
             app.mount("/data", StaticFiles(directory=dist_path / "data"), name="data")
 
+        @app.get("/favicon.svg")
+        async def favicon():
+            with importlib.resources.as_file(dist_dir / "favicon.svg") as favicon_path:
+                return FileResponse(favicon_path, media_type="image/svg+xml")
+
         @app.middleware("http")
         async def spa_fallback(request, call_next):
             try:
