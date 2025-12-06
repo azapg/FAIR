@@ -5,6 +5,7 @@ import { useWorkflowStore } from "@/store/workflows-store";
 import type { Workflow } from "@/store/workflows-store";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
+import { useTranslation } from "react-i18next";
 
 const keys = {
   workflows: (courseId: string) => ["workflows", courseId] as const,
@@ -103,6 +104,7 @@ export function useCreateWorkflow() {
 export function usePersistWorkflowDrafts() {
   const client = useQueryClient();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   return useMutation({
     mutationFn: async () => {
@@ -135,9 +137,9 @@ export function usePersistWorkflowDrafts() {
             touchedCourses.add(draft.courseId);
           } catch (error: any) {
             if (error?.response?.status === 404) {
-              toast.error(`Can't find workflow '${draft.name || workflowId}'. It may have been deleted.`);
+              toast.error(t("workflow.notFound", { name: draft.name || workflowId }));
             } else if (error?.response?.status === 403) {
-              toast.error(`You don't have permission to update workflow '${draft.name || workflowId}'.`);
+              toast.error(t("workflow.noPermission", { name: draft.name || workflowId }));
             } else {
               throw error;
             }
