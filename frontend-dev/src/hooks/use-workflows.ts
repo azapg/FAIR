@@ -114,6 +114,7 @@ export function usePersistWorkflowDrafts() {
       const currentUserId = user?.id;
       const userDrafts = entries.filter(([_, draft]) => {
         // If creatorId is not set (old drafts), we skip them to avoid 403 errors
+        // If currentUserId is undefined (not authenticated), we skip all drafts
         // If creatorId matches current user, we include them
         return draft.creatorId && draft.creatorId === currentUserId;
       });
