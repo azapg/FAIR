@@ -4,6 +4,7 @@ import api from "@/lib/api";
 import { useWorkflowStore } from "@/store/workflows-store";
 import type { Workflow } from "@/store/workflows-store";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/auth-context";
 
 const keys = {
   workflows: (courseId: string) => ["workflows", courseId] as const,
@@ -14,6 +15,7 @@ export function useWorkflows() {
   const saveDraft = useWorkflowStore((s) => s.saveDraft);
   const courseId = useWorkflowStore((s) => s.activeCourseId);
   const setActiveWorkflowId = useWorkflowStore((s) => s.setActiveWorkflowId);
+  const { user } = useAuth();
 
   const query = useQuery<Workflow[]>({
     enabled: !!courseId,
@@ -59,9 +61,10 @@ export function useWorkflows() {
         name: wf.name,
         courseId: wf.courseId,
         plugins: wf.plugins || {},
+        creatorId: user?.id,
       });
     }
-  }, [courseId, query.data]);
+  }, [courseId, query.data, user?.id]);
 
   return {
     workflows: query.data ?? [],
@@ -99,6 +102,7 @@ export function useCreateWorkflow() {
 
 export function usePersistWorkflowDrafts() {
   const client = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async () => {
@@ -106,10 +110,20 @@ export function usePersistWorkflowDrafts() {
       const entries = Object.entries(drafts);
       if (entries.length === 0) return { updated: 0 } as { updated: number };
 
+      // Filter drafts to only include those created by the current user
+      const currentUserId = user?.id;
+      const userDrafts = entries.filter(([_, draft]) => {
+        // If creatorId is not set (old drafts), we skip them to avoid 403 errors
+        // If creatorId matches current user, we include them
+        return draft.creatorId && draft.creatorId === currentUserId;
+      });
+
+      if (userDrafts.length === 0) return { updated: 0 } as { updated: number };
+
       const touchedCourses = new Set<string>();
 
       await Promise.all(
-        entries.map(async ([workflowId, draft]) => {
+        userDrafts.map(async ([workflowId, draft]) => {
           try {
             const payload = {
               name: draft.name,
@@ -122,9 +136,7 @@ export function usePersistWorkflowDrafts() {
             if (error?.response?.status === 404) {
               toast.error(`Can't find workflow '${draft.name || workflowId}'. It may have been deleted.`);
             } else if (error?.response?.status === 403) {
-              // TODO: Because this attempts to persist all drafts, in case you switched account but your browser still has drafts
-              //  from the previous user, you may get a lot of these errors. We should either remove the drafts on user switch, or just persist
-              //  just the active course drafts or at least just the active workflow's draft.  
+              toast.error(`You don't have permission to update workflow '${draft.name || workflowId}'.`);
             } else {
               throw error;
             }
@@ -136,7 +148,7 @@ export function usePersistWorkflowDrafts() {
         client.invalidateQueries({ queryKey: keys.workflows(courseId) });
       });
 
-      return { updated: entries.length } as { updated: number };
+      return { updated: userDrafts.length } as { updated: number };
     },
   });
 }
