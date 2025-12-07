@@ -94,7 +94,7 @@ def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
         {"sub": str(user.id), "role": user.role},
         remember_me=False
     )
-    return {"access_token": access_token, "token_type": "bearer", "user": user}
+    return {"access_token": access_token, "token_type": "bearer", "user": UserRead.model_validate(user)}
 
 
 @router.post("/login")
