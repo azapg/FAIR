@@ -142,7 +142,9 @@
     "noWorkflowSelected": "No workflow selected.",
     "selectFromDropdown": "Select one from the dropdown above.",
     "createWithButton": "Create one using the \"+\" button above.",
-    "workflowDetails": "Workflow details go here."
+    "workflowDetails": "Workflow details go here.",
+    "notFound": "Can't find workflow '{{name}}'. It may have been deleted.",
+    "noPermission": "You don't have permission to update workflow '{{name}}'."
   },
   "plugins": {
     "transcriber": "Transcriber",

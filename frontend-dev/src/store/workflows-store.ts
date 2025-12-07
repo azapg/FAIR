@@ -36,6 +36,7 @@ export type Workflow = WorkflowCreate & {
 
 export type WorkflowDraft = WorkflowCreate & {
   workflowId: string;
+  creatorId?: string; // ID of the user who created this draft
 };
 
 type State = {

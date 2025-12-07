@@ -142,7 +142,9 @@
     "noWorkflowSelected": "Ningún flujo de trabajo seleccionado.",
     "selectFromDropdown": "Selecciona uno del menú desplegable.",
     "createWithButton": "Crea uno usando el botón \"+\" de arriba.",
-    "workflowDetails": "Los detalles del flujo de trabajo van aquí."
+    "workflowDetails": "Los detalles del flujo de trabajo van aquí.",
+    "notFound": "No se encuentra el flujo de trabajo '{{name}}'. Puede haber sido eliminado.",
+    "noPermission": "No tienes permiso para actualizar el flujo de trabajo '{{name}}'."
   },
   "plugins": {
     "transcriber": "Transcriptor",

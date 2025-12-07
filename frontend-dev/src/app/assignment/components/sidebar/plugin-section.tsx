@@ -22,6 +22,7 @@ import {
 import { Plus } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/contexts/auth-context";
 
 type PluginSectionProps = {
   title: string;
@@ -43,6 +44,7 @@ export default function PluginSection({
     s.activeWorkflowId ? s.drafts[s.activeWorkflowId] : undefined,
   );
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   useEffect(() => {
     const pluginInDraft = currentDraft?.plugins[type];
@@ -83,6 +85,7 @@ export default function PluginSection({
         name: currentDraft?.name || "Default Workflow",
         courseId: activeCourseId || "",
         ...currentDraft,
+        creatorId: user?.id,
         plugins: {
           ...(currentDraft?.plugins || {}),
           [type]: {
