@@ -1,6 +1,6 @@
 [project]
 name = "fair-platform"
-version = "0.6.1"
+version = "6.0.2"
 description = "Fair Platform - The complete platform with backend, frontend, and CLI"
 authors = [{ name = "Allan Zapata", email = "allan.zapata@up.ac.pa" }]
 readme = "README.md"
