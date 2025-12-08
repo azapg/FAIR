@@ -176,3 +176,15 @@ body {
     overflow-y: auto;
     scrollbar-width: none;
 }
+
+.astro-kmkmnagf {
+    justify-content: center;
+}
+
+.title-wrapper {
+    justify-content: start;
+}
+
+dialog:where(.astro-v37mnknz) {
+    background-color: var(--sl-color-bg);
+}
