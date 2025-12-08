@@ -39,7 +39,7 @@ export default function CoursesPage() {
     await createCourse.mutateAsync({
       name: name.trim(),
       description: description.trim() || null,
-      instructor_id: user.id,
+      instructorId: user.id,
     });
 
     setName("");

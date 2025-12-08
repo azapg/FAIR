@@ -74,7 +74,7 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
       await createCourse.mutateAsync({
         name: name.trim(),
         description: description.trim() || null,
-        instructor_id: user.id,
+        instructorId: user.id,
       });
     }
     setOpen(false);
@@ -185,8 +185,8 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
       </CardContent>
       <CardFooter>
         <span className="text-sm text-muted-foreground">
-          {t("courses.by")} {course.instructor_name}
-          {course.assignments_count > 0 && ` • ${course.assignments_count} ${course.assignments_count > 1 ? t("courses.assignments") : t("courses.assignment")}`}
+          {t("courses.by")} {course.instructorName}
+          {course.assignmentsCount > 0 && ` • ${course.assignmentsCount} ${course.assignmentsCount > 1 ? t("courses.assignments") : t("courses.assignment")}`}
         </span>
       </CardFooter>
     </Card>
