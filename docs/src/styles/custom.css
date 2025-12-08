@@ -156,3 +156,23 @@ body {
     list-style-type: decimal;
     margin-left: 1.5rem;
 }
+
+.main-pane {
+    flex: 1;
+}
+
+.right-sidebar-container:where(.astro-67yu43on) {
+    width: 20rem;
+}
+
+.right-sidebar:where(.astro-67yu43on) {
+    position: fixed;
+    top: 0;
+    border-inline-start: none;
+    padding-top: var(--sl-nav-height);
+    margin-top: 1rem;
+    width: 100%;
+    height: 100vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
