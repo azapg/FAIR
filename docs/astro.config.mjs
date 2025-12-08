@@ -54,6 +54,8 @@ export default defineConfig({
       components: {
         SiteTitle: "./src/components/header-title.astro",
         Search: "./src/components/header-search.astro",
+        PageTitle: "./src/components/page-title.astro",
+        ContentPanel: "./src/components/content-panel.astro",
       },
     }),
   ],
