@@ -2,10 +2,29 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root[data-theme='light'], [data-theme='light'] ::backdrop {
+:root {
+    /* text sizes */
+    --sl-text-2xs: 0.625rem;
+    --sl-text-xs: 0.75rem;
+    --sl-text-sm: 0.875rem;
+    --sl-text-base: 1rem;
+    --sl-text-lg: 1.125rem;
+    --sl-text-xl: 1.25rem;
+    --sl-text-2xl: 1.5rem;
+    --sl-text-3xl: 1.875rem;
+    --sl-text-4xl: 2.25rem;
+    --sl-text-5xl: 3rem;
+    --sl-text-6xl: 3.75rem;
+
+    --sl-line-height: 1.75;
+    --sl-line-height-headings: 1;
+
     --sl-font: "Host Grotesk", sans-serif;
     --sl-font-headings: "Remark", serif;
+}
 
+:root[data-theme="light"],
+[data-theme="light"] ::backdrop {
     --sl-color-accent-low: var(--accent-foreground);
     --sl-color-accent: var(--accent-foreground);
     --sl-color-accent-high: var(--muted);
