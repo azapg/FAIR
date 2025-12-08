@@ -50,7 +50,7 @@ export default defineConfig({
           autogenerate: { directory: "development" },
         },
       ],
-      customCss: ["./src/styles/custom.css"],
+      customCss: ["./src/styles/custom.css", "./src/styles/fonts.css"],
       components: {
         SiteTitle: "./src/components/header-title.astro",
         Search: "./src/components/header-search.astro",
