@@ -1,97 +1,151 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-/* Import fonts from platform */
-@font-face {
-    font-family: 'Host Grotesk';
-    src: url('/fonts/host-grotesk/HostGrotesk-Regular.ttf') format('truetype');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
+@custom-variant dark (&:is(.dark *));
+
+:root, root[data-theme="light"],
+[data-theme="light"] ::backdrop {
+    /* text sizes */
+    --sl-text-2xs: 0.625rem;
+    --sl-text-xs: 0.75rem;
+    --sl-text-sm: 0.875rem;
+    --sl-text-base: 1rem;
+    --sl-text-lg: 1.125rem;
+    --sl-text-xl: 1.25rem;
+    --sl-text-2xl: 1.5rem;
+    --sl-text-3xl: 1.875rem;
+    --sl-text-4xl: 2.25rem;
+    --sl-text-5xl: 3rem;
+    --sl-text-6xl: 3.75rem;
+
+    --sl-line-height: 1.75;
+    --sl-line-height-headings: 1;
+
+    --sl-font: "Host Grotesk", sans-serif;
+    --sl-font-headings: "Remark", serif;
+    --radius: 0.625rem;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
 }
 
-@font-face {
-    font-family: 'Host Grotesk';
-    src: url('/fonts/host-grotesk/HostGrotesk-Medium.ttf') format('truetype');
-    font-weight: 500;
-    font-style: normal;
-    font-display: swap;
+:root[data-theme="light"],
+[data-theme="light"] ::backdrop {
+    --sl-color-accent-low: var(--accent-foreground);
+    --sl-color-accent: var(--accent-foreground);
+    --sl-color-accent-high: var(--muted);
+
+    --sl-color-text: var(--foreground);
+    --sl-color-text-accent: var(--accent-foreground);
+
+    --sl-color-bg: var(--background);
+    --sl-color-bg-nav: var(--background);
+    --sl-color-bg-sidebar: var(--sidebar);
 }
 
-@font-face {
-    font-family: 'Host Grotesk';
-    src: url('/fonts/host-grotesk/HostGrotesk-SemiBold.ttf') format('truetype');
-    font-weight: 600;
-    font-style: normal;
-    font-display: swap;
+[data-theme="dark"] {
+    --sl-color-accent-low: var(--accent-foreground);
+    --sl-color-accent: var(--accent-foreground);
+    --sl-color-accent-high: var(--muted);
+
+    --sl-color-text: var(--foreground);
+    --sl-color-text-accent: var(--accent-foreground);
+
+    --sl-color-bg: var(--background);
+    --sl-color-bg-nav: var(--background);
+    --sl-color-bg-sidebar: var(--sidebar);
+
+    /* shdacn */
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
 }
 
-@font-face {
-    font-family: 'Remark';
-    src: url('/fonts/remark/LTRemark-Regular.otf') format('opentype');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Remark';
-    src: url('/fonts/remark/LTRemark-Bold.otf') format('opentype');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-}
-
-/* Platform color scheme and Starlight overrides */
-:root {
-    --sl-font: 'Host Grotesk', sans-serif;
-    --sl-font-headings: 'Remark', serif;
-
-    --sl-color-white: oklch(1 0 0);
-    --sl-color-gray-1: oklch(0.97 0 0);
-    --sl-color-gray-2: oklch(0.955 0 89.876);
-    --sl-color-gray-3: oklch(0.922 0 0);
-    --sl-color-gray-4: oklch(0.708 0 0);
-    --sl-color-gray-5: oklch(0.556 0 0);
-    --sl-color-gray-6: oklch(0.205 0 0);
-    --sl-color-black: oklch(0.145 0 0);
-
-    --sl-color-accent-low: oklch(0.97 0 0);
-    --sl-color-accent: oklch(0.205 0 0);
-    --sl-color-accent-high: oklch(0.97 0 0);
-
-    --sl-color-text: oklch(0.145 0 0);
-    --sl-color-text-accent: oklch(0.205 0 0);
-
-    --sl-color-bg: oklch(1 0 0);
-    --sl-color-bg-nav: oklch(0.988 0 89.876);
-    --sl-color-bg-sidebar: oklch(0.988 0 89.876);
-
-    --sl-border-radius: 0.625rem;
+.astro-3ii7xxms li a[aria-current="page"] {
+    color: var(--accent-foreground);
+    background: var(--accent);
 }
 
 /* Typography refinements */
-h1, h2, h3, h4, h5, h6 {
-    font-family: 'Remark', serif;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: "Remark", serif;
 }
 
 body {
-    font-family: 'Host Grotesk', sans-serif;
-}
-
-code {
-    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+    font-family: "Host Grotesk", sans-serif;
 }
 
 /* Responsive 16:9 YouTube/Vimeo embeds */
 .sl-markdown-content iframe[src*="youtube.com"],
 .sl-markdown-content iframe[src*="youtu.be"],
 .sl-markdown-content iframe[src*="vimeo.com"] {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  height: auto !important; /* computed from aspect-ratio */
-  max-width: 800px;         /* optional max width */
-  display: block;
-  border: 0;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    height: auto !important; /* computed from aspect-ratio */
+    max-width: 800px; /* optional max width */
+    display: block;
+    border: 0;
 }
 
 .sl-markdown-content ul {
@@ -100,6 +154,99 @@ code {
 }
 
 .sl-markdown-content ol {
-    list-style-type: lower-roman;
+    list-style-type: decimal;
     margin-left: 1.5rem;
+}
+
+.main-pane {
+    flex: 1;
+}
+
+.right-sidebar-container:where(.astro-67yu43on) {
+    width: 20rem;
+}
+
+.right-sidebar:where(.astro-67yu43on) {
+    position: fixed;
+    top: 0;
+    border-inline-start: none;
+    padding-top: var(--sl-nav-height);
+    margin-top: 1rem;
+    width: 100%;
+    height: 100vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.astro-kmkmnagf {
+    justify-content: end;
+}
+
+.title-wrapper {
+    justify-content: start;
+}
+
+.sidebar-content, #starlight__sidebar {
+    background-color: var(--color-background);
+    border-color: var(--color-background);
+    border-inline-end: 0px;
+}
+
+dialog:where(.astro-v37mnknz) {
+    background-color: var(--sl-color-bg);
+}
+
+@theme inline {
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+
+/* Workaround for https://github.com/shadcn-ui/ui/issues/977 */
+html>body[data-scroll-locked] {
+    overflow: visible !important;
+    margin-right: 0 !important;
 }

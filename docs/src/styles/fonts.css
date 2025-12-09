@@ -1,0 +1,40 @@
+/* Import fonts from platform */
+@font-face {
+    font-family: "Host Grotesk";
+    src: url("/fonts/host-grotesk/HostGrotesk-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Host Grotesk";
+    src: url("/fonts/host-grotesk/HostGrotesk-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Host Grotesk";
+    src: url("/fonts/host-grotesk/HostGrotesk-SemiBold.ttf") format("truetype");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Remark";
+    src: url("/fonts/remark/LTRemark-Regular.otf") format("opentype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Remark";
+    src: url("/fonts/remark/LTRemark-Bold.otf") format("opentype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
