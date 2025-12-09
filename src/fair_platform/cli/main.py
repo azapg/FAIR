@@ -56,6 +56,9 @@ def serve(
     no_update_check: Annotated[
         bool, typer.Option("--no-update-check", help="Disable version update check")
     ] = False,
+    docs: Annotated[
+        bool, typer.Option("--docs", help="Serve documentation at /docs endpoint")
+    ] = False,
 ):
     # Check for updates unless disabled
     if not no_update_check:
@@ -64,7 +67,7 @@ def serve(
     
     from fair_platform.backend.main import run
 
-    run(host="127.0.0.1", port=port, headless=headless, dev=dev)
+    run(host="127.0.0.1", port=port, headless=headless, dev=dev, serve_docs=docs)
 
 
 if __name__ == "__main__":

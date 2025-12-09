@@ -35,7 +35,14 @@ async def lifespan(_ignored: FastAPI):
         pass
 
 
-app = FastAPI(title="Fair Platform Backend", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="Fair Platform Backend",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
@@ -60,7 +67,7 @@ def main():
 
 
 def run(
-    host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False
+    host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False, serve_docs: bool = False
 ):
     if not headless:
         frontend_files = importlib.resources.files("fair_platform.frontend")
@@ -80,8 +87,44 @@ def run(
             with importlib.resources.as_file(dist_dir / "favicon.svg") as favicon_path:
                 return FileResponse(favicon_path, media_type="image/svg+xml")
 
+        # Serve docs if enabled
+        if serve_docs:
+            docs_dir = frontend_files / "docs"
+            
+            with importlib.resources.as_file(docs_dir) as docs_path:
+                app.mount(
+                    "/docs/_astro", StaticFiles(directory=docs_path / "_astro"), name="docs_astro"
+                )
+                if (docs_path / "fonts").exists():
+                    app.mount(
+                        "/docs/fonts", StaticFiles(directory=docs_path / "fonts"), name="docs_fonts"
+                    )
+            
+            @app.get("/docs")
+            @app.get("/docs/")
+            async def docs_index():
+                with importlib.resources.as_file(docs_dir / "index.html") as index_path:
+                    return FileResponse(index_path)
+            
+            @app.get("/docs/{path:path}")
+            async def docs_spa(path: str):
+                with importlib.resources.as_file(docs_dir) as docs_path:
+                    file_path = docs_path / path
+                    if file_path.exists() and file_path.is_file():
+                        return FileResponse(file_path)
+                    html_path = docs_path / f"{path}.html"
+                    if html_path.exists():
+                        return FileResponse(html_path)
+                    dir_index = docs_path / path / "index.html"
+                    if dir_index.exists():
+                        return FileResponse(dir_index)
+                    with importlib.resources.as_file(docs_dir / "index.html") as index_path:
+                        return FileResponse(index_path)
+
         @app.middleware("http")
         async def spa_fallback(request, call_next):
+            if serve_docs and request.url.path.startswith("/docs"):
+                return await call_next(request)
             try:
                 response = await call_next(request)
                 if response.status_code == 404:
