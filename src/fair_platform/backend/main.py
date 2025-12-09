@@ -35,7 +35,14 @@ async def lifespan(_ignored: FastAPI):
         pass
 
 
-app = FastAPI(title="Fair Platform Backend", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="Fair Platform Backend",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
@@ -60,7 +67,7 @@ def main():
 
 
 def run(
-    host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False
+    host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False, serve_docs: bool = False
 ):
     if not headless:
         frontend_files = importlib.resources.files("fair_platform.frontend")
@@ -77,22 +84,20 @@ def run(
 
         @app.get("/favicon.svg")
         async def favicon():
-            with importlib.resources.as_file(dist_dir / "favicon.svg") as favicon_path:
-                return FileResponse(favicon_path, media_type="image/svg+xml")
+            return FileResponse(dist_path / "favicon.svg", media_type="image/svg+xml")
+        
+        if serve_docs:
+            docs_dir = frontend_files / "docs"
+            with importlib.resources.as_file(docs_dir) as docs_path:
+                app.mount("/docs", StaticFiles(directory=docs_path, html=True), name="docs")
+
 
         @app.middleware("http")
         async def spa_fallback(request, call_next):
-            try:
-                response = await call_next(request)
-                if response.status_code == 404:
-                    with importlib.resources.as_file(
-                        dist_dir / "index.html"
-                    ) as index_path:
-                        return FileResponse(index_path)
-                return response
-            except (FileNotFoundError, RuntimeError, Exception):
-                with importlib.resources.as_file(dist_dir / "index.html") as index_path:
-                    return FileResponse(index_path)
+            response = await call_next(request)
+            if response.status_code == 404:
+                return FileResponse(dist_path / "index.html")
+            return response
 
     if dev:
         app.add_middleware(

@@ -53,6 +53,7 @@ src/fair_platform/backend/.pytest_cache/
 src/fair_platform/backend/.coverage
 
 src/fair_platform/frontend/dist
+src/fair_platform/frontend/docs
 
 # IDEs
 **/.idea

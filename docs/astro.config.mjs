@@ -6,10 +6,11 @@ import react from '@astrojs/react';
 
 // https://astro.build/config
 export default defineConfig({
+  base: "/docs",
   redirects: {
-    '/': '/en/introduction',
-    '/en': '/en/introduction',
-    '/es': '/es/introduction'
+    '/': '/docs/en/introduction',
+    '/en': '/docs/en/introduction',
+    '/es': '/docs/es/introduction'
   },
   integrations: [
     react(),

@@ -24,7 +24,7 @@ export function LanguageSelect({slug}: {slug: string}) {
     const newSlug = slug.replace(new RegExp(`^${currentLang}`), langCode);
 
     // Navigate to the new URL
-    window.location.href = `/${newSlug}`;
+    window.location.href = `/docs/${newSlug}`;
   };
 
   return (
