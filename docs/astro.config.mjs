@@ -1,6 +1,8 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
+import react from '@astrojs/react';
+
 
 // https://astro.build/config
 export default defineConfig({
@@ -10,6 +12,7 @@ export default defineConfig({
     '/es': '/es/introduction'
   },
   integrations: [
+    react(),
     starlight({
       title: "FAIR Platform",
       description: "Open-source platform for AI-powered grading systems",
@@ -55,6 +58,7 @@ export default defineConfig({
         SiteTitle: "./src/components/header-title.astro",
         PageTitle: "./src/components/page-title.astro",
         ContentPanel: "./src/components/content-panel.astro",
+        ThemeSelect: "./src/components/theme-select.astro",
       },
     }),
   ],
