@@ -11,19 +11,33 @@ import {
 
 export function ModeToggle() {
   const [theme, setThemeState] = React.useState<
-    "theme-light" | "dark" | "system"
-  >("theme-light")
-
-  React.useEffect(() => {
+    "light" | "dark" | "system"
+  >(() => {
+    if (typeof window === "undefined") return "light"
+    try {
+      const stored = localStorage.getItem("starlight-theme")
+      if (stored === "dark" || stored === "system" || stored === "light") {
+        return stored as "light" | "dark" | "system"
+      }
+    } catch (e) {
+      // ignore localStorage errors
+    }
     const dataTheme = document.documentElement.getAttribute("data-theme")
-    setThemeState(dataTheme === "dark" ? "dark" : "theme-light")
-  }, [])
+    return dataTheme === "dark" ? "dark" : "light"
+  })
 
   React.useEffect(() => {
     const mql = window.matchMedia("(prefers-color-scheme: dark)")
 
     const applyTheme = (isDark: boolean) => {
       document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light")
+    }
+
+    // persist selection to localStorage
+    try {
+      localStorage.setItem("starlight-theme", theme)
+    } catch (e) {
+      // ignore localStorage errors (e.g., private mode)
     }
 
     if (theme === "system") {
@@ -60,7 +74,7 @@ export function ModeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setThemeState("theme-light")}>
+        <DropdownMenuItem onClick={() => setThemeState("light")}>
           Light
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setThemeState("dark")}>
