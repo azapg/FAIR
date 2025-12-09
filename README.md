@@ -20,6 +20,9 @@ The goal is to support researchers, educators, and students who want to explore 
 ```bash
 pip install fair-platform
 fair serve
+
+# To serve documentation locally
+fair serve --docs  # Documentation available at http://127.0.0.1:3000/docs
 ```
 
 For detailed installation instructions, troubleshooting, and more, visit the [documentation](https://fair.alam.systems/docs/) (available in English and Spanish).
