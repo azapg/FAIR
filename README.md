@@ -22,7 +22,7 @@ pip install fair-platform
 fair serve
 ```
 
-For detailed installation instructions, troubleshooting, and more, visit the [documentation](docs/) (available in English and Spanish).
+For detailed installation instructions, troubleshooting, and more, visit the [documentation](https://fair.alam.systems/docs/) (available in English and Spanish).
 
 ### Development Requirements
 - Python 3.12+
