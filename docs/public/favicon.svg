@@ -1,0 +1,20 @@
+<svg class="typst-doc" viewBox="0 0 8.578 9.700000000000001" width="8.578pt" height="9.700000000000001pt" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <style>
+    path {
+      fill: #000000;
+    }<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 124 124" fill="none">
+<rect width="124" height="124" rx="24" fill="#F97316"/>
+<path d="M19.375 36.7818V100.625C19.375 102.834 21.1659 104.625 23.375 104.625H87.2181C90.7818 104.625 92.5664 100.316 90.0466 97.7966L26.2034 33.9534C23.6836 31.4336 19.375 33.2182 19.375 36.7818Z" fill="white"/>
+<circle cx="63.2109" cy="37.5391" r="18.1641" fill="black"/>
+<rect opacity="0.4" x="81.1328" y="80.7198" width="17.5687" height="17.3876" rx="4" transform="rotate(-45 81.1328 80.7198)" fill="#FDBA74"/>
+</svg>
+    @media (prefers-color-scheme: dark) {
+      path {
+        fill: #ffffff;
+      }
+    }
+  </style>
+  <g transform="matrix(1 0 0 -1 1 8.700000000000001)">
+    <path d="M5.324 4.906c0-.506-.264-.77-.759-.77H2.816v2.42c0 .506.209.759.638.759h.341c1.287 0 1.76-.231 2.145-1.001l.088-.176h.363L5.951 7.7H.33v-.363h.341c.44 0 .649-.297.649-.869V1.221c0-.572-.209-.858-.649-.858H.33V0h3.52v.374h-.396c-.429 0-.638.286-.638.847v2.431h1.749c.495 0 .759-.264.759-.77v-.11h.341v2.244h-.341Z"/>
+  </g>
+</svg>

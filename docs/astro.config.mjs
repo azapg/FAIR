@@ -14,7 +14,8 @@ export default defineConfig({
   integrations: [
     react(),
     starlight({
-      title: "FAIR Platform",
+      title: "FAIR Docs",
+      favicon: "/favicon.svg",
       description: "Open-source platform for AI-powered grading systems",
       defaultLocale: "en",
       locales: {
