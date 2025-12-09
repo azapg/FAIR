@@ -59,10 +59,14 @@ export default defineConfig({
         PageTitle: "./src/components/page-title.astro",
         ContentPanel: "./src/components/content-panel.astro",
         ThemeSelect: "./src/components/theme-select.astro",
+        LanguageSelect: "./src/components/language-select.astro",
       },
     }),
   ],
   vite: {
     plugins: [tailwindcss()],
+    ssr: {
+      noExternal: ['nucleo-flags']
+    }
   },
 });
