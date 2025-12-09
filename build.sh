@@ -2,15 +2,9 @@
 
 set -e
 
-# Parse arguments
 BUILD_DOCS=false
 for arg in "$@"; do
-    case $arg in
-        --docs)
-            BUILD_DOCS=true
-            shift
-            ;;
-    esac
+  [[ "$arg" == "--docs" ]] && BUILD_DOCS=true
 done
 
 echo "Building frontend..."
