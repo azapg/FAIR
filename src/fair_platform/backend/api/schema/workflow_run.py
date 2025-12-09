@@ -6,20 +6,15 @@ from pydantic import BaseModel
 
 from fair_platform.backend.api.schema.submission import SubmissionBase
 from fair_platform.backend.data.models.workflow_run import WorkflowRunStatus
+from fair_platform.backend.api.schema.utils import schema_config
 
 
 class WorkflowRunBase(BaseModel):
+    model_config = schema_config
+    
     status: WorkflowRunStatus
     logs: Optional[Dict[str, Any]] = None
     submissions: Optional[List[SubmissionBase]] = None
-
-    class Config:
-        from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
-        validate_by_name = True
 
 
 class WorkflowRunCreate(WorkflowRunBase):
@@ -27,17 +22,11 @@ class WorkflowRunCreate(WorkflowRunBase):
 
 
 class WorkflowRunUpdate(BaseModel):
+    model_config = schema_config
+    
     status: Optional[WorkflowRunStatus] = None
     finished_at: Optional[datetime] = None
     logs: Optional[Dict[str, Any]] = None
-
-    class Config:
-        from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
-        validate_by_name = True
 
 
 class WorkflowRunRead(WorkflowRunBase):

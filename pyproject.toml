@@ -1,6 +1,6 @@
 [project]
 name = "fair-platform"
-version = "0.6.0"
+version = "6.0.2"
 description = "Fair Platform - The complete platform with backend, frontend, and CLI"
 authors = [{ name = "Allan Zapata", email = "allan.zapata@up.ac.pa" }]
 readme = "README.md"
@@ -15,10 +15,10 @@ license-files = ["LICENSE"]
 dependencies = [
     "appdirs>=1.4.4",
     "dotenv>=0.9.9",
-    "fastapi>=0.116.1",
+    "fastapi>=0.122.0",
     "httpx>=0.25.0",
     "packaging>=23.0",
-    "pydantic[email]>=2.11.7",
+    "pydantic[email]>=2.12.5",
     "python-jose>=3.5.0",
     "python-multipart>=0.0.20",
     "sqlalchemy>=2.0.43",

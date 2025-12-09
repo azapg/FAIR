@@ -27,6 +27,7 @@ from fair_platform.sdk import load_storage_plugins
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
     init_db()
+    load_storage_plugins()
     try:
         yield
     finally:
@@ -61,7 +62,6 @@ def main():
 def run(
     host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False
 ):
-    load_storage_plugins()
     if not headless:
         frontend_files = importlib.resources.files("fair_platform.frontend")
         dist_dir = frontend_files / "dist"
@@ -74,6 +74,11 @@ def run(
                 "/fonts", StaticFiles(directory=dist_path / "fonts"), name="fonts"
             )
             app.mount("/data", StaticFiles(directory=dist_path / "data"), name="data")
+
+        @app.get("/favicon.svg")
+        async def favicon():
+            with importlib.resources.as_file(dist_dir / "favicon.svg") as favicon_path:
+                return FileResponse(favicon_path, media_type="image/svg+xml")
 
         @app.middleware("http")
         async def spa_fallback(request, call_next):

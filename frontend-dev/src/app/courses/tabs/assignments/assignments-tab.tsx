@@ -1,8 +1,9 @@
 import {useState, useEffect} from "react";
 import {AssignmentsTable} from "@/app/courses/tabs/assignments/assignments-table";
-import {columns} from "@/app/courses/tabs/assignments/assignments";
+import {useAssignmentColumns} from "@/app/courses/tabs/assignments/assignments";
 import {CreateAssignmentDialog} from "@/app/courses/tabs/assignments/create-assignment-dialog";
 import {Assignment} from "@/hooks/use-assignments";
+import {useTranslation} from "react-i18next";
 
 // TODO: Let's just use react-query here directly to manage assignments state
 export default function AssignmentsTab({
@@ -13,6 +14,8 @@ export default function AssignmentsTab({
   courseId?: string;
 }) {
   const [assignments, setAssignments] = useState<Assignment[]>(() => initialAssignments);
+  const {t} = useTranslation();
+  const columns = useAssignmentColumns();
 
   useEffect(() => {
     setAssignments(initialAssignments);
@@ -25,7 +28,7 @@ export default function AssignmentsTab({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl">Assignments</h2>
+        <h2 className="text-2xl">{t("assignments.title")}</h2>
         <CreateAssignmentDialog 
           courseId={courseId} 
           onAssignmentCreated={handleAssignmentCreated}

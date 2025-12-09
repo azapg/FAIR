@@ -6,21 +6,16 @@ from pydantic import BaseModel
 
 from fair_platform.backend.api.schema.plugin import RuntimePlugin
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunBase
+from fair_platform.backend.api.schema.utils import schema_config
 
 
 class WorkflowBase(BaseModel):
+    model_config = schema_config
+    
     name: str
     course_id: UUID
     description: Optional[str] = None
     plugins: Optional[Dict[str, RuntimePlugin]] = None
-
-    class Config:
-        from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
-        validate_by_name = True
 
 
 class WorkflowCreate(WorkflowBase):
@@ -28,17 +23,11 @@ class WorkflowCreate(WorkflowBase):
 
 
 class WorkflowUpdate(BaseModel):
+    model_config = schema_config
+    
     name: Optional[str] = None
     description: Optional[str] = None
     plugins: Optional[Dict[str, RuntimePlugin]] = None
-
-    class Config:
-        from_attributes = True
-        alias_generator = lambda field_name: "".join(
-            word.capitalize() if i > 0 else word
-            for i, word in enumerate(field_name.split("_"))
-        )
-        validate_by_name = True
 
 
 class WorkflowRead(WorkflowBase):

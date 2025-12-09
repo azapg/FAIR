@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 export type CourseFormMode = "create" | "edit" | "clone";
 
@@ -34,8 +35,21 @@ export default function CourseFormDialog({
   isDisabled = false,
   trigger,
 }: CourseFormDialogProps) {
-  const title = mode === "edit" ? "Edit course" : mode === "clone" ? "Clone course" : "Create course";
-  const cta = isSubmitting ? "Wait..." : mode === "edit" ? "Save" : mode === "clone" ? "Clone" : "Create";
+  const { t } = useTranslation();
+  
+  const title = mode === "edit" 
+    ? t("courses.editCourse") 
+    : mode === "clone" 
+    ? t("courses.cloneCourse") 
+    : t("courses.createCourse");
+  
+  const cta = isSubmitting 
+    ? t("common.wait") 
+    : mode === "edit" 
+    ? t("common.save") 
+    : mode === "clone" 
+    ? t("common.clone") 
+    : t("common.create");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChangeAction}>
@@ -46,22 +60,22 @@ export default function CourseFormDialog({
         </DialogHeader>
         <form onSubmit={onSubmitAction} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="course-name">Name</Label>
+            <Label htmlFor="course-name">{t("courses.name")}</Label>
             <Input
               id="course-name"
               value={name}
               onChange={(e) => onNameChangeAction(e.target.value)}
-              placeholder="Intro to AI"
+              placeholder={t("courses.namePlaceholder")}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="course-description">Description</Label>
+            <Label htmlFor="course-description">{t("courses.description")}</Label>
             <Textarea
               id="course-description"
               value={description}
               onChange={(e) => onDescriptionChangeAction(e.target.value)}
-              placeholder="Optional short description"
+              placeholder={t("courses.descriptionPlaceholder")}
             />
           </div>
           <DialogFooter>

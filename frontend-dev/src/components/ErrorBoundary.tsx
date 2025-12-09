@@ -1,6 +1,7 @@
 // ErrorBoundary.tsx
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { toast } from "sonner";
+import i18n from "@/i18n";
 
 interface Props {
   children: ReactNode;
@@ -22,10 +23,10 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Show a toast notification instead of ugly error screen!
-    toast.error("Something went wrong", {
+    toast.error(i18n.t("errors.somethingWrong"), {
       description: error.message,
       action: {
-        label: "Reload",
+        label: i18n.t("errors.reload"),
         onClick: () => window.location.reload(),
       },
     });
@@ -39,9 +40,9 @@ class ErrorBoundary extends Component<Props, State> {
       // Show minimal fallback UI since toast already notified user
       return (
         <div style={{ padding: "20px", textAlign: "center" }}>
-          <h2>Oops! Something went wrong</h2>
-          <p>We've been notified and are looking into it.</p>
-          <button onClick={() => window.location.reload()}>Reload Page</button>
+          <h2>{i18n.t("errors.oops")}</h2>
+          <p>{i18n.t("errors.lookingIntoIt")}</p>
+          <button onClick={() => window.location.reload()}>{i18n.t("errors.reloadPage")}</button>
         </div>
       );
     }

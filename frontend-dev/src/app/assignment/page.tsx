@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { SubmissionsTable } from "@/app/assignment/components/submissions/submissions-table";
-import { columns } from "@/app/assignment/components/submissions/submissions";
+import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { WorkflowsSidebar } from "@/app/assignment/components/sidebar/workflows-sidebar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -24,6 +24,7 @@ import { useEffect } from "react";
 import { CreateSubmissionDialog } from "@/app/assignment/components/submissions/create-submission-dialog";
 import { useArtifacts } from "@/hooks/use-artifacts";
 import { useSubmissions } from "@/hooks/use-submissions";
+import { useTranslation } from "react-i18next";
 
 export default function AssignmentPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
@@ -48,12 +49,15 @@ export default function AssignmentPage() {
   } = useSubmissions({
     assignment_id: assignmentId,
   });
+  const { t } = useTranslation();
 
   const isOverallLoading =
     isLoading ||
     isLoadingWorkflows ||
     isLoadingArtifacts ||
     isLoadingSubmissions;
+
+  const columns = useSubmissionColumns();
 
   useEffect(() => {
     if (course?.id) {
@@ -62,7 +66,7 @@ export default function AssignmentPage() {
   }, [course]);
 
   if (isOverallLoading) {
-    return <div>Loading...</div>;
+    return <div>{t("common.loading")}</div>;
   }
 
   if (
@@ -72,7 +76,7 @@ export default function AssignmentPage() {
     isErrorArtifacts ||
     isErrorSubmissions
   ) {
-    return <div>Error loading assignment.</div>;
+    return <div>{t("errors.errorLoadingAssignment")}</div>;
   }
 
   return (
@@ -82,7 +86,7 @@ export default function AssignmentPage() {
           <BreadcrumbNav
             segments={[
               {
-                label: "Courses",
+                label: t("courses.title"),
                 slug: "courses",
               },
               {
@@ -92,7 +96,7 @@ export default function AssignmentPage() {
                   assignment?.courseId.toLocaleString(),
               },
               {
-                label: "Assignments",
+                label: t("tabs.assignments"),
                 slug: "assignments",
               },
               {
@@ -114,10 +118,10 @@ export default function AssignmentPage() {
             <ScrollArea className={"w-full h-auto"}>
               <div className={"flex flex-row gap-1 mt-4 items-center"}>
                 <h2 className={"text-muted-foreground mr-4 text-sm"}>
-                  Properties
+                  {t("properties.title")}
                 </h2>
                 <Button variant={"secondary"} size={"sm"}>
-                  <CircleCheck /> Completed
+                  <CircleCheck /> {t("properties.completed")}
                 </Button>
                 <Button variant={"ghost"} size={"sm"}>
                   <Hourglass />{" "}
@@ -129,7 +133,7 @@ export default function AssignmentPage() {
                           month: "short",
                         },
                       )
-                    : "No deadline"}
+                    : t("common.noDeadline")}
                 </Button>
                 <Button variant={"ghost"} size={"sm"}>
                   <Plus />
@@ -138,7 +142,7 @@ export default function AssignmentPage() {
 
               <div className={"flex flex-row gap-1 mt-4 items-center"}>
                 <h2 className={"text-muted-foreground mr-4 text-sm"}>
-                  Resources
+                  {t("assignments.resources")}
                 </h2>
                 {artifacts && artifacts.length > 0 ? (
                   artifacts.map((artifact) => (
@@ -162,7 +166,7 @@ export default function AssignmentPage() {
 
           <div className={"space-y-3 mb-5"}>
             <div className={"flex justify-between items-center mb-3"}>
-              <h2 className={"text-xl font-semibold"}>Submissions</h2>
+              <h2 className={"text-xl font-semibold"}>{t("submissions.title")}</h2>
               <CreateSubmissionDialog assignmentId={assignment.id.toString()} />
             </div>
             <SubmissionsTable columns={columns} data={submissions ?? []} />

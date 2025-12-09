@@ -6,6 +6,7 @@ import AssignmentsTab from "@/app/courses/tabs/assignments/assignments-tab";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import {useParams, useNavigate, useLocation} from "react-router-dom";
 import {useEffect} from "react";
+import {useTranslation} from "react-i18next";
 
 const allowedTabs = ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"];
 
@@ -14,6 +15,7 @@ export default function CourseDetailPage() {
   const {courseId, tab} = params;
   const navigate = useNavigate();
   const location = useLocation();
+  const {t} = useTranslation();
 
   const basePath = location.pathname.split('/').slice(0, -1).join('/');
 
@@ -29,17 +31,17 @@ export default function CourseDetailPage() {
   }, [tab, courseId, navigate, basePath, isLoading, isError, course]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div>{t("common.loading")}</div>;
   }
 
   if (isError || !course) {
-    return <div>Error loading course.</div>;
+    return <div>{t("courses.errorLoading")}</div>;
   }
 
   const segments: BreadcrumbSegment[] = [
-    {label: "Courses", slug: "courses"},
+    {label: t("courses.title"), slug: "courses"},
     ...(courseId ? [{label: course?.name ?? "Course", slug: courseId}] : []),
-    ...(tab ? [{label: tab.charAt(0).toUpperCase() + tab.slice(1), slug: tab}] : []),
+    ...(tab ? [{label: t(`tabs.${tab}`), slug: tab}] : []),
   ];
 
   // Map assignments from detailed course if present
@@ -61,23 +63,23 @@ export default function CourseDetailPage() {
       }}>
         <ScrollArea className={"w-full border-b"}>
           <TabsList className={"px-8 w-full"}>
-            <TabsTrigger value="assignments">Assignments</TabsTrigger>
-            <TabsTrigger value="participants">Participants</TabsTrigger>
-            <TabsTrigger value="runs">Runs</TabsTrigger>
-            <TabsTrigger value="artifacts">Artifacts</TabsTrigger>
-            <TabsTrigger value="workflows">Workflows</TabsTrigger>
-            <TabsTrigger value="plugins">Plugins</TabsTrigger>
+            <TabsTrigger value="assignments">{t("tabs.assignments")}</TabsTrigger>
+            <TabsTrigger value="participants">{t("tabs.participants")}</TabsTrigger>
+            <TabsTrigger value="runs">{t("tabs.runs")}</TabsTrigger>
+            <TabsTrigger value="artifacts">{t("tabs.artifacts")}</TabsTrigger>
+            <TabsTrigger value="workflows">{t("tabs.workflows")}</TabsTrigger>
+            <TabsTrigger value="plugins">{t("tabs.plugins")}</TabsTrigger>
           </TabsList>
           <ScrollBar orientation="horizontal" className={"hidden"}/>
         </ScrollArea>
         <TabsContent value={"assignments"} className={"px-8 py-3"}>
           <AssignmentsTab assignments={courseAssignments} courseId={courseId}/>
         </TabsContent>
-        <TabsContent value={"participants"} className={"px-8"}>participants</TabsContent>
-        <TabsContent value={"runs"} className={"px-8"}>runs</TabsContent>
-        <TabsContent value={"artifacts"} className={"px-8"}>artifacts</TabsContent>
-        <TabsContent value={"workflows"} className={"px-8"}>workflows</TabsContent>
-        <TabsContent value={"plugins"} className={"px-8"}>plugins</TabsContent>
+        <TabsContent value={"participants"} className={"px-8"}>{t("tabs.participants")}</TabsContent>
+        <TabsContent value={"runs"} className={"px-8"}>{t("tabs.runs")}</TabsContent>
+        <TabsContent value={"artifacts"} className={"px-8"}>{t("tabs.artifacts")}</TabsContent>
+        <TabsContent value={"workflows"} className={"px-8"}>{t("tabs.workflows")}</TabsContent>
+        <TabsContent value={"plugins"} className={"px-8"}>{t("tabs.plugins")}</TabsContent>
       </Tabs>
     </div>
   );

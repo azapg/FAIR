@@ -128,3 +128,36 @@ class TestAuthenticationFlow:
         assert response.status_code == 401, (
             f"Expected 401 Unauthorized, got {response.status_code}: {response.text}"
         )
+
+    def test_register_does_not_expose_password_hash(self, test_client: TestClient):
+        """
+        Test that the registration response does not expose the password_hash.
+        This is a critical security test.
+        """
+        user_data = create_sample_user_data(role=UserRole.student)
+
+        response = test_client.post(
+            "/api/auth/register",
+            json=user_data,
+        )
+
+        assert response.status_code == 201, (
+            f"User creation failed: {response.text}"
+        )
+        
+        response_data = response.json()
+        
+        # Verify user data is in the response
+        assert "user" in response_data, "User data should be in response"
+        user = response_data["user"]
+        
+        # Verify password_hash is NOT in the response
+        assert "password_hash" not in user, (
+            "SECURITY VIOLATION: password_hash should never be exposed in API responses"
+        )
+        
+        # Verify expected fields are present
+        assert "id" in user, "User ID should be in response"
+        assert "email" in user, "Email should be in response"
+        assert "name" in user, "Name should be in response"
+        assert "role" in user, "Role should be in response"

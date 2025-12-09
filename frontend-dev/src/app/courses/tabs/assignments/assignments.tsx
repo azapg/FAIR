@@ -1,4 +1,6 @@
 import {ColumnDef} from "@tanstack/react-table";
+import {useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {Assignment} from "@/hooks/use-assignments";
 
 export type Grade = {
@@ -14,56 +16,59 @@ export type CreateAssignmentForm = {
   gradeValue: string; // number/letter/pass|fail as string
 }
 
-
-export const columns: ColumnDef<Assignment>[] = [
-  {
-    accessorKey: "title",
-    header: "Assignment",
-    cell: info => {
-      const value = info.getValue() as string;
-      return value.length > 50 ? `${value.substring(0, 50)}...` : value;
+export function useAssignmentColumns(): ColumnDef<Assignment>[] {
+  const { t } = useTranslation();
+  
+  return useMemo(() => [
+    {
+      accessorKey: "title",
+      header: t("assignments.titleLabel"),
+      cell: info => {
+        const value = info.getValue() as string;
+        return value.length > 50 ? `${value.substring(0, 50)}...` : value;
+      },
+      footer: props => props.column.id,
     },
-    footer: props => props.column.id,
-  },
-  {
-    accessorKey: "description",
-    header: "Description",
-    cell: info => {
-      const value = info.getValue() as string;
-      if (!value) return "";
-      return value.length > 80 ? `${value.substring(0, 80)}...` : value;
+    {
+      accessorKey: "description",
+      header: t("assignments.description"),
+      cell: info => {
+        const value = info.getValue() as string;
+        if (!value) return "";
+        return value.length > 80 ? `${value.substring(0, 80)}...` : value;
+      },
+      footer: props => props.column.id,
     },
-    footer: props => props.column.id,
-  },
-  {
-    accessorKey: "dueDate",
-    header: "Due Date",
-    cell: info => {
-      const raw = info.getValue() as Date | string | undefined;
-      if (!raw) return "No due date";
-      const date = raw instanceof Date ? raw : new Date(raw);
-      return isNaN(date.getTime()) ? "No due date" : date.toLocaleDateString();
+    {
+      accessorKey: "dueDate",
+      header: t("assignments.dueDate"),
+      cell: info => {
+        const raw = info.getValue() as Date | string | undefined;
+        if (!raw) return t("assignments.noDueDate");
+        const date = raw instanceof Date ? raw : new Date(raw);
+        return isNaN(date.getTime()) ? t("assignments.noDueDate") : date.toLocaleDateString();
+      },
+      footer: props => props.column.id,
     },
-    footer: props => props.column.id,
-  },
-  {
-    accessorKey: "totalPoints",
-    header: "Total Points",
-    cell: info => {
-      const grade = info.getValue() as Grade | undefined;
-      if (!grade) return "N/A";
-      switch (grade.type) {
-        case "percentage":
-          return `${grade.value}%`;
-        case "points":
-          return `${grade.value} pts`;
-        case "letter":
-          return grade.value;
-        case "pass_fail":
-          return (grade.value as boolean) ? "Pass" : "Fail";
-        default:
-          return "N/A";
+    {
+      accessorKey: "totalPoints",
+      header: t("assignments.totalPoints"),
+      cell: info => {
+        const grade = info.getValue() as Grade | undefined;
+        if (!grade) return t("assignments.na");
+        switch (grade.type) {
+          case "percentage":
+            return `${grade.value}%`;
+          case "points":
+            return `${grade.value} pts`;
+          case "letter":
+            return grade.value;
+          case "pass_fail":
+            return (grade.value as boolean) ? t("assignments.pass") : t("assignments.fail");
+          default:
+            return t("assignments.na");
+        }
       }
     }
-  }
-]
+  ], [t]);
+}

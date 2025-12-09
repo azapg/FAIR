@@ -8,6 +8,7 @@ import CourseGrid from "@/app/courses/components/course-grid";
 import CourseFormDialog from "@/app/courses/components/course-form-dialog";
 import {BreadcrumbNav} from "@/components/breadcrumb-nav";
 import {Separator} from "@/components/ui/separator";
+import {useTranslation} from "react-i18next";
 
 export default function CoursesPage() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function CoursesPage() {
   const {data, isPending, isError} = useCourses();
   const createCourse = useCreateCourse();
   const deleteCourse = useDeleteCourse();
+  const {t} = useTranslation();
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -37,7 +39,7 @@ export default function CoursesPage() {
     await createCourse.mutateAsync({
       name: name.trim(),
       description: description.trim() || null,
-      instructor_id: user.id,
+      instructorId: user.id,
     });
 
     setName("");
@@ -58,14 +60,14 @@ export default function CoursesPage() {
       <div className={"py-2 px-5"}>
         <BreadcrumbNav segments={[
           {
-            label: "Courses",
+            label: t("courses.title"),
             slug: "courses"
           }
         ]}/>
       </div>
       <Separator/>
       <div className="flex items-center justify-between px-6 pt-5">
-        <h1 className="text-3xl">Your courses</h1>
+        <h1 className="text-3xl">{t("courses.yourCourses")}</h1>
 
         {isAuthenticated && (<CourseFormDialog
           open={open}
@@ -81,7 +83,7 @@ export default function CoursesPage() {
           trigger={
             <Button onClick={openCreateDialog}>
               <Plus className="mr-2"/>
-              Create
+              {t("common.create")}
             </Button>
           }
         />)}

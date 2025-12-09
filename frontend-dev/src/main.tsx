@@ -6,6 +6,7 @@ import { App } from "./index";
 import Header from "@/components/header";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "sonner";
+import "@/i18n";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

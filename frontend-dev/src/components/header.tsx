@@ -13,6 +13,8 @@ import { Settings, User, LogOut, HelpCircle } from "lucide-react";
 import {ThemeToggle} from "@/components/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
 import {useNavigate} from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 interface HeaderProps {
   /**
@@ -75,7 +77,7 @@ function getInitials(name?: string, fallback?: string) {
 }
 
 function Header({
-  title = "The Fair Platform",
+  title,
   centerContent,
   rightContent,
   dropdownItems,
@@ -86,6 +88,9 @@ function Header({
 }: HeaderProps) {
   const navigate = useNavigate();
   const { user: authUser, isAuthenticated, logout } = useAuth();
+  const { t } = useTranslation();
+
+  const displayTitle = title || t("header.title");
 
   const activeUser = isAuthenticated ? {
     name: authUser?.name,
@@ -97,22 +102,22 @@ function Header({
 
   const defaultDropdownItems = [
     {
-      label: "Profile",
+      label: t("header.profile"),
       icon: <User className="h-4 w-4" />,
       onClick: onProfileClick || (() => console.log("Profile clicked")),
     },
     {
-      label: "Settings",
+      label: t("header.settings"),
       icon: <Settings className="h-4 w-4" />,
       onClick: onSettingsClick || (() => console.log("Settings clicked")),
     },
     {
-      label: "Help",
+      label: t("header.help"),
       icon: <HelpCircle className="h-4 w-4" />,
       onClick: () => console.log("Help clicked"),
     },
     {
-      label: "Logout",
+      label: t("header.logout"),
       icon: <LogOut className="h-4 w-4" />,
       onClick: onLogoutClick || (() => {
         logout()
@@ -130,7 +135,7 @@ function Header({
     >
       {/* Left section - Platform title */}
       <div className="flex items-center">
-        <h1 className="text-xl font-serif font-semibold text-foreground cursor-pointer" onClick={() => navigate("/")}>{title}</h1>
+        <h1 className="text-xl font-serif font-semibold text-foreground cursor-pointer" onClick={() => navigate("/")}>{displayTitle}</h1>
       </div>
 
       {/* Center section - Extensible content */}
@@ -143,10 +148,11 @@ function Header({
       {/* Right section - Additional content and auth */}
       <div className="flex items-center gap-3">
         {rightContent}
+        <LanguageSwitcher />
         <ThemeToggle />
         {!isAuthenticated ? (
           <Button onClick={() => navigate("/login")}>
-            Log in
+            {t("header.login")}
           </Button>
         ) : (
           <DropdownMenu>

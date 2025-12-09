@@ -7,9 +7,9 @@ export type Course = {
   id: string
   name: string
   description?: string | null
-  instructor_id: string
-  instructor_name?: string
-  assignments_count: number
+  instructorId: string
+  instructorName?: string
+  assignmentsCount: number
 }
 
 export type CourseDetail = {
@@ -27,15 +27,15 @@ export type CourseDetail = {
     id: string,
     name: string,
     description?: string | null,
-    created_at: string,
-    updated_at: string,
+    createdAt: string,
+    updatedAt: string,
   }
 }
 
 export type CreateCourseInput = {
   name: string
   description?: string | null
-  instructor_id: string
+  instructorId: string
 }
 
 export type UpdateCourseInput = Partial<Pick<Course, 'name' | 'description'>>
