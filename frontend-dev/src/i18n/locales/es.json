@@ -12,7 +12,9 @@
     "wait": "Espera...",
     "notFound": "No encontrado",
     "noDeadline": "Sin fecha límite",
-    "home": "Inicio"
+    "home": "Inicio",
+    "learnMore": "Saber más",
+    "commingSoon": "Próximamente..."
   },
   "header": {
     "title": "The Fair Platform",
@@ -130,7 +132,10 @@
   },
   "workflow": {
     "selectWorkflow": "Seleccionar flujo de trabajo",
-    "noWorkflows": "No hay flujos de trabajo disponibles",
+    "noWorkflows": "Aún no hay flujos de trabajo",
+    "noWorkflowsMessage": "No has creado ningún flujo de trabajo todavía. Crea uno para comenzar.",
+    "createWorkflow": "Crear flujo",
+    "importWorkflow": "Importar flujo",
     "runWorkflow": "Ejecutar flujo",
     "running": "Ejecutando",
     "selectPlugin": "Seleccionar plugin",
@@ -141,7 +146,6 @@
     "failedToStart": "Error al iniciar el flujo de trabajo. Por favor intenta de nuevo.",
     "noWorkflowSelected": "Ningún flujo de trabajo seleccionado.",
     "selectFromDropdown": "Selecciona uno del menú desplegable.",
-    "createWithButton": "Crea uno usando el botón \"+\" de arriba.",
     "workflowDetails": "Los detalles del flujo de trabajo van aquí.",
     "notFound": "No se encuentra el flujo de trabajo '{{name}}'. Puede haber sido eliminado.",
     "noPermission": "No tienes permiso para actualizar el flujo de trabajo '{{name}}'."

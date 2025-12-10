@@ -20,6 +20,8 @@ import {
   PlusIcon,
   Save,
   Ban,
+  Workflow,
+  ArrowUpRightIcon
 } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import PluginSection from "@/app/assignment/components/sidebar/plugin-section";
@@ -41,9 +43,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { ExecutionLogsView } from "@/app/assignment/components/sidebar/execution-logs-view";
 import { useSubmissions } from "@/hooks/use-submissions";
-import { toast } from "sonner"
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 export function WorkflowsSidebar({
@@ -68,7 +79,7 @@ export function WorkflowsSidebar({
       return workflows.find((w) => w.id === activeWorkflowId);
     return workflows[0];
   }, [activeWorkflowId, workflows]);
-  const {data: submissions} = useSubmissions({assignment_id: assignmentId})
+  const { data: submissions } = useSubmissions({ assignment_id: assignmentId });
   const { t } = useTranslation();
 
   const setCurrentSession = useSessionStore((state) => state.setCurrentSession);
@@ -109,11 +120,13 @@ export function WorkflowsSidebar({
       await persistDrafts();
       const response = await api.post("/sessions", {
         workflow_id: activeWorkflowId,
-        submission_ids: submissions?.map(s => s.id) || [],
+        submission_ids: submissions?.map((s) => s.id) || [],
       });
       setCurrentSession(response.data.session);
     } catch (error) {
-      const errorMessage = isAxiosError(error) ? error.response?.data?.detail : undefined;
+      const errorMessage = isAxiosError(error)
+        ? error.response?.data?.detail
+        : undefined;
       toast.error(t("workflow.failedToStart"), {
         description: errorMessage || undefined,
       });
@@ -188,10 +201,7 @@ export function WorkflowsSidebar({
       ) : (
         <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
           {workflows.length === 0 ? (
-            <div>
-              <p>{t("workflow.noWorkflows")}</p>
-              <p>{t("workflow.createWithButton")}</p>
-            </div>
+            <WorkflowEmptyState onCreate={onCreateWorkflow} />
           ) : !activeWorkflowId ? (
             <div>
               <p>{t("workflow.noWorkflowSelected")}</p>
@@ -225,14 +235,10 @@ const WorkflowSidebarRunButton = ({
   onShowLogs: () => void;
 }) => {
   const { t } = useTranslation();
-  
+
   return (
     <ButtonGroup className="flex w-full my-2">
-      <Button
-        onClick={onRun}
-        disabled={isRunning}
-        className="flex-1"
-      >
+      <Button onClick={onRun} disabled={isRunning} className="flex-1">
         {isRunning ? (
           <>
             <LoaderIcon className={"animate-spin"} /> {t("workflow.running")}
@@ -265,5 +271,73 @@ const WorkflowSidebarRunButton = ({
         </DropdownMenuContent>
       </DropdownMenu>
     </ButtonGroup>
+  );
+};
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
+const WorkflowEmptyState = ({
+  onCreate,
+  onImport,
+}: {
+  onCreate: () => void;
+  onImport?: () => void;
+}) => {
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language;
+
+  return (
+    <Empty className="lg:p-0">
+      <EmptyHeader>
+        <EmptyMedia variant={"icon"}>
+          <Workflow />
+        </EmptyMedia>
+        <EmptyTitle className="text-white">{t("workflow.noWorkflows")}</EmptyTitle>
+        <EmptyDescription>{t("workflow.noWorkflowsMessage")}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <div className="flex flex-wrap gap-2 justify-center ">
+          <Button size={"sm"} onClick={onCreate}>
+            {t("workflow.createWorkflow")}
+          </Button>
+          {!onImport ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-block">
+                  <Button size={"sm"} variant="outline" onClick={onImport} disabled>
+                    {t("workflow.importWorkflow")}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t("common.commingSoon")}</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              size={"sm"}
+              variant="outline"
+              onClick={onImport}
+            >
+              {t("workflow.importWorkflow")}
+            </Button>
+          )}
+        </div>
+      </EmptyContent>
+      <Button
+        variant="link"
+        asChild
+        className="text-muted-foreground"
+        size="sm"
+      >
+        <a href={`/docs/${currentLang}/getting-started/extensions/`} target="_blank" rel="noreferrer">
+          {t("common.learnMore")} <ArrowUpRightIcon />
+        </a>
+      </Button>
+    </Empty>
   );
 };
