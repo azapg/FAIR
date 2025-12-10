@@ -21,7 +21,7 @@ import {
   Save,
   Ban,
   Workflow,
-  ArrowUpRightIcon
+  ArrowUpRightIcon,
 } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import PluginSection from "@/app/assignment/components/sidebar/plugin-section";
@@ -203,10 +203,7 @@ export function WorkflowsSidebar({
           {workflows.length === 0 ? (
             <WorkflowEmptyState onCreate={onCreateWorkflow} />
           ) : !activeWorkflowId ? (
-            <div>
-              <p>{t("workflow.noWorkflowSelected")}</p>
-              <p>{t("workflow.selectFromDropdown")}</p>
-            </div>
+            <WorkflowNotSelectedState />
           ) : (
             <div>{t("workflow.workflowDetails")}</div>
           )}
@@ -278,7 +275,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 
 const WorkflowEmptyState = ({
   onCreate,
@@ -291,12 +288,14 @@ const WorkflowEmptyState = ({
   const currentLang = i18n.language;
 
   return (
-    <Empty className="lg:p-0">
+    <Empty className="lg:p-0 p-0">
       <EmptyHeader>
         <EmptyMedia variant={"icon"}>
           <Workflow />
         </EmptyMedia>
-        <EmptyTitle className="text-white">{t("workflow.noWorkflows")}</EmptyTitle>
+        <EmptyTitle className="text-white">
+          {t("workflow.noWorkflows")}
+        </EmptyTitle>
         <EmptyDescription>{t("workflow.noWorkflowsMessage")}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
@@ -308,7 +307,12 @@ const WorkflowEmptyState = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="inline-block">
-                  <Button size={"sm"} variant="outline" onClick={onImport} disabled>
+                  <Button
+                    size={"sm"}
+                    variant="outline"
+                    onClick={onImport}
+                    disabled
+                  >
                     {t("workflow.importWorkflow")}
                   </Button>
                 </span>
@@ -318,11 +322,7 @@ const WorkflowEmptyState = ({
               </TooltipContent>
             </Tooltip>
           ) : (
-            <Button
-              size={"sm"}
-              variant="outline"
-              onClick={onImport}
-            >
+            <Button size={"sm"} variant="outline" onClick={onImport}>
               {t("workflow.importWorkflow")}
             </Button>
           )}
@@ -334,10 +334,47 @@ const WorkflowEmptyState = ({
         className="text-muted-foreground"
         size="sm"
       >
-        <a href={`/docs/${currentLang}/getting-started/extensions/`} target="_blank" rel="noreferrer">
+        <a
+          href={`/docs/${currentLang}/getting-started/extensions/`}
+          target="_blank"
+          rel="noreferrer"
+        >
           {t("common.learnMore")} <ArrowUpRightIcon />
         </a>
       </Button>
+    </Empty>
+  );
+};
+
+const WorkflowNotSelectedState = () => {
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language;
+
+  return (
+    <Empty className="lg:p-0 p-0">
+      <EmptyHeader>
+        <EmptyMedia variant={"icon"}>
+          <Workflow />
+        </EmptyMedia>
+        <EmptyTitle className="text-white">
+          {t("workflow.noWorkflowSelected")}
+        </EmptyTitle>
+        <EmptyDescription>{t("workflow.selectFromDropdown")}</EmptyDescription>
+        <Button
+          variant="link"
+          asChild
+          className="text-muted-foreground"
+          size="sm"
+        >
+          <a
+            href={`/docs/${currentLang}/getting-started/extensions/`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t("common.learnMore")} <ArrowUpRightIcon />
+          </a>
+        </Button>
+      </EmptyHeader>
     </Empty>
   );
 };
