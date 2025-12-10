@@ -103,6 +103,8 @@
   "submissions": {
     "title": "Submissions",
     "addSubmission": "Add a submission",
+    "addSubmissions": "Add submissions",
+    "importSubmissions": "Import submissions",
     "createSynthetic": "Create a synthetic submission for a student",
     "studentName": "Student Name",
     "files": "Files",
@@ -112,7 +114,9 @@
     "status": "Status",
     "grade": "Grade",
     "submissionDate": "Submission Date",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "noSubmissons": "No submissions available",
+    "noSubmissonsDescription": "No submissions yet. They will appear here when students submit. You can add synthetic submissions to experiment."
   },
   "status": {
     "pending": "Pending",

@@ -103,6 +103,8 @@
   "submissions": {
     "title": "Entregas",
     "addSubmission": "Agregar una entrega",
+    "addSubmissions": "Agregar entregas",
+    "importSubmissions": "Importar entregas",
     "createSynthetic": "Crear una entrega sintética para un estudiante",
     "studentName": "Nombre del estudiante",
     "files": "Archivos",
@@ -112,7 +114,9 @@
     "status": "Estado",
     "grade": "Calificación",
     "submissionDate": "Fecha de entrega",
-    "feedback": "Retroalimentación"
+    "feedback": "Retroalimentación",
+    "noSubmissons": "No hay entregas disponibles",
+    "noSubmissonsDescription": "Aún no hay entregas. Aparecerán aquí cuando los estudiantes entreguen. Puedes agregar entregas sintéticas para experimentar."
   },
   "status": {
     "pending": "Pendiente",
