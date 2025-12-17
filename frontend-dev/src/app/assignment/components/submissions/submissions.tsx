@@ -208,11 +208,10 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         ),
       },
     ],
-    [t],
+    [t, i18n.language],
   );
 }
 
-// Separate component for actions to use hooks properly
 function SubmissionActionsCell({ submission }: { submission: Submission }) {
   const { t } = useTranslation();
   const { workflows } = useWorkflows();
