@@ -37,26 +37,14 @@ import {
 } from "@/components/ui/tooltip";
 import { useTranslation } from "react-i18next";
 
-function formatShortDate(date: Date) {
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  const day = date.getDate().toString().padStart(2, "0");
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-  const currentYear = new Date().getFullYear();
-  return currentYear === year ? `${day} ${month}` : `${day} ${month} ${year}`;
+function formatShortDate(date: Date, lang: string) {
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+
+  return new Intl.DateTimeFormat(lang, {
+    day: "2-digit",
+    month: "short",
+    ...(sameYear ? {} : { year: "numeric" }),
+  }).format(date);
 }
 
 const defaultSize = 14;
@@ -143,9 +131,8 @@ const SkeletonStatus = ({ pulse, status }: SkeletonStatusProps) => {
   );
 };
 
-// Create a hook to get translated columns
 export function useSubmissionColumns(): ColumnDef<Submission>[] {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return useMemo(
     () => [
@@ -180,7 +167,7 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         cell: (info) => {
           const date = info.getValue() as Date;
           return date ? (
-            formatShortDate(new Date(date))
+            formatShortDate(new Date(date), i18n.language)
           ) : (
             <SkeletonStatus status={info.cell.row.original.status} />
           );
