@@ -30,11 +30,29 @@ import { useWorkflowStore, Workflow } from "@/store/workflows-store";
 import { RuntimePlugin } from "@/hooks/use-plugins";
 import { useWorkflows } from "@/hooks/use-workflows";
 import { SubmissionStatus, Submission } from "@/hooks/use-submissions";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useTranslation } from "react-i18next";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function formatShortDate(date: Date) {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const day = date.getDate().toString().padStart(2, "0");
   const month = months[date.getMonth()];
   const year = date.getFullYear();
@@ -47,13 +65,28 @@ const defaultSize = 14;
 const STATUS_ICONS: Record<string, ReactNode> = {
   pending: <SquircleDashed size={defaultSize} />,
   submitted: <Circle size={defaultSize} />,
-  transcribing: <Loader className="animate-spin [animation-duration:4.0s]" size={defaultSize} />,
+  transcribing: (
+    <Loader
+      className="animate-spin [animation-duration:4.0s]"
+      size={defaultSize}
+    />
+  ),
   transcribed: <CircleCheck size={defaultSize} />,
-  grading: <Loader className="animate-spin [animation-duration:4.0s]" size={defaultSize} />,
+  grading: (
+    <Loader
+      className="animate-spin [animation-duration:4.0s]"
+      size={defaultSize}
+    />
+  ),
   graded: <CircleCheck size={defaultSize} />,
   needs_review: <CircleAlert size={defaultSize} />,
   failure: <TriangleAlert size={defaultSize} />,
-  processing: <Loader className="animate-spin [animation-duration:4.0s]" size={defaultSize} />,
+  processing: (
+    <Loader
+      className="animate-spin [animation-duration:4.0s]"
+      size={defaultSize}
+    />
+  ),
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -76,11 +109,11 @@ export const SubmissionStatusLabel = ({
   status,
 }: SubmissionStatusLabelProps) => {
   const { t } = useTranslation();
-  
+
   const statusKey = status as keyof typeof STATUS_COLORS;
   const color = STATUS_COLORS[statusKey] ?? "gray-500";
   const icon = STATUS_ICONS[statusKey];
-  
+
   // Map status to translation key
   const labelKey = `status.${status === "needs_review" ? "needsReview" : status}`;
   const label = t(labelKey);
@@ -96,71 +129,102 @@ export const SubmissionStatusLabel = ({
   );
 };
 
+interface SkeletonStatusProps {
+  pulse?: boolean;
+  status?: SubmissionStatus;
+}
+
+const SkeletonStatus = ({ pulse, status }: SkeletonStatusProps) => {
+  const animate =
+    pulse ||
+    (status && ["transcribing", "grading", "processing"].includes(status));
+  return (
+    <div
+      className={`bg-accent h-2 w-8 rounded-md ${animate ? "animate-pulse" : ""}`}
+    ></div>
+  );
+};
+
 // Create a hook to get translated columns
 export function useSubmissionColumns(): ColumnDef<Submission>[] {
   const { t } = useTranslation();
-  
-  return useMemo(() => [
-    {
-      accessorKey: "submitter.name",
-      header: t("submissions.studentNameColumn"),
-      cell: (info) => info.getValue(),
-    },
-    {
-      accessorKey: "status",
-      header: t("submissions.status"),
-      cell: (info) => {
-        const status = info.getValue() as SubmissionStatus;
-        return <SubmissionStatusLabel status={status} />;
-      },
-    },
-    {
-      accessorKey: "officialResult.score",
-      header: t("submissions.grade"),
-      cell: (info) => {
-        const grade = info.getValue();
-        return typeof grade === 'number' ? `${grade}/100` : "—";
-      },
-    },
-    {
-      accessorKey: "submittedAt",
-      header: t("submissions.submissionDate"),
-      cell: (info) => {
-        const date = info.getValue() as Date;
-        return date ? formatShortDate(new Date(date)) : "—";
-      },
-    },
-    {
-      accessorKey: "officialResult.feedback",
-      header: t("submissions.feedback"),
-      cell: (info) => {
-        const feedback = info.getValue() as string | undefined;
-        if (!feedback) return "—";
 
-        const maxLength = 50;
-        const abbreviated = feedback.length > maxLength
-          ? `${feedback.slice(0, maxLength)}...`
-          : feedback;
-
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-default truncate block max-w-xs">
-                {abbreviated}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="max-w-sm whitespace-pre-wrap">{feedback}</p>
-            </TooltipContent>
-          </Tooltip>
-        );
+  return useMemo(
+    () => [
+      {
+        accessorKey: "submitter.name",
+        header: t("submissions.studentNameColumn"),
+        cell: (info) => info.getValue(),
       },
-    },
-    {
-      id: "actions",
-      cell: (info) => <SubmissionActionsCell submission={info.row.original} />,
-    },
-  ], [t]);
+      {
+        accessorKey: "status",
+        header: t("submissions.status"),
+        cell: (info) => {
+          const status = info.getValue() as SubmissionStatus;
+          return <SubmissionStatusLabel status={status} />;
+        },
+      },
+      {
+        accessorKey: "officialResult.score",
+        header: t("submissions.grade"),
+        cell: (info) => {
+          const grade = info.getValue();
+          return typeof grade === "number" ? (
+            `${grade}/100`
+          ) : (
+            <SkeletonStatus status={info.cell.row.original.status} />
+          );
+        },
+      },
+      {
+        accessorKey: "submittedAt",
+        header: t("submissions.submissionDate"),
+        cell: (info) => {
+          const date = info.getValue() as Date;
+          return date ? (
+            formatShortDate(new Date(date))
+          ) : (
+            <SkeletonStatus status={info.cell.row.original.status} />
+          );
+        },
+      },
+      {
+        accessorKey: "officialResult.feedback",
+        header: t("submissions.feedback"),
+        cell: (info) => {
+          const feedback = info.getValue() as string | undefined;
+          if (!feedback)
+            return <SkeletonStatus status={info.cell.row.original.status} />;
+
+          const maxLength = 50;
+          const abbreviated =
+            feedback.length > maxLength
+              ? `${feedback.slice(0, maxLength)}...`
+              : feedback;
+
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-default truncate block max-w-xs">
+                  {abbreviated}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-sm whitespace-pre-wrap">{feedback}</p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        },
+      },
+      {
+        id: "actions",
+        cell: (info) => (
+          <SubmissionActionsCell submission={info.row.original} />
+        ),
+      },
+    ],
+    [t],
+  );
 }
 
 // Separate component for actions to use hooks properly
@@ -168,7 +232,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
   const { t } = useTranslation();
   const { workflows } = useWorkflows();
   const activeWorkflowId = useWorkflowStore((state) => state.activeWorkflowId);
-  
+
   const workflow = useMemo(() => {
     if (activeWorkflowId)
       return workflows.find((w) => w.id === activeWorkflowId);
@@ -199,7 +263,8 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
       <DropdownMenuContent>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className={"gap-2"}>
-            <BlocksIcon size={16} className={"text-muted-foreground"} /> {t("plugins.runPlugin")}
+            <BlocksIcon size={16} className={"text-muted-foreground"} />{" "}
+            {t("plugins.runPlugin")}
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent>
@@ -214,9 +279,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
                 workflow?.plugins?.transcriber && (
                   <>
                     <DropdownMenuItem
-                      onClick={(_) =>
-                        runPlugin(workflow.plugins.transcriber)
-                      }
+                      onClick={(_) => runPlugin(workflow.plugins.transcriber)}
                     >
                       {workflow.plugins.transcriber.settingsSchema.title}
                     </DropdownMenuItem>
@@ -224,18 +287,16 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
                   </>
                 )}
 
-              {workflow &&
-                workflow?.plugins &&
-                workflow?.plugins?.grader && (
-                  <>
-                    <DropdownMenuItem
-                      onClick={(_) => runPlugin(workflow.plugins.grader)}
-                    >
-                      {workflow.plugins.grader.settingsSchema.title}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
+              {workflow && workflow?.plugins && workflow?.plugins?.grader && (
+                <>
+                  <DropdownMenuItem
+                    onClick={(_) => runPlugin(workflow.plugins.grader)}
+                  >
+                    {workflow.plugins.grader.settingsSchema.title}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
 
               {workflow &&
                 workflow?.plugins &&
@@ -260,10 +321,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
           <DropdownMenuPortal>
             <DropdownMenuSubContent>
               {workflows?.map((wf) => (
-                <DropdownMenuItem
-                  key={wf.id}
-                  onClick={(_) => runWorkflow(wf)}
-                >
+                <DropdownMenuItem key={wf.id} onClick={(_) => runWorkflow(wf)}>
                   {wf.name}
                 </DropdownMenuItem>
               ))}
@@ -275,9 +333,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
-        <DropdownMenuItem
-          onClick={(_) => runWorkflow((workflows || [])[0])}
-        >
+        <DropdownMenuItem onClick={(_) => runWorkflow((workflows || [])[0])}>
           <Repeat /> {t("actions.rerun")}
         </DropdownMenuItem>
         <DropdownMenuItem>
@@ -294,5 +350,3 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
     </DropdownMenu>
   );
 }
-
-
