@@ -36,7 +36,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTranslation } from "react-i18next";
-import { Skeleton } from "@/components/ui/skeleton";
 
 function formatShortDate(date: Date) {
   const months = [
@@ -112,11 +111,10 @@ export const SubmissionStatusLabel = ({
 
   const statusKey = status as keyof typeof STATUS_COLORS;
   const color = STATUS_COLORS[statusKey] ?? "gray-500";
-  const icon = STATUS_ICONS[statusKey];
+  const icon = STATUS_ICONS[statusKey] ?? <Circle size={defaultSize} />;
 
-  // Map status to translation key
   const labelKey = `status.${status === "needs_review" ? "needsReview" : status}`;
-  const label = t(labelKey);
+  const label = t([labelKey, 'status.unknown']);
 
   return (
     <span
