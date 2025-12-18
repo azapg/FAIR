@@ -206,10 +206,13 @@ async def report_failure(
     log_message: str | None = None,
 ) -> int:
     if log_message:
-        await session.logger.error(log_message)
+        session.logger.error(log_message)
     with get_session() as db:
         workflow_run = db.get(WorkflowRun, session_id)
         if not workflow_run:
+            # Flush pending logs before closing
+            await session.logger.flush()
+            await session.logger.stop()
             await session.bus.emit("close", {"reason": reason})
             return -1
 
@@ -233,6 +236,9 @@ async def report_failure(
                     status=SubmissionStatus.failure,
                 )
 
+    # Flush pending logs before closing
+    await session.logger.flush()
+    await session.logger.stop()
     await session.bus.emit("close", {"reason": reason})
     return -1
 
@@ -299,7 +305,7 @@ class SessionManager:
         if not session:
             return -1
 
-        await session.logger.info(
+        session.logger.info(
             f"Starting session for workflow {workflow.name} for {len(submission_ids)} submissions",
         )
 
@@ -341,7 +347,7 @@ class SessionManager:
 
         # Transcription
         if workflow.transcriber_plugin_id:
-            await session.logger.info("Starting transcription step...")
+            session.logger.info("Starting transcription step...")
             transcriber_cls = get_plugin_object(workflow.transcriber_plugin_id)
 
             if not transcriber_cls:
@@ -473,7 +479,7 @@ class SessionManager:
                 ] = []
 
                 if use_batch_transcribe:
-                    await session.logger.info(
+                    session.logger.info(
                         "Using batch transcription. Parallelism setting will be ignored."
                     )
                     # Call batch method with sync/async support
@@ -505,7 +511,7 @@ class SessionManager:
                             sub_id = UUID(original.id)
                             db_submission = db.get(Submission, sub_id)
                             if not db_submission:
-                                await session.logger.warning(
+                                session.logger.warning(
                                     f"Can't find {original.submitter.name}'s submission, skipping."
                                 )
                                 continue
@@ -529,7 +535,7 @@ class SessionManager:
                                 status=SubmissionStatus.transcribed,
                             )
                 else:
-                    await session.logger.info(
+                    session.logger.info(
                         "Transcribing submissions individually..."
                     )
                     semaphore = asyncio.Semaphore(parallelism)
@@ -558,7 +564,7 @@ class SessionManager:
                                 with get_session() as db:
                                     db_submission = db.get(Submission, sub_id)
                                     if not db_submission:
-                                        await session.logger.warning(
+                                        session.logger.warning(
                                             f"Can't find {submission.submitter.name}'s submission"
                                         )
                                         return None
@@ -594,7 +600,7 @@ class SessionManager:
                                 with get_session() as db:
                                     db_sub = db.get(Submission, sub_id)
                                     if db_sub:
-                                        await session.logger.error(
+                                        session.logger.error(
                                             f"Transcription failed for {submission.submitter.name}'s submission: {e}"
                                         )
                                         db_sub.status = SubmissionStatus.failure
@@ -629,7 +635,7 @@ class SessionManager:
                     log_message=f"Transcription failed: {e}",
                 )
 
-            await session.logger.info("Transcription step completed")
+            session.logger.info("Transcription step completed")
         else:
             # TODO: This is temporary. I would like to support workflows without transcription in the future,
             #  but it requires rethinking the flow.
@@ -642,7 +648,7 @@ class SessionManager:
             )
 
         if workflow.grader_plugin_id:
-            await session.logger.info("Starting grading step")
+            session.logger.info("Starting grading step")
             grader_cls = get_plugin_object(workflow.grader_plugin_id)
             if not grader_cls:
                 return await report_failure(
@@ -698,7 +704,7 @@ class SessionManager:
                     )
 
                 if not valid_t_results:
-                    await session.logger.warning(
+                    session.logger.warning(
                         "No submissions to grade, skipping grading step"
                     )
                     grading_results: List[
@@ -714,7 +720,7 @@ class SessionManager:
                     ] = []
 
                     if use_batch_grade:
-                        await session.logger.info(
+                        session.logger.info(
                             "Using batch grading (plugin override detected)"
                         )
                         pairs = [(t, o) for (o, t) in valid_t_results]
@@ -738,7 +744,7 @@ class SessionManager:
                                 original_id = UUID(original.id)
                                 db_sub = db.get(Submission, original_id)
                                 if not db_sub:
-                                    await session.logger.warning(
+                                    session.logger.warning(
                                         f"Can't find {original.submitter.name}'s submission, skipping."
                                     )
                                     continue
@@ -764,7 +770,7 @@ class SessionManager:
                                     status=SubmissionStatus.graded,
                                 )
                     else:
-                        await session.logger.info(
+                        session.logger.info(
                             "Using individual grading with streaming"
                         )
                         semaphore = asyncio.Semaphore(parallelism)
@@ -795,7 +801,7 @@ class SessionManager:
                                     with get_session() as db:
                                         db_sub = db.get(Submission, original_id)
                                         if not db_sub:
-                                            await session.logger.warning(
+                                            session.logger.warning(
                                                 f"Can't find {original.submitter.name}'s submission, skipping."
                                             )
                                             return None
@@ -835,7 +841,7 @@ class SessionManager:
                                     with get_session() as db:
                                         db_sub = db.get(Submission, original_id)
                                         if db_sub:
-                                            await session.logger.error(
+                                            session.logger.error(
                                                 f"Grading failed for {original.submitter.name}'s submission: {e}"
                                             )
                                             db_sub.status = SubmissionStatus.failure
@@ -872,14 +878,14 @@ class SessionManager:
                     log_message=f"Grading failed: {e}",
                 )
 
-            await session.logger.info("Grading step completed")
+            session.logger.info("Grading step completed")
 
         # Validation step
         if getattr(workflow, "validator_plugin_id", None):
-            await session.logger.info("Starting validation step")
+            session.logger.info("Starting validation step")
             validator_cls = get_plugin_object(workflow.validator_plugin_id)
             if not validator_cls:
-                await session.logger.warning("Validator plugin not found, skipping")
+                session.logger.warning("Validator plugin not found, skipping")
             else:
                 try:
                     validator_instance = validator_cls(
@@ -935,11 +941,11 @@ class SessionManager:
                                 )
 
                     if not grading_results:
-                        await session.logger.info(
+                        session.logger.info(
                             "No graded submissions to validate, skipping"
                         )
                     elif use_batch_validate:
-                        await session.logger.info(
+                        session.logger.info(
                             "Using batch validation..."
                         )
                         items = [(o, t, g) for (o, t, g) in grading_results]
@@ -969,7 +975,7 @@ class SessionManager:
                                 },
                             )
                     else:
-                        await session.logger.info(
+                        session.logger.info(
                             "Using individual validation with streaming"
                         )
                         semaphore = asyncio.Semaphore(parallelism)
@@ -999,7 +1005,7 @@ class SessionManager:
                                         )
                                     await apply_validation_to_db(UUID(original.id), v)
                                 except Exception as e:
-                                    await session.logger.error(
+                                    session.logger.error(
                                         f"Validation failed for {original.submitter.name}'s submission: {e}"
                                     )
 
@@ -1010,13 +1016,16 @@ class SessionManager:
                             ]
                         )
                 except Exception as e:
-                    await session.logger.error(
+                    session.logger.error(
                         f"Validation step failed: {e} — continuing to finalize run"
                     )
 
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:
+                # Flush pending logs before closing
+                await session.logger.flush()
+                await session.logger.stop()
                 await session.bus.emit(
                     "close",
                     {"reason": "Workflow run not found in database at completion"},
@@ -1031,6 +1040,9 @@ class SessionManager:
                 finished_at=datetime.now(),
             )
 
+        # Flush pending logs before closing
+        await session.logger.flush()
+        await session.logger.stop()
         await session.bus.emit("close", {"reason": "Session completed"})
         return 0
 
