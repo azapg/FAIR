@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from datetime import datetime
 from typing import Optional
 
@@ -25,6 +26,12 @@ class LogQueue:
         self._flusher_task: Optional[asyncio.Task] = None
         self._running = False
         self._started = False
+        self._loop_thread_id: Optional[int] = None
+    
+    @property
+    def is_started(self) -> bool:
+        """Check if the queue flusher has been started."""
+        return self._started
     
     def start(self):
         """Start the background flusher task."""
@@ -32,6 +39,8 @@ class LogQueue:
             return
         self._running = True
         self._started = True
+        # Record the event loop thread ID for thread-safe enqueuing
+        self._loop_thread_id = threading.current_thread().ident
         self._flusher_task = asyncio.create_task(self._flusher())
     
     async def _flusher(self):
@@ -81,9 +90,19 @@ class LogQueue:
             "payload": payload,
         }
         
-        # Directly put the entry in the queue
-        # This is thread-safe because asyncio.Queue.put_nowait is thread-safe
-        self._queue.put_nowait(entry)
+        # Check if we're on the event loop thread
+        current_thread_id = threading.current_thread().ident
+        if self._loop_thread_id is not None and current_thread_id == self._loop_thread_id:
+            # Same thread as event loop - put directly (no race condition)
+            self._queue.put_nowait(entry)
+        else:
+            # Different thread (e.g., from executor) - use thread-safe scheduling
+            try:
+                loop = asyncio.get_running_loop()
+                loop.call_soon_threadsafe(self._queue.put_nowait, entry)
+            except RuntimeError:
+                # No running loop - put directly
+                self._queue.put_nowait(entry)
     
     async def flush(self):
         """Wait for all pending log entries to be processed."""
@@ -129,7 +148,7 @@ class SessionLogger:
         """Lazily initialize and start the log queue."""
         if self._log_queue is None:
             self._log_queue = LogQueue(self.bus)
-        if not self._log_queue._started:
+        if not self._log_queue.is_started:
             try:
                 asyncio.get_running_loop()
                 self._log_queue.start()
