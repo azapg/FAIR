@@ -5,23 +5,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
 } from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import {LoaderIcon, PlusIcon} from "lucide-react";
+import {LoaderIcon} from "lucide-react";
 import {useState} from "react";
 import {useCreateSubmission} from "@/hooks/use-submissions";
 import {useTranslation} from "react-i18next";
 
 type CreateSubmissionDialogProps = {
   assignmentId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogProps) {
+export function CreateSubmissionDialog({ assignmentId, open, onOpenChange }: CreateSubmissionDialogProps) {
   const [username, setUsername] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
-  const [open, setOpen] = useState(false);
   const {t} = useTranslation();
   
   const createSubmission = useCreateSubmission();
@@ -36,7 +36,7 @@ export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogP
       
       setUsername("");
       setFiles(null);
-      setOpen(false);
+      onOpenChange(false);
     } catch (error: any) {
       console.error("Error creating submission:", error);
       alert(error.response?.data?.detail || t("submissions.failedToCreate"));
@@ -44,10 +44,7 @@ export function CreateSubmissionDialog({ assignmentId }: CreateSubmissionDialogP
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm"><PlusIcon/> {t("common.add")}</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={""}>
         <DialogHeader>
           <DialogTitle>{t("submissions.addSubmission")}</DialogTitle>
