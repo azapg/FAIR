@@ -29,8 +29,11 @@ class SubmissionResultCreate(SubmissionResultBase):
     workflow_run_id: UUID
 
 
-class SubmissionResultUpdate(SubmissionResultBase):
-    pass
+class SubmissionResultUpdate(BaseModel):
+    model_config = schema_config
+
+    score: Optional[float] = None
+    feedback: Optional[str] = None
 
 
 __all__ = [
