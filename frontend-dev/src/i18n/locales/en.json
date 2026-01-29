@@ -12,7 +12,9 @@
     "wait": "Wait...",
     "notFound": "Not Found",
     "noDeadline": "No deadline",
-    "home": "Home"
+    "home": "Home",
+    "learnMore": "Learn more",
+    "commingSoon": "Comming soon..."
   },
   "header": {
     "title": "The Fair Platform",
@@ -101,6 +103,8 @@
   "submissions": {
     "title": "Submissions",
     "addSubmission": "Add a submission",
+    "addSubmissions": "Add submissions",
+    "importSubmissions": "Import submissions",
     "createSynthetic": "Create a synthetic submission for a student",
     "studentName": "Student Name",
     "files": "Files",
@@ -110,7 +114,9 @@
     "status": "Status",
     "grade": "Grade",
     "submissionDate": "Submission Date",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "noSubmissons": "No submissions available",
+    "noSubmissonsDescription": "No submissions yet. They will appear here when students submit. You can add synthetic submissions to experiment."
   },
   "status": {
     "pending": "Pending",
@@ -131,6 +137,9 @@
   "workflow": {
     "selectWorkflow": "Select workflow",
     "noWorkflows": "No workflows available",
+    "noWorkflowsMessage": "You haven't created any workflows yet. Create one to get started.",
+    "createWorkflow": "Create Workflow",
+    "importWorkflow": "Import Workflow",
     "runWorkflow": "Run Workflow",
     "running": "Running",
     "selectPlugin": "Select plugin",
@@ -141,7 +150,6 @@
     "failedToStart": "Failed to start workflow run. Please try again.",
     "noWorkflowSelected": "No workflow selected.",
     "selectFromDropdown": "Select one from the dropdown above.",
-    "createWithButton": "Create one using the \"+\" button above.",
     "workflowDetails": "Workflow details go here.",
     "notFound": "Can't find workflow '{{name}}'. It may have been deleted.",
     "noPermission": "You don't have permission to update workflow '{{name}}'."
