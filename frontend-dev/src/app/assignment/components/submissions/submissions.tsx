@@ -66,6 +66,8 @@ const STATUS_ICONS: Record<string, ReactNode> = {
     />
   ),
   graded: <CircleCheck size={defaultSize} />,
+  returned: <CircleCheck size={defaultSize} />,
+  excused: <CircleCheck size={defaultSize} />,
   needs_review: <CircleAlert size={defaultSize} />,
   failure: <TriangleAlert size={defaultSize} />,
   processing: (
@@ -83,6 +85,8 @@ const STATUS_COLORS: Record<string, string> = {
   transcribed: "blue-500",
   grading: "yellow-500",
   graded: "blue-500",
+  returned: "blue-500",
+  excused: "gray-500",
   needs_review: "orange-500",
   failure: "red-500",
   processing: "yellow-500",

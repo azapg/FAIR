@@ -12,8 +12,11 @@ export type SubmissionStatus =
   | "transcribed"
   | "grading"
   | "graded"
+  | "returned"
+  | "excused"
   | "needs_review"
   | "failure"
+  | "processing"
 
 export type Submitter = {
   id: string

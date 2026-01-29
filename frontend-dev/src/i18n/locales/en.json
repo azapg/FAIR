@@ -119,6 +119,8 @@
     "transcribed": "Transcribed",
     "grading": "Grading",
     "graded": "Graded",
+    "returned": "Returned",
+    "excused": "Excused",
     "needsReview": "Needs Review",
     "failure": "Error",
     "processing": "Processing",
