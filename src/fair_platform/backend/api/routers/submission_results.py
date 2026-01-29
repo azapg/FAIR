@@ -11,7 +11,13 @@ from fair_platform.backend.api.schema.submission_result import (
     SubmissionResultUpdate,
 )
 from fair_platform.backend.data.database import session_dependency
-from fair_platform.backend.data.models import Submission, SubmissionResult
+from fair_platform.backend.data.models import (
+    Assignment,
+    Course,
+    Submission,
+    SubmissionResult,
+    UserRole,
+)
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.data.models.user import User
 
@@ -76,7 +82,26 @@ def update_result(
             detail="Only the official result can be edited",
         )
 
+    if current_user.role != UserRole.admin:
+        assignment = db.get(Assignment, submission.assignment_id)
+        course = db.get(Course, assignment.course_id) if assignment else None
+        if current_user.role != UserRole.professor or not course:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only instructors or admin can update results",
+            )
+        if course.instructor_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the course instructor or admin can update results",
+            )
+
     data = payload.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide score and/or feedback to update",
+        )
     if "score" in data:
         result.score = data["score"]
     if "feedback" in data:
@@ -85,7 +110,7 @@ def update_result(
     meta = result.grading_meta or {}
     meta["modified_by"] = str(current_user.id)
     meta["modified_at"] = datetime.now(timezone.utc).isoformat()
-    result.grading_meta = meta
+    result.grading_meta = dict(meta)
     result.graded_at = result.graded_at or datetime.now(timezone.utc)
 
     db.commit()
