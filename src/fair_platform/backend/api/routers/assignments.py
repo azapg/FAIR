@@ -152,12 +152,12 @@ def list_assignments(
     current_user: User = Depends(get_current_user),
 ):
     query = db.query(Assignment)
+
     if course_id is not None:
         if not db.get(Course, course_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
             )
-
 
         query = query.filter(Assignment.course_id == course_id)
 
@@ -166,6 +166,12 @@ def list_assignments(
         else:
             # TODO: Check enrollment once implemented
             return query.join(Course).filter(Course.instructor_id == current_user.id).all()
+
+    if current_user.role == UserRole.admin:
+        return query.all()
+
+    # TODO: Check enrollment once implemented
+    return query.join(Course).filter(Course.instructor_id == current_user.id).all()
 
 @router.get("/{assignment_id}", response_model=AssignmentRead)
 def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):

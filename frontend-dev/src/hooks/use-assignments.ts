@@ -103,6 +103,10 @@ export function useAssignments(params?: ListParams, enabled = true) {
   })
 }
 
+export function useAllAssignments(enabled = true) {
+  return useAssignments(undefined, enabled)
+}
+
 export function useAssignment(id?: string, enabled = true) {
   return useQuery({
     queryKey: id != null ? assignmentsKeys.detail(id) : assignmentsKeys.detail('unknown'),
