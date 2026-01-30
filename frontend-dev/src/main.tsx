@@ -7,6 +7,7 @@ import { App } from "./index";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebarContextBridge } from "@/contexts/app-sidebar-context";
 import { Toaster } from "sonner";
 import "@/i18n";
 
@@ -32,15 +33,17 @@ function MainLayout() {
       keyboardShortcut="g"
       width="16rem"
     >
-      <div className="h-full flex">
-        <AppSidebar />
-        <SidebarInset>
-          <Toaster richColors position="bottom-left" />
-          <ErrorBoundary>
-            <App />
-          </ErrorBoundary>
-        </SidebarInset>
-      </div>
+      <AppSidebarContextBridge>
+        <div className="h-full flex">
+          <AppSidebar />
+          <SidebarInset>
+            <Toaster richColors position="bottom-left" />
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
+          </SidebarInset>
+        </div>
+      </AppSidebarContextBridge>
     </SidebarProvider>
   );
 }

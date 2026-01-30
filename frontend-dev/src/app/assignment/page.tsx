@@ -6,7 +6,6 @@ import {
   Hourglass,
   Plus,
 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { SubmissionsTable } from "@/app/assignment/components/submissions/submissions-table";
 import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -111,8 +110,7 @@ export default function AssignmentPage() {
           />
           <SidebarTrigger />
         </div>
-        <Separator />
-        <div className={"px-8 pt-5"}>
+        <div className={"px-8 pt-2"}>
           <div className={"mb-5"}>
             <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
             <MarkdownRenderer className={"text-sm text-muted-foreground"}>

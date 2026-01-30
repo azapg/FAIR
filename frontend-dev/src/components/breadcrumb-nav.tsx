@@ -4,9 +4,12 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator
+  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {Link} from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useAppSidebar } from "@/contexts/app-sidebar-context";
+import { PanelLeftIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
@@ -49,26 +52,39 @@ const generateBreadcrumbs = (baseUrl: string, segments: BreadcrumbSegment[], hom
 
 export function BreadcrumbNav({className, segments, baseUrl = ""}: { className?: string, baseUrl?: string, segments: BreadcrumbSegment[] }) {
   const { t } = useTranslation();
+  const { toggle } = useAppSidebar();
 
   const breadcrumbs = React.useMemo(() => generateBreadcrumbs(baseUrl, segments ?? [], t("common.home")), [baseUrl, segments, t]);
   return (
-    <Breadcrumb className={className}>
-      <BreadcrumbList>
-        {breadcrumbs.map((crumb) => (
-          <React.Fragment key={crumb.href}>
-            <BreadcrumbItem>
-              {crumb.isLast ? (
-                <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link to={crumb.href}>{crumb.label}</Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
-            {!crumb.isLast && <BreadcrumbSeparator />}
-          </React.Fragment>
-        ))}
-      </BreadcrumbList>
-    </Breadcrumb>
+    <div className="flex items-center gap-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-7"
+        onClick={toggle}
+        aria-label="Toggle sidebar"
+      >
+        <PanelLeftIcon />
+      </Button>
+      <Breadcrumb className={className}>
+        <BreadcrumbList>
+          {breadcrumbs.map((crumb) => (
+            <React.Fragment key={crumb.href}>
+              <BreadcrumbItem>
+                {crumb.isLast ? (
+                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link to={crumb.href}>{crumb.label}</Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+              {!crumb.isLast && <BreadcrumbSeparator />}
+            </React.Fragment>
+          ))}
+        </BreadcrumbList>
+      </Breadcrumb>
+    </div>
   )
 }
