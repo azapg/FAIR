@@ -24,6 +24,30 @@
     "help": "Help",
     "logout": "Logout"
   },
+  "nav": {
+    "home": "Home",
+    "search": "Search",
+    "inbox": "Inbox",
+    "settings": "Settings",
+    "help": "Help"
+  },
+  "sidebar": {
+    "classes": "Your classes",
+    "courses": {
+      "title": "Courses",
+      "seeAll": "See all courses"
+    },
+    "assignments": {
+      "title": "Assignments",
+      "showMore": "Show more"
+    }
+  },
+  "menu": {
+    "account": "Account",
+    "theme": "Theme",
+    "language": "Language",
+    "logout": "Log out"
+  },
   "auth": {
     "welcomeBack": "Welcome back",
     "loginToFair": "Login to The Fair Platform",

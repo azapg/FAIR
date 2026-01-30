@@ -24,6 +24,30 @@
     "help": "Ayuda",
     "logout": "Cerrar sesión"
   },
+  "nav": {
+    "home": "Inicio",
+    "search": "Buscar",
+    "inbox": "Bandeja",
+    "settings": "Configuración",
+    "help": "Ayuda"
+  },
+  "sidebar": {
+    "classes": "Tus clases",
+    "courses": {
+      "title": "Cursos",
+      "seeAll": "Ver todos los cursos"
+    },
+    "assignments": {
+      "title": "Tareas",
+      "showMore": "Mostrar más"
+    }
+  },
+  "menu": {
+    "account": "Cuenta",
+    "theme": "Tema",
+    "language": "Idioma",
+    "logout": "Cerrar sesión"
+  },
   "auth": {
     "welcomeBack": "Bienvenido de nuevo",
     "loginToFair": "Inicia sesión en The Fair Platform",

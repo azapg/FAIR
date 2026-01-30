@@ -56,33 +56,34 @@ const languages = [
 ];
 
 function NavMain() {
+  const { t } = useTranslation();
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip="Home">
+        <SidebarMenuButton asChild tooltip={t("nav.home")}>
           <Link to="/">
             <Home />
-            <span>Home</span>
+            <span>{t("nav.home")}</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
 
       {/*search*/}
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip="Search">
+        <SidebarMenuButton asChild tooltip={t("nav.search")}>
           <Link to="/search">
             <SearchIcon />
-            <span>Search</span>
+            <span>{t("nav.search")}</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
 
       {/*inbox*/}
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip="Inbox">
+        <SidebarMenuButton asChild tooltip={t("nav.inbox")}>
           <Link to="/inbox">
             <InboxIcon />
-            <span>Inbox</span>
+            <span>{t("nav.inbox")}</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -91,22 +92,23 @@ function NavMain() {
 }
 
 function NavSecondary() {
+  const { t } = useTranslation();
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip="Settings">
+        <SidebarMenuButton asChild tooltip={t("nav.settings")}>
           <Link to="/settings">
             <SettingsIcon />
-            <span>Settings</span>
+            <span>{t("nav.settings")}</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
       {/*Help*/}
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip="Help">
+        <SidebarMenuButton asChild tooltip={t("nav.help")}>
           <Link to="/help">
             <MessageCircleQuestionMarkIcon />
-            <span>Help</span>
+            <span>{t("nav.help")}</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -135,6 +137,9 @@ export function AppSidebar({
   const userName = authUser?.name || t("header.profile");
   const userEmail = authUser?.email || "user@example.com";
   const initials = getInitials(authUser?.name, authUser?.email);
+  // Typed avatar accessor to satisfy linting rules (avoid use of `any`)
+  type AvatarUser = { avatar?: string } & Partial<Record<string, unknown>>;
+  const avatarSrc = (authUser as AvatarUser)?.avatar;
   const currentLanguage =
     languages.find((lang) =>
       i18n.language?.toLowerCase().startsWith(lang.code)
@@ -174,15 +179,15 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Your classes</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("sidebar.classes")}</SidebarGroupLabel>
           <SidebarGroupContent className="flex flex-col">
             <SidebarMenu>
               <Collapsible defaultOpen className="group/collapsible">
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip="Courses">
+                    <SidebarMenuButton tooltip={t("sidebar.courses.title")}>
                       <BookOpen />
-                      <span>Courses</span>
+                      <span>{t("sidebar.courses.title")}</span>
                       <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
@@ -201,7 +206,7 @@ export function AppSidebar({
                         <SidebarMenuSubItem>
                           <SidebarMenuSubButton asChild className="text-muted-foreground">
                             <Link to="/courses" className="flex items-center gap-2 text-muted-foreground">
-                              <span>See all courses</span>
+                              <span>{t("sidebar.courses.seeAll")}</span>
                               <span className="text-muted-foreground"><ChevronRight className="h-4 w-4" /></span>
                             </Link>
                           </SidebarMenuSubButton>
@@ -215,9 +220,9 @@ export function AppSidebar({
               <Collapsible className="group/collapsible">
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip="Assignments">
+                    <SidebarMenuButton tooltip={t("sidebar.assignments.title")}>
                       <FileText />
-                      <span>Assignments</span>
+                      <span>{t("sidebar.assignments.title")}</span>
                       <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
@@ -238,7 +243,7 @@ export function AppSidebar({
                             className="text-muted-foreground"
                             onClick={() => setShowAllAssignments(true)}
                           >
-                            <span>Show more</span>
+                            <span>{t("sidebar.assignments.showMore")}</span>
                             <span className="text-muted-foreground"><Plus className="h-4 w-4" /></span>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
@@ -271,7 +276,7 @@ export function AppSidebar({
                         className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                       >
                         <Avatar className="h-8 w-8 rounded-lg">
-                          <AvatarImage src={authUser?.avatar} alt={userName} />
+                          <AvatarImage src={avatarSrc} alt={userName} />
                           <AvatarFallback className="rounded-lg text-xs">
                             {initials}
                           </AvatarFallback>
@@ -294,7 +299,7 @@ export function AppSidebar({
                       <DropdownMenuLabel className="p-0 font-normal">
                         <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                           <Avatar className="h-8 w-8 rounded-lg">
-                            <AvatarImage src={authUser?.avatar} alt={userName} />
+                            <AvatarImage src={avatarSrc} alt={userName} />
                             <AvatarFallback className="rounded-lg text-xs">
                               {initials}
                             </AvatarFallback>
@@ -312,12 +317,12 @@ export function AppSidebar({
                         onSelect={(event) => event.preventDefault()}
                         className="flex items-center"
                       >
-                        <span>Account</span>
+                        <span>{t("menu.account")}</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuSub>
                         <DropdownMenuSubTrigger className="flex items-center">
-                          <span>Theme</span>
+                          <span>{t("menu.theme")}</span>
                         </DropdownMenuSubTrigger>
                         <DropdownMenuSubContent>
                           <DropdownMenuRadioGroup
@@ -340,7 +345,7 @@ export function AppSidebar({
                       </DropdownMenuSub>
                       <DropdownMenuSub>
                         <DropdownMenuSubTrigger className="flex items-center">
-                          <span>Language</span>
+                          <span>{t("menu.language")}</span>
                         </DropdownMenuSubTrigger>
                         <DropdownMenuSubContent>
                           <DropdownMenuRadioGroup
@@ -363,7 +368,7 @@ export function AppSidebar({
                         }}
                       >
                         <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
+                        <span>{t("menu.logout")}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
