@@ -19,7 +19,7 @@ import { useAssignment } from "@/hooks/use-assignments";
 import { useCourse } from "@/hooks/use-courses";
 import { useWorkflowStore } from "@/store/workflows-store";
 import { useWorkflows } from "@/hooks/use-workflows";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CreateSubmissionDialog } from "@/app/assignment/components/submissions/create-submission-dialog";
 import { useArtifacts } from "@/hooks/use-artifacts";
 import { useSubmissions } from "@/hooks/use-submissions";
@@ -49,6 +49,7 @@ export default function AssignmentPage() {
     assignment_id: assignmentId,
   });
   const { t } = useTranslation();
+  const [isCreateSubmissionOpen, setIsCreateSubmissionOpen] = useState(false);
 
   const isOverallLoading =
     isLoading ||
@@ -169,9 +170,17 @@ export default function AssignmentPage() {
           <div className={"space-y-3 mb-5"}>
             <div className={"flex justify-between items-center mb-3"}>
               <h2 className={"text-xl font-semibold"}>{t("submissions.title")}</h2>
-              <CreateSubmissionDialog assignmentId={assignment.id.toString()} />
+              <Button size="sm" onClick={() => setIsCreateSubmissionOpen(true)}>
+                <Plus /> {t("common.add")}
+              </Button>
             </div>
-            <SubmissionsTable columns={columns} data={submissions ?? []} />
+            <SubmissionsTable columns={columns} data={submissions ?? []} onCreateSubmission={() => setIsCreateSubmissionOpen(true)}
+            />
+            <CreateSubmissionDialog
+              assignmentId={assignment.id.toString()}
+              open={isCreateSubmissionOpen}
+              onOpenChange={setIsCreateSubmissionOpen}
+            />
           </div>
         </div>
       </div>
