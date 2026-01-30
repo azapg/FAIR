@@ -4,20 +4,26 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import type { ComponentProps } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, ChevronsUpDown, Home, LogOut, User } from "lucide-react";
+import { BookOpen, ChevronRight, ChevronsUpDown, FileText, LogOut, User } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
 import { useTheme } from "@/components/theme-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useCourses } from "@/hooks/use-courses";
+import { useAllAssignments } from "@/hooks/use-assignments";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +65,8 @@ export function AppSidebar({
   const { user: authUser, isAuthenticated, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile();
+  const { data: courses = [] } = useCourses();
+  const { data: assignments = [] } = useAllAssignments(isAuthenticated);
 
   const displayTitle = t("header.title");
   const userName = authUser?.name || t("header.profile");
@@ -97,24 +105,58 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupLabel>Your classes</SidebarGroupLabel>
           <SidebarGroupContent className="flex flex-col gap-2">
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Home">
-                  <Link to="/">
-                    <Home />
-                    <span>Home</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Courses">
-                  <Link to="/courses">
-                    <BookOpen />
-                    <span>Courses</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <Collapsible defaultOpen className="group/collapsible">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton tooltip="Courses">
+                      <BookOpen />
+                      <span>Courses</span>
+                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {courses.map((course) => (
+                        <SidebarMenuSubItem key={course.id}>
+                          <SidebarMenuSubButton asChild>
+                            <Link to={`/courses/${course.id}`}>
+                              <span>{course.name}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+
+              <Collapsible className="group/collapsible">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton tooltip="Assignments">
+                      <FileText />
+                      <span>Assignments</span>
+                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {assignments.map((assignment) => (
+                        <SidebarMenuSubItem key={assignment.id}>
+                          <SidebarMenuSubButton asChild>
+                            <Link to={`/courses/${assignment.courseId}/assignments/${assignment.id}`}>
+                              <span>{assignment.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
