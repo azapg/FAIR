@@ -80,7 +80,11 @@ export default function AssignmentPage() {
   }
 
   return (
-    <SidebarProvider className={"flex flex-row m-0 p-0 h-auto overflow-none"}>
+    <SidebarProvider
+      className={"flex flex-row m-0 p-0 h-auto overflow-none"}
+      cookieName="workflow_sidebar_state"
+      keyboardShortcut="m"
+    >
       <div className={"w-full h-full overflow-auto break-words"}>
         <div className={"flex flex-row justify-between items-center py-2 px-5"}>
           <BreadcrumbNav
