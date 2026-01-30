@@ -15,9 +15,10 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { useState } from "react";
 import type { ComponentProps } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, ChevronRight, ChevronsUpDown, FileText, LogOut, User, Home, SearchIcon, InboxIcon, SettingsIcon, MessageCircleQuestionMarkIcon } from "lucide-react";
+import { BookOpen, ChevronRight, ChevronsUpDown, FileText, Plus, LogOut, User, Home, SearchIcon, InboxIcon, SettingsIcon, MessageCircleQuestionMarkIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
@@ -110,7 +111,7 @@ function NavSecondary() {
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
-    
+
   )
 }
 
@@ -128,6 +129,7 @@ export function AppSidebar({
   const isMobile = useIsMobile();
   const { data: courses = [] } = useCourses();
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
+  const [showAllAssignments, setShowAllAssignments] = useState(false);
 
   const displayTitle = t("header.title");
   const userName = authUser?.name || t("header.profile");
@@ -186,7 +188,7 @@ export function AppSidebar({
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>
-                      {courses.map((course) => (
+                      {courses.slice(0, 3).map((course) => (
                         <SidebarMenuSubItem key={course.id}>
                           <SidebarMenuSubButton asChild>
                             <Link to={`/courses/${course.id}`}>
@@ -195,6 +197,16 @@ export function AppSidebar({
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
+                      {courses.length > 3 && (
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild className="text-muted-foreground">
+                            <Link to="/courses" className="flex items-center gap-2 text-muted-foreground">
+                              <span>See all courses</span>
+                              <span className="text-muted-foreground"><ChevronRight className="h-4 w-4" /></span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )}
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>
@@ -211,7 +223,7 @@ export function AppSidebar({
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>
-                      {assignments.map((assignment) => (
+                      {(showAllAssignments ? assignments : assignments.slice(0, 3)).map((assignment) => (
                         <SidebarMenuSubItem key={assignment.id}>
                           <SidebarMenuSubButton asChild>
                             <Link to={`/courses/${assignment.courseId}/assignments/${assignment.id}`}>
@@ -220,6 +232,17 @@ export function AppSidebar({
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
+                      {assignments.length > 3 && !showAllAssignments && (
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            className="text-muted-foreground"
+                            onClick={() => setShowAllAssignments(true)}
+                          >
+                            <span>Show more</span>
+                            <span className="text-muted-foreground"><Plus className="h-4 w-4" /></span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )}
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>
