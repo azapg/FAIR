@@ -148,7 +148,7 @@ async def create_assignment(
 @router.get("/", response_model=List[AssignmentRead])
 def list_assignments(
     db: Session = Depends(session_dependency),
-    course_id: UUID = Query(None, description="Filter assignments by course ID"),
+    course_id: UUID | None = Query(None, description="Filter assignments by course ID"),
     current_user: User = Depends(get_current_user),
 ):
     query = db.query(Assignment)
@@ -161,17 +161,11 @@ def list_assignments(
 
         query = query.filter(Assignment.course_id == course_id)
 
-        if current_user.role == UserRole.admin:
-            return query.all()
-        else:
-            # TODO: Check enrollment once implemented
-            return query.join(Course).filter(Course.instructor_id == current_user.id).all()
-
     if current_user.role == UserRole.admin:
         return query.all()
-
-    # TODO: Check enrollment once implemented
-    return query.join(Course).filter(Course.instructor_id == current_user.id).all()
+    else:
+        # TODO: Check enrollment once implemented
+        return query.join(Course).filter(Course.instructor_id == current_user.id).all()
 
 @router.get("/{assignment_id}", response_model=AssignmentRead)
 def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
