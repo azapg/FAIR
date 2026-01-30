@@ -225,7 +225,7 @@ const WorkflowSidebarRunButton = ({
   onShowLogs: () => void;
 }) => {
   const { t } = useTranslation();
-  
+
   return (
     <ButtonGroup className="flex w-full my-2">
       <Button

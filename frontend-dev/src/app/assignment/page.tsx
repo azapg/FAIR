@@ -177,7 +177,7 @@ export default function AssignmentPage() {
           </div>
         </div>
       </div>
-      <WorkflowsSidebar side={"right"} className={"pt-16"} assignmentId={assignmentId ?? ""} />
+      <WorkflowsSidebar side={"right"} assignmentId={assignmentId ?? ""} />
     </SidebarProvider>
   );
 }

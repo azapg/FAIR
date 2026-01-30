@@ -3,9 +3,9 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { Providers } from "./providers";
 import { App } from "./index";
-import Header from "@/components/header";
+
 import ErrorBoundary from "./components/ErrorBoundary";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "sonner";
 import "@/i18n";
@@ -20,11 +20,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           keyboardShortcut="g"
           width="16rem"
         >
-          <ErrorBoundary>
-            <Header />
-          </ErrorBoundary>
-          <div className={"pt-16 h-full flex"}>
-            <AppSidebar className="pt-16" />
+          <div className={"h-full flex"}>
+            <AppSidebar />
             <SidebarInset>
               <Toaster richColors position="bottom-left" />
               <ErrorBoundary>
