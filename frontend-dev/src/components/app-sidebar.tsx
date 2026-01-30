@@ -13,10 +13,11 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import type { ComponentProps } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, ChevronRight, ChevronsUpDown, FileText, LogOut, User } from "lucide-react";
+import { BookOpen, ChevronRight, ChevronsUpDown, FileText, LogOut, User, Home, SearchIcon, InboxIcon, SettingsIcon, MessageCircleQuestionMarkIcon } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
@@ -53,6 +54,66 @@ const languages = [
   { code: "es", name: "Español" },
 ];
 
+function NavMain() {
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="Home">
+          <Link to="/">
+            <Home />
+            <span>Home</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+
+      {/*search*/}
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="Search">
+          <Link to="/search">
+            <SearchIcon />
+            <span>Search</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+
+      {/*inbox*/}
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="Inbox">
+          <Link to="/inbox">
+            <InboxIcon />
+            <span>Inbox</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
+}
+
+function NavSecondary() {
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="Settings">
+          <Link to="/settings">
+            <SettingsIcon />
+            <span>Settings</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+      {/*Help*/}
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="Help">
+          <Link to="/help">
+            <MessageCircleQuestionMarkIcon />
+            <span>Help</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+    
+  )
+}
+
 export function AppSidebar({
   side = "left",
   className,
@@ -79,7 +140,7 @@ export function AppSidebar({
 
   return (
     <Sidebar side={side} collapsible="icon" className={className} {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="pb-0 pt-4">
         <SidebarMenu>
           <SidebarMenuItem>
             <Link to="/" aria-label={displayTitle}>
@@ -102,11 +163,17 @@ export function AppSidebar({
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
+        <SidebarSeparator className="mx-0" />
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="gap-0">
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <NavMain />
+          </SidebarGroupContent>
+        </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel>Your classes</SidebarGroupLabel>
-          <SidebarGroupContent className="flex flex-col gap-2">
+          <SidebarGroupContent className="flex flex-col">
             <SidebarMenu>
               <Collapsible defaultOpen className="group/collapsible">
                 <SidebarMenuItem>
@@ -160,6 +227,13 @@ export function AppSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <NavSecondary />
+          </SidebarGroupContent>
+        </SidebarGroup>
+
       </SidebarContent>
       <SidebarFooter>
         <SidebarGroup className="p-0">
