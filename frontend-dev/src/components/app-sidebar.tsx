@@ -13,10 +13,11 @@ import {
 } from "@/components/ui/sidebar";
 import type { ComponentProps } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, Home, LogOut, User } from "lucide-react";
+import { BookOpen, ChevronsUpDown, Home, LogOut, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
 import { useTheme } from "@/components/theme-provider";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,6 +58,7 @@ export function AppSidebar({
   const { t, i18n } = useTranslation();
   const { user: authUser, isAuthenticated, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const isMobile = useIsMobile();
 
   const displayTitle = t("header.title");
   const userName = authUser?.name || t("header.profile");
@@ -72,15 +74,23 @@ export function AppSidebar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <Link to="/">
-              <div className="flex justify-center items-center">
+            <Link to="/" aria-label={displayTitle}>
+              <div className="flex items-center justify-center">
                 <h1
                   className="text-2xl font-serif font-semibold text-foreground cursor-pointer"
                   onClick={() => navigate("/")}
                 >
-                  {displayTitle}
+                  <span className="transition-[opacity,transform,margin] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:hidden">
+                    {displayTitle}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="hidden ml-0 transition-[opacity,transform,margin] duration-200 ease-linear group-data-[collapsible=icon]:inline group-data-[collapsible=icon]:opacity-100"
+                  >
+                    F
+                  </span>
                 </h1>
-              </div>{" "}
+              </div>
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -110,7 +120,7 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarGroup>
+        <SidebarGroup className="p-0">
           <SidebarGroupContent className="flex flex-col gap-2">
             {isAuthenticated ? (
               <SidebarMenu>
@@ -119,7 +129,7 @@ export function AppSidebar({
                     <DropdownMenuTrigger asChild>
                       <SidebarMenuButton
                         size="lg"
-                        className="w-full data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                        className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                       >
                         <Avatar className="h-8 w-8 rounded-lg">
                           <AvatarImage src={authUser?.avatar} alt={userName} />
@@ -127,17 +137,18 @@ export function AppSidebar({
                             {initials}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="grid flex-1 text-left text-sm leading-tight ml-2">
+                        <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                           <span className="truncate font-medium">{userName}</span>
                           <span className="text-muted-foreground truncate text-xs">
                             {userEmail}
                           </span>
                         </div>
+                        <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
                       </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                      side="right"
+                      side={isMobile ? "bottom" : "right"}
                       align="end"
                       sideOffset={4}
                     >
