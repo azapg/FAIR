@@ -196,6 +196,7 @@ def list_submissions(
             "submitted_at": sub.submitted_at,
             "status": sub.status,
             "artifacts": sub.artifacts,
+            "official_run_id": sub.official_run_id,
         }
 
         # Attach official_result if present
@@ -226,7 +227,6 @@ def list_submissions(
 
 
 @router.get("/{submission_id}", response_model=SubmissionRead)
-
 def get_submission(
     submission_id: UUID,
     run_id: Optional[UUID] = Query(
@@ -270,6 +270,7 @@ def get_submission(
         "submitted_at": sub.submitted_at,
         "status": sub.status,
         "artifacts": sub.artifacts,
+        "official_run_id": sub.official_run_id,
     }
 
     selected_run_id = run_id or sub.official_run_id
