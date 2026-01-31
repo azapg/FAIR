@@ -39,7 +39,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import UserAvatar from "@/components/user-avatar";
 
 function getInitials(name?: string, fallback?: string) {
   if (name && name.trim().length > 0) {
@@ -136,10 +136,7 @@ export function AppSidebar({
   const displayTitle = t("header.title");
   const userName = authUser?.name || t("header.profile");
   const userEmail = authUser?.email || "user@example.com";
-  const initials = getInitials(authUser?.name, authUser?.email);
-  // Typed avatar accessor to satisfy linting rules (avoid use of `any`)
-  type AvatarUser = { avatar?: string } & Partial<Record<string, unknown>>;
-  const avatarSrc = (authUser as AvatarUser)?.avatar;
+
   const currentLanguage =
     languages.find((lang) =>
       i18n.language?.toLowerCase().startsWith(lang.code)
@@ -275,12 +272,11 @@ export function AppSidebar({
                         size="lg"
                         className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                       >
-                        <Avatar className="h-8 w-8 rounded-lg">
-                          <AvatarImage src={avatarSrc} alt={userName} />
-                          <AvatarFallback className="rounded-lg text-xs">
-                            {initials}
-                          </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                          avatarSrc={null}
+                          username={userName}
+                          className="h-8 w-8 rounded-lg"
+                        />
                         <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                           <span className="truncate font-medium">{userName}</span>
                           <span className="text-muted-foreground truncate text-xs">
@@ -298,12 +294,11 @@ export function AppSidebar({
                     >
                       <DropdownMenuLabel className="p-0 font-normal">
                         <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                          <Avatar className="h-8 w-8 rounded-lg">
-                            <AvatarImage src={avatarSrc} alt={userName} />
-                            <AvatarFallback className="rounded-lg text-xs">
-                              {initials}
-                            </AvatarFallback>
-                          </Avatar>
+                          <UserAvatar
+                            avatarSrc={null}
+                            username={userName}
+                            className="h-8 w-8 rounded-lg"
+                          />
                           <div className="grid flex-1 text-left text-sm leading-tight">
                             <span className="truncate font-medium">{userName}</span>
                             <span className="text-muted-foreground truncate text-xs">
