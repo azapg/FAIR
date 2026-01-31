@@ -87,7 +87,9 @@
     "assignment": "assignment",
     "assignments": "assignments",
     "deleteConfirmation": "This action cannot be undone. To confirm deletion, type the course name exactly:",
-    "errorLoading": "Error loading course."
+    "errorLoading": "Error loading course.",
+    "noCourses": "No courses available",
+    "noCoursesDescription": "You haven't created any courses yet. Create your first course to get started."
   },
   "tabs": {
     "assignments": "Assignments",

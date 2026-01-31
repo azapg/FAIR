@@ -94,6 +94,7 @@ export default function CoursesPage() {
           isError={isError}
           onCardClickAction={handleCourseClick}
           onDeleteAction={handleDeleteCourse}
+          onCreateCourse={openCreateDialog}
         />
       </div>
     </main>
