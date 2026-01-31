@@ -153,6 +153,8 @@
     "transcribed": "Transcrito",
     "grading": "Calificando",
     "graded": "Calificado",
+    "returned": "Devuelto",
+    "excused": "Excusado",
     "needsReview": "Requiere revisión",
     "failure": "Error",
     "processing": "Procesando",
