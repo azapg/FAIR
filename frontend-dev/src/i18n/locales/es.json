@@ -82,6 +82,8 @@
     "descriptionPlaceholder": "Descripción breve opcional",
     "courseName": "Nombre del curso",
     "by": "Por",
+    "instructor": "Instructor",
+    "instructedByYou": "Impartido por ti",
     "assignment": "tarea",
     "assignments": "tareas",
     "deleteConfirmation": "Esta acción no se puede deshacer. Para confirmar la eliminación, escribe el nombre del curso exactamente:",
