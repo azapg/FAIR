@@ -85,7 +85,9 @@
     "assignment": "tarea",
     "assignments": "tareas",
     "deleteConfirmation": "Esta acción no se puede deshacer. Para confirmar la eliminación, escribe el nombre del curso exactamente:",
-    "errorLoading": "Error al cargar el curso."
+    "errorLoading": "Error al cargar el curso.",
+    "noCourses": "No hay cursos disponibles",
+    "noCoursesDescription": "Aún no has creado ningún curso. Crea tu primer curso para comenzar."
   },
   "tabs": {
     "assignments": "Tareas",
