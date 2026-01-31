@@ -185,7 +185,10 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
       </CardContent>
       <CardFooter>
         <span className="text-sm text-muted-foreground">
-          {t("courses.by")} {course.instructorName}
+          {user && user.id === course.instructorId 
+            ? t("courses.instructedByYou")
+            : `${t("courses.instructor")}: ${course.instructorName}`
+          }
           {course.assignmentsCount > 0 && ` • ${course.assignmentsCount} ${course.assignmentsCount > 1 ? t("courses.assignments") : t("courses.assignment")}`}
         </span>
       </CardFooter>

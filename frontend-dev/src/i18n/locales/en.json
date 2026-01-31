@@ -82,6 +82,8 @@
     "descriptionPlaceholder": "Optional short description",
     "courseName": "Course name",
     "by": "By",
+    "instructor": "Instructor",
+    "instructedByYou": "Instructed by you",
     "assignment": "assignment",
     "assignments": "assignments",
     "deleteConfirmation": "This action cannot be undone. To confirm deletion, type the course name exactly:",
