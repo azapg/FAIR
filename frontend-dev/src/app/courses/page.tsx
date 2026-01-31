@@ -7,7 +7,6 @@ import {useAuth} from "@/contexts/auth-context";
 import CourseGrid from "@/app/courses/components/course-grid";
 import CourseFormDialog from "@/app/courses/components/course-form-dialog";
 import {BreadcrumbNav} from "@/components/breadcrumb-nav";
-import {Separator} from "@/components/ui/separator";
 import {useTranslation} from "react-i18next";
 
 export default function CoursesPage() {
@@ -65,8 +64,7 @@ export default function CoursesPage() {
           }
         ]}/>
       </div>
-      <Separator/>
-      <div className="flex items-center justify-between px-6 pt-5">
+      <div className="flex items-center justify-between px-6 pt-3">
         <h1 className="text-3xl">{t("courses.yourCourses")}</h1>
 
         {isAuthenticated && (<CourseFormDialog

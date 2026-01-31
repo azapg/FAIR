@@ -1,7 +1,6 @@
 import {useCourse} from "@/hooks/use-courses";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import {BreadcrumbNav, BreadcrumbSegment} from "@/components/breadcrumb-nav";
-import {Separator} from "@/components/ui/separator";
 import AssignmentsTab from "@/app/courses/tabs/assignments/assignments-tab";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import {useParams, useNavigate, useLocation} from "react-router-dom";
@@ -52,8 +51,7 @@ export default function CourseDetailPage() {
       <div className={"py-2 px-5"}>
         <BreadcrumbNav segments={segments}/>
       </div>
-      <Separator/>
-      <div className={"px-8 py-5"}>
+      <div className={"px-8 py-2"}>
         <h1 className={"text-3xl font-bold pb-1"}>{course?.name}</h1>
         <p className={"text-sm text-muted-foreground"}>{course?.description}</p>
       </div>

@@ -4,11 +4,12 @@ import {
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator
+  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export type BreadcrumbSegment = {
   label: string;
@@ -52,23 +53,26 @@ export function BreadcrumbNav({className, segments, baseUrl = ""}: { className?:
 
   const breadcrumbs = React.useMemo(() => generateBreadcrumbs(baseUrl, segments ?? [], t("common.home")), [baseUrl, segments, t]);
   return (
-    <Breadcrumb className={className}>
-      <BreadcrumbList>
-        {breadcrumbs.map((crumb) => (
-          <React.Fragment key={crumb.href}>
-            <BreadcrumbItem>
-              {crumb.isLast ? (
-                <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link to={crumb.href}>{crumb.label}</Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
-            {!crumb.isLast && <BreadcrumbSeparator />}
-          </React.Fragment>
-        ))}
-      </BreadcrumbList>
-    </Breadcrumb>
+    <div className="flex items-center gap-2">
+      <SidebarTrigger />
+      <Breadcrumb className={className}>
+        <BreadcrumbList>
+          {breadcrumbs.map((crumb) => (
+            <React.Fragment key={crumb.href}>
+              <BreadcrumbItem>
+                {crumb.isLast ? (
+                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link to={crumb.href}>{crumb.label}</Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+              {!crumb.isLast && <BreadcrumbSeparator />}
+            </React.Fragment>
+          ))}
+        </BreadcrumbList>
+      </Breadcrumb>
+    </div>
   )
 }
