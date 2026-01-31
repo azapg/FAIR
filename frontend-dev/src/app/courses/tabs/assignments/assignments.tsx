@@ -2,6 +2,8 @@ import {ColumnDef} from "@tanstack/react-table";
 import {useMemo} from "react";
 import {useTranslation} from "react-i18next";
 import {Assignment} from "@/hooks/use-assignments";
+import {MarkdownRenderer} from "@/components/markdown-renderer";
+import truncate from "markdown-truncate";
 
 export type Grade = {
   type: "percentage" | "points" | "letter" | "pass_fail";
@@ -18,7 +20,7 @@ export type CreateAssignmentForm = {
 
 export function useAssignmentColumns(): ColumnDef<Assignment>[] {
   const { t } = useTranslation();
-  
+
   return useMemo(() => [
     {
       accessorKey: "title",
@@ -34,24 +36,28 @@ export function useAssignmentColumns(): ColumnDef<Assignment>[] {
       header: t("assignments.description"),
       cell: info => {
         const value = info.getValue() as string;
-        if (!value) return "";
-        return value.length > 80 ? `${value.substring(0, 80)}...` : value;
+        if (!value) return <div className="h-full flex items-center"></div>;
+        const truncatedValue = truncate(value, { limit: 55, ellipsis: "..." });
+        return <div className="h-full flex items-center"><MarkdownRenderer compact>{truncatedValue}</MarkdownRenderer></div>;
       },
       footer: props => props.column.id,
     },
     {
-      accessorKey: "dueDate",
+      accessorKey: "deadline",
       header: t("assignments.dueDate"),
       cell: info => {
         const raw = info.getValue() as Date | string | undefined;
         if (!raw) return t("assignments.noDueDate");
         const date = raw instanceof Date ? raw : new Date(raw);
-        return isNaN(date.getTime()) ? t("assignments.noDueDate") : date.toLocaleDateString();
+        return isNaN(date.getTime()) ? t("assignments.noDueDate") : date.toLocaleDateString(undefined, {
+          day: "2-digit",
+          month: "short",
+        });
       },
       footer: props => props.column.id,
     },
     {
-      accessorKey: "totalPoints",
+      accessorKey: "maxGrade",
       header: t("assignments.totalPoints"),
       cell: info => {
         const grade = info.getValue() as Grade | undefined;
