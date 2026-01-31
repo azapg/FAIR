@@ -7,7 +7,6 @@ import { App } from "./index";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { AppSidebarContextBridge } from "@/contexts/app-sidebar-context";
 import { Toaster } from "sonner";
 import "@/i18n";
 
@@ -31,9 +30,7 @@ function MainLayout() {
       className="flex min-h-svh w-full flex-col"
       cookieName="app_sidebar_state"
       keyboardShortcut="g"
-      width="16rem"
     >
-      <AppSidebarContextBridge>
         <div className="h-full flex">
           <AppSidebar />
           <SidebarInset>
@@ -43,7 +40,6 @@ function MainLayout() {
             </ErrorBoundary>
           </SidebarInset>
         </div>
-      </AppSidebarContextBridge>
     </SidebarProvider>
   );
 }

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { SubmissionsTable } from "@/app/assignment/components/submissions/submissions-table";
 import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { WorkflowsSidebarProvider, WorkflowsSidebarTrigger } from "@/components/ui/sidebar";
 import { WorkflowsSidebar } from "@/app/assignment/components/sidebar/workflows-sidebar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
@@ -80,11 +80,13 @@ export default function AssignmentPage() {
   }
 
   return (
-    <SidebarProvider
-      className={"flex flex-row m-0 p-0 h-auto overflow-none"}
+    <WorkflowsSidebarProvider
       cookieName="workflow_sidebar_state"
       keyboardShortcut="m"
+      width="22rem"
+      widthMobile="18rem"
     >
+
       <div className={"w-full h-full overflow-auto break-words"}>
         <div className={"flex flex-row justify-between items-center py-2 px-5"}>
           <BreadcrumbNav
@@ -109,7 +111,7 @@ export default function AssignmentPage() {
               },
             ]}
           />
-          <SidebarTrigger />
+          <WorkflowsSidebarTrigger />
         </div>
         <div className={"px-8 pt-2"}>
           <div className={"mb-5"}>
@@ -185,6 +187,6 @@ export default function AssignmentPage() {
         </div>
       </div>
       <WorkflowsSidebar side={"right"} assignmentId={assignmentId ?? ""} />
-    </SidebarProvider>
+    </WorkflowsSidebarProvider>
   );
 }

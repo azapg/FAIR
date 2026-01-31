@@ -6,12 +6,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { useAppSidebar } from "@/contexts/app-sidebar-context";
-import { PanelLeftIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export type BreadcrumbSegment = {
   label: string;
@@ -52,21 +50,11 @@ const generateBreadcrumbs = (baseUrl: string, segments: BreadcrumbSegment[], hom
 
 export function BreadcrumbNav({className, segments, baseUrl = ""}: { className?: string, baseUrl?: string, segments: BreadcrumbSegment[] }) {
   const { t } = useTranslation();
-  const { toggle } = useAppSidebar();
 
   const breadcrumbs = React.useMemo(() => generateBreadcrumbs(baseUrl, segments ?? [], t("common.home")), [baseUrl, segments, t]);
   return (
     <div className="flex items-center gap-2">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-7"
-        onClick={toggle}
-        aria-label="Toggle sidebar"
-      >
-        <PanelLeftIcon />
-      </Button>
+      <SidebarTrigger />
       <Breadcrumb className={className}>
         <BreadcrumbList>
           {breadcrumbs.map((crumb) => (
