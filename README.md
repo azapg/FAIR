@@ -48,13 +48,17 @@ Some planned directions for FAIR include:
 - [ ] More visualization and reporting tools
 
 ## Contributing
-FAIR is open for contributions! You can:
 
-- Submit issues and feature requests.
-- Propose or implement new grading modules.
-- Share experimental datasets and benchmarks.
+FAIR is open for contributions! Whether you want to submit issues, propose new grading modules, or share experimental datasets, we'd love your help.
 
-If you’re interested in collaborating, open an issue or start a discussion.
+**📖 New contributors:** Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on how to get started, our workflow, and what to expect.
+
+**Quick start:**
+- Submit issues and feature requests
+- Propose or implement new grading modules  
+- Share experimental datasets and benchmarks
+
+If you're interested in collaborating, open an issue or start a discussion.
 
 ## License
 
