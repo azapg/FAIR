@@ -33,6 +33,7 @@ from fair_platform.backend.data.models import (
     SubmissionStatus,
 )
 from fair_platform.backend.data.models import SubmissionResult
+from fair_platform.backend.services.submission_manager import SubmissionManager
 
 from sqlalchemy.orm import joinedload
 from fair_platform.sdk import get_plugin_object
@@ -733,6 +734,7 @@ class SessionManager:
                             )
                         with get_session() as db:
                             to_update_success: List[Submission] = []
+                            sub_mgr = SubmissionManager(db)
                             for idx, grade_result in enumerate(batch):
                                 original, transcribed = valid_t_results[idx]
                                 original_id = UUID(original.id)
@@ -751,6 +753,12 @@ class SessionManager:
                                     feedback=grade_result.feedback,
                                     grading_meta=grade_result.meta,
                                     graded_at=datetime.now(),
+                                )
+                                sub_mgr.record_ai_result(
+                                    original_id,
+                                    grade_result.score,
+                                    grade_result.feedback,
+                                    session_id,
                                 )
                                 to_update_success.append(db_sub)
                                 grading_results.append(
@@ -809,6 +817,13 @@ class SessionManager:
                                             feedback=result.feedback,
                                             grading_meta=result.meta,
                                             graded_at=datetime.now(),
+                                        )
+                                        sub_mgr = SubmissionManager(db)
+                                        sub_mgr.record_ai_result(
+                                            original_id,
+                                            result.score,
+                                            result.feedback,
+                                            session_id,
                                         )
 
                                         db_sub.status = SubmissionStatus.graded
