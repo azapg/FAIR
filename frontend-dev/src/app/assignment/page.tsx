@@ -125,9 +125,6 @@ export default function AssignmentPage() {
                 <h2 className={"text-muted-foreground mr-4 text-sm"}>
                   {t("properties.title")}
                 </h2>
-                <Button variant={"secondary"} size={"sm"}>
-                  <CircleCheck /> {t("properties.completed")}
-                </Button>
                 <Button variant={"ghost"} size={"sm"}>
                   <Hourglass />{" "}
                   {assignment.deadline

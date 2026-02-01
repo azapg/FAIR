@@ -130,7 +130,7 @@ const SkeletonStatus = ({ pulse, status }: SkeletonStatusProps) => {
     (status && ["transcribing", "grading", "processing"].includes(status));
   return (
     <div
-      className={`bg-accent h-2 w-8 rounded-md ${animate ? "animate-pulse" : ""}`}
+      className={`bg-gray-200 dark:bg-accent h-2 w-8 rounded-md ${animate ? "animate-pulse" : ""}`}
     ></div>
   );
 };
