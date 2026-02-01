@@ -1,6 +1,8 @@
 import importlib.resources
+import asyncio
+import os
+from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI
-from contextlib import asynccontextmanager
 
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,15 +26,47 @@ from fair_platform.backend.api.routers.version import router as version_router
 from fair_platform.sdk import load_storage_plugins
 
 
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
     init_db()
     load_storage_plugins()
+
+    stop_event: asyncio.Event | None = None
+    cleanup_task: asyncio.Task | None = None
+
+    if _env_flag("FAIR_ORPHAN_CLEANUP_ENABLED", default=False):
+        from fair_platform.backend.jobs.orphan_cleanup import orphan_cleanup_loop
+
+        interval_seconds = int(os.getenv("FAIR_ORPHAN_CLEANUP_INTERVAL_SECONDS", "3600"))
+        retention_days = int(os.getenv("FAIR_ORPHAN_CLEANUP_RETENTION_DAYS", "7"))
+        dry_run = _env_flag("FAIR_ORPHAN_CLEANUP_DRY_RUN", default=False)
+
+        stop_event = asyncio.Event()
+        cleanup_task = asyncio.create_task(
+            orphan_cleanup_loop(
+                stop_event,
+                interval_seconds=interval_seconds,
+                retention_days=retention_days,
+                dry_run=dry_run,
+            ),
+            name="fair.orphan_cleanup_loop",
+        )
     try:
         yield
     finally:
-        # teardown?
-        pass
+        if stop_event is not None:
+            stop_event.set()
+        if cleanup_task is not None:
+            cleanup_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await cleanup_task
 
 
 app = FastAPI(
