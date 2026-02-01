@@ -1,6 +1,7 @@
-# The Fair Platform
+# The Fair Platform [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) ![PyPI - Version](https://img.shields.io/pypi/v/fair-platform) ![PyPI - Downloads](https://img.shields.io/pypi/dm/fair-platform)
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) ![PyPI - Version](https://img.shields.io/pypi/v/fair-platform) ![PyPI - Downloads](https://img.shields.io/pypi/dm/fair-platform)
+
+<img width="1974" height="992" alt="showcase" src="https://github.com/user-attachments/assets/c88cc1ea-c30a-4c0e-9f35-955b92b1bf46" />
 
 
 FAIR (or _The Fair Platform_) is an open-source platform that makes it easy to experiment with automatic grading systems using AI. It provides a flexible and extensible environment for building, testing, and comparing grading approaches, from interpreters and rubrics to agent-based systems and research datasets.
@@ -48,13 +49,17 @@ Some planned directions for FAIR include:
 - [ ] More visualization and reporting tools
 
 ## Contributing
-FAIR is open for contributions! You can:
 
-- Submit issues and feature requests.
-- Propose or implement new grading modules.
-- Share experimental datasets and benchmarks.
+FAIR is open for contributions! Whether you want to submit issues, propose new grading modules, or share experimental datasets, we'd love your help.
 
-If you’re interested in collaborating, open an issue or start a discussion.
+**📖 New contributors:** Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on how to get started, our workflow, and what to expect.
+
+**Quick start:**
+- Submit issues and feature requests
+- Propose or implement new grading modules  
+- Share experimental datasets and benchmarks
+
+If you're interested in collaborating, open an issue or start a discussion.
 
 ## License
 

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "The Fair Documentation",
+  "colors": {
+    "primary": "#ff0000"
+  },
+  "navigation": {
+    "global": {
+      "languages": [
+        {
+          "language": "en",
+          "default": true,
+          "href": "/en/introduction"
+        },
+        {
+          "language": "es",
+          "href": "/es/introduction"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "language": "en",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": ["en/introduction"]
+          },
+          {
+            "group": "Getting started",
+            "pages": [
+              "en/getting-started/installation",
+              "en/getting-started/the-platform"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": ["en/development/releases"]
+          }
+        ]
+      },
+      {
+        "language": "es",
+        "groups": [
+          {
+            "group": "Introducción",
+            "pages": ["es/introduction"]
+          },
+          {
+            "group": "Primeros pasos",
+            "pages": [
+              "es/getting-started/installation",
+              "es/getting-started/extensions"
+            ]
+          },
+          {
+            "group": "Desarrollo",
+            "pages": ["es/development/releases"]
+          }
+        ]
+      }
+    ]
+  }
+}

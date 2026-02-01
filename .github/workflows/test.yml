@@ -3,8 +3,20 @@ name: Tests
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '**/*.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '**/*.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
 
 jobs:
   test:
