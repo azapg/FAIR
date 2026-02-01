@@ -1,6 +1,6 @@
 from uuid import UUID, uuid4
 from datetime import datetime
-from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP, Table, Column
+from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP, Table, Column, Float, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from enum import Enum
 from typing import Optional, List, TYPE_CHECKING
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from .workflow_run import WorkflowRun
     from .artifact import Artifact
     from .submission_result import SubmissionResult
+    from .submission_event import SubmissionEvent
     from .submitter import Submitter
     from .user import User
 
@@ -85,6 +86,13 @@ class Submission(Base):
     official_run_id: Mapped[Optional[UUID]] = mapped_column(
         SAUUID, ForeignKey("workflow_runs.id"), nullable=True
     )
+    draft_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    draft_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    published_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    published_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    returned_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
 
     assignment: Mapped["Assignment"] = relationship(
         "Assignment", back_populates="submissions"
@@ -116,6 +124,11 @@ class Submission(Base):
     # Processing results (per workflow run)
     results: Mapped[List["SubmissionResult"]] = relationship(
         "SubmissionResult",
+        back_populates="submission",
+        cascade="all, delete-orphan",
+    )
+    events: Mapped[List["SubmissionEvent"]] = relationship(
+        "SubmissionEvent",
         back_populates="submission",
         cascade="all, delete-orphan",
     )
