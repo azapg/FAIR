@@ -11,11 +11,11 @@
         {
           "language": "en",
           "default": true,
-          "href": "en/introduction"
+          "href": "/en/introduction"
         },
         {
           "language": "es",
-          "href": "es/introduction"
+          "href": "/es/introduction"
         }
       ]
     },
