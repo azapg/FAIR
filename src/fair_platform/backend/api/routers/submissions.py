@@ -20,10 +20,14 @@ from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus,
 from fair_platform.backend.api.schema.submission import (
     SubmissionRead,
     SubmissionUpdate,
+    SubmissionDraftUpdate,
 )
 from fair_platform.backend.api.schema.submission_result import SubmissionResultRead
+from fair_platform.backend.api.schema.submission_event import SubmissionEventRead
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
+from fair_platform.backend.services.submission_manager import get_submission_manager
+from fair_platform.backend.data.models.submission_event import SubmissionEvent
 
 router = APIRouter()
 
@@ -197,6 +201,11 @@ def list_submissions(
             "status": sub.status,
             "artifacts": sub.artifacts,
             "official_run_id": sub.official_run_id,
+            "draft_score": sub.draft_score,
+            "draft_feedback": sub.draft_feedback,
+            "published_score": sub.published_score,
+            "published_feedback": sub.published_feedback,
+            "returned_at": sub.returned_at,
         }
 
         # Attach official_result if present
@@ -271,6 +280,11 @@ def get_submission(
         "status": sub.status,
         "artifacts": sub.artifacts,
         "official_run_id": sub.official_run_id,
+        "draft_score": sub.draft_score,
+        "draft_feedback": sub.draft_feedback,
+        "published_score": sub.published_score,
+        "published_feedback": sub.published_feedback,
+        "returned_at": sub.returned_at,
     }
 
     selected_run_id = run_id or sub.official_run_id
@@ -368,6 +382,139 @@ def delete_submission(
     db.delete(sub)
     db.commit()
     return None
+
+
+@router.patch("/{submission_id}/draft", response_model=SubmissionRead)
+def update_submission_draft(
+    submission_id: UUID,
+    payload: SubmissionDraftUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    sub = db.get(Submission, submission_id)
+    if not sub:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
+        )
+
+    if current_user.role != UserRole.admin:
+        assignment = db.get(Assignment, sub.assignment_id)
+        course = db.get(Course, assignment.course_id) if assignment else None
+        if (
+            current_user.role != UserRole.professor
+            or not course
+            or course.instructor_id != current_user.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the course instructor or admin can edit drafts",
+            )
+
+    data = payload.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide score and/or feedback to update",
+        )
+
+    try:
+        mgr = get_submission_manager(db)
+        mgr.update_draft(
+            submission_id=sub.id,
+            score=data.get("score"),
+            feedback=data.get("feedback"),
+            actor=current_user,
+        )
+        db.commit()
+        db.refresh(sub)
+        return sub
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update draft: {str(e)}",
+        )
+
+
+@router.post("/{submission_id}/return", response_model=SubmissionRead)
+def return_submission(
+    submission_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    sub = db.get(Submission, submission_id)
+    if not sub:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
+        )
+
+    if current_user.role != UserRole.admin:
+        assignment = db.get(Assignment, sub.assignment_id)
+        course = db.get(Course, assignment.course_id) if assignment else None
+        if (
+            current_user.role != UserRole.professor
+            or not course
+            or course.instructor_id != current_user.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the course instructor or admin can return submissions",
+            )
+
+    try:
+        mgr = get_submission_manager(db)
+        mgr.return_to_student(submission_id=sub.id, actor=current_user)
+        db.commit()
+        db.refresh(sub)
+        return sub
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to return submission: {str(e)}",
+        )
+
+
+@router.get("/{submission_id}/timeline", response_model=List[SubmissionEventRead])
+def get_submission_timeline(
+    submission_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    sub = db.get(Submission, submission_id)
+    if not sub:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
+        )
+
+    if current_user.role != UserRole.admin:
+        if current_user.role == UserRole.professor:
+            assignment = db.get(Assignment, sub.assignment_id)
+            course = db.get(Course, assignment.course_id) if assignment else None
+            if not course or course.instructor_id != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Not authorized to view this submission's timeline",
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only instructors or admin can view the submission timeline",
+            )
+
+    events = (
+        db.query(SubmissionEvent)
+        .filter(SubmissionEvent.submission_id == submission_id)
+        .order_by(SubmissionEvent.created_at)
+        .all()
+    )
+    return events
 
 
 __all__ = ["router"]

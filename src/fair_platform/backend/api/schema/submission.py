@@ -36,11 +36,23 @@ class SubmissionUpdate(BaseModel):
     artifact_ids: Optional[List[UUID]] = None  # full replace if provided
 
 
+class SubmissionDraftUpdate(BaseModel):
+    model_config = schema_config
+
+    score: Optional[float] = None
+    feedback: Optional[str] = None
+
+
 class SubmissionRead(SubmissionBase):
     id: UUID
     submitter: Optional[SubmitterRead] = None
     artifacts: List[ArtifactRead] = []
     official_result: Optional[SubmissionResultRead] = None
+    draft_score: Optional[float] = None
+    draft_feedback: Optional[str] = None
+    published_score: Optional[float] = None
+    published_feedback: Optional[str] = None
+    returned_at: Optional[datetime] = None
 
 
 __all__ = [
@@ -48,5 +60,6 @@ __all__ = [
     "SubmissionBase",
     "SubmissionCreate",
     "SubmissionUpdate",
+    "SubmissionDraftUpdate",
     "SubmissionRead",
 ]

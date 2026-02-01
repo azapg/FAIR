@@ -3,6 +3,7 @@ from .course import Course
 from .assignment import Assignment
 from .submitter import Submitter
 from .submission import Submission, SubmissionStatus
+from .submission_event import SubmissionEvent, SubmissionEventType
 from .workflow import Workflow
 from .workflow_run import WorkflowRun, WorkflowRunStatus
 from .plugin import Plugin
@@ -17,6 +18,8 @@ __all__ = [
     "Submitter",
     "Submission",
     "SubmissionStatus",
+    "SubmissionEvent",
+    "SubmissionEventType",
     "Workflow",
     "WorkflowRun",
     "WorkflowRunStatus",

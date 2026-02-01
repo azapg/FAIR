@@ -2,6 +2,7 @@ from uuid import UUID, uuid4
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 
+from typing_extensions import deprecated
 from sqlalchemy import UUID as SAUUID, ForeignKey, JSON, TIMESTAMP, Float, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,7 +13,9 @@ if TYPE_CHECKING:
     from .workflow_run import WorkflowRun
 
 
+@deprecated("SubmissionResult is deprecated. Use SubmissionEvent plus Submission draft/published fields.")
 class SubmissionResult(Base):
+    """DEPRECATED: use SubmissionEvent + Submission draft/published fields."""
     __tablename__ = "submission_results"
 
     id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True, default=uuid4)
