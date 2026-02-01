@@ -1,6 +1,5 @@
-# The Fair Platform
+# The Fair Platform [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) ![PyPI - Version](https://img.shields.io/pypi/v/fair-platform) ![PyPI - Downloads](https://img.shields.io/pypi/dm/fair-platform)
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) ![PyPI - Version](https://img.shields.io/pypi/v/fair-platform) ![PyPI - Downloads](https://img.shields.io/pypi/dm/fair-platform)
 
 <img width="1974" height="992" alt="showcase" src="https://github.com/user-attachments/assets/c88cc1ea-c30a-4c0e-9f35-955b92b1bf46" />
 
