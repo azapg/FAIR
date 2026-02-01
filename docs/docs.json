@@ -1,0 +1,11 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "The Fair Documentation",
+  "colors": {
+    "primary": "#ff0000"
+  },
+  "navigation": {
+    "products": []
+  }
+}
