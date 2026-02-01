@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 class SubmissionEventType(str, Enum):
     ai_graded = "ai_graded"
+    initial_result = "initial_result"
     manual_edit = "manual_edit"
     returned = "returned"
     status_changed = "status_changed"
