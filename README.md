@@ -2,6 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) ![PyPI - Version](https://img.shields.io/pypi/v/fair-platform) ![PyPI - Downloads](https://img.shields.io/pypi/dm/fair-platform)
 
+<img width="2160" height="1440" alt="showcase" src="https://github.com/user-attachments/assets/2d3c898f-89e1-4f48-bf78-446a2a8c50bc" />
 
 FAIR (or _The Fair Platform_) is an open-source platform that makes it easy to experiment with automatic grading systems using AI. It provides a flexible and extensible environment for building, testing, and comparing grading approaches, from interpreters and rubrics to agent-based systems and research datasets.
 
