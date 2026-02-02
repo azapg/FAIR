@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "almond",
-  "name": "Fair Platform",
+  "name": "The Fair Docs",
   "description": "FAIR (The Fair Platform) is an open-source, AI-powered grading platform for experimenting with interpreters, rubrics, agent-based graders, and reproducible assessment workflows.",
   "colors": {
     "primary": "#ff0000"
