@@ -139,23 +139,11 @@ const SkeletonStatus = ({ pulse, status }: SkeletonStatusProps) => {
   );
 };
 
-const LOADING_STATUSES: SubmissionStatus[] = [
-  "pending",
-  "submitted",
-  "transcribing",
-  "grading",
-  "processing",
-];
-
-const isLoadingStatus = (status: SubmissionStatus) =>
-  LOADING_STATUSES.includes(status);
-
 function InlineEditableScore({ submission }: { submission: Submission }) {
   const { t } = useTranslation();
   const updateDraft = useUpdateSubmissionDraft();
   const inputRef = useRef<HTMLInputElement>(null);
-  const scoreValue =
-    submission.draftScore ?? submission.officialResult?.score ?? null;
+  const scoreValue = submission.draftScore ?? null;
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(
     scoreValue !== null && scoreValue !== undefined ? String(scoreValue) : "",
@@ -179,8 +167,6 @@ function InlineEditableScore({ submission }: { submission: Submission }) {
   }, [isEditing]);
 
   const isDisabled = submission.status === "pending" || updateDraft.isPending;
-  const showSkeleton = scoreValue == null && isLoadingStatus(submission.status);
-
   const commit = () => {
     if (isDisabled) return;
     const trimmed = value.trim();
@@ -200,10 +186,6 @@ function InlineEditableScore({ submission }: { submission: Submission }) {
       data: { score: nextScore },
     });
   };
-
-  if (showSkeleton && !isEditing) {
-    return <SkeletonStatus status={submission.status} />;
-  }
 
   return (
     <div className="flex items-center gap-1">
@@ -247,8 +229,7 @@ function InlineEditableFeedback({ submission }: { submission: Submission }) {
   const { t } = useTranslation();
   const updateDraft = useUpdateSubmissionDraft();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const feedbackValue =
-    submission.draftFeedback ?? submission.officialResult?.feedback ?? "";
+  const feedbackValue = submission.draftFeedback ?? "";
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(feedbackValue ?? "");
 
@@ -267,8 +248,6 @@ function InlineEditableFeedback({ submission }: { submission: Submission }) {
   }, [isEditing]);
 
   const isDisabled = submission.status === "pending" || updateDraft.isPending;
-  const showSkeleton = !feedbackValue && isLoadingStatus(submission.status);
-
   const commit = () => {
     if (isDisabled) return;
     if (value === feedbackValue) return;
@@ -277,10 +256,6 @@ function InlineEditableFeedback({ submission }: { submission: Submission }) {
       data: { feedback: value },
     });
   };
-
-  if (showSkeleton && !isEditing) {
-    return <SkeletonStatus status={submission.status} />;
-  }
 
   return (
     <Textarea
