@@ -144,9 +144,9 @@
     "submissionDate": "Submission Date",
     "feedback": "Feedback",
     "views": {
-      "inbox": "Inbox (Untouched)",
-      "active": "Active (WIP)",
-      "finalized": "Finalized (Done)"
+      "inbox": "Inbox",
+      "active": "Active",
+      "finalized": "Finalized"
     },
     "searchPlaceholder": "Search submissions",
     "selectedRows": "{{selected}} of {{total}} selected",
