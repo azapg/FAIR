@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "almond",
   "name": "Fair Platform",
   "description": "FAIR (The Fair Platform) is an open-source, AI-powered grading platform for experimenting with interpreters, rubrics, agent-based graders, and reproducible assessment workflows.",
   "colors": {
@@ -8,6 +8,9 @@
   },
   "icons": {
     "library": "lucide"
+  },
+  "fonts": {
+    "family": "Host Grotesk"
   },
   "navigation": {
     "global": {
@@ -71,7 +74,7 @@
           },
           {
             "tab": "SDK",
-            "icon": "puzzle-piece",
+            "icon": "blocks",
             "groups": [
               {
                 "group": "Overview",
@@ -145,6 +148,7 @@
           },
           {
             "tab": "Referencia API",
+            "openapi": "assets/openapi.json",
             "icon": "code",
             "groups": [
               {
