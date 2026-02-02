@@ -7,61 +7,207 @@
     "primary": "#ff0000"
   },
   "navigation": {
-    "tabs": [
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/allanzapata/fair-platform"
+        },
+        {
+          "anchor": "PyPI",
+          "href": "https://pypi.org/project/fair-platform/"
+        }
+      ]
+    },
+    "languages": [
       {
-        "tab": "Docs",
-        "icon": "book",
-        "pages": [
-          "en/introduction",
-          "en/getting-started/installation",
-          "en/getting-started/the-platform",
-          "en/development/releases",
-          "es/introduction",
-          "es/getting-started/installation",
-          "es/getting-started/extensions",
-          "es/development/releases"
+        "language": "en",
+        "default": true,
+        "tabs": [
+          {
+            "tab": "Docs",
+            "icon": "book",
+            "groups": [
+              {
+                "group": "Introduction",
+                "pages": ["en/introduction"]
+              },
+              {
+                "group": "Getting started",
+                "pages": [
+                  "en/getting-started/installation",
+                  "en/getting-started/the-platform"
+                ]
+              },
+              {
+                "group": "Development",
+                "pages": ["en/development/releases"]
+              }
+            ]
+          },
+          {
+            "tab": "API Reference",
+            "icon": "code",
+            "groups": [
+              {
+                "group": "Overview",
+                "pages": ["en/api-reference/overview"]
+              },
+              {
+                "group": "Authentication",
+                "pages": ["en/api-reference/authentication"]
+              },
+              {
+                "group": "Endpoints",
+                "pages": ["en/api-reference/endpoints"]
+              }
+            ]
+          },
+          {
+            "tab": "SDK",
+            "icon": "puzzle-piece",
+            "groups": [
+              {
+                "group": "Overview",
+                "pages": ["en/sdk/overview"]
+              },
+              {
+                "group": "Plugins",
+                "pages": ["en/sdk/plugins"]
+              },
+              {
+                "group": "Schemas",
+                "pages": ["en/sdk/schemas"]
+              },
+              {
+                "group": "Examples",
+                "pages": ["en/sdk/examples"]
+              }
+            ]
+          },
+          {
+            "tab": "Guides",
+            "icon": "graduation-cap",
+            "groups": [
+              {
+                "group": "Setup",
+                "pages": ["en/guides/installation"]
+              },
+              {
+                "group": "Development",
+                "pages": [
+                  "en/guides/development-workflow",
+                  "en/guides/frontend",
+                  "en/guides/backend"
+                ]
+              },
+              {
+                "group": "Extending",
+                "pages": ["en/guides/plugins"]
+              },
+              {
+                "group": "Releases",
+                "pages": ["en/guides/releases"]
+              }
+            ]
+          }
         ]
       },
       {
-        "tab": "API Reference",
-        "icon": "code",
-        "pages": [
-          "api-reference/overview",
-          "api-reference/authentication",
-          "api-reference/endpoints"
-        ]
-      },
-      {
-        "tab": "SDK",
-        "icon": "puzzle-piece",
-        "pages": [
-          "sdk/overview",
-          "sdk/plugins",
-          "sdk/schemas",
-          "sdk/examples"
-        ]
-      },
-      {
-        "tab": "Guides",
-        "icon": "graduation-cap",
-        "pages": [
-          "guides/installation",
-          "guides/development-workflow",
-          "guides/frontend",
-          "guides/backend",
-          "guides/plugins",
-          "guides/releases"
+        "language": "es",
+        "tabs": [
+          {
+            "tab": "Docs",
+            "icon": "book",
+            "groups": [
+              {
+                "group": "Introducción",
+                "pages": ["es/introduction"]
+              },
+              {
+                "group": "Primeros pasos",
+                "pages": [
+                  "es/getting-started/installation",
+                  "es/getting-started/extensions"
+                ]
+              },
+              {
+                "group": "Desarrollo",
+                "pages": ["es/development/releases"]
+              }
+            ]
+          },
+          {
+            "tab": "Referencia API",
+            "icon": "code",
+            "groups": [
+              {
+                "group": "Resumen",
+                "pages": ["es/api-reference/overview"]
+              },
+              {
+                "group": "Autenticación",
+                "pages": ["es/api-reference/authentication"]
+              },
+              {
+                "group": "Endpoints",
+                "pages": ["es/api-reference/endpoints"]
+              }
+            ]
+          },
+          {
+            "tab": "SDK",
+            "icon": "puzzle-piece",
+            "groups": [
+              {
+                "group": "Resumen",
+                "pages": ["es/sdk/overview"]
+              },
+              {
+                "group": "Plugins",
+                "pages": ["es/sdk/plugins"]
+              },
+              {
+                "group": "Esquemas",
+                "pages": ["es/sdk/schemas"]
+              },
+              {
+                "group": "Ejemplos",
+                "pages": ["es/sdk/examples"]
+              }
+            ]
+          },
+          {
+            "tab": "Guías",
+            "icon": "graduation-cap",
+            "groups": [
+              {
+                "group": "Instalación",
+                "pages": ["es/guides/installation"]
+              },
+              {
+                "group": "Desarrollo",
+                "pages": [
+                  "es/guides/development-workflow",
+                  "es/guides/frontend",
+                  "es/guides/backend"
+                ]
+              },
+              {
+                "group": "Extensiones",
+                "pages": ["es/guides/plugins"]
+              },
+              {
+                "group": "Lanzamientos",
+                "pages": ["es/guides/releases"]
+              }
+            ]
+          }
         ]
       }
     ]
   },
   "navbar": {
-    "links": [
-      {
-        "label": "PyPI",
-        "href": "https://pypi.org/project/fair-platform/"
-      }
-    ],
     "primary": {
       "type": "button",
       "label": "Get started",
