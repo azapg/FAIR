@@ -14,8 +14,10 @@ import {
   Circle,
   BlocksIcon,
 } from "lucide-react";
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,12 +32,13 @@ import {
 import { useWorkflowStore, Workflow } from "@/store/workflows-store";
 import { RuntimePlugin } from "@/hooks/use-plugins";
 import { useWorkflows } from "@/hooks/use-workflows";
-import { SubmissionStatus, Submission } from "@/hooks/use-submissions";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  SubmissionStatus,
+  Submission,
+  useReturnSubmission,
+  useUpdateSubmissionDraft,
+} from "@/hooks/use-submissions";
+
 import { useTranslation } from "react-i18next";
 
 function formatShortDate(date: Date, lang: string) {
@@ -136,6 +139,179 @@ const SkeletonStatus = ({ pulse, status }: SkeletonStatusProps) => {
   );
 };
 
+const LOADING_STATUSES: SubmissionStatus[] = [
+  "pending",
+  "submitted",
+  "transcribing",
+  "grading",
+  "processing",
+];
+
+const isLoadingStatus = (status: SubmissionStatus) =>
+  LOADING_STATUSES.includes(status);
+
+function InlineEditableScore({ submission }: { submission: Submission }) {
+  const { t } = useTranslation();
+  const updateDraft = useUpdateSubmissionDraft();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const scoreValue =
+    submission.draftScore ?? submission.officialResult?.score ?? null;
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(
+    scoreValue !== null && scoreValue !== undefined ? String(scoreValue) : "",
+  );
+
+  useEffect(() => {
+    if (!isEditing) {
+      setValue(
+        scoreValue !== null && scoreValue !== undefined ? String(scoreValue) : "",
+      );
+    }
+  }, [isEditing, scoreValue]);
+
+  useEffect(() => {
+    if (isEditing) {
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      });
+    }
+  }, [isEditing]);
+
+  const isDisabled = submission.status === "pending" || updateDraft.isPending;
+  const showSkeleton = scoreValue == null && isLoadingStatus(submission.status);
+
+  const commit = () => {
+    if (isDisabled) return;
+    const trimmed = value.trim();
+    const nextScore = trimmed === "" ? null : Number(trimmed);
+    if (trimmed !== "" && Number.isNaN(nextScore)) {
+      setValue(
+        scoreValue !== null && scoreValue !== undefined ? String(scoreValue) : "",
+      );
+      return;
+    }
+    const unchanged =
+      (nextScore == null && scoreValue == null) ||
+      (typeof nextScore === "number" && nextScore === scoreValue);
+    if (unchanged) return;
+    updateDraft.mutate({
+      id: submission.id,
+      data: { score: nextScore },
+    });
+  };
+
+  if (showSkeleton && !isEditing) {
+    return <SkeletonStatus status={submission.status} />;
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        ref={inputRef}
+        type="number"
+        inputMode="decimal"
+        className={`h-7 w-20 px-0 py-0 text-sm bg-transparent border-transparent shadow-none focus-visible:border-border focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:bg-muted/20 focus-visible:px-2 focus-visible:py-1 ${
+          scoreValue == null ? "text-muted-foreground italic" : "text-foreground"
+        } ${isDisabled ? "cursor-not-allowed opacity-50" : "cursor-text"}`}
+        value={value}
+        onFocus={() => !isDisabled && setIsEditing(true)}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={() => {
+          setIsEditing(false);
+          commit();
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.currentTarget.blur();
+          }
+          if (event.key === "Escape") {
+            setIsEditing(false);
+            setValue(
+              scoreValue !== null && scoreValue !== undefined
+                ? String(scoreValue)
+                : "",
+            );
+          }
+        }}
+        placeholder="—"
+        aria-label={t("submissions.grade")}
+        disabled={isDisabled}
+      />
+      <span className="text-xs text-muted-foreground">/100</span>
+    </div>
+  );
+}
+
+function InlineEditableFeedback({ submission }: { submission: Submission }) {
+  const { t } = useTranslation();
+  const updateDraft = useUpdateSubmissionDraft();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const feedbackValue =
+    submission.draftFeedback ?? submission.officialResult?.feedback ?? "";
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(feedbackValue ?? "");
+
+  useEffect(() => {
+    if (!isEditing) {
+      setValue(feedbackValue ?? "");
+    }
+  }, [isEditing, feedbackValue]);
+
+  useEffect(() => {
+    if (isEditing) {
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+    }
+  }, [isEditing]);
+
+  const isDisabled = submission.status === "pending" || updateDraft.isPending;
+  const showSkeleton = !feedbackValue && isLoadingStatus(submission.status);
+
+  const commit = () => {
+    if (isDisabled) return;
+    if (value === feedbackValue) return;
+    updateDraft.mutate({
+      id: submission.id,
+      data: { feedback: value },
+    });
+  };
+
+  if (showSkeleton && !isEditing) {
+    return <SkeletonStatus status={submission.status} />;
+  }
+
+  return (
+    <Textarea
+      ref={textareaRef}
+      rows={2}
+      className={`min-h-[48px] text-sm bg-transparent border-transparent shadow-none focus-visible:border-border focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:bg-muted/20 focus-visible:px-2 focus-visible:py-1 ${
+        value ? "text-foreground" : "text-muted-foreground italic"
+      } ${isDisabled ? "cursor-not-allowed opacity-50" : "cursor-text"}`}
+      value={value}
+      onFocus={() => !isDisabled && setIsEditing(true)}
+      onChange={(event) => setValue(event.target.value)}
+      onBlur={() => {
+        setIsEditing(false);
+        commit();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          setIsEditing(false);
+          setValue(feedbackValue ?? "");
+        }
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+          event.currentTarget.blur();
+        }
+      }}
+      placeholder="—"
+      aria-label={t("submissions.feedback")}
+      disabled={isDisabled}
+    />
+  );
+}
+
 export function useSubmissionColumns(): ColumnDef<Submission>[] {
   const { t, i18n } = useTranslation();
 
@@ -179,15 +355,10 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         },
       },
       {
-        accessorKey: "officialResult.score",
+        accessorKey: "draftScore",
         header: t("submissions.grade"),
         cell: (info) => {
-          const grade = info.getValue();
-          return typeof grade === "number" ? (
-            `${grade}/100`
-          ) : (
-            <SkeletonStatus status={info.cell.row.original.status} />
-          );
+          return <InlineEditableScore submission={info.row.original} />;
         },
       },
       {
@@ -203,31 +374,10 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         },
       },
       {
-        accessorKey: "officialResult.feedback",
+        accessorKey: "draftFeedback",
         header: t("submissions.feedback"),
         cell: (info) => {
-          const feedback = info.getValue() as string | undefined;
-          if (!feedback)
-            return <SkeletonStatus status={info.cell.row.original.status} />;
-
-          const maxLength = 50;
-          const abbreviated =
-            feedback.length > maxLength
-              ? `${feedback.slice(0, maxLength)}...`
-              : feedback;
-
-          return (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="cursor-default truncate block max-w-xs">
-                  {abbreviated}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="max-w-sm whitespace-pre-wrap">{feedback}</p>
-              </TooltipContent>
-            </Tooltip>
-          );
+          return <InlineEditableFeedback submission={info.row.original} />;
         },
       },
       {
@@ -245,12 +395,18 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
   const { t } = useTranslation();
   const { workflows } = useWorkflows();
   const activeWorkflowId = useWorkflowStore((state) => state.activeWorkflowId);
+  const returnSubmission = useReturnSubmission();
 
   const workflow = useMemo(() => {
     if (activeWorkflowId)
       return workflows.find((w) => w.id === activeWorkflowId);
     return workflows[0];
   }, [activeWorkflowId, workflows]);
+
+  const hasDraft =
+    submission.draftScore != null || submission.draftFeedback != null;
+  const canReturn =
+    hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
 
   function runPlugin(plugin?: RuntimePlugin) {
     if (!plugin) return;
@@ -351,6 +507,12 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
         </DropdownMenuItem>
         <DropdownMenuItem>
           <History size={16} /> {t("actions.history")}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => returnSubmission.mutate(submission.id)}
+          disabled={!canReturn}
+        >
+          <CircleCheck size={16} /> {t("submissions.returnAction")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem>

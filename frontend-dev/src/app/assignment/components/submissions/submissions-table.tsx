@@ -27,7 +27,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { useTranslation } from "react-i18next";
-import { Submission, SubmissionStatus } from "@/hooks/use-submissions";
+import { Submission, SubmissionStatus, useReturnSubmissions } from "@/hooks/use-submissions";
 
 interface DataTableProps {
   columns: ColumnDef<Submission>[];
@@ -113,6 +113,7 @@ export function SubmissionsTable({
   const [activeView, setActiveView] = useState(SUBMISSION_VIEWS[0].id);
   const [searchQuery, setSearchQuery] = useState("");
   const [rowSelection, setRowSelection] = useState({});
+  const returnSubmissions = useReturnSubmissions();
 
   const filteredData = useMemo(() => {
     const view = SUBMISSION_VIEWS.find((item) => item.id === activeView);
@@ -151,6 +152,19 @@ export function SubmissionsTable({
   const hasRows = rows.length > 0;
   const selectedRowsCount = table.getSelectedRowModel().rows.length;
 
+
+  const returnableSubmissionIds = table
+    .getSelectedRowModel()
+    .rows.map((row) => row.original)
+    .filter(
+      (submission) =>
+        submission.status !== "returned" &&
+        (submission.draftScore != null || submission.draftFeedback != null),
+    )
+    .map((submission) => submission.id);
+
+  const hasReturnableSelection = returnableSubmissionIds.length > 0;
+
   return (
     <div className="w-full space-y-4">
       <Tabs value={activeView} onValueChange={setActiveView}>
@@ -180,7 +194,8 @@ export function SubmissionsTable({
           </span>
           <Button
             variant="secondary"
-            disabled={selectedRowsCount === 0}
+            disabled={!hasReturnableSelection || returnSubmissions.isPending}
+            onClick={() => returnSubmissions.mutate(returnableSubmissionIds)}
           >
             {t("submissions.returnAction")}
           </Button>
