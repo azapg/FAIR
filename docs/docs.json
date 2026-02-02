@@ -6,16 +6,21 @@
   "colors": {
     "primary": "#ff0000"
   },
+  "icons": {
+    "library": "lucide"
+  },
   "navigation": {
     "global": {
       "anchors": [
         {
           "anchor": "GitHub",
-          "href": "https://github.com/allanzapata/fair-platform"
+          "href": "https://github.com/allanzapata/fair-platform",
+          "icon": "github"
         },
         {
           "anchor": "PyPI",
-          "href": "https://pypi.org/project/fair-platform/"
+          "href": "https://pypi.org/project/fair-platform/",
+          "icon": "box"
         }
       ]
     },
@@ -47,6 +52,7 @@
           },
           {
             "tab": "API Reference",
+            "openapi": "assets/openapi.json",
             "icon": "code",
             "groups": [
               {
