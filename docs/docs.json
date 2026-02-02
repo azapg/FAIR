@@ -1,65 +1,107 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "The Fair Documentation",
+  "name": "Fair Platform",
+  "description": "FAIR (The Fair Platform) is an open-source, AI-powered grading platform for experimenting with interpreters, rubrics, agent-based graders, and reproducible assessment workflows.",
   "colors": {
     "primary": "#ff0000"
   },
   "navigation": {
-    "global": {
-      "languages": [
-        {
-          "language": "en",
-          "default": true,
-          "href": "/en/introduction"
-        },
-        {
-          "language": "es",
-          "href": "/es/introduction"
-        }
-      ]
-    },
-    "languages": [
+    "tabs": [
       {
-        "language": "en",
-        "groups": [
+        "tab": "Docs",
+        "icon": "book",
+        "pages": [
+          "en/introduction",
+          "en/getting-started/installation",
+          "en/getting-started/the-platform",
+          "en/development/releases",
+          "es/introduction",
+          "es/getting-started/installation",
+          "es/getting-started/extensions",
+          "es/development/releases"
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "icon": "code",
+        "pages": [
+          "api-reference/overview",
+          "api-reference/authentication",
+          "api-reference/endpoints"
+        ]
+      },
+      {
+        "tab": "SDK",
+        "icon": "puzzle-piece",
+        "pages": [
+          "sdk/overview",
+          "sdk/plugins",
+          "sdk/schemas",
+          "sdk/examples"
+        ]
+      },
+      {
+        "tab": "Guides",
+        "icon": "graduation-cap",
+        "pages": [
+          "guides/installation",
+          "guides/development-workflow",
+          "guides/frontend",
+          "guides/backend",
+          "guides/plugins",
+          "guides/releases"
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "PyPI",
+        "href": "https://pypi.org/project/fair-platform/"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Get started",
+      "href": "/en/getting-started/installation"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/allanzapata/fair-platform"
+    },
+    "links": [
+      {
+        "header": "Project",
+        "items": [
           {
-            "group": "Introduction",
-            "pages": ["en/introduction"]
+            "label": "Repository",
+            "href": "https://github.com/allanzapata/fair-platform"
           },
           {
-            "group": "Getting started",
-            "pages": [
-              "en/getting-started/installation",
-              "en/getting-started/the-platform"
-            ]
-          },
-          {
-            "group": "Development",
-            "pages": ["en/development/releases"]
+            "label": "License (GPL-3.0)",
+            "href": "https://github.com/allanzapata/fair-platform/blob/main/LICENSE"
           }
         ]
       },
       {
-        "language": "es",
-        "groups": [
+        "header": "Docs",
+        "items": [
           {
-            "group": "Introducción",
-            "pages": ["es/introduction"]
+            "label": "English",
+            "href": "/en/introduction"
           },
           {
-            "group": "Primeros pasos",
-            "pages": [
-              "es/getting-started/installation",
-              "es/getting-started/extensions"
-            ]
-          },
-          {
-            "group": "Desarrollo",
-            "pages": ["es/development/releases"]
+            "label": "Español",
+            "href": "/es/introduction"
           }
         ]
       }
     ]
+  },
+  "contextual": {
+    "options": ["copy", "view"]
   }
 }
