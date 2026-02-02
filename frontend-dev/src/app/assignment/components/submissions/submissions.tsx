@@ -15,6 +15,7 @@ import {
   BlocksIcon,
 } from "lucide-react";
 import { ReactNode, useMemo } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -140,6 +141,30 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
 
   return useMemo(
     () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllRowsSelected() ||
+              (table.getIsSomeRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
       {
         accessorKey: "submitter.name",
         header: t("submissions.studentNameColumn"),
