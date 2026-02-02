@@ -16,10 +16,10 @@ from logging.config import fileConfig
 from alembic import context  # type: ignore
 from sqlalchemy import engine_from_config, pool
 
-# Ensure project root (parent of the 'backend' package) is on sys.path
+# Ensure project root (the 'src' directory) is on sys.path
 CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 BACKEND_DIR = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
-PROJECT_ROOT = os.path.abspath(os.path.join(BACKEND_DIR, ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(BACKEND_DIR, "..", ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 

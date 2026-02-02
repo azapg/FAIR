@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+from typing_extensions import deprecated
 
 from fair_platform.backend.api.schema.submission_result import (
     SubmissionResultRead,
@@ -26,6 +27,7 @@ router = APIRouter()
 
 
 @router.get("/{result_id}", response_model=SubmissionResultRead)
+@deprecated("SubmissionResult API is deprecated. Use Submission events and draft/published fields.")
 def get_result(
     result_id: UUID,
     db: Session = Depends(session_dependency),
@@ -39,6 +41,7 @@ def get_result(
 
 
 @router.get("/", response_model=List[SubmissionResultRead])
+@deprecated("SubmissionResult API is deprecated. Use Submission events and draft/published fields.")
 def list_results(
     submission_id: Optional[UUID] = Query(None),
     workflow_run_id: Optional[UUID] = Query(None),
@@ -56,6 +59,7 @@ def list_results(
 
 
 @router.patch("/{result_id}", response_model=SubmissionResultRead)
+@deprecated("SubmissionResult API is deprecated. Use Submission events and draft/published fields.")
 def update_result(
     result_id: UUID,
     payload: SubmissionResultUpdate,
