@@ -12,6 +12,10 @@
   "fonts": {
     "family": "Host Grotesk"
   },
+  "logo": {
+    "dark": "/assets/fair-docs-dark.svg",
+    "light": "/assets/fair-docs.svg"
+  },
   "navigation": {
     "global": {
       "anchors": [
