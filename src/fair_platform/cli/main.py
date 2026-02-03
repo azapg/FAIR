@@ -40,7 +40,7 @@ def _find_frontend_dir() -> Path:
         if frontend_dir.is_dir():
             return frontend_dir
     raise typer.Exit(
-        "Unable to locate frontend-dev directory. Run from the repo root or use --no-frontend."
+        "Error: Unable to locate frontend-dev directory. Run from the repo root or use --no-frontend."
     )
 
 
@@ -61,7 +61,9 @@ def _start_frontend_process(frontend_dir: Path) -> subprocess.Popen:
     try:
         return subprocess.Popen(["bun", "dev"], cwd=frontend_dir)
     except FileNotFoundError as exc:
-        raise typer.Exit("bun is required to run the frontend dev server.") from exc
+        raise typer.Exit(
+            "Error: bun is required to run the frontend dev server. Install Bun from https://bun.sh."
+        ) from exc
 
 
 def _stop_backend(process: multiprocessing.Process) -> None:
@@ -155,9 +157,11 @@ def dev(
             _stop_frontend(frontend_process)
         _stop_backend(backend_process)
 
-    exit_code = backend_process.exitcode or 0
-    if frontend_process and frontend_process.returncode:
-        exit_code = exit_code or frontend_process.returncode
+    exit_code = backend_process.exitcode
+    if exit_code is None:
+        exit_code = 0
+    if exit_code == 0 and frontend_process and frontend_process.returncode:
+        exit_code = frontend_process.returncode
     raise typer.Exit(code=exit_code)
 
 
