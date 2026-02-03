@@ -25,6 +25,9 @@ def test_dev_command_no_frontend(monkeypatch):
     backend_calls = {}
     stopped = []
 
+    def fail_frontend_start(*_args, **_kwargs):
+        raise AssertionError("frontend should not start")
+
     def start_backend(port: int, headless: bool):
         backend_calls["args"] = (port, headless)
         return DummyBackend()
@@ -35,9 +38,7 @@ def test_dev_command_no_frontend(monkeypatch):
     monkeypatch.setattr(cli_main, "_start_backend_process", start_backend)
     monkeypatch.setattr(cli_main, "_stop_backend", stop_backend)
     monkeypatch.setattr(cli_main, "_find_frontend_dir", lambda: None)
-    monkeypatch.setattr(
-        cli_main, "_start_frontend_process", lambda *_: (_ for _ in ()).throw(AssertionError())
-    )
+    monkeypatch.setattr(cli_main, "_start_frontend_process", fail_frontend_start)
 
     result = runner.invoke(cli_main.app, ["dev", "--no-frontend"])
 
