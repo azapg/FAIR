@@ -3,6 +3,27 @@ title: Release Automation
 description: How the release pipeline works in FAIR Platform
 ---
 
+## Local Development Workflow
+
+Use the dedicated dev command when iterating on the backend and frontend together. It starts the FastAPI API in headless mode with CORS enabled on port 8000 and runs the Vite dev server in `frontend-dev` at the same time:
+
+```bash
+fair dev
+```
+
+Common options:
+
+```bash
+# Backend on a custom port
+fair dev --port 9000
+
+# Backend only (no frontend dev server)
+fair dev --no-frontend
+
+# Serve bundled frontend alongside the dev frontend
+fair dev --no-headless
+```
+
 This project ships with a lightweight release pipeline that runs whenever a Git tag that starts with `v` is pushed to GitHub. The workflow lives in [`.github/workflows/release.yml`](https://github.com/azapg/FAIR/blob/main/.github/workflows/release.yml) and takes care of version metadata, build validation, release creation, and optional package publication.
 
 ## Tag-driven Version Management
