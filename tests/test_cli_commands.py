@@ -3,7 +3,7 @@ from typer.testing import CliRunner
 import fair_platform.cli.main as cli_main
 
 
-class DummyBackend:
+class FakeBackendProcess:
     def __init__(self, exitcode: int = 0):
         self.exitcode = exitcode
 
@@ -30,14 +30,14 @@ def test_dev_command_no_frontend(monkeypatch):
 
     def start_backend(port: int, headless: bool):
         backend_calls["args"] = (port, headless)
-        return DummyBackend()
+        return FakeBackendProcess()
 
-    def stop_backend(process: DummyBackend):
+    def stop_backend(process: FakeBackendProcess):
         stopped.append(process)
 
     monkeypatch.setattr(cli_main, "_start_backend_process", start_backend)
     monkeypatch.setattr(cli_main, "_stop_backend", stop_backend)
-    monkeypatch.setattr(cli_main, "_find_frontend_dir", lambda: None)
+    monkeypatch.setattr(cli_main, "_get_frontend_dir", lambda: None)
     monkeypatch.setattr(cli_main, "_start_frontend_process", fail_frontend_start)
 
     result = runner.invoke(cli_main.app, ["dev", "--no-frontend"])
@@ -53,11 +53,11 @@ def test_dev_command_no_headless(monkeypatch):
 
     def start_backend(port: int, headless: bool):
         backend_calls["args"] = (port, headless)
-        return DummyBackend()
+        return FakeBackendProcess()
 
     monkeypatch.setattr(cli_main, "_start_backend_process", start_backend)
     monkeypatch.setattr(cli_main, "_stop_backend", lambda *_: None)
-    monkeypatch.setattr(cli_main, "_find_frontend_dir", lambda: None)
+    monkeypatch.setattr(cli_main, "_get_frontend_dir", lambda: None)
 
     result = runner.invoke(cli_main.app, ["dev", "--no-frontend", "--no-headless"])
 

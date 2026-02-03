@@ -33,7 +33,7 @@ def _run_backend(port: int, headless: bool) -> None:
     _run_server(host="127.0.0.1", port=port, headless=headless, dev=True, serve_docs=False)
 
 
-def _find_frontend_dir() -> Path:
+def _get_frontend_dir() -> Path:
     candidates = [Path.cwd(), *Path(__file__).resolve().parents]
     for candidate in candidates:
         frontend_dir = candidate / "frontend-dev"
@@ -43,6 +43,19 @@ def _find_frontend_dir() -> Path:
         "Error: Unable to locate frontend-dev directory. Run from the repo root or use --no-frontend."
     )
     raise typer.Exit(code=1)
+
+
+def _determine_exit_code(
+    backend_process: multiprocessing.Process, frontend_process: subprocess.Popen | None
+) -> int:
+    backend_code = backend_process.exitcode
+    if backend_code is None:
+        backend_code = 0
+    if backend_code != 0:
+        return backend_code
+    if frontend_process and frontend_process.returncode:
+        return frontend_process.returncode
+    return 0
 
 
 def _run_server(host: str, port: int, headless: bool, dev: bool, serve_docs: bool) -> None:
@@ -143,7 +156,7 @@ def dev(
 
     try:
         if not no_frontend:
-            frontend_dir = _find_frontend_dir()
+            frontend_dir = _get_frontend_dir()
             frontend_process = _start_frontend_process(frontend_dir)
 
         while True:
@@ -159,12 +172,7 @@ def dev(
             _stop_frontend(frontend_process)
         _stop_backend(backend_process)
 
-    exit_code = backend_process.exitcode
-    if exit_code is None:
-        exit_code = 0
-    if exit_code == 0 and frontend_process and frontend_process.returncode:
-        exit_code = frontend_process.returncode
-    raise typer.Exit(code=exit_code)
+    raise typer.Exit(code=_determine_exit_code(backend_process, frontend_process))
 
 
 if __name__ == "__main__":
