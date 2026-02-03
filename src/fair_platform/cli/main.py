@@ -26,7 +26,7 @@ def _get_version() -> str:
 
 
 __version__ = _get_version()
-PROCESS_POLL_INTERVAL_SECONDS = 0.5
+PROCESS_POLL_INTERVAL = 0.5
 
 
 def _run_backend(port: int, headless: bool) -> None:
@@ -161,12 +161,10 @@ def dev(
                 raise typer.Exit(code=1)
             frontend_process = _start_frontend_process(frontend_dir)
 
-        while True:
-            backend_process.join(timeout=PROCESS_POLL_INTERVAL_SECONDS)
-            if not backend_process.is_alive():
-                break
-            if frontend_process and frontend_process.poll() is not None:
-                break
+        while backend_process.is_alive() and (
+            not frontend_process or frontend_process.poll() is None
+        ):
+            backend_process.join(timeout=PROCESS_POLL_INTERVAL)
     except KeyboardInterrupt:
         pass
     finally:

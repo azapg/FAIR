@@ -3,7 +3,7 @@ from typer.testing import CliRunner
 import fair_platform.cli.main as cli_main
 
 
-class MockBackendProcess:
+class StubBackendProcess:
     def __init__(self, exitcode: int = 0):
         self.exitcode = exitcode
 
@@ -20,7 +20,7 @@ class MockBackendProcess:
         return None
 
 
-class InterruptingBackendProcess(MockBackendProcess):
+class InterruptingBackendProcess(StubBackendProcess):
     def is_alive(self) -> bool:
         raise KeyboardInterrupt
 
@@ -35,9 +35,9 @@ def test_dev_command_no_frontend(monkeypatch):
 
     def start_backend(port: int, headless: bool):
         backend_calls["args"] = (port, headless)
-        return MockBackendProcess()
+        return StubBackendProcess()
 
-    def stop_backend(process: MockBackendProcess):
+    def stop_backend(process: StubBackendProcess):
         stopped.append(process)
 
     monkeypatch.setattr(cli_main, "_start_backend_process", start_backend)
@@ -58,7 +58,7 @@ def test_dev_command_no_headless(monkeypatch):
 
     def start_backend(port: int, headless: bool):
         backend_calls["args"] = (port, headless)
-        return MockBackendProcess()
+        return StubBackendProcess()
 
     monkeypatch.setattr(cli_main, "_start_backend_process", start_backend)
     monkeypatch.setattr(cli_main, "_stop_backend", lambda *_: None)
@@ -92,7 +92,7 @@ def test_dev_command_handles_keyboard_interrupt(monkeypatch):
     def start_backend(port: int, headless: bool):
         return InterruptingBackendProcess()
 
-    def stop_backend(process: MockBackendProcess):
+    def stop_backend(process: StubBackendProcess):
         stopped.append(process)
 
     monkeypatch.setattr(cli_main, "_start_backend_process", start_backend)
