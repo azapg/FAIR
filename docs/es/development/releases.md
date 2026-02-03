@@ -3,6 +3,27 @@ title: Automatización de Lanzamientos
 description: Cómo funciona el pipeline de lanzamientos en FAIR Platform
 ---
 
+## Flujo de desarrollo local
+
+Usa el comando de desarrollo dedicado para trabajar en backend y frontend al mismo tiempo. Inicia el API de FastAPI en modo headless con CORS habilitado en el puerto 8000 y ejecuta el servidor de desarrollo de Vite en `frontend-dev`:
+
+```bash
+fair dev
+```
+
+Opciones comunes:
+
+```bash
+# Backend en un puerto personalizado
+fair dev --port 9000
+
+# Solo backend (sin servidor de frontend)
+fair dev --no-frontend
+
+# Servir el frontend empaquetado junto con el frontend de desarrollo
+fair dev --no-headless
+```
+
 Este proyecto incluye un pipeline ligero de lanzamientos que se ejecuta cada vez que se sube una etiqueta Git que comienza con `v` a GitHub. El flujo de trabajo se encuentra en [`.github/workflows/release.yml`](https://github.com/azapg/FAIR/blob/main/.github/workflows/release.yml) y se encarga de los metadatos de versión, validación de compilación, creación de lanzamiento y publicación opcional de paquetes.
 
 ## Gestión de Versiones Basada en Etiquetas

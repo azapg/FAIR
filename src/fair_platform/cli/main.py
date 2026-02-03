@@ -1,8 +1,12 @@
+import multiprocessing
+import subprocess
+import time
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
+
+import tomllib
 import typer
 from typing_extensions import Annotated
-from importlib.metadata import version, PackageNotFoundError
-from pathlib import Path
-import tomllib
 
 
 def _get_version() -> str:
@@ -23,6 +27,60 @@ def _get_version() -> str:
 
 
 __version__ = _get_version()
+
+
+def _run_backend(port: int, headless: bool) -> None:
+    _run_server(host="127.0.0.1", port=port, headless=headless, dev=True, serve_docs=False)
+
+
+def _find_frontend_dir() -> Path:
+    candidates = [Path.cwd(), *Path(__file__).resolve().parents]
+    for candidate in candidates:
+        frontend_dir = candidate / "frontend-dev"
+        if frontend_dir.is_dir():
+            return frontend_dir
+    raise typer.Exit(
+        "Unable to locate frontend-dev directory. Run from the repo root or use --no-frontend."
+    )
+
+
+def _run_server(host: str, port: int, headless: bool, dev: bool, serve_docs: bool) -> None:
+    from fair_platform.backend.main import run
+
+    run(host=host, port=port, headless=headless, dev=dev, serve_docs=serve_docs)
+
+
+def _start_backend_process(port: int, headless: bool) -> multiprocessing.Process:
+    ctx = multiprocessing.get_context("spawn")
+    process = ctx.Process(target=_run_backend, kwargs={"port": port, "headless": headless})
+    process.start()
+    return process
+
+
+def _start_frontend_process(frontend_dir: Path) -> subprocess.Popen:
+    try:
+        return subprocess.Popen(["bun", "dev"], cwd=frontend_dir)
+    except FileNotFoundError as exc:
+        raise typer.Exit("bun is required to run the frontend dev server.") from exc
+
+
+def _stop_backend(process: multiprocessing.Process) -> None:
+    if process.is_alive():
+        process.terminate()
+        process.join(timeout=5)
+    if process.is_alive():
+        process.kill()
+        process.join(timeout=5)
+
+
+def _stop_frontend(process: subprocess.Popen) -> None:
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
 
 
 def version_callback(value: bool):
@@ -50,9 +108,6 @@ def serve(
     headless: Annotated[
         bool, typer.Option("--headless", "-h", help="Run in headless mode")
     ] = False,
-    dev: Annotated[
-        bool, typer.Option("--dev", "-d", help="Run in development mode")
-    ] = False,
     no_update_check: Annotated[
         bool, typer.Option("--no-update-check", help="Disable version update check")
     ] = False,
@@ -65,9 +120,45 @@ def serve(
         from fair_platform.utils.version import check_for_updates
         check_for_updates()
     
-    from fair_platform.backend.main import run
+    _run_server(host="127.0.0.1", port=port, headless=headless, dev=False, serve_docs=docs)
 
-    run(host="127.0.0.1", port=port, headless=headless, dev=dev, serve_docs=docs)
+
+@app.command()
+def dev(
+    port: Annotated[int, typer.Option("--port", "-p", help="Backend port to use")] = 8000,
+    no_frontend: Annotated[
+        bool, typer.Option("--no-frontend", help="Disable frontend dev server")
+    ] = False,
+    no_headless: Annotated[
+        bool,
+        typer.Option("--no-headless", help="Serve the bundled frontend from the backend"),
+    ] = False,
+):
+    frontend_process = None
+    backend_process = _start_backend_process(port=port, headless=not no_headless)
+
+    try:
+        if not no_frontend:
+            frontend_dir = _find_frontend_dir()
+            frontend_process = _start_frontend_process(frontend_dir)
+
+        while True:
+            if not backend_process.is_alive():
+                break
+            if frontend_process and frontend_process.poll() is not None:
+                break
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if frontend_process:
+            _stop_frontend(frontend_process)
+        _stop_backend(backend_process)
+
+    exit_code = backend_process.exitcode or 0
+    if frontend_process and frontend_process.returncode:
+        exit_code = exit_code or frontend_process.returncode
+    raise typer.Exit(code=exit_code)
 
 
 if __name__ == "__main__":
