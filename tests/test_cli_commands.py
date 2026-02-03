@@ -20,6 +20,11 @@ class MockBackendProcess:
         return None
 
 
+class InterruptingBackendProcess(MockBackendProcess):
+    def is_alive(self) -> bool:
+        raise KeyboardInterrupt
+
+
 def test_dev_command_no_frontend(monkeypatch):
     runner = CliRunner()
     backend_calls = {}
@@ -78,3 +83,22 @@ def test_serve_command_disables_dev(monkeypatch):
 
     assert result.exit_code == 0
     assert captured["args"][3] is False
+
+
+def test_dev_command_handles_keyboard_interrupt(monkeypatch):
+    runner = CliRunner()
+    stopped = []
+
+    def start_backend(port: int, headless: bool):
+        return InterruptingBackendProcess()
+
+    def stop_backend(process: MockBackendProcess):
+        stopped.append(process)
+
+    monkeypatch.setattr(cli_main, "_start_backend_process", start_backend)
+    monkeypatch.setattr(cli_main, "_stop_backend", stop_backend)
+
+    result = runner.invoke(cli_main.app, ["dev", "--no-frontend"])
+
+    assert result.exit_code == 0
+    assert stopped

@@ -27,6 +27,7 @@ def _get_version() -> str:
 
 
 __version__ = _get_version()
+PROCESS_POLL_INTERVAL_SECONDS = 0.5
 
 
 def _run_backend(port: int, headless: bool) -> None:
@@ -164,7 +165,7 @@ def dev(
                 break
             if frontend_process and frontend_process.poll() is not None:
                 break
-            time.sleep(0.5)
+            time.sleep(PROCESS_POLL_INTERVAL_SECONDS)
     except KeyboardInterrupt:
         pass
     finally:
