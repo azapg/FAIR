@@ -35,8 +35,8 @@ La plataforma estará disponible en `http://localhost:8000` por defecto.
 # Especificar un puerto personalizado
 fair serve --port 3000
 
-# Modo desarrollo con CORS habilitado
-fair serve --dev
+# Desarrollo local (backend + frontend)
+fair dev
 
 # Modo headless (solo API, sin frontend)
 fair serve --headless

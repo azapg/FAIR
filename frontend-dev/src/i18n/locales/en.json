@@ -143,6 +143,15 @@
     "grade": "Grade",
     "submissionDate": "Submission Date",
     "feedback": "Feedback",
+    "views": {
+      "inbox": "Inbox",
+      "active": "Active",
+      "finalized": "Finalized",
+      "all": "All"
+    },
+    "searchPlaceholder": "Search submissions",
+    "selectedRows": "{{selected}} of {{total}} selected",
+    "returnAction": "Return",
     "noSubmissons": "No submissions available",
     "noSubmissonsDescription": "No submissions yet. They will appear here when students submit. You can add synthetic submissions to experiment."
   },

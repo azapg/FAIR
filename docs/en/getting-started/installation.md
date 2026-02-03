@@ -57,6 +57,9 @@ fair serve --port 8000
 
 # API-only mode (no web interface)
 fair serve --headless
+
+# Local development (backend + frontend)
+fair dev
 ```
 
 ## Troubleshooting
