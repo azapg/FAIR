@@ -5,7 +5,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { TableProperties, ArrowUpRightIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 import {
   Table,
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/empty";
 import { useTranslation } from "react-i18next";
 import { Submission, SubmissionStatus, useReturnSubmissions } from "@/hooks/use-submissions";
+import { SubmissionSheet } from "./submission-sheet";
 
 interface DataTableProps {
   columns: ColumnDef<Submission>[];
@@ -118,6 +119,7 @@ export function SubmissionsTable({
   const [activeView, setActiveView] = useState(SUBMISSION_VIEWS[0].id);
   const [searchQuery, setSearchQuery] = useState("");
   const [rowSelection, setRowSelection] = useState({});
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const returnSubmissions = useReturnSubmissions();
 
   const filteredData = useMemo(() => {
@@ -143,6 +145,14 @@ export function SubmissionsTable({
       return searchTargets.includes(normalizedQuery);
     });
   }, [activeView, data, searchQuery]);
+
+  // DEV ONLY: Auto-open first submission for development convenience
+  // Remove this block in production
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && filteredData.length > 0 && !selectedSubmission) {
+      setSelectedSubmission(filteredData[0]);
+    }
+  }, [filteredData, selectedSubmission]);
 
   const table = useReactTable({
     data: filteredData,
@@ -232,6 +242,8 @@ export function SubmissionsTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() ? "selected" : undefined}
+                  className="cursor-pointer"
+                  onClick={() => setSelectedSubmission(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -253,6 +265,11 @@ export function SubmissionsTable({
           </TableBody>
         </Table>
       </div>
+      <SubmissionSheet
+        submission={selectedSubmission}
+        open={!!selectedSubmission}
+        onOpenChange={(open) => !open && setSelectedSubmission(null)}
+      />
     </div>
   );
 }
