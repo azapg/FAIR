@@ -146,7 +146,8 @@
     "views": {
       "inbox": "Inbox",
       "active": "Active",
-      "finalized": "Finalized"
+      "finalized": "Finalized",
+      "all": "All"
     },
     "searchPlaceholder": "Search submissions",
     "selectedRows": "{{selected}} of {{total}} selected",

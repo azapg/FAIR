@@ -41,6 +41,11 @@ const SUBMISSION_VIEWS: Array<{
   statuses: SubmissionStatus[];
 }> = [
   {
+    id: "all",
+    labelKey: "submissions.views.all",
+    statuses: [],
+  },
+  {
     id: "inbox",
     labelKey: "submissions.views.inbox",
     statuses: ["pending", "submitted"],
@@ -121,7 +126,9 @@ export function SubmissionsTable({
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
     return data.filter((submission) => {
-      const matchesView = viewStatuses.includes(submission.status);
+      // If the view is "all", include every submission regardless of status.
+      const matchesView =
+        view?.id === "all" ? true : viewStatuses.includes(submission.status);
       if (!matchesView) return false;
       if (!normalizedQuery) return true;
 

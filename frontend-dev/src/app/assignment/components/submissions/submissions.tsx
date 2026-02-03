@@ -294,18 +294,21 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
     () => [
       {
         id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllRowsSelected() ||
-              (table.getIsSomeRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllRowsSelected(!!value)
-            }
-            aria-label="Select all"
-          />
-        ),
+        header: ({ table }) => {
+          const all = table.getIsAllRowsSelected();
+          const some = table.getIsSomeRowsSelected();
+          const checkedValue: boolean | "indeterminate" = all ? true : some ? "indeterminate" : false;
+
+          return (
+            <Checkbox
+              checked={checkedValue as any}
+              onCheckedChange={(value) =>
+                table.toggleAllRowsSelected(!!value)
+              }
+              aria-label="Select all"
+            />
+          );
+        },
         cell: ({ row }) => (
           <Checkbox
             checked={row.getIsSelected()}
