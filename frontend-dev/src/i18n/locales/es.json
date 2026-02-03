@@ -143,6 +143,15 @@
     "grade": "Calificación",
     "submissionDate": "Fecha de entrega",
     "feedback": "Retroalimentación",
+    "views": {
+      "inbox": "Bandeja de entrada",
+      "active": "Activas",
+      "finalized": "Finalizadas",
+      "all": "Todas"
+    },
+    "searchPlaceholder": "Buscar entregas",
+    "selectedRows": "{{selected}} de {{total}} seleccionadas",
+    "returnAction": "Devolver",
     "noSubmissons": "No hay entregas disponibles",
     "noSubmissonsDescription": "Aún no hay entregas. Aparecerán aquí cuando los estudiantes entreguen. Puedes agregar entregas sintéticas para experimentar."
   },

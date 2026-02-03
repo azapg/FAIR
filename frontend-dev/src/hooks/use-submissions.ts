@@ -48,7 +48,12 @@ export type Submission = {
   submittedAt: string
   status: SubmissionStatus
   officialRunId?: string | null
-  officialResult: SubmissionResult
+  officialResult?: SubmissionResult | null
+  draftScore?: number | null
+  draftFeedback?: string | null
+  publishedScore?: number | null
+  publishedFeedback?: string | null
+  returnedAt?: string | null
   artifacts: Artifact[]
 }
 
@@ -61,6 +66,11 @@ export type CreateSubmissionInput = {
 
 export type UpdateSubmissionInput = {
   artifact_ids?: string[]
+}
+
+export type UpdateSubmissionDraftInput = {
+  score?: number | null
+  feedback?: string | null
 }
 
 export const submissionsKeys = {
@@ -107,6 +117,19 @@ const createSubmission = async (data: CreateSubmissionInput): Promise<Submission
 
 const updateSubmission = async (id: string, data: UpdateSubmissionInput): Promise<Submission> => {
   const res = await api.put(`/submissions/${id}`, data)
+  return res.data
+}
+
+const updateSubmissionDraft = async (
+  id: string,
+  data: UpdateSubmissionDraftInput
+): Promise<Submission> => {
+  const res = await api.patch(`/submissions/${id}/draft`, data)
+  return res.data
+}
+
+const returnSubmission = async (id: string): Promise<Submission> => {
+  const res = await api.post(`/submissions/${id}/return`)
   return res.data
 }
 
@@ -161,6 +184,63 @@ export function useUpdateSubmission() {
     },
     onError: (error: Error) => {
       toast.error('Failed to update Submission', {
+        description: error.message || 'Something went wrong'
+      });
+    }
+  })
+}
+
+export function useUpdateSubmissionDraft() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateSubmissionDraftInput }) =>
+      updateSubmissionDraft(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: submissionsKeys.detail(variables.id) })
+      queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Submission draft updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to update submission draft', {
+        description: error.message || 'Something went wrong'
+      });
+    }
+  })
+}
+
+export function useReturnSubmission() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => returnSubmission(id),
+    onSuccess: (_, submissionId) => {
+      queryClient.invalidateQueries({ queryKey: submissionsKeys.detail(submissionId) })
+      queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Submission returned successfully');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to return submission', {
+        description: error.message || 'Something went wrong'
+      });
+    }
+  })
+}
+
+export function useReturnSubmissions() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const results = await Promise.all(ids.map((id) => returnSubmission(id)))
+      return results
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Submissions returned successfully');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to return submissions', {
         description: error.message || 'Something went wrong'
       });
     }

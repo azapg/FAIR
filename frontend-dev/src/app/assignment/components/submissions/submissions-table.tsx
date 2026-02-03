@@ -4,6 +4,8 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { TableProperties, ArrowUpRightIcon } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import {
   Table,
@@ -13,14 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
-  onCreateSubmission?: () => void;
-}
-
-import { TableProperties, ArrowUpRightIcon } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -31,6 +27,48 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { useTranslation } from "react-i18next";
+import { Submission, SubmissionStatus, useReturnSubmissions } from "@/hooks/use-submissions";
+
+interface DataTableProps {
+  columns: ColumnDef<Submission>[];
+  data: Submission[];
+  onCreateSubmission?: () => void;
+}
+
+const SUBMISSION_VIEWS: Array<{
+  id: string;
+  labelKey: string;
+  statuses: SubmissionStatus[];
+}> = [
+  {
+    id: "all",
+    labelKey: "submissions.views.all",
+    statuses: [],
+  },
+  {
+    id: "inbox",
+    labelKey: "submissions.views.inbox",
+    statuses: ["pending", "submitted"],
+  },
+  {
+    id: "active",
+    labelKey: "submissions.views.active",
+    statuses: [
+      "transcribing",
+      "transcribed",
+      "grading",
+      "graded",
+      "processing",
+      "needs_review",
+      "failure",
+    ],
+  },
+  {
+    id: "finalized",
+    labelKey: "submissions.views.finalized",
+    statuses: ["returned", "excused"],
+  },
+];
 
 export function EmptyTableState({
   onCreateSubmission,
@@ -71,58 +109,150 @@ export function EmptyTableState({
   );
 }
 
-export function SubmissionsTable<TData, TValue>({
+export function SubmissionsTable({
   columns,
   data,
   onCreateSubmission,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps) {
+  const { t } = useTranslation();
+  const [activeView, setActiveView] = useState(SUBMISSION_VIEWS[0].id);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [rowSelection, setRowSelection] = useState({});
+  const returnSubmissions = useReturnSubmissions();
+
+  const filteredData = useMemo(() => {
+    const view = SUBMISSION_VIEWS.find((item) => item.id === activeView);
+    const viewStatuses = view?.statuses ?? [];
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return data.filter((submission) => {
+      // If the view is "all", include every submission regardless of status.
+      const matchesView =
+        view?.id === "all" ? true : viewStatuses.includes(submission.status);
+      if (!matchesView) return false;
+      if (!normalizedQuery) return true;
+
+      const searchTargets = [
+        submission.submitter?.name ?? "",
+        submission.submitter?.email ?? "",
+        submission.status,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return searchTargets.includes(normalizedQuery);
+    });
+  }, [activeView, data, searchQuery]);
+
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    enableRowSelection: true,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      rowSelection,
+    },
   });
 
   const rows = table.getRowModel().rows;
   const hasRows = rows.length > 0;
+  const selectedRowsCount = table.getSelectedRowModel().rows.length;
+
+
+  const returnableSubmissionIds = table
+    .getSelectedRowModel()
+    .rows.map((row) => row.original)
+    .filter(
+      (submission) =>
+        submission.status !== "returned" &&
+        (submission.draftScore != null || submission.draftFeedback != null),
+    )
+    .map((submission) => submission.id);
+
+  const hasReturnableSelection = returnableSubmissionIds.length > 0;
 
   return (
-    <div className={"w-full rounded-md border"}>
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
+    <div className="w-full space-y-4">
+      <Tabs value={activeView} onValueChange={setActiveView}>
+        <TabsList className="w-full justify-start">
+          {SUBMISSION_VIEWS.map((view) => (
+            <TabsTrigger key={view.id} value={view.id}>
+              {t(view.labelKey)}
+            </TabsTrigger>
           ))}
-        </TableHeader>
+        </TabsList>
+      </Tabs>
 
-        <TableBody>
-          {hasRows ? (
-            rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="w-full md:max-w-sm">
+          <Input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={t("submissions.searchPlaceholder")}
+          />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground md:justify-end">
+          <span>
+            {t("submissions.selectedRows", {
+              selected: selectedRowsCount,
+              total: rows.length,
+            })}
+          </span>
+          <Button
+            variant="secondary"
+            disabled={!hasReturnableSelection || returnSubmissions.isPending}
+            onClick={() => returnSubmissions.mutate(returnableSubmissionIds)}
+          >
+            {t("submissions.returnAction")}
+          </Button>
+        </div>
+      </div>
+
+      <div className="w-full rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
+                  </TableHead>
                 ))}
               </TableRow>
-            ))
-          ) : (
-            <TableRow className="hover:bg-background">
-              <TableCell colSpan={columns.length}>
-                <EmptyTableState onCreateSubmission={onCreateSubmission} />
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+            ))}
+          </TableHeader>
+
+          <TableBody>
+            {hasRows ? (
+              rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow className="hover:bg-background">
+                <TableCell colSpan={columns.length}>
+                  <EmptyTableState onCreateSubmission={onCreateSubmission} />
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
