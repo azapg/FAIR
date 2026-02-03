@@ -25,7 +25,7 @@ class InterruptingBackendProcess(StubBackendProcess):
         raise KeyboardInterrupt
 
 
-def test_dev_command_no_frontend(monkeypatch):
+def test_dev_command_runs_backend_only_when_frontend_disabled(monkeypatch):
     runner = CliRunner()
     backend_calls = {}
     stopped = []
@@ -52,7 +52,7 @@ def test_dev_command_no_frontend(monkeypatch):
     assert stopped
 
 
-def test_dev_command_no_headless(monkeypatch):
+def test_dev_command_disables_headless_mode_when_flag_set(monkeypatch):
     runner = CliRunner()
     backend_calls = {}
 
@@ -88,9 +88,10 @@ def test_serve_command_disables_dev(monkeypatch):
 def test_dev_command_handles_keyboard_interrupt(monkeypatch):
     runner = CliRunner()
     stopped = []
+    backend = InterruptingBackendProcess()
 
     def start_backend(port: int, headless: bool):
-        return InterruptingBackendProcess()
+        return backend
 
     def stop_backend(process: StubBackendProcess):
         stopped.append(process)
@@ -101,4 +102,4 @@ def test_dev_command_handles_keyboard_interrupt(monkeypatch):
     result = runner.invoke(cli_main.app, ["dev", "--no-frontend"])
 
     assert result.exit_code == 0
-    assert stopped
+    assert backend in stopped

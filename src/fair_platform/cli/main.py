@@ -1,6 +1,5 @@
 import multiprocessing
 import subprocess
-import time
 import tomllib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
