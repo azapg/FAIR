@@ -17,7 +17,6 @@ import {
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -228,7 +227,7 @@ function InlineEditableScore({ submission }: { submission: Submission }) {
 function InlineEditableFeedback({ submission }: { submission: Submission }) {
   const { t } = useTranslation();
   const updateDraft = useUpdateSubmissionDraft();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const feedbackValue = submission.draftFeedback ?? "";
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(feedbackValue ?? "");
@@ -242,7 +241,8 @@ function InlineEditableFeedback({ submission }: { submission: Submission }) {
   useEffect(() => {
     if (isEditing) {
       requestAnimationFrame(() => {
-        textareaRef.current?.focus();
+        inputRef.current?.focus();
+        inputRef.current?.select();
       });
     }
   }, [isEditing]);
@@ -258,10 +258,10 @@ function InlineEditableFeedback({ submission }: { submission: Submission }) {
   };
 
   return (
-    <Textarea
-      ref={textareaRef}
-      rows={2}
-      className={`min-h-[48px] text-sm bg-transparent border-transparent shadow-none focus-visible:border-border focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:bg-muted/20 focus-visible:px-2 focus-visible:py-1 ${
+    <Input
+      ref={inputRef}
+      type="text"
+      className={`h-7 w-full px-0 py-0 text-sm bg-transparent border-transparent shadow-none focus-visible:border-border focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:bg-muted/20 focus-visible:px-2 focus-visible:py-1 truncate whitespace-nowrap overflow-hidden ${
         value ? "text-foreground" : "text-muted-foreground italic"
       } ${isDisabled ? "cursor-not-allowed opacity-50" : "cursor-text"}`}
       value={value}
@@ -276,7 +276,8 @@ function InlineEditableFeedback({ submission }: { submission: Submission }) {
           setIsEditing(false);
           setValue(feedbackValue ?? "");
         }
-        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+        // Commit on Enter (single-line editing), but prevent form submission
+        if (event.key === "Enter") {
           event.currentTarget.blur();
         }
       }}
