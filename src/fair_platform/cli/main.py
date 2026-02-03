@@ -1,10 +1,9 @@
 import multiprocessing
 import subprocess
 import time
+import tomllib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-
-import tomllib
 import typer
 from typing_extensions import Annotated
 
@@ -34,16 +33,13 @@ def _run_backend(port: int, headless: bool) -> None:
     _run_server(host="127.0.0.1", port=port, headless=headless, dev=True, serve_docs=False)
 
 
-def _get_frontend_dir() -> Path:
+def _get_frontend_dir() -> Path | None:
     candidates = [Path.cwd(), *Path(__file__).resolve().parents]
     for candidate in candidates:
         frontend_dir = candidate / "frontend-dev"
         if frontend_dir.is_dir():
             return frontend_dir
-    typer.echo(
-        "Error: Unable to locate frontend-dev directory. Run from the repo root or use --no-frontend."
-    )
-    raise typer.Exit(code=1)
+    return None
 
 
 def _determine_exit_code(
@@ -158,14 +154,19 @@ def dev(
     try:
         if not no_frontend:
             frontend_dir = _get_frontend_dir()
+            if frontend_dir is None:
+                typer.echo(
+                    "Error: Unable to locate frontend-dev directory. Run from the repo root or use --no-frontend."
+                )
+                raise typer.Exit(code=1)
             frontend_process = _start_frontend_process(frontend_dir)
 
         while True:
+            backend_process.join(timeout=PROCESS_POLL_INTERVAL_SECONDS)
             if not backend_process.is_alive():
                 break
             if frontend_process and frontend_process.poll() is not None:
                 break
-            time.sleep(PROCESS_POLL_INTERVAL_SECONDS)
     except KeyboardInterrupt:
         pass
     finally:
