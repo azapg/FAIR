@@ -3,7 +3,7 @@ from typer.testing import CliRunner
 import fair_platform.cli.main as cli_main
 
 
-class FakeBackendProcess:
+class MockBackendProcess:
     def __init__(self, exitcode: int = 0):
         self.exitcode = exitcode
 
@@ -30,9 +30,9 @@ def test_dev_command_no_frontend(monkeypatch):
 
     def start_backend(port: int, headless: bool):
         backend_calls["args"] = (port, headless)
-        return FakeBackendProcess()
+        return MockBackendProcess()
 
-    def stop_backend(process: FakeBackendProcess):
+    def stop_backend(process: MockBackendProcess):
         stopped.append(process)
 
     monkeypatch.setattr(cli_main, "_start_backend_process", start_backend)
@@ -53,7 +53,7 @@ def test_dev_command_no_headless(monkeypatch):
 
     def start_backend(port: int, headless: bool):
         backend_calls["args"] = (port, headless)
-        return FakeBackendProcess()
+        return MockBackendProcess()
 
     monkeypatch.setattr(cli_main, "_start_backend_process", start_backend)
     monkeypatch.setattr(cli_main, "_stop_backend", lambda *_: None)

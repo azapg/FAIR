@@ -53,7 +53,7 @@ def _determine_exit_code(
         backend_code = 0
     if backend_code != 0:
         return backend_code
-    if frontend_process and frontend_process.returncode:
+    if frontend_process and frontend_process.returncode is not None:
         return frontend_process.returncode
     return 0
 
