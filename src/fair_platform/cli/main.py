@@ -3,6 +3,7 @@ import subprocess
 import tomllib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+
 import typer
 from typing_extensions import Annotated
 

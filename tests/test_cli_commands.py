@@ -1,6 +1,5 @@
-from typer.testing import CliRunner
-
 import fair_platform.cli.main as cli_main
+from typer.testing import CliRunner
 
 
 class StubBackendProcess:
