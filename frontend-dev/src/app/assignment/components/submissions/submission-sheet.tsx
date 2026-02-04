@@ -38,7 +38,7 @@ export function SubmissionSheet({ submission, open, onOpenChange }: SubmissionSh
               <SheetTitle className="text-3xl">{submission.submitter?.name}</SheetTitle>
             </SheetHeader>
             <div className="grid flex-1 auto-rows-min gap-6 px-4">
-              <PropertiesDisplay scroll>
+              <PropertiesDisplay scroll gapX={2.5}>
                 <Property>
                   <PropertyLabel>Status</PropertyLabel>
                   <PropertyValue><SubmissionStatusLabel status={submission.status} /></PropertyValue>

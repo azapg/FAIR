@@ -4,12 +4,31 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 type PropertiesDisplayProps = React.HTMLAttributes<HTMLDivElement> & {
   scroll?: boolean;
+  valueAlign?: "left" | "center" | "right";
+  gapX?: number;
 };
 
-function PropertiesDisplay({ className, scroll, ...props }: PropertiesDisplayProps) {
+function PropertiesDisplay({
+  className,
+  scroll,
+  valueAlign = "left",
+  gapX,
+  ...props
+}: PropertiesDisplayProps) {
+  const styles = {
+    "--value-align": valueAlign,
+    ...(gapX !== undefined && { columnGap: `${gapX}rem` }),
+    ...props.style,
+  } as React.CSSProperties;
+
   const content = (
     <div
-      className={cn("grid grid-cols-[max-content_1fr] items-center gap-x-4 gap-y-3", className)}
+      className={cn(
+        "grid grid-cols-[max-content_1fr] items-center gap-y-3",
+        gapX === undefined && "gap-x-4",
+        className,
+      )}
+      style={styles}
       {...props}
     />
   );
@@ -50,8 +69,12 @@ function PropertyLabel({ className, ...props }: PropertyLabelProps) {
 
 type PropertyValueProps = React.HTMLAttributes<HTMLDivElement>;
 
-function PropertyValue({ className, ...props }: PropertyValueProps) {
-  return <div className={cn(className)} {...props} />;
+function PropertyValue({ className, style, ...props }: PropertyValueProps) {
+  const componentStyle: React.CSSProperties = {
+    textAlign: "var(--value-align, left)" as "left" | "center" | "right",
+    ...style,
+  };
+  return <div className={cn(className)} style={componentStyle} {...props} />;
 }
 
 export {
