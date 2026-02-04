@@ -192,13 +192,28 @@ export function InlineEditableScore({ submission }: { submission: Submission }) 
       className="flex items-center gap-1"
       onClick={(e) => e.stopPropagation()}
     >
+
       <Input
         ref={inputRef}
         type="number"
         inputMode="decimal"
-        className={`h-7 w-5 focus:w-10 px-0 py-0 text-end focus:text-start text-sm bg-transparent border-transparent shadow-none focus-visible:border-border focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:bg-muted/20 focus-visible:px-2 focus-visible:py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-inner-spin-button]:m-0 ${
-          scoreValue == null ? "text-muted-foreground italic" : "text-foreground"
-        } ${isDisabled ? "cursor-not-allowed opacity-50" : "cursor-text"}`}
+        className={`
+            h-7 w-[${Math.max(3, (scoreValue?.toString().length ?? 1) + 1)}ch] focus:w-[6ch] p-0
+            text-end focus:text-start text-sm
+            dark:bg-transparent border-transparent shadow-none
+
+            focus-visible:border-border focus-visible:ring-1
+            focus-visible:ring-ring/40 focus-visible:bg-muted/20
+            focus-visible:px-2 focus-visible:py-1
+
+            [appearance:textfield]
+            [&::-webkit-outer-spin-button]:appearance-none
+            [&::-webkit-inner-spin-button]:appearance-none
+            [&::-webkit-outer-spin-button]:m-0
+            [&::-webkit-inner-spin-button]:m-0
+            ${scoreValue == null ? "text-muted-foreground" : "text-foreground"}
+            ${isDisabled ? "cursor-not-allowed opacity-50" : "cursor-text"}
+            `}
         value={value}
         onFocus={() => !isDisabled && setIsEditing(true)}
         onChange={(event) => setValue(event.target.value)}
