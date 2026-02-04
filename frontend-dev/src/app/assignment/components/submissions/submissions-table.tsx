@@ -119,7 +119,9 @@ export function SubmissionsTable({
   const [activeView, setActiveView] = useState(SUBMISSION_VIEWS[0].id);
   const [searchQuery, setSearchQuery] = useState("");
   const [rowSelection, setRowSelection] = useState({});
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [selectedSubmission, setSelectedSubmission] =
+    useState<Submission | null>(null);
+  const [focusOn, setFocusOn] = useState<"feedback" | null>(null);
   const returnSubmissions = useReturnSubmissions();
   const hasAutoOpened = useRef(false);
 
@@ -160,6 +162,11 @@ export function SubmissionsTable({
     }
   }, [filteredData]);
 
+  const onFeedbackClick = (submission: Submission) => {
+    setSelectedSubmission(submission);
+    setFocusOn("feedback");
+  };
+
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -169,12 +176,14 @@ export function SubmissionsTable({
     state: {
       rowSelection,
     },
+    meta: {
+      onFeedbackClick,
+    },
   });
 
   const rows = table.getRowModel().rows;
   const hasRows = rows.length > 0;
   const selectedRowsCount = table.getSelectedRowModel().rows.length;
-
 
   const returnableSubmissionIds = table
     .getSelectedRowModel()
@@ -249,7 +258,10 @@ export function SubmissionsTable({
                   key={row.id}
                   data-state={row.getIsSelected() ? "selected" : undefined}
                   className="cursor-pointer"
-                  onClick={() => setSelectedSubmission(row.original)}
+                  onClick={() => {
+                    setSelectedSubmission(row.original);
+                    setFocusOn(null);
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -274,7 +286,13 @@ export function SubmissionsTable({
       <SubmissionSheet
         submission={selectedSubmission}
         open={!!selectedSubmission}
-        onOpenChange={(open) => !open && setSelectedSubmission(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedSubmission(null);
+            setFocusOn(null);
+          }
+        }}
+        focusOn={focusOn}
       />
     </div>
   );

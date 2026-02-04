@@ -227,12 +227,18 @@ export function InlineEditableScore({ submission }: { submission: Submission }) 
   );
 }
 
-export function InlineEditableFeedback({ submission }: { submission: Submission }) {
+export function InlineEditableFeedback({
+  submission,
+  startInEditMode,
+}: {
+  submission: Submission;
+  startInEditMode?: boolean;
+}) {
   const { t } = useTranslation();
   const updateDraft = useUpdateSubmissionDraft();
   const inputRef = useRef<HTMLInputElement>(null);
   const feedbackValue = submission.draftFeedback ?? "";
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(startInEditMode || false);
   const [value, setValue] = useState(feedbackValue ?? "");
 
   useEffect(() => {
@@ -301,14 +307,16 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         header: ({ table }) => {
           const all = table.getIsAllRowsSelected();
           const some = table.getIsSomeRowsSelected();
-          const checkedValue: boolean | "indeterminate" = all ? true : some ? "indeterminate" : false;
+          const checkedValue: boolean | "indeterminate" = all
+            ? true
+            : some
+              ? "indeterminate"
+              : false;
 
           return (
             <Checkbox
               checked={checkedValue as any}
-              onCheckedChange={(value) =>
-                table.toggleAllRowsSelected(!!value)
-              }
+              onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
               aria-label="Select all"
             />
           );
@@ -359,7 +367,20 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         accessorKey: "draftFeedback",
         header: t("submissions.feedback"),
         cell: (info) => {
-          return <InlineEditableFeedback submission={info.row.original} />;
+          const feedback = info.getValue() as string;
+          return (
+            <p
+              className="block max-w-[240px] truncate cursor-pointer hover:underline hover:decoration-dotted hover:decoration-gray-500 hover:underline-offset-3"
+              onClick={(e) => {
+                e.stopPropagation();
+                (info.table.options.meta as any)?.onFeedbackClick?.(
+                  info.row.original,
+                );
+              }}
+            >
+              {feedback || "—"}
+            </p>
+          );
         },
       },
       {

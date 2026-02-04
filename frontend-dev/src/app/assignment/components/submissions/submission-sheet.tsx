@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetClose,
@@ -8,7 +8,7 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 import {
   PropertiesDisplay,
   Property,
@@ -16,17 +16,28 @@ import {
   PropertyValue,
 } from "@/components/properties-display";
 
-import { Submission } from "@/hooks/use-submissions"
-import { SubmissionStatusLabel, InlineEditableScore, InlineEditableFeedback, formatShortDate } from "./submissions";
+import { Submission } from "@/hooks/use-submissions";
+import {
+  SubmissionStatusLabel,
+  InlineEditableScore,
+  InlineEditableFeedback,
+  formatShortDate,
+} from "./submissions";
 import { useTranslation } from "react-i18next";
 
 interface SubmissionSheetProps {
   submission: Submission | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  focusOn?: "feedback" | null;
 }
 
-export function SubmissionSheet({ submission, open, onOpenChange }: SubmissionSheetProps) {
+export function SubmissionSheet({
+  submission,
+  open,
+  onOpenChange,
+  focusOn,
+}: SubmissionSheetProps) {
   const { i18n } = useTranslation();
   if (!submission) return null;
   return (
@@ -38,28 +49,44 @@ export function SubmissionSheet({ submission, open, onOpenChange }: SubmissionSh
         <div className="flex flex-row h-full">
           <div className="w-2/3">
             <SheetHeader>
-              <SheetTitle className="text-3xl">{submission.submitter?.name}</SheetTitle>
+              <SheetTitle className="text-3xl">
+                {submission.submitter?.name}
+              </SheetTitle>
             </SheetHeader>
             <div className="grid flex-1 auto-rows-min gap-6 px-4">
               <PropertiesDisplay scroll gapX={2.5}>
                 <Property>
                   <PropertyLabel>Status</PropertyLabel>
-                  <PropertyValue><SubmissionStatusLabel status={submission.status} /></PropertyValue>
+                  <PropertyValue>
+                    <SubmissionStatusLabel status={submission.status} />
+                  </PropertyValue>
                 </Property>
 
                 <Property>
                   <PropertyLabel>Grade</PropertyLabel>
-                  <PropertyValue><InlineEditableScore submission={submission} /></PropertyValue>
+                  <PropertyValue>
+                    <InlineEditableScore submission={submission} />
+                  </PropertyValue>
                 </Property>
 
                 <Property>
                   <PropertyLabel>Feedback</PropertyLabel>
-                  <PropertyValue><InlineEditableFeedback submission={submission} /></PropertyValue>
+                  <PropertyValue>
+                    <InlineEditableFeedback
+                      submission={submission}
+                      startInEditMode={focusOn === "feedback"}
+                    />
+                  </PropertyValue>
                 </Property>
 
                 <Property>
                   <PropertyLabel>Turned in</PropertyLabel>
-                  <PropertyValue>{formatShortDate(new Date(submission.submittedAt), i18n.language)}</PropertyValue>
+                  <PropertyValue>
+                    {formatShortDate(
+                      new Date(submission.submittedAt),
+                      i18n.language,
+                    )}
+                  </PropertyValue>
                 </Property>
               </PropertiesDisplay>
             </div>
@@ -70,5 +97,5 @@ export function SubmissionSheet({ submission, open, onOpenChange }: SubmissionSh
         </div>
       </SheetContent>
     </Sheet>
-  )
+  );
 }
