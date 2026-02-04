@@ -40,7 +40,7 @@ import {
 
 import { useTranslation } from "react-i18next";
 
-function formatShortDate(date: Date, lang: string) {
+export function formatShortDate(date: Date, lang: string) {
   const sameYear = date.getFullYear() === new Date().getFullYear();
 
   return new Intl.DateTimeFormat(lang, {
@@ -138,7 +138,7 @@ const SkeletonStatus = ({ pulse, status }: SkeletonStatusProps) => {
   );
 };
 
-function InlineEditableScore({ submission }: { submission: Submission }) {
+export function InlineEditableScore({ submission }: { submission: Submission }) {
   const { t } = useTranslation();
   const updateDraft = useUpdateSubmissionDraft();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -224,7 +224,7 @@ function InlineEditableScore({ submission }: { submission: Submission }) {
   );
 }
 
-function InlineEditableFeedback({ submission }: { submission: Submission }) {
+export function InlineEditableFeedback({ submission }: { submission: Submission }) {
   const { t } = useTranslation();
   const updateDraft = useUpdateSubmissionDraft();
   const inputRef = useRef<HTMLInputElement>(null);

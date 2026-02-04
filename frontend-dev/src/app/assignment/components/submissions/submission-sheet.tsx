@@ -9,7 +9,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import {
+  PropertiesDisplay,
+  Property,
+  PropertyLabel,
+  PropertyValue,
+} from "@/components/properties-display";
+
 import { Submission } from "@/hooks/use-submissions"
+import { SubmissionStatusLabel, InlineEditableScore, InlineEditableFeedback, formatShortDate } from "./submissions";
+import { useTranslation } from "react-i18next";
 
 interface SubmissionSheetProps {
   submission: Submission | null;
@@ -18,48 +27,44 @@ interface SubmissionSheetProps {
 }
 
 export function SubmissionSheet({ submission, open, onOpenChange }: SubmissionSheetProps) {
+  const { i18n } = useTranslation();
   if (!submission) return null;
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[700px] sm:max-w-[700px]">
-        <SheetHeader>
-          <SheetTitle>Submission Details</SheetTitle>
-          <SheetDescription>
-            Details for submission by {submission.submitter?.name}
-          </SheetDescription>
-        </SheetHeader>
-        <div className="grid flex-1 auto-rows-min gap-6 px-4">
-          <div className="grid gap-3">
-            <Label>Submitter Name</Label>
-            <p>{submission.submitter?.name}</p>
-          </div>
-          <div className="grid gap-3">
-            <Label>Submitter Email</Label>
-            <p>{submission.submitter?.email}</p>
-          </div>
-          <div className="grid gap-3">
-            <Label>Status</Label>
-            <p>{submission.status}</p>
-          </div>
-          {submission.draftScore != null && (
-            <div className="grid gap-3">
-              <Label>Draft Score</Label>
-              <p>{submission.draftScore}</p>
+      <SheetContent className="w-[1000px] sm:max-w-[1000px]">
+        <div className="flex flex-row h-full">
+          <div className="w-2/3">
+            <SheetHeader>
+              <SheetTitle className="text-3xl">{submission.submitter?.name}</SheetTitle>
+            </SheetHeader>
+            <div className="grid flex-1 auto-rows-min gap-6 px-4">
+              <PropertiesDisplay scroll>
+                <Property>
+                  <PropertyLabel>Status</PropertyLabel>
+                  <PropertyValue><SubmissionStatusLabel status={submission.status} /></PropertyValue>
+                </Property>
+
+                <Property>
+                  <PropertyLabel>Grade</PropertyLabel>
+                  <PropertyValue><InlineEditableScore submission={submission} /></PropertyValue>
+                </Property>
+
+                <Property>
+                  <PropertyLabel>Feedback</PropertyLabel>
+                  <PropertyValue><InlineEditableFeedback submission={submission} /></PropertyValue>
+                </Property>
+
+                <Property>
+                  <PropertyLabel>Turned in</PropertyLabel>
+                  <PropertyValue>{formatShortDate(new Date(submission.submittedAt), i18n.language)}</PropertyValue>
+                </Property>
+              </PropertiesDisplay>
             </div>
-          )}
-          {submission.draftFeedback && (
-            <div className="grid gap-3">
-              <Label>Draft Feedback</Label>
-              <p>{submission.draftFeedback}</p>
-            </div>
-          )}
+          </div>
+          <div className="w-1/3">
+            <h1>Attachments</h1>
+          </div>
         </div>
-        <SheetFooter>
-          <SheetClose asChild>
-            <Button variant="outline">Close</Button>
-          </SheetClose>
-        </SheetFooter>
       </SheetContent>
     </Sheet>
   )

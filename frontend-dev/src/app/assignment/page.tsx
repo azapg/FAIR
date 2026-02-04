@@ -10,7 +10,13 @@ import { SubmissionsTable } from "@/app/assignment/components/submissions/submis
 import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
 import { WorkflowsSidebarProvider, WorkflowsSidebarTrigger } from "@/components/ui/sidebar";
 import { WorkflowsSidebar } from "@/app/assignment/components/sidebar/workflows-sidebar";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  PropertiesDisplay,
+  Property,
+  PropertyLabel,
+  PropertyValue,
+} from "@/components/properties-display";
+
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 
@@ -120,50 +126,48 @@ export default function AssignmentPage() {
               {assignment.description}
             </MarkdownRenderer>
 
-            <ScrollArea className={"w-full h-auto"}>
-              <div className={"flex flex-row gap-1 mt-4 items-center"}>
-                <h2 className={"text-muted-foreground mr-4 text-sm"}>
-                  {t("properties.title")}
-                </h2>
-                <Button variant={"ghost"} size={"sm"}>
-                  <Hourglass />{" "}
-                  {assignment.deadline
-                    ? new Date(assignment.deadline).toLocaleDateString(
-                        undefined,
-                        {
-                          day: "2-digit",
-                          month: "short",
-                        },
-                      )
-                    : t("common.noDeadline")}
-                </Button>
-                <Button variant={"ghost"} size={"sm"}>
-                  <Plus />
-                </Button>
-              </div>
-
-              <div className={"flex flex-row gap-1 mt-4 items-center"}>
-                <h2 className={"text-muted-foreground mr-4 text-sm"}>
-                  {t("assignments.resources")}
-                </h2>
-                {artifacts && artifacts.length > 0 ? (
-                  artifacts.map((artifact) => (
-                    <Button key={artifact.id} variant={"secondary"} size={"sm"}>
-                      <FileText />
-                      {artifact.title}
-                      <ArrowUpRight className="text-muted-foreground" />
+            <PropertiesDisplay scroll>
+                <Property>
+                  <PropertyLabel>{t("properties.title")}</PropertyLabel>
+                  <PropertyValue className="flex flex-row gap-1 items-center">
+                    <Button variant={"ghost"} size={"sm"}>
+                      <Hourglass />{" "}
+                      {assignment.deadline
+                        ? new Date(assignment.deadline).toLocaleDateString(
+                            undefined,
+                            {
+                              day: "2-digit",
+                              month: "short",
+                            },
+                          )
+                        : t("common.noDeadline")}
                     </Button>
-                  ))
-                ) : (
-                  <></>
-                )}
-                <Button variant={"ghost"} size={"sm"}>
-                  <Plus />
-                </Button>
-              </div>
+                    <Button variant={"ghost"} size={"sm"}>
+                      <Plus />
+                    </Button>
+                  </PropertyValue>
+                </Property>
 
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+                <Property>
+                  <PropertyLabel>{t("assignments.resources")}</PropertyLabel>
+                  <PropertyValue className="flex flex-row gap-1 items-center">
+                    {artifacts && artifacts.length > 0 ? (
+                      artifacts.map((artifact) => (
+                        <Button key={artifact.id} variant={"secondary"} size={"sm"}>
+                          <FileText />
+                          {artifact.title}
+                          <ArrowUpRight className="text-muted-foreground" />
+                        </Button>
+                      ))
+                    ) : (
+                      <></>
+                    )}
+                    <Button variant={"ghost"} size={"sm"}>
+                      <Plus />
+                    </Button>
+                  </PropertyValue>
+                </Property>
+            </PropertiesDisplay>
           </div>
 
           <div className={"space-y-3 mb-5"}>
