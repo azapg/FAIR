@@ -19,12 +19,6 @@ def validate_rubric_content(content: dict) -> None:
             detail="Rubric content must be a dictionary",
         )
 
-    if "name" not in content or not isinstance(content.get("name"), str):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Rubric content must have a 'name' string field",
-        )
-
     if "levels" not in content or not isinstance(content.get("levels"), list):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

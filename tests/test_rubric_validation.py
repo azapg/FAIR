@@ -8,7 +8,6 @@ class TestRubricValidation:
 
     def test_valid_rubric_passes(self):
         content = {
-            "name": "Test Rubric",
             "levels": ["Poor", "Fair", "Good", "Excellent"],
             "criteria": [
                 {
@@ -27,7 +26,6 @@ class TestRubricValidation:
 
     def test_weights_sum_to_one_exact(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B"],
             "criteria": [
                 {"name": "C1", "weight": 0.25, "levels": ["X", "Y"]},
@@ -39,7 +37,6 @@ class TestRubricValidation:
 
     def test_weights_with_floating_point_edge_case(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B"],
             "criteria": [
                 {"name": "C1", "weight": 0.1, "levels": ["X", "Y"]},
@@ -52,7 +49,6 @@ class TestRubricValidation:
 
     def test_weights_slightly_over_fails(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B"],
             "criteria": [
                 {"name": "C1", "weight": 0.5, "levels": ["X", "Y"]},
@@ -66,7 +62,6 @@ class TestRubricValidation:
 
     def test_weights_slightly_under_fails(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B"],
             "criteria": [
                 {"name": "C1", "weight": 0.5, "levels": ["X", "Y"]},
@@ -80,7 +75,6 @@ class TestRubricValidation:
 
     def test_criterion_levels_count_mismatch_fails(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B", "C"],
             "criteria": [
                 {"name": "C1", "weight": 1.0, "levels": ["X", "Y"]}
@@ -91,19 +85,8 @@ class TestRubricValidation:
         assert exc_info.value.status_code == 400
         assert "has 2 levels but expected 3" in exc_info.value.detail
 
-    def test_missing_name_fails(self):
-        content = {
-            "levels": ["A", "B"],
-            "criteria": [{"name": "C1", "weight": 1.0, "levels": ["X", "Y"]}]
-        }
-        with pytest.raises(HTTPException) as exc_info:
-            validate_rubric_content(content)
-        assert exc_info.value.status_code == 400
-        assert "name" in exc_info.value.detail.lower()
-
     def test_missing_levels_fails(self):
         content = {
-            "name": "Test",
             "criteria": [{"name": "C1", "weight": 1.0, "levels": ["X", "Y"]}]
         }
         with pytest.raises(HTTPException) as exc_info:
@@ -113,7 +96,6 @@ class TestRubricValidation:
 
     def test_missing_criteria_fails(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B"]
         }
         with pytest.raises(HTTPException) as exc_info:
@@ -123,7 +105,6 @@ class TestRubricValidation:
 
     def test_empty_levels_fails(self):
         content = {
-            "name": "Test",
             "levels": [],
             "criteria": [{"name": "C1", "weight": 1.0, "levels": []}]
         }
@@ -134,7 +115,6 @@ class TestRubricValidation:
 
     def test_empty_criteria_fails(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B"],
             "criteria": []
         }
@@ -145,7 +125,6 @@ class TestRubricValidation:
 
     def test_criterion_missing_weight_fails(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B"],
             "criteria": [{"name": "C1", "levels": ["X", "Y"]}]
         }
@@ -156,7 +135,6 @@ class TestRubricValidation:
 
     def test_criterion_missing_name_fails(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B"],
             "criteria": [{"weight": 1.0, "levels": ["X", "Y"]}]
         }
@@ -167,7 +145,6 @@ class TestRubricValidation:
 
     def test_criterion_missing_levels_fails(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B"],
             "criteria": [{"name": "C1", "weight": 1.0}]
         }
@@ -178,7 +155,6 @@ class TestRubricValidation:
 
     def test_non_string_level_fails(self):
         content = {
-            "name": "Test",
             "levels": ["A", 123],
             "criteria": [{"name": "C1", "weight": 1.0, "levels": ["X", "Y"]}]
         }
@@ -195,7 +171,6 @@ class TestRubricValidation:
 
     def test_integer_weight_works(self):
         content = {
-            "name": "Test",
             "levels": ["A", "B"],
             "criteria": [{"name": "C1", "weight": 1, "levels": ["X", "Y"]}]
         }

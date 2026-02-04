@@ -6,7 +6,6 @@ from tests.conftest import get_auth_token
 
 def make_valid_rubric_content():
     return {
-        "name": "Essay Rubric",
         "levels": ["Poor", "Fair", "Good", "Excellent"],
         "criteria": [
             {
