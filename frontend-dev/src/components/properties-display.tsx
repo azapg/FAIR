@@ -9,7 +9,7 @@ type PropertiesDisplayProps = React.HTMLAttributes<HTMLDivElement> & {
 function PropertiesDisplay({ className, scroll, ...props }: PropertiesDisplayProps) {
   const content = (
     <div
-      className={cn("space-y-3", className)}
+      className={cn("grid grid-cols-[max-content_1fr] items-center gap-x-4 gap-y-3", className)}
       {...props}
     />
   );
@@ -31,7 +31,7 @@ type PropertyProps = React.HTMLAttributes<HTMLDivElement>;
 function Property({ className, ...props }: PropertyProps) {
   return (
     <div
-      className={cn("flex flex-row gap-1 items-center", className)}
+      className={cn("contents", className)}
       {...props}
     />
   );
@@ -42,7 +42,7 @@ type PropertyLabelProps = React.HTMLAttributes<HTMLDivElement>;
 function PropertyLabel({ className, ...props }: PropertyLabelProps) {
   return (
     <div
-      className={cn("text-muted-foreground text-sm mr-4", className)}
+      className={cn("text-muted-foreground text-sm", className)}
       {...props}
     />
   );
