@@ -5,7 +5,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { TableProperties, ArrowUpRightIcon } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 
 import {
   Table,
@@ -121,6 +121,7 @@ export function SubmissionsTable({
   const [rowSelection, setRowSelection] = useState({});
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const returnSubmissions = useReturnSubmissions();
+  const hasAutoOpened = useRef(false);
 
   const filteredData = useMemo(() => {
     const view = SUBMISSION_VIEWS.find((item) => item.id === activeView);
@@ -149,10 +150,15 @@ export function SubmissionsTable({
   // DEV ONLY: Auto-open first submission for development convenience
   // Remove this block in production
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && filteredData.length > 0 && !selectedSubmission) {
+    if (
+      process.env.NODE_ENV === "development" &&
+      filteredData.length > 0 &&
+      !hasAutoOpened.current
+    ) {
       setSelectedSubmission(filteredData[0]);
+      hasAutoOpened.current = true;
     }
-  }, [filteredData, selectedSubmission]);
+  }, [filteredData]);
 
   const table = useReactTable({
     data: filteredData,
