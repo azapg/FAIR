@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
   ArrowUpRight,
-  CircleCheck,
   FileText,
   Hourglass,
   Plus,

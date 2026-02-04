@@ -9,6 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ArrowUpRight, FileText, Plus } from "lucide-react";
 import {
   PropertiesDisplay,
   Property,
@@ -38,7 +39,7 @@ export function SubmissionSheet({
   onOpenChange,
   focusOn,
 }: SubmissionSheetProps) {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   if (!submission) return null;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -49,7 +50,7 @@ export function SubmissionSheet({
         <div className="flex flex-row h-full">
           <div className="w-2/3">
             <SheetHeader>
-              <SheetTitle className="text-3xl">
+              <SheetTitle className="text-4xl">
                 {submission.submitter?.name}
               </SheetTitle>
             </SheetHeader>
@@ -85,6 +86,23 @@ export function SubmissionSheet({
                     {formatShortDate(
                       new Date(submission.submittedAt),
                       i18n.language,
+                    )}
+                  </PropertyValue>
+                </Property>
+
+                <Property>
+                  <PropertyLabel>Attachments</PropertyLabel>
+                  <PropertyValue className="flex flex-row gap-1 items-center">
+                    {submission.artifacts && submission.artifacts.length > 0 ? (
+                      submission.artifacts.map((artifact) => (
+                        <Button key={artifact.id} variant={"secondary"} size={"sm"}>
+                          <FileText />
+                          {artifact.title}
+                          <ArrowUpRight className="text-muted-foreground" />
+                        </Button>
+                      ))
+                    ) : (
+                      <></>
                     )}
                   </PropertyValue>
                 </Property>
