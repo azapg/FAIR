@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from .artifact import Artifact
     from .submitter import Submitter
     from .submission import Submission
+    from .rubric import Rubric
 
 
 class UserRole(str, Enum):
@@ -54,6 +55,7 @@ class User(Base):
     created_submissions: Mapped[List["Submission"]] = relationship(
         "Submission", back_populates="created_by", foreign_keys="Submission.created_by_id"
     )
+    rubrics: Mapped[List["Rubric"]] = relationship("Rubric", back_populates="creator")
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r} role={self.role}>"

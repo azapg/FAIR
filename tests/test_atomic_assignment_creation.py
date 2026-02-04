@@ -14,6 +14,7 @@ from fair_platform.backend.data.models.user import User, UserRole
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.artifact import Artifact
+from fair_platform.backend.api.routers.auth import hash_password
 from tests.conftest import get_auth_token
 
 
@@ -35,7 +36,7 @@ class TestAtomicAssignmentCreation:
             course_id = str(course.id)
         
         # Get auth token
-        token = get_auth_token(test_client, professor_user)
+        token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         # Prepare test files
@@ -97,7 +98,8 @@ class TestAtomicAssignmentCreation:
                 id=prof_id,
                 name="Prof Different",
                 email="different@test.com",
-                role=UserRole.professor
+                role=UserRole.professor,
+                password_hash=hash_password("test_password_123")
             )
             session.add(professor)
             
@@ -112,7 +114,7 @@ class TestAtomicAssignmentCreation:
             course_id = str(course.id)
         
         # Get student auth token
-        token = get_auth_token(test_client, student_user)
+        token = get_auth_token(test_client, student_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         # Try to create assignment
@@ -136,7 +138,7 @@ class TestAtomicAssignmentCreation:
 
     def test_create_assignment_with_files_invalid_course(self, test_client, test_db, professor_user):
         """Test assignment creation with non-existent course"""
-        token = get_auth_token(test_client, professor_user)
+        token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         files = [("files", ("test.txt", BytesIO(b"content"), "text/plain"))]
@@ -165,8 +167,9 @@ class TestAtomicAssignmentCreation:
             other_professor = User(
                 id=other_prof_id,
                 name="Other Prof",
-                email="other@test.com", 
-                role=UserRole.professor
+                email="other@test.com",
+                role=UserRole.professor,
+                password_hash=hash_password("test_password_123")
             )
             session.add(other_professor)
             
@@ -180,7 +183,7 @@ class TestAtomicAssignmentCreation:
             session.commit()
             course_id = str(course.id)
         
-        token = get_auth_token(test_client, professor_user)
+        token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         files = [("files", ("test.txt", BytesIO(b"content"), "text/plain"))]
@@ -214,7 +217,7 @@ class TestAtomicAssignmentCreation:
             session.commit()
             course_id = str(course.id)
         
-        token = get_auth_token(test_client, professor_user)
+        token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         # No files, just assignment data
@@ -249,7 +252,7 @@ class TestAtomicAssignmentCreation:
             session.commit()
             course_id = str(course.id)
         
-        token = get_auth_token(test_client, professor_user)
+        token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         # Create large file (simulate file > allowed size)
@@ -286,7 +289,7 @@ class TestAtomicAssignmentCreation:
             session.commit()
             course_id = str(course.id)
         
-        token = get_auth_token(test_client, professor_user)
+        token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         # Executable file (should be rejected)
@@ -326,7 +329,7 @@ class TestAtomicAssignmentCreation:
         # Mock storage failure
         mock_upload.side_effect = Exception("Storage failure")
         
-        token = get_auth_token(test_client, professor_user)
+        token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         files = [("files", ("test.txt", BytesIO(b"content"), "text/plain"))]
@@ -373,7 +376,7 @@ class TestAtomicAssignmentCreation:
             session.commit()
             course_id = str(course.id)
         
-        token = get_auth_token(test_client, professor_user)
+        token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         files = [("files", ("test.txt", BytesIO(b"content"), "text/plain"))]
@@ -396,7 +399,7 @@ class TestAtomicAssignmentCreation:
 
     def test_create_assignment_with_files_missing_required_fields(self, test_client, test_db, professor_user):
         """Test validation of required fields"""
-        token = get_auth_token(test_client, professor_user)
+        token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         files = [("files", ("test.txt", BytesIO(b"content"), "text/plain"))]
@@ -444,7 +447,7 @@ class TestAtomicAssignmentCreation:
             session.commit()
             course_id = str(course.id)
         
-        token = get_auth_token(test_client, professor_user)
+        token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         # Simulate concurrent requests with same assignment title
