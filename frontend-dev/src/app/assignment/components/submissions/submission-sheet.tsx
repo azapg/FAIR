@@ -31,7 +31,10 @@ export function SubmissionSheet({ submission, open, onOpenChange }: SubmissionSh
   if (!submission) return null;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[1000px] sm:max-w-[1000px]">
+      <SheetContent
+        className="w-[1000px] sm:max-w-[1000px]"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <div className="flex flex-row h-full">
           <div className="w-2/3">
             <SheetHeader>
