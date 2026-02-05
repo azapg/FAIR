@@ -89,28 +89,24 @@ export function SubmissionSheet({
                     )}
                   </PropertyValue>
                 </Property>
-
-                <Property>
-                  <PropertyLabel>Attachments</PropertyLabel>
-                  <PropertyValue className="flex flex-row gap-1 items-center">
-                    {submission.artifacts && submission.artifacts.length > 0 ? (
-                      submission.artifacts.map((artifact) => (
-                        <Button key={artifact.id} variant={"secondary"} size={"sm"}>
-                          <FileText />
-                          {artifact.title}
-                          <ArrowUpRight className="text-muted-foreground" />
-                        </Button>
-                      ))
-                    ) : (
-                      <></>
-                    )}
-                  </PropertyValue>
-                </Property>
               </PropertiesDisplay>
             </div>
           </div>
           <div className="w-1/3">
             <h1>Attachments</h1>
+            <div className="flex flex-row gap-1 items-center">
+              {submission.artifacts && submission.artifacts.length > 0 ? (
+                submission.artifacts.map((artifact) => (
+                  <Button key={artifact.id} variant={"secondary"} size={"sm"}>
+                    <FileText />
+                    {artifact.title}
+                    <ArrowUpRight className="text-muted-foreground" />
+                  </Button>
+                ))
+              ) : (
+                <></>
+              )}
+            </div>
           </div>
         </div>
       </SheetContent>
