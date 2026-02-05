@@ -10,7 +10,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "Development Status :: 1 - Planning"
 ]
-license = "GPL-3.0-or-later"
+license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "appdirs>=1.4.4",
