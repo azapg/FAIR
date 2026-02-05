@@ -198,8 +198,8 @@ export function InlineEditableScore({ submission }: { submission: Submission }) 
         type="number"
         inputMode="decimal"
         className={`
-            h-7 w-[${Math.max(3, (scoreValue?.toString().length ?? 1) + 1)}ch] focus:w-[6ch] p-0
-            text-end focus:text-start text-sm
+            h-7 p-0 w-auto field-sizing-content
+            text-start focus:text-end text-sm
             dark:bg-transparent border-transparent shadow-none
 
             focus-visible:border-border focus-visible:ring-1
