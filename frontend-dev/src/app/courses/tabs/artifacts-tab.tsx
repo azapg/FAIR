@@ -48,6 +48,9 @@ export function ArtifactsTab({
     return <div className="text-sm text-muted-foreground">{t("artifacts.empty")}</div>;
   }
 
+  const activeArtifacts = artifacts.filter((artifact) => artifact.status !== "archived");
+  const archivedArtifacts = artifacts.filter((artifact) => artifact.status === "archived");
+
   const handleDelete = async (artifactId: string) => {
     await deleteArtifact.mutateAsync(artifactId);
     await refetch();
@@ -68,26 +71,64 @@ export function ArtifactsTab({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {artifacts.map((artifact) => (
-            <TableRow key={artifact.id}>
-              <TableCell className="font-medium">{artifact.title}</TableCell>
-              <TableCell>
-                {artifact.assignmentId ? assignmentNames.get(artifact.assignmentId) ?? artifact.assignmentId : t("assignments.na")}
-              </TableCell>
-              <TableCell className="capitalize">{artifact.status}</TableCell>
-              <TableCell className="capitalize">{artifact.accessLevel}</TableCell>
-              <TableCell>
-                {artifact.updatedAt ? new Date(artifact.updatedAt).toLocaleString() : "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(artifact.id)}>
-                  {t("common.delete")}
-                </Button>
+          {activeArtifacts.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-sm text-muted-foreground">
+                {t("artifacts.empty")}
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            activeArtifacts.map((artifact) => (
+              <TableRow key={artifact.id}>
+                <TableCell className="font-medium">{artifact.title}</TableCell>
+                <TableCell>
+                  {artifact.assignmentId ? assignmentNames.get(artifact.assignmentId) ?? artifact.assignmentId : t("assignments.na")}
+                </TableCell>
+                <TableCell className="capitalize">{artifact.status}</TableCell>
+                <TableCell className="capitalize">{artifact.accessLevel}</TableCell>
+                <TableCell>
+                  {artifact.updatedAt ? new Date(artifact.updatedAt).toLocaleString() : "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(artifact.id)}>
+                    {t("common.delete")}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
+
+      {archivedArtifacts.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-lg font-semibold">{t("artifacts.archivedTitle")}</h4>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("assignments.titleLabel")}</TableHead>
+                <TableHead>{t("artifacts.assignment")}</TableHead>
+                <TableHead>{t("artifacts.status")}</TableHead>
+                <TableHead>{t("artifacts.updated")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {archivedArtifacts.map((artifact) => (
+                <TableRow key={artifact.id}>
+                  <TableCell className="font-medium">{artifact.title}</TableCell>
+                  <TableCell>
+                    {artifact.assignmentId ? assignmentNames.get(artifact.assignmentId) ?? artifact.assignmentId : t("assignments.na")}
+                  </TableCell>
+                  <TableCell className="capitalize">{artifact.status}</TableCell>
+                  <TableCell>
+                    {artifact.updatedAt ? new Date(artifact.updatedAt).toLocaleString() : "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

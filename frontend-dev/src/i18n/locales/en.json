@@ -222,6 +222,8 @@
     "courseActions": "Course actions"
   },
   "participants": {
+    "instructors": "Instructors",
+    "instructorRole": "Instructor",
     "students": "Students",
     "noStudents": "No students have been added yet.",
     "noInstructor": "No instructor information available."
@@ -232,6 +234,7 @@
     "status": "Status",
     "access": "Access",
     "updated": "Updated",
+    "archivedTitle": "Archived artifacts",
     "empty": "No artifacts for this course yet.",
     "noCourse": "Select a course to view artifacts.",
     "errorLoading": "Error loading artifacts."

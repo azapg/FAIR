@@ -222,6 +222,8 @@
     "courseActions": "Acciones del curso"
   },
   "participants": {
+    "instructors": "Instructores",
+    "instructorRole": "Instructor",
     "students": "Estudiantes",
     "noStudents": "Aún no se han añadido estudiantes.",
     "noInstructor": "No hay información del instructor."
@@ -232,6 +234,7 @@
     "status": "Estado",
     "access": "Acceso",
     "updated": "Actualizado",
+    "archivedTitle": "Artefactos archivados",
     "empty": "Aún no hay artefactos para este curso.",
     "noCourse": "Seleccione un curso para ver artefactos.",
     "errorLoading": "Error al cargar artefactos."
