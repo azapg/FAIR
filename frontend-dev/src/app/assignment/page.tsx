@@ -124,10 +124,15 @@ export default function AssignmentPage() {
               const truncatedDescription = lines.slice(0, 3).join('\n');
               const hasMore = lines.length > 3;
               return (
-                <div>
-                  <MarkdownRenderer className={"text-sm text-muted-foreground"}>
-                    {isDescriptionExpanded ? assignment.description : truncatedDescription}
-                  </MarkdownRenderer>
+                <>
+                  <div className="relative">
+                    <MarkdownRenderer className={"text-sm text-muted-foreground"}>
+                      {isDescriptionExpanded ? assignment.description : truncatedDescription}
+                    </MarkdownRenderer>
+                    {!isDescriptionExpanded && hasMore && (
+                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+                    )}
+                  </div>
                   {hasMore && (
                     <Button
                       variant="link"
@@ -138,7 +143,7 @@ export default function AssignmentPage() {
                       {isDescriptionExpanded ? t("common.showLess") : t("common.showMore")}
                     </Button>
                   )}
-                </div>
+                </>
               );
             })()}
 
