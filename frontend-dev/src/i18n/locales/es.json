@@ -14,7 +14,9 @@
     "noDeadline": "Sin fecha límite",
     "home": "Inicio",
     "learnMore": "Saber más",
-    "commingSoon": "Próximamente..."
+    "commingSoon": "Próximamente...",
+    "showMore": "Mostrar más",
+    "showLess": "Mostrar menos"
   },
   "header": {
     "title": "The Fair Platform",
@@ -108,6 +110,7 @@
     "descriptionPlaceholder": "Detalles breves...",
     "dueDate": "Fecha de entrega",
     "gradingType": "Tipo de calificación",
+    "editAssignment": "Editar tarea",
     "points": "Puntos",
     "percentage": "Porcentaje",
     "letter": "Letra",
@@ -123,10 +126,12 @@
     "creating": "Creando...",
     "titleRequired": "El título es requerido",
     "failedToCreate": "Error al crear la tarea.",
+    "failedToUpdate": "Error al actualizar la tarea.",
     "courseIdRequired": "El ID del curso es requerido",
     "noDueDate": "Sin fecha de entrega",
     "totalPoints": "Puntos totales",
-    "na": "N/A"
+    "na": "N/A",
+    "noDescription": "No se proporcionó descripción."
   },
   "submissions": {
     "title": "Entregas",
@@ -175,6 +180,7 @@
   },
   "workflow": {
     "selectWorkflow": "Seleccionar flujo de trabajo",
+    "noCourseSelected": "Seleccione un curso para ver sus flujos de trabajo.",
     "noWorkflows": "Aún no hay flujos de trabajo",
     "noWorkflowsMessage": "No has creado ningún flujo de trabajo todavía. Crea uno para comenzar.",
     "createWorkflow": "Crear flujo",
@@ -186,6 +192,7 @@
     "viewLogs": "Ver registros de ejecución",
     "saveWorkflow": "Guardar flujo de trabajo",
     "abortWorkflow": "Abortar flujo de trabajo",
+    "errorLoading": "Error cargando flujos de trabajo.",
     "failedToStart": "Error al iniciar el flujo de trabajo. Por favor intenta de nuevo.",
     "noWorkflowSelected": "Ningún flujo de trabajo seleccionado.",
     "selectFromDropdown": "Selecciona uno del menú desplegable.",
@@ -202,7 +209,12 @@
     "validateAll": "Validar todo",
     "loadingPlugins": "Cargando...",
     "errorLoadingPlugins": "Error al cargar plugins",
-    "runPlugin": "Ejecutar plugin..."
+    "runPlugin": "Ejecutar plugin...",
+    "type": "Tipo",
+    "version": "Versión",
+    "author": "Autor",
+    "source": "Fuente",
+    "empty": "No hay plugins disponibles."
   },
   "actions": {
     "rerunWith": "Reejecutar con...",
@@ -211,6 +223,35 @@
     "reset": "Restablecer",
     "remove": "Eliminar",
     "courseActions": "Acciones del curso"
+  },
+  "participants": {
+    "instructors": "Instructores",
+    "instructorRole": "Instructor",
+    "students": "Estudiantes",
+    "noStudents": "Aún no se han añadido estudiantes.",
+    "noInstructor": "No hay información del instructor."
+  },
+  "artifacts": {
+    "title": "Artefactos",
+    "assignment": "Tarea",
+    "status": "Estado",
+    "access": "Acceso",
+    "updated": "Actualizado",
+    "archivedTitle": "Artefactos archivados",
+    "empty": "Aún no hay artefactos para este curso.",
+    "noCourse": "Seleccione un curso para ver artefactos.",
+    "errorLoading": "Error al cargar artefactos."
+  },
+  "runs": {
+    "title": "Ejecuciones de flujo de trabajo",
+    "assignment": "Tarea",
+    "submitter": "Remitente",
+    "status": "Estado",
+    "runId": "ID de ejecución",
+    "submittedAt": "Enviado el",
+    "empty": "Aún no hay ejecuciones para este curso.",
+    "noCourse": "Seleccione un curso para ver ejecuciones.",
+    "errorLoading": "Error al cargar ejecuciones."
   },
   "errors": {
     "somethingWrong": "Algo salió mal",

@@ -10,7 +10,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "Development Status :: 1 - Planning"
 ]
-license = "GPL-3.0-or-later"
+license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
     "appdirs>=1.4.4",
@@ -27,6 +27,7 @@ dependencies = [
     "websockets>=15.0.1",
     "bcrypt>=4.0.0",
     "alembic>=1.18.3",
+    "openai>=1.0.0",
 ]
 
 [project.optional-dependencies]

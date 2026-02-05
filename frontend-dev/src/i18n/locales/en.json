@@ -14,6 +14,8 @@
     "noDeadline": "No deadline",
     "home": "Home",
     "learnMore": "Learn more",
+    "showMore": "Show more",
+    "showLess": "Show less",
     "commingSoon": "Comming soon..."
   },
   "header": {
@@ -108,6 +110,7 @@
     "descriptionPlaceholder": "Brief details...",
     "dueDate": "Due date",
     "gradingType": "Grading type",
+    "editAssignment": "Edit assignment",
     "points": "Points",
     "percentage": "Percentage",
     "letter": "Letter",
@@ -123,10 +126,12 @@
     "creating": "Creating...",
     "titleRequired": "Title is required",
     "failedToCreate": "Failed to create assignment.",
+    "failedToUpdate": "Failed to update assignment.",
     "courseIdRequired": "Course ID is required",
     "noDueDate": "No due date",
     "totalPoints": "Total Points",
-    "na": "N/A"
+    "na": "N/A",
+    "noDescription": "No description provided."
   },
   "submissions": {
     "title": "Submissions",
@@ -175,6 +180,7 @@
   },
   "workflow": {
     "selectWorkflow": "Select workflow",
+    "noCourseSelected": "Select a course to view its workflows.",
     "noWorkflows": "No workflows available",
     "noWorkflowsMessage": "You haven't created any workflows yet. Create one to get started.",
     "createWorkflow": "Create Workflow",
@@ -186,6 +192,7 @@
     "viewLogs": "View Execution Logs",
     "saveWorkflow": "Save Workflow",
     "abortWorkflow": "Abort Workflow",
+    "errorLoading": "Error loading workflows.",
     "failedToStart": "Failed to start workflow run. Please try again.",
     "noWorkflowSelected": "No workflow selected.",
     "selectFromDropdown": "Select one from the dropdown above.",
@@ -202,7 +209,12 @@
     "validateAll": "Validate all",
     "loadingPlugins": "Loading...",
     "errorLoadingPlugins": "Error loading plugins",
-    "runPlugin": "Run plugin..."
+    "runPlugin": "Run plugin...",
+    "type": "Type",
+    "version": "Version",
+    "author": "Author",
+    "source": "Source",
+    "empty": "No plugins available."
   },
   "actions": {
     "rerunWith": "Rerun with...",
@@ -211,6 +223,35 @@
     "reset": "Reset",
     "remove": "Remove",
     "courseActions": "Course actions"
+  },
+  "participants": {
+    "instructors": "Instructors",
+    "instructorRole": "Instructor",
+    "students": "Students",
+    "noStudents": "No students have been added yet.",
+    "noInstructor": "No instructor information available."
+  },
+  "artifacts": {
+    "title": "Artifacts",
+    "assignment": "Assignment",
+    "status": "Status",
+    "access": "Access",
+    "updated": "Updated",
+    "archivedTitle": "Archived artifacts",
+    "empty": "No artifacts for this course yet.",
+    "noCourse": "Select a course to view artifacts.",
+    "errorLoading": "Error loading artifacts."
+  },
+  "runs": {
+    "title": "Workflow runs",
+    "assignment": "Assignment",
+    "submitter": "Submitter",
+    "status": "Status",
+    "runId": "Run ID",
+    "submittedAt": "Submitted at",
+    "empty": "No workflow runs available for this course yet.",
+    "noCourse": "Select a course to view runs.",
+    "errorLoading": "Error loading runs."
   },
   "errors": {
     "somethingWrong": "Something went wrong",

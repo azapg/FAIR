@@ -4,6 +4,8 @@ import {useTranslation} from "react-i18next";
 import {Assignment} from "@/hooks/use-assignments";
 import {MarkdownRenderer} from "@/components/markdown-renderer";
 import truncate from "markdown-truncate";
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
+import {Ellipsis, Pencil, Trash2} from "lucide-react";
 
 export type Grade = {
   type: "percentage" | "points" | "letter" | "pass_fail";
@@ -18,8 +20,12 @@ export type CreateAssignmentForm = {
   gradeValue: string; // number/letter/pass|fail as string
 }
 
-export function useAssignmentColumns(): ColumnDef<Assignment>[] {
+export function useAssignmentColumns(options?: {
+  onEdit?: (assignment: Assignment) => void;
+  onDelete?: (assignment: Assignment) => void;
+}): ColumnDef<Assignment>[] {
   const { t } = useTranslation();
+  const { onEdit, onDelete } = options || {};
 
   return useMemo(() => [
     {
@@ -72,9 +78,40 @@ export function useAssignmentColumns(): ColumnDef<Assignment>[] {
           case "pass_fail":
             return (grade.value as boolean) ? t("assignments.pass") : t("assignments.fail");
           default:
-            return t("assignments.na");
+          return t("assignments.na");
         }
       }
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: (info) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger className="ml-auto flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
+            <Ellipsis className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit?.(info.row.original);
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              {t("common.edit")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete?.(info.row.original);
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t("common.delete")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
     }
-  ], [t]);
+  ], [t, onEdit, onDelete]);
 }

@@ -3,7 +3,7 @@ import os
 import tempfile
 from uuid import uuid4
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from faker import Faker
 
@@ -23,8 +23,15 @@ def test_db():
     TEST_DATABASE_URL = f"sqlite:///{test_db_path}"
 
     engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+
+    @event.listens_for(engine, "connect")
+    def enable_sqlite_fks(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     Base.metadata.create_all(bind=engine)
-    TestingSessionLocal = sessionmaker(bind=engine)
+    TestingSessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
     def override_get_db():
         try:
