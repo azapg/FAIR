@@ -6,6 +6,13 @@ import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import {useParams, useNavigate, useLocation} from "react-router-dom";
 import {useEffect} from "react";
 import {useTranslation} from "react-i18next";
+import {useAssignments} from "@/hooks/use-assignments";
+import {ParticipantsTab} from "@/app/courses/tabs/participants-tab";
+import {RunsTab} from "@/app/courses/tabs/runs-tab";
+import {ArtifactsTab} from "@/app/courses/tabs/artifacts-tab";
+import {WorkflowsTab} from "@/app/courses/tabs/workflows-tab";
+import {PluginsTab} from "@/app/courses/tabs/plugins-tab";
+import {useWorkflowStore} from "@/store/workflows-store";
 
 const allowedTabs = ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"];
 
@@ -15,10 +22,12 @@ export default function CourseDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const {t} = useTranslation();
+  const {setActiveCourseId} = useWorkflowStore();
 
   const basePath = location.pathname.split('/').slice(0, -1).join('/');
 
   const {isLoading, isError, data: course} = useCourse(courseId, Boolean(courseId), true);
+  const {data: assignmentsList} = useAssignments(courseId ? {course_id: courseId} : undefined, Boolean(courseId));
 
   const effectiveTab = tab && allowedTabs.includes(tab) ? tab : "assignments";
 
@@ -28,6 +37,12 @@ export default function CourseDetailPage() {
       navigate(`assignments`);
     }
   }, [tab, courseId, navigate, basePath, isLoading, isError, course]);
+
+  useEffect(() => {
+    if (courseId) {
+      setActiveCourseId(courseId);
+    }
+  }, [courseId, setActiveCourseId]);
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -45,6 +60,7 @@ export default function CourseDetailPage() {
 
   // Map assignments from detailed course if present
   const courseAssignments = 'assignments' in course ? course.assignments : [];
+  const assignments = assignmentsList ?? courseAssignments ?? [];
 
   return (
     <div className="flex flex-col">
@@ -71,13 +87,23 @@ export default function CourseDetailPage() {
           <ScrollBar orientation="horizontal" className={"hidden"}/>
         </ScrollArea>
         <TabsContent value={"assignments"} className={"px-8 py-3"}>
-          <AssignmentsTab assignments={courseAssignments} courseId={courseId}/>
+          <AssignmentsTab assignments={assignments} courseId={courseId}/>
         </TabsContent>
-        <TabsContent value={"participants"} className={"px-8"}>{t("tabs.participants")}</TabsContent>
-        <TabsContent value={"runs"} className={"px-8"}>{t("tabs.runs")}</TabsContent>
-        <TabsContent value={"artifacts"} className={"px-8"}>{t("tabs.artifacts")}</TabsContent>
-        <TabsContent value={"workflows"} className={"px-8"}>{t("tabs.workflows")}</TabsContent>
-        <TabsContent value={"plugins"} className={"px-8"}>{t("tabs.plugins")}</TabsContent>
+        <TabsContent value={"participants"} className={"px-8"}>
+          <ParticipantsTab instructor={"instructor" in course ? course.instructor : undefined}/>
+        </TabsContent>
+        <TabsContent value={"runs"} className={"px-8"}>
+          <RunsTab courseId={courseId} assignments={assignments}/>
+        </TabsContent>
+        <TabsContent value={"artifacts"} className={"px-8"}>
+          <ArtifactsTab courseId={courseId} assignments={assignments}/>
+        </TabsContent>
+        <TabsContent value={"workflows"} className={"px-8"}>
+          <WorkflowsTab courseId={courseId}/>
+        </TabsContent>
+        <TabsContent value={"plugins"} className={"px-8"}>
+          <PluginsTab/>
+        </TabsContent>
       </Tabs>
     </div>
   );
