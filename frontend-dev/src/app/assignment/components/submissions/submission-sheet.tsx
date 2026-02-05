@@ -26,6 +26,7 @@ import {
   formatShortDate,
 } from "./submissions";
 import { useTranslation } from "react-i18next";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SubmissionSheetProps {
   submission: Submission | null;
@@ -41,11 +42,14 @@ export function SubmissionSheet({
   focusOn,
 }: SubmissionSheetProps) {
   const { i18n, t } = useTranslation();
+  const isMobile = useIsMobile()
+
   if (!submission) return null;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        className="w-4/5 md:w-1/3"
+        className="w-full h-9/10 md:h-full md:min-w-4/5 lg:min-w-1/3"
+        side={isMobile ? 'bottom' : 'right'}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <SheetHeader>
