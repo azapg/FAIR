@@ -14,6 +14,8 @@
     "noDeadline": "No deadline",
     "home": "Home",
     "learnMore": "Learn more",
+    "showMore": "Show more",
+    "showLess": "Show less",
     "commingSoon": "Comming soon..."
   },
   "header": {
@@ -128,7 +130,8 @@
     "courseIdRequired": "Course ID is required",
     "noDueDate": "No due date",
     "totalPoints": "Total Points",
-    "na": "N/A"
+    "na": "N/A",
+    "noDescription": "No description provided."
   },
   "submissions": {
     "title": "Submissions",

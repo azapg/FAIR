@@ -14,7 +14,9 @@
     "noDeadline": "Sin fecha límite",
     "home": "Inicio",
     "learnMore": "Saber más",
-    "commingSoon": "Próximamente..."
+    "commingSoon": "Próximamente...",
+    "showMore": "Mostrar más",
+    "showLess": "Mostrar menos"
   },
   "header": {
     "title": "The Fair Platform",
@@ -128,7 +130,8 @@
     "courseIdRequired": "El ID del curso es requerido",
     "noDueDate": "Sin fecha de entrega",
     "totalPoints": "Puntos totales",
-    "na": "N/A"
+    "na": "N/A",
+    "noDescription": "No se proporcionó descripción."
   },
   "submissions": {
     "title": "Entregas",

@@ -50,6 +50,7 @@ export default function AssignmentPage() {
   });
   const { t } = useTranslation();
   const [isCreateSubmissionOpen, setIsCreateSubmissionOpen] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const isOverallLoading =
     isLoading ||
@@ -116,9 +117,30 @@ export default function AssignmentPage() {
         <div className={"px-8 pt-2"}>
           <div className={"mb-5"}>
             <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
-            <MarkdownRenderer className={"text-sm text-muted-foreground"}>
-              {assignment.description}
-            </MarkdownRenderer>
+            {!assignment.description || assignment.description.trim() === '' ? (
+              <p className="text-muted-foreground italic">{t("assignments.noDescription")}</p>
+            ) : (() => {
+              const lines = assignment.description.split('\n');
+              const truncatedDescription = lines.slice(0, 3).join('\n');
+              const hasMore = lines.length > 3;
+              return (
+                <div>
+                  <MarkdownRenderer className={"text-sm text-muted-foreground"}>
+                    {isDescriptionExpanded ? assignment.description : truncatedDescription}
+                  </MarkdownRenderer>
+                  {hasMore && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      className="p-0 h-auto text-sm"
+                    >
+                      {isDescriptionExpanded ? t("common.showLess") : t("common.showMore")}
+                    </Button>
+                  )}
+                </div>
+              );
+            })()}
 
             <ScrollArea className={"w-full h-auto"}>
               <div className={"flex flex-row gap-1 mt-4 items-center"}>
