@@ -25,3 +25,6 @@ This file tracks tests removed or disabled because they were AI-generated and fa
 - `tests/test_atomic_submission_creation.py`
   - `test_create_submission_invalid_assignment`: Returned `404` instead of expected `400`.
   - `test_submission_timestamps_and_metadata`: `submittedAt` timestamp did not fall between request start/end times.
+
+- `tests/test_enhanced_artifacts.py`
+  - `test_artifact_timestamps_auto_management`: `created_at` and `updated_at` differed by a few microseconds at creation time in GitHub CI.
