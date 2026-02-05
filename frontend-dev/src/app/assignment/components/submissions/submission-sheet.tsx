@@ -9,7 +9,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { ArrowUpRight, FileText, Plus } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { getIconForMime } from "@/lib/utils";
 import {
   PropertiesDisplay,
   Property,
@@ -96,13 +97,16 @@ export function SubmissionSheet({
             <h1>Attachments</h1>
             <div className="flex flex-row gap-1 items-center">
               {submission.artifacts && submission.artifacts.length > 0 ? (
-                submission.artifacts.map((artifact) => (
-                  <Button key={artifact.id} variant={"secondary"} size={"sm"}>
-                    <FileText />
-                    {artifact.title}
-                    <ArrowUpRight className="text-muted-foreground" />
-                  </Button>
-                ))
+                submission.artifacts.map((artifact) => {
+                  const Icon = getIconForMime(artifact.mime);
+                  return (
+                    <Button key={artifact.id} variant={"secondary"} size={"sm"}>
+                      <Icon />
+                      {artifact.title}
+                      <ArrowUpRight className="text-muted-foreground" />
+                    </Button>
+                  );
+                })
               ) : (
                 <></>
               )}
