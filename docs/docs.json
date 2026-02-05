@@ -1,65 +1,274 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "The Fair Documentation",
+  "theme": "almond",
+  "name": "The Fair Docs",
+  "description": "FAIR (The Fair Platform) is an open-source, AI-powered grading platform for experimenting with interpreters, rubrics, agent-based graders, and reproducible assessment workflows.",
   "colors": {
     "primary": "#ff0000"
   },
+  "icons": {
+    "library": "lucide"
+  },
+  "fonts": {
+    "family": "Host Grotesk"
+  },
+  "logo": {
+    "dark": "/assets/fair-docs-dark.svg",
+    "light": "/assets/fair-docs.svg"
+  },
   "navigation": {
     "global": {
-      "languages": [
+      "anchors": [
         {
-          "language": "en",
-          "default": true,
-          "href": "/en/introduction"
+          "anchor": "GitHub",
+          "href": "https://github.com/allanzapata/fair-platform",
+          "icon": "github"
         },
         {
-          "language": "es",
-          "href": "/es/introduction"
+          "anchor": "PyPI",
+          "href": "https://pypi.org/project/fair-platform/",
+          "icon": "box"
         }
       ]
     },
     "languages": [
       {
         "language": "en",
-        "groups": [
+        "default": true,
+        "tabs": [
           {
-            "group": "Introduction",
-            "pages": ["en/introduction"]
-          },
-          {
-            "group": "Getting started",
-            "pages": [
-              "en/getting-started/installation",
-              "en/getting-started/the-platform"
+            "tab": "Docs",
+            "icon": "book",
+            "groups": [
+              {
+                "group": "Introduction",
+                "pages": ["en/introduction"]
+              },
+              {
+                "group": "Getting started",
+                "pages": [
+                  "en/getting-started/installation",
+                  "en/getting-started/the-platform"
+                ]
+              },
+              {
+                "group": "Development",
+                "pages": ["en/development/releases"]
+              }
             ]
           },
           {
-            "group": "Development",
-            "pages": ["en/development/releases"]
+            "tab": "API Reference",
+            "openapi": "assets/openapi.json",
+            "icon": "code",
+            "groups": [
+              {
+                "group": "Overview",
+                "pages": ["en/api-reference/overview"]
+              },
+              {
+                "group": "Authentication",
+                "pages": ["en/api-reference/authentication"]
+              },
+              {
+                "group": "Endpoints",
+                "pages": ["en/api-reference/endpoints"]
+              }
+            ]
+          },
+          {
+            "tab": "SDK",
+            "icon": "blocks",
+            "groups": [
+              {
+                "group": "Overview",
+                "pages": ["en/sdk/overview"]
+              },
+              {
+                "group": "Plugins",
+                "pages": ["en/sdk/plugins"]
+              },
+              {
+                "group": "Schemas",
+                "pages": ["en/sdk/schemas"]
+              },
+              {
+                "group": "Examples",
+                "pages": ["en/sdk/examples"]
+              }
+            ]
+          },
+          {
+            "tab": "Guides",
+            "icon": "graduation-cap",
+            "groups": [
+              {
+                "group": "Setup",
+                "pages": ["en/guides/installation"]
+              },
+              {
+                "group": "Development",
+                "pages": [
+                  "en/guides/development-workflow",
+                  "en/guides/frontend",
+                  "en/guides/backend"
+                ]
+              },
+              {
+                "group": "Extending",
+                "pages": ["en/guides/plugins"]
+              },
+              {
+                "group": "Releases",
+                "pages": ["en/guides/releases"]
+              }
+            ]
           }
         ]
       },
       {
         "language": "es",
-        "groups": [
+        "tabs": [
           {
-            "group": "Introducción",
-            "pages": ["es/introduction"]
-          },
-          {
-            "group": "Primeros pasos",
-            "pages": [
-              "es/getting-started/installation",
-              "es/getting-started/extensions"
+            "tab": "Docs",
+            "icon": "book",
+            "groups": [
+              {
+                "group": "Introducción",
+                "pages": ["es/introduction"]
+              },
+              {
+                "group": "Primeros pasos",
+                "pages": [
+                  "es/getting-started/installation",
+                  "es/getting-started/extensions"
+                ]
+              },
+              {
+                "group": "Desarrollo",
+                "pages": ["es/development/releases"]
+              }
             ]
           },
           {
-            "group": "Desarrollo",
-            "pages": ["es/development/releases"]
+            "tab": "Referencia API",
+            "openapi": "assets/openapi.json",
+            "icon": "code",
+            "groups": [
+              {
+                "group": "Resumen",
+                "pages": ["es/api-reference/overview"]
+              },
+              {
+                "group": "Autenticación",
+                "pages": ["es/api-reference/authentication"]
+              },
+              {
+                "group": "Endpoints",
+                "pages": ["es/api-reference/endpoints"]
+              }
+            ]
+          },
+          {
+            "tab": "SDK",
+            "icon": "puzzle-piece",
+            "groups": [
+              {
+                "group": "Resumen",
+                "pages": ["es/sdk/overview"]
+              },
+              {
+                "group": "Plugins",
+                "pages": ["es/sdk/plugins"]
+              },
+              {
+                "group": "Esquemas",
+                "pages": ["es/sdk/schemas"]
+              },
+              {
+                "group": "Ejemplos",
+                "pages": ["es/sdk/examples"]
+              }
+            ]
+          },
+          {
+            "tab": "Guías",
+            "icon": "graduation-cap",
+            "groups": [
+              {
+                "group": "Instalación",
+                "pages": ["es/guides/installation"]
+              },
+              {
+                "group": "Desarrollo",
+                "pages": [
+                  "es/guides/development-workflow",
+                  "es/guides/frontend",
+                  "es/guides/backend"
+                ]
+              },
+              {
+                "group": "Extensiones",
+                "pages": ["es/guides/plugins"]
+              },
+              {
+                "group": "Lanzamientos",
+                "pages": ["es/guides/releases"]
+              }
+            ]
           }
         ]
       }
+    ]
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Get started",
+      "href": "/en/getting-started/installation"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/allanzapata/fair-platform"
+    },
+    "links": [
+      {
+        "header": "Project",
+        "items": [
+          {
+            "label": "Repository",
+            "href": "https://github.com/allanzapata/fair-platform"
+          },
+          {
+            "label": "License (GPL-3.0)",
+            "href": "https://github.com/allanzapata/fair-platform/blob/main/LICENSE"
+          }
+        ]
+      },
+      {
+        "header": "Docs",
+        "items": [
+          {
+            "label": "English",
+            "href": "/en/introduction"
+          },
+          {
+            "label": "Español",
+            "href": "/es/introduction"
+          }
+        ]
+      }
+    ]
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "grok"
     ]
   }
 }
