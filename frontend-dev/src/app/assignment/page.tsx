@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
   ArrowUpRight,
-  CircleCheck,
   FileText,
   Hourglass,
   Plus,
@@ -121,13 +120,13 @@ export default function AssignmentPage() {
               <p className="text-muted-foreground italic">{t("assignments.noDescription")}</p>
             ) : (() => {
               const lines = assignment.description.split('\n');
-              const truncatedDescription = lines.slice(0, 3).join('\n');
-              const hasMore = lines.length > 3;
+              const words = assignment.description.split(/\s+/);
+              const hasMore = lines.length > 3 || words.length > 80;
               return (
                 <>
-                  <div className="relative">
+                  <div className={`relative ${!isDescriptionExpanded && hasMore ? 'line-clamp-3' : ''}`}>
                     <MarkdownRenderer className={"text-sm text-muted-foreground"}>
-                      {isDescriptionExpanded ? assignment.description : truncatedDescription}
+                      {assignment.description}
                     </MarkdownRenderer>
                     {!isDescriptionExpanded && hasMore && (
                       <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
