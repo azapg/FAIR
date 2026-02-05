@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
   ArrowUpRight,
-  CircleCheck,
   FileText,
   Hourglass,
   Plus,
@@ -50,6 +49,7 @@ export default function AssignmentPage() {
   });
   const { t } = useTranslation();
   const [isCreateSubmissionOpen, setIsCreateSubmissionOpen] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const isOverallLoading =
     isLoading ||
@@ -116,9 +116,35 @@ export default function AssignmentPage() {
         <div className={"px-8 pt-2"}>
           <div className={"mb-5"}>
             <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
-            <MarkdownRenderer className={"text-sm text-muted-foreground"}>
-              {assignment.description}
-            </MarkdownRenderer>
+            {!assignment.description || assignment.description.trim() === '' ? (
+              <p className="text-muted-foreground italic">{t("assignments.noDescription")}</p>
+            ) : (() => {
+              const lines = assignment.description.split('\n');
+              const words = assignment.description.split(/\s+/);
+              const hasMore = lines.length > 3 || words.length > 80;
+              return (
+                <>
+                  <div className={`relative ${!isDescriptionExpanded && hasMore ? 'line-clamp-3' : ''}`}>
+                    <MarkdownRenderer className={"text-sm text-muted-foreground"}>
+                      {assignment.description}
+                    </MarkdownRenderer>
+                    {!isDescriptionExpanded && hasMore && (
+                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+                    )}
+                  </div>
+                  {hasMore && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      className="p-0 h-auto text-sm"
+                    >
+                      {isDescriptionExpanded ? t("common.showLess") : t("common.showMore")}
+                    </Button>
+                  )}
+                </>
+              );
+            })()}
 
             <ScrollArea className={"w-full h-auto"}>
               <div className={"flex flex-row gap-1 mt-4 items-center"}>
