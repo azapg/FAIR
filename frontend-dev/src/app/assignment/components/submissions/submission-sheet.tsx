@@ -48,16 +48,14 @@ export function SubmissionSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        className="w-full h-9/10 md:h-full md:min-w-4/5 lg:min-w-1/3"
+        className="w-full h-9/10 md:h-full md:min-w-4/5 lg:min-w-1/3 p-4"
         side={isMobile ? 'bottom' : 'right'}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <SheetHeader>
           <SheetTitle className="text-4xl">
             {submission.submitter?.name}
           </SheetTitle>
-        </SheetHeader>
-        <div className="grid flex-1 auto-rows-min gap-6 px-4">
+        <div className="grid flex-1 auto-rows-min gap-6">
           <PropertiesDisplay scroll gapX={2.5}>
             <Property>
               <PropertyLabel>Status</PropertyLabel>
