@@ -1,4 +1,4 @@
-from sqlalchemy import String, Text, JSON, PrimaryKeyConstraint
+from sqlalchemy import String, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 from typing import Optional, Dict, Any
 
@@ -7,9 +7,8 @@ from ..database import Base
 
 class Plugin(Base):
     __tablename__ = "plugins"
-    __table_args__ = (PrimaryKeyConstraint("id", "hash"),)
 
-    id: Mapped[str] = mapped_column(String, nullable=False)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     author: Mapped[Optional[str]] = mapped_column(String, nullable=False)

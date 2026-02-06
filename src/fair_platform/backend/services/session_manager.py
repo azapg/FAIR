@@ -279,6 +279,7 @@ class SessionManager:
         # TODO: Just noticed that this doesn't hold a reference to the workflow id
         return WorkflowRunRead(
             id=workflow_run.id,
+            workflow_id=workflow.id,
             run_by=workflow_run.run_by,
             status=workflow_run.status,
             started_at=workflow_run.started_at,
