@@ -1,12 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ArrowUpRight } from "lucide-react";
@@ -18,7 +13,7 @@ import {
   PropertyValue,
 } from "@/components/properties-display";
 
-import { Submission } from "@/hooks/use-submissions";
+import { Submission, useSubmissionTimeline } from "@/hooks/use-submissions";
 import {
   SubmissionStatusLabel,
   InlineEditableScore,
@@ -42,19 +37,21 @@ export function SubmissionSheet({
   focusOn,
 }: SubmissionSheetProps) {
   const { i18n, t } = useTranslation();
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile();
+  const { data: timeline } = useSubmissionTimeline(submission?.id);
 
   if (!submission) return null;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        className="w-full h-9/10 md:h-full md:min-w-4/5 lg:min-w-1/3 p-4"
-        side={isMobile ? 'bottom' : 'right'}
+        className="w-full h-9/10 md:h-full md:min-w-4/5 lg:min-w-1/3 p-4 overflow-y-auto"
+        side={isMobile ? "bottom" : "right"}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-          <SheetTitle className="text-4xl">
-            {submission.submitter?.name}
-          </SheetTitle>
+        <SheetTitle className="text-4xl">
+          {submission.submitter?.name}
+        </SheetTitle>
         <div className="grid flex-1 auto-rows-min gap-6">
           <PropertiesDisplay scroll gapX={2.5}>
             <Property>
@@ -108,6 +105,8 @@ export function SubmissionSheet({
               <></>
             )}
           </div>
+          <h1>Timeline</h1>
+          <pre>{JSON.stringify(timeline, null, 2)}</pre>
         </div>
       </SheetContent>
     </Sheet>
