@@ -2,13 +2,9 @@ import React from "react";
 import {
   CheckCircle2,
   User,
-  RotateCcw,
   ArrowRight,
   Pencil,
   FileDiff,
-  TrendingUp,
-  TrendingDown,
-  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,7 +142,7 @@ const ReturnedCard = ({ details }: { details: any }) => (
       </div>
     </CardHeader>
     <CardContent>
-      <p>{details.published_feedback}</p>
+      <p className="text-sm">{details.published_feedback}</p>
     </CardContent>
   </Card>
 );
