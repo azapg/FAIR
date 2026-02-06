@@ -17,6 +17,7 @@ import {
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +41,7 @@ import {
 
 import { useTranslation } from "react-i18next";
 
-function formatShortDate(date: Date, lang: string) {
+export function formatShortDate(date: Date, lang: string) {
   const sameYear = date.getFullYear() === new Date().getFullYear();
 
   return new Intl.DateTimeFormat(lang, {
@@ -138,7 +139,7 @@ const SkeletonStatus = ({ pulse, status }: SkeletonStatusProps) => {
   );
 };
 
-function InlineEditableScore({ submission }: { submission: Submission }) {
+export function InlineEditableScore({ submission }: { submission: Submission }) {
   const { t } = useTranslation();
   const updateDraft = useUpdateSubmissionDraft();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -187,14 +188,32 @@ function InlineEditableScore({ submission }: { submission: Submission }) {
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div
+      className="flex items-center gap-1"
+      onClick={(e) => e.stopPropagation()}
+    >
+
       <Input
         ref={inputRef}
         type="number"
         inputMode="decimal"
-        className={`h-7 w-20 px-0 py-0 text-end text-sm bg-transparent border-transparent shadow-none focus-visible:border-border focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:bg-muted/20 focus-visible:px-2 focus-visible:py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-inner-spin-button]:m-0 ${
-          scoreValue == null ? "text-muted-foreground italic" : "text-foreground"
-        } ${isDisabled ? "cursor-not-allowed opacity-50" : "cursor-text"}`}
+        className={`
+            h-7 p-0 w-auto field-sizing-content
+            text-start focus:text-end text-sm
+            dark:bg-transparent border-transparent shadow-none
+
+            focus-visible:border-border focus-visible:ring-1
+            focus-visible:ring-ring/40 focus-visible:bg-muted/20
+            focus-visible:px-2 focus-visible:py-1
+
+            [appearance:textfield]
+            [&::-webkit-outer-spin-button]:appearance-none
+            [&::-webkit-inner-spin-button]:appearance-none
+            [&::-webkit-outer-spin-button]:m-0
+            [&::-webkit-inner-spin-button]:m-0
+            ${scoreValue == null ? "text-muted-foreground" : "text-foreground"}
+            ${isDisabled ? "cursor-not-allowed opacity-50" : "cursor-text"}
+            `}
         value={value}
         onFocus={() => !isDisabled && setIsEditing(true)}
         onChange={(event) => setValue(event.target.value)}
@@ -224,12 +243,18 @@ function InlineEditableScore({ submission }: { submission: Submission }) {
   );
 }
 
-function InlineEditableFeedback({ submission }: { submission: Submission }) {
+export function InlineEditableFeedback({
+  submission,
+  startInEditMode,
+}: {
+  submission: Submission;
+  startInEditMode?: boolean;
+}) {
   const { t } = useTranslation();
   const updateDraft = useUpdateSubmissionDraft();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const feedbackValue = submission.draftFeedback ?? "";
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(startInEditMode || false);
   const [value, setValue] = useState(feedbackValue ?? "");
 
   useEffect(() => {
@@ -258,12 +283,14 @@ function InlineEditableFeedback({ submission }: { submission: Submission }) {
   };
 
   return (
-    <Input
+    <Textarea
       ref={inputRef}
-      type="text"
-      className={`h-7 w-full px-0 py-0 text-sm bg-transparent border-transparent shadow-none focus-visible:border-border focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:bg-muted/20 focus-visible:px-2 focus-visible:py-1 truncate whitespace-nowrap overflow-hidden ${
-        value ? "text-foreground" : "text-muted-foreground italic"
-      } ${isDisabled ? "cursor-not-allowed opacity-50" : "cursor-text"}`}
+      rows={isEditing ? 6 : 1}
+      className={`w-full px-2 py-0 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:bg-muted/20 focus-visible:px-2 focus-visible:py-1 transition-all ${
+        isEditing ? "min-h-32 resize-y" : "h-16 min-h-16 resize-none overflow-hidden"
+      } ${value ? "text-foreground" : "text-muted-foreground italic"} ${
+        isDisabled ? "cursor-not-allowed opacity-50" : "cursor-text"
+      }`}
       value={value}
       onFocus={() => !isDisabled && setIsEditing(true)}
       onChange={(event) => setValue(event.target.value)}
@@ -275,10 +302,7 @@ function InlineEditableFeedback({ submission }: { submission: Submission }) {
         if (event.key === "Escape") {
           setIsEditing(false);
           setValue(feedbackValue ?? "");
-        }
-        // Commit on Enter (single-line editing), but prevent form submission
-        if (event.key === "Enter") {
-          event.currentTarget.blur();
+          inputRef.current?.blur();
         }
       }}
       placeholder="—"
@@ -298,14 +322,16 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         header: ({ table }) => {
           const all = table.getIsAllRowsSelected();
           const some = table.getIsSomeRowsSelected();
-          const checkedValue: boolean | "indeterminate" = all ? true : some ? "indeterminate" : false;
+          const checkedValue: boolean | "indeterminate" = all
+            ? true
+            : some
+              ? "indeterminate"
+              : false;
 
           return (
             <Checkbox
               checked={checkedValue as any}
-              onCheckedChange={(value) =>
-                table.toggleAllRowsSelected(!!value)
-              }
+              onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
               aria-label="Select all"
             />
           );
@@ -356,7 +382,20 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         accessorKey: "draftFeedback",
         header: t("submissions.feedback"),
         cell: (info) => {
-          return <InlineEditableFeedback submission={info.row.original} />;
+          const feedback = info.getValue() as string;
+          return (
+            <p
+              className="block max-w-[240px] truncate cursor-pointer hover:underline hover:decoration-dotted hover:decoration-gray-500 hover:underline-offset-3"
+              onClick={(e) => {
+                e.stopPropagation();
+                (info.table.options.meta as any)?.onFeedbackClick?.(
+                  info.row.original,
+                );
+              }}
+            >
+              {feedback || "—"}
+            </p>
+          );
         },
       },
       {

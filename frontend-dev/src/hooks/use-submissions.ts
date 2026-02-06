@@ -3,6 +3,23 @@ import api from '@/lib/api'
 import { Artifact } from "@/hooks/use-artifacts"
 import { toast } from 'sonner'
 
+export type SubmissionEventType =
+  | "ai_graded"
+  | "initial_result"
+  | "manual_edit"
+  | "returned"
+  | "status_changed"
+
+export type SubmissionEvent = {
+  id: string
+  submissionId: string
+  eventType: SubmissionEventType
+  actorId?: string | null
+  workflowRunId?: string | null
+  details?: Record<string, unknown> | null
+  createdAt: string
+}
+
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
 export type SubmissionStatus =
@@ -79,6 +96,7 @@ export const submissionsKeys = {
   list: (params?: ListParams) => [...submissionsKeys.lists(), { params }] as const,
   details: () => [...submissionsKeys.all, 'detail'] as const,
   detail: (id: string) => [...submissionsKeys.details(), id] as const,
+  timeline: (id?: string) => [...submissionsKeys.detail(id || ''), 'timeline'] as const,
 }
 
 const fetchSubmissions = async (params?: ListParams): Promise<Submission[]> => {
@@ -88,6 +106,11 @@ const fetchSubmissions = async (params?: ListParams): Promise<Submission[]> => {
 
 const fetchSubmission = async (id: string): Promise<Submission> => {
   const res = await api.get(`/submissions/${id}`)
+  return res.data
+}
+
+const fetchSubmissionTimeline = async (id: string): Promise<SubmissionEvent[]> => {
+  const res = await api.get(`/submissions/${id}/timeline`)
   return res.data
 }
 
@@ -150,6 +173,14 @@ export function useSubmission(id: string) {
   return useQuery({
     queryKey: submissionsKeys.detail(id),
     queryFn: () => fetchSubmission(id),
+    enabled: !!id,
+  })
+}
+
+export function useSubmissionTimeline(id?: string) {
+  return useQuery({
+    queryKey: submissionsKeys.timeline(id),
+    queryFn: () => fetchSubmissionTimeline(id!),
     enabled: !!id,
   })
 }

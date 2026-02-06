@@ -8,8 +8,8 @@ export type ListParams = Record<string, string | number | boolean | null | undef
 export type Artifact = {
   id: string
   title: string
-  storagePath: string
-  storageType: string
+  artifact_type: string
+  mime: string
   creatorId: string
   createdAt: string
   updatedAt: string

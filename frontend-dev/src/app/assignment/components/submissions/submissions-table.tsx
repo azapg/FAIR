@@ -5,7 +5,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { TableProperties, ArrowUpRightIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 
 import {
   Table,
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/empty";
 import { useTranslation } from "react-i18next";
 import { Submission, SubmissionStatus, useReturnSubmissions } from "@/hooks/use-submissions";
+import { SubmissionSheet } from "./submission-sheet";
 
 interface DataTableProps {
   columns: ColumnDef<Submission>[];
@@ -118,7 +119,11 @@ export function SubmissionsTable({
   const [activeView, setActiveView] = useState(SUBMISSION_VIEWS[0].id);
   const [searchQuery, setSearchQuery] = useState("");
   const [rowSelection, setRowSelection] = useState({});
+  const [selectedSubmission, setSelectedSubmission] =
+    useState<Submission | null>(null);
+  const [focusOn, setFocusOn] = useState<"feedback" | null>(null);
   const returnSubmissions = useReturnSubmissions();
+  const hasAutoOpened = useRef(false);
 
   const filteredData = useMemo(() => {
     const view = SUBMISSION_VIEWS.find((item) => item.id === activeView);
@@ -144,6 +149,24 @@ export function SubmissionsTable({
     });
   }, [activeView, data, searchQuery]);
 
+  // DEV ONLY: Auto-open first submission for development convenience
+  // Remove this block in production
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV === "development" &&
+      filteredData.length > 0 &&
+      !hasAutoOpened.current
+    ) {
+      setSelectedSubmission(filteredData[0]);
+      hasAutoOpened.current = true;
+    }
+  }, [filteredData]);
+
+  const onFeedbackClick = (submission: Submission) => {
+    setSelectedSubmission(submission);
+    setFocusOn("feedback");
+  };
+
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -153,12 +176,14 @@ export function SubmissionsTable({
     state: {
       rowSelection,
     },
+    meta: {
+      onFeedbackClick,
+    },
   });
 
   const rows = table.getRowModel().rows;
   const hasRows = rows.length > 0;
   const selectedRowsCount = table.getSelectedRowModel().rows.length;
-
 
   const returnableSubmissionIds = table
     .getSelectedRowModel()
@@ -232,6 +257,11 @@ export function SubmissionsTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() ? "selected" : undefined}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedSubmission(row.original);
+                    setFocusOn(null);
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -253,6 +283,17 @@ export function SubmissionsTable({
           </TableBody>
         </Table>
       </div>
+      <SubmissionSheet
+        submission={selectedSubmission}
+        open={!!selectedSubmission}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedSubmission(null);
+            setFocusOn(null);
+          }
+        }}
+        focusOn={focusOn}
+      />
     </div>
   );
 }
