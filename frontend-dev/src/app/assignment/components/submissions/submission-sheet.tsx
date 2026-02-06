@@ -22,6 +22,7 @@ import {
 } from "./submissions";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
+import SubmissionTimeline from "@/components/submission-timeline";
 
 interface SubmissionSheetProps {
   submission: Submission | null;
@@ -106,7 +107,7 @@ export function SubmissionSheet({
             )}
           </div>
           <h1>Timeline</h1>
-          <pre>{JSON.stringify(timeline, null, 2)}</pre>
+          <SubmissionTimeline timeline={timeline}/>
         </div>
       </SheetContent>
     </Sheet>

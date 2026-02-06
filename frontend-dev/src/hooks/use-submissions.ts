@@ -12,12 +12,12 @@ export type SubmissionEventType =
 
 export type SubmissionEvent = {
   id: string
-  submission_id: string
-  event_type: SubmissionEventType
-  actor_id?: string | null
-  workflow_run_id?: string | null
+  submissionId: string
+  eventType: SubmissionEventType
+  actorId?: string | null
+  workflowRunId?: string | null
   details?: Record<string, unknown> | null
-  created_at: string
+  createdAt: string
 }
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
