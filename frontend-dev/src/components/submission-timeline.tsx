@@ -204,7 +204,7 @@ const FeedbackDiffWidget = ({
 
       <div className="p-3 text-sm space-y-3">
         {showOld && (
-          <div className="bg-red-50/50 p-2 rounded border border-red-100 text-red-800/70 text-xs line-through">
+          <div className="p-2 rounded border border-border text-red-800 text-xs line-through">
             {feedback.old}
           </div>
         )}
@@ -212,7 +212,7 @@ const FeedbackDiffWidget = ({
           className={cn(
             "text-foreground",
             showOld &&
-              "bg-green-50/50 p-2 rounded border border-green-100 text-green-900",
+              "p-2 rounded border border-border text-green-900",
           )}
         >
           {feedback.new}
