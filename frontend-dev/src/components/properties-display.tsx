@@ -24,7 +24,7 @@ function PropertiesDisplay({
   const content = (
     <div
       className={cn(
-        "grid grid-cols-[max-content_1fr] items-center gap-y-3",
+        "grid grid-cols-[max-content_minmax(0,1fr)] items-center gap-y-3 min-w-0 w-full",
         gapX === undefined && "gap-x-4",
         className,
       )}
@@ -74,7 +74,13 @@ function PropertyValue({ className, style, ...props }: PropertyValueProps) {
     textAlign: "var(--value-align, left)" as "left" | "center" | "right",
     ...style,
   };
-  return <div className={cn(className)} style={componentStyle} {...props} />;
+  return (
+    <div
+      className={cn("min-w-0 flex-wrap", className)}
+      style={componentStyle}
+      {...props}
+    />
+  );
 }
 
 export {
