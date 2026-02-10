@@ -29,6 +29,7 @@ import { CreateSubmissionDialog } from "@/app/assignment/components/submissions/
 import { useArtifacts } from "@/hooks/use-artifacts";
 import { useSubmissions } from "@/hooks/use-submissions";
 import { useTranslation } from "react-i18next";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function AssignmentPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
@@ -93,7 +94,8 @@ export default function AssignmentPage() {
       widthMobile="18rem"
     >
 
-      <div className={"w-full h-full overflow-auto break-words"}>
+      <ScrollArea className="w-full h-svh flex-1 min-w-0">
+        <div className="min-w-0 break-words">
         <div className={"flex flex-row justify-between items-center py-2 px-5"}>
           <BreadcrumbNav
             segments={[
@@ -212,7 +214,8 @@ export default function AssignmentPage() {
             />
           </div>
         </div>
-      </div>
+        </div>
+      </ScrollArea>
       <WorkflowsSidebar side={"right"} assignmentId={assignmentId ?? ""} />
     </WorkflowsSidebarProvider>
   );
