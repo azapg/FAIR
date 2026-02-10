@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, CircleCheck } from "lucide-react";
 import { getIconForMime } from "@/lib/utils";
 import {
   PropertiesDisplay,
@@ -9,7 +9,11 @@ import {
   PropertyValue,
 } from "@/components/properties-display";
 
-import { Submission, useSubmissionTimeline } from "@/hooks/use-submissions";
+import {
+  Submission,
+  useSubmissionTimeline,
+  useReturnSubmission,
+} from "@/hooks/use-submissions";
 import {
   SubmissionStatusLabel,
   InlineEditableScore,
@@ -37,8 +41,14 @@ export function SubmissionSheet({
   const { i18n, t } = useTranslation();
   const isMobile = useIsMobile();
   const { data: timeline } = useSubmissionTimeline(submission?.id);
+  const returnSubmission = useReturnSubmission();
 
   if (!submission) return null;
+
+  const hasDraft =
+    submission.draftScore != null || submission.draftFeedback != null;
+  const canReturn =
+    hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -49,8 +59,15 @@ export function SubmissionSheet({
       >
         <ScrollArea className="overflow-y-auto">
           <div className="p-6 overflow-y-auto">
-            <SheetTitle className="text-3xl font-extrabold pb-6">
+            <SheetTitle className="text-3xl font-extrabold pb-6 flex items-center justify-between">
               <span>{submission.submitter?.name}</span>
+              <Button
+                variant="secondary"
+                disabled={!canReturn}
+                onClick={() => returnSubmission.mutate(submission.id)}
+              >
+                <CircleCheck size={16} /> {t("submissions.returnAction")}
+              </Button>
             </SheetTitle>
             <div className="grid flex-1 auto-rows-min gap-6">
               <PropertiesDisplay scroll gapX={7} className="items-start">
