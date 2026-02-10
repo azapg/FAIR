@@ -103,6 +103,7 @@ def _db_workflow_to_read(wf: Workflow, db: Session) -> WorkflowRead:
         created_by=wf.created_by,
         created_at=wf.created_at,
         updated_at=wf.updated_at,
+        archived=wf.archived,
         plugins=plugins if plugins else None,
     )
 
@@ -178,7 +179,7 @@ def list_workflows(
     q = db.query(Workflow)
     if course_id:
         q = q.filter(Workflow.course_id == course_id)
-    workflows = q.all()
+    workflows = q.filter(Workflow.archived.is_(False)).all()
     return [_db_workflow_to_read(wf, db) for wf in workflows]
 
 
@@ -192,7 +193,7 @@ def get_workflow(
         raise HTTPException(status_code=403, detail="Not authorized to get workflow")
 
     wf = db.get(Workflow, workflow_id)
-    if not wf:
+    if not wf or wf.archived:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
         )
@@ -222,7 +223,7 @@ def update_workflow(
         raise HTTPException(status_code=403, detail="Not authorized to update workflow")
 
     wf = db.get(Workflow, workflow_id)
-    if not wf:
+    if not wf or wf.archived:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
     course = db.get(Course, wf.course_id)
@@ -275,6 +276,8 @@ def delete_workflow(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
         )
+    if wf.archived:
+        return None
 
     course = db.get(Course, wf.course_id)
     if not course:
@@ -288,7 +291,9 @@ def delete_workflow(
             detail="Only the course instructor or admin can delete this workflow",
         )
 
-    db.delete(wf)
+    wf.archived = True
+    wf.updated_at = datetime.now(timezone.utc)
+    db.add(wf)
     db.commit()
     return None
 

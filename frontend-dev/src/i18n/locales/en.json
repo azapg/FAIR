@@ -131,7 +131,9 @@
     "noDueDate": "No due date",
     "totalPoints": "Total Points",
     "na": "N/A",
-    "noDescription": "No description provided."
+    "noDescription": "No description provided.",
+    "deleteConfirmTitle": "Delete assignment?",
+    "deleteConfirmDescription": "This will also delete all student submissions for this assignment. This action cannot be undone."
   },
   "submissions": {
     "title": "Submissions",
