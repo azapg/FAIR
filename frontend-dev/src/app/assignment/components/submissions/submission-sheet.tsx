@@ -55,14 +55,14 @@ export function SubmissionSheet({
             <div className="grid flex-1 auto-rows-min gap-6">
               <PropertiesDisplay scroll gapX={7} className="items-start">
                 <Property>
-                  <PropertyLabel>Status</PropertyLabel>
+                  <PropertyLabel>{t("submissions.status")}</PropertyLabel>
                   <PropertyValue>
                     <SubmissionStatusLabel status={submission.status} />
                   </PropertyValue>
                 </Property>
 
                 <Property>
-                  <PropertyLabel>Turned in</PropertyLabel>
+                  <PropertyLabel>{t("submissions.turnedIn")}</PropertyLabel>
                   <PropertyValue>
                     {formatShortDate(
                       new Date(submission.submittedAt),
@@ -72,14 +72,14 @@ export function SubmissionSheet({
                 </Property>
 
                 <Property>
-                  <PropertyLabel>Grade</PropertyLabel>
+                  <PropertyLabel>{t("submissions.grade")}</PropertyLabel>
                   <PropertyValue>
                     <InlineEditableScore submission={submission} />
                   </PropertyValue>
                 </Property>
 
                 <Property>
-                  <PropertyLabel>Feedback</PropertyLabel>
+                  <PropertyLabel>{t("submissions.feedback")}</PropertyLabel>
                   <PropertyValue>
                     <InlineEditableFeedback
                       submission={submission}
@@ -88,7 +88,9 @@ export function SubmissionSheet({
                   </PropertyValue>
                 </Property>
               </PropertiesDisplay>
-              <h1 className="text-xl font-medium">Attachments</h1>
+              <h1 className="text-xl font-medium">
+                {t("submissions.attachments")}
+              </h1>
               <div className="flex flex-row gap-1 items-center">
                 {submission.artifacts && submission.artifacts.length > 0 ? (
                   submission.artifacts.map((artifact) => {
@@ -106,10 +108,12 @@ export function SubmissionSheet({
                     );
                   })
                 ) : (
-                  <>This submission doesn't include attachments.</>
+                  <>{t("submissions.noAttachments")}</>
                 )}
               </div>
-              <h1 className="text-xl font-medium">Timeline</h1>
+              <h1 className="text-xl font-medium">
+                {t("submissions.timeline")}
+              </h1>
               <SubmissionTimeline timeline={timeline} />
             </div>
           </div>

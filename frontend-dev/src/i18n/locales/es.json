@@ -160,7 +160,11 @@
     "selectedRows": "{{selected}} de {{total}} seleccionadas",
     "returnAction": "Devolver",
     "noSubmissons": "No hay entregas disponibles",
-    "noSubmissonsDescription": "Aún no hay entregas. Aparecerán aquí cuando los estudiantes entreguen. Puedes agregar entregas sintéticas para experimentar."
+    "noSubmissonsDescription": "Aún no hay entregas. Aparecerán aquí cuando los estudiantes entreguen. Puedes agregar entregas sintéticas para experimentar.",
+    "turnedIn": "Entregado el",
+    "attachments": "Adjuntos",
+    "noAttachments": "Esta entrega no incluye adjuntos.",
+    "timeline": "Cronología"
   },
   "status": {
     "pending": "Pendiente",
