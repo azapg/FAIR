@@ -131,7 +131,9 @@
     "noDueDate": "Sin fecha de entrega",
     "totalPoints": "Puntos totales",
     "na": "N/A",
-    "noDescription": "No se proporcionó descripción."
+    "noDescription": "No se proporcionó descripción.",
+    "deleteConfirmTitle": "¿Eliminar tarea?",
+    "deleteConfirmDescription": "Esto también eliminará todas las entregas de los estudiantes para esta tarea. Esta acción no se puede deshacer."
   },
   "submissions": {
     "title": "Entregas",

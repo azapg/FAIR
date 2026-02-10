@@ -10,6 +10,7 @@ from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.assignment import (
     Assignment,
 )
+from fair_platform.backend.data.models.submission import Submission
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.artifact import ArtifactStatus, AccessLevel
 from fair_platform.backend.api.schema.assignment import (
@@ -256,6 +257,16 @@ def delete_assignment(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this assignment",
         )
+
+    submissions = (
+        db.query(Submission)
+        .filter(Submission.assignment_id == assignment_id)
+        .all()
+    )
+    for submission in submissions:
+        submission.artifacts.clear()
+        submission.runs.clear()
+        db.delete(submission)
 
     db.delete(assignment)
     db.commit()
