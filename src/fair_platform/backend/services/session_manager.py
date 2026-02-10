@@ -276,7 +276,6 @@ class SessionManager:
             db.commit()
             db.refresh(workflow_run)
 
-        # TODO: Just noticed that this doesn't hold a reference to the workflow id
         return WorkflowRunRead(
             id=workflow_run.id,
             workflow_id=workflow.id,
