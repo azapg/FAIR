@@ -51,7 +51,7 @@ async def create_session(
         )
 
     workflow = db.get(Workflow, payload.workflow_id)
-    if not workflow:
+    if not workflow or workflow.archived:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
     session = session_manager.create_session(workflow.id, payload.submission_ids, user)

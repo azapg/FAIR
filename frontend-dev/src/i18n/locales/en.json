@@ -131,7 +131,9 @@
     "noDueDate": "No due date",
     "totalPoints": "Total Points",
     "na": "N/A",
-    "noDescription": "No description provided."
+    "noDescription": "No description provided.",
+    "deleteConfirmTitle": "Delete assignment?",
+    "deleteConfirmDescription": "This will also delete all student submissions for this assignment. This action cannot be undone."
   },
   "submissions": {
     "title": "Submissions",
@@ -172,6 +174,9 @@
     "needsReview": "Needs Review",
     "failure": "Error",
     "processing": "Processing",
+    "running": "Running",
+    "success": "Success",
+    "cancelled": "Cancelled",
     "unknown": "Unknown"
   },
   "properties": {
@@ -244,11 +249,14 @@
   },
   "runs": {
     "title": "Workflow runs",
-    "assignment": "Assignment",
-    "submitter": "Submitter",
+    "workflow": "Workflow",
+    "submissions": "Submissions",
     "status": "Status",
     "runId": "Run ID",
-    "submittedAt": "Submitted at",
+    "startedAt": "Started at",
+    "finishedAt": "Finished at",
+    "duration": "Duration",
+    "runBy": "Run by",
     "empty": "No workflow runs available for this course yet.",
     "noCourse": "Select a course to view runs.",
     "errorLoading": "Error loading runs."

@@ -5,6 +5,16 @@ import {CreateAssignmentDialog} from "@/app/courses/tabs/assignments/create-assi
 import {Assignment, useDeleteAssignment} from "@/hooks/use-assignments";
 import {useTranslation} from "react-i18next";
 import {EditAssignmentDialog} from "@/app/courses/tabs/assignments/edit-assignment-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // TODO: Let's just use react-query here directly to manage assignments state
 export default function AssignmentsTab({
@@ -17,6 +27,7 @@ export default function AssignmentsTab({
   const [assignments, setAssignments] = useState<Assignment[]>(() => initialAssignments);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
   const {t} = useTranslation();
   const deleteAssignment = useDeleteAssignment();
   const columns = useAssignmentColumns({
@@ -24,10 +35,9 @@ export default function AssignmentsTab({
       setEditingAssignment(assignment);
       setIsEditOpen(true);
     },
-    onDelete: async (assignment) => {
-      await deleteAssignment.mutateAsync(assignment.id);
-      setAssignments(prev => prev.filter(item => item.id !== assignment.id));
-    }
+    onDelete: (assignment) => {
+      setDeleteTarget(assignment);
+    },
   });
 
   useEffect(() => {
@@ -49,6 +59,13 @@ export default function AssignmentsTab({
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    await deleteAssignment.mutateAsync(deleteTarget.id);
+    setAssignments(prev => prev.filter(item => item.id !== deleteTarget.id));
+    setDeleteTarget(null);
+  };
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -66,6 +83,27 @@ export default function AssignmentsTab({
         onOpenChange={handleEditOpenChange}
         onAssignmentUpdated={handleAssignmentUpdated}
       />
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("assignments.deleteConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("assignments.deleteConfirmDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>
+              {t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

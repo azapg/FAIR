@@ -26,7 +26,7 @@ _WORKFLOW_PLUGIN_ROLES = ("transcriber", "grader", "validator")
 def _empty_workflow_plugin_fields() -> Dict[str, Optional[Any]]:
     fields: Dict[str, Optional[Any]] = {}
     for role in _WORKFLOW_PLUGIN_ROLES:
-        fields[f"{role}_plugin_id"] = None
+        fields[f"{role}_plugin_hash"] = None
         fields[f"{role}_settings"] = None
     return fields
 
@@ -59,7 +59,7 @@ def _extract_workflow_plugin_fields(
         if not plugin:
             continue
         matched_roles += 1
-        extracted[f"{role}_plugin_id"] = plugin.id
+        extracted[f"{role}_plugin_hash"] = plugin.hash
         extracted[f"{role}_settings"] = plugin.settings
 
     if require_at_least_one and matched_roles == 0:
@@ -74,14 +74,14 @@ def _extract_workflow_plugin_fields(
 def _db_workflow_to_read(wf: Workflow, db: Session) -> WorkflowRead:
     plugins: Dict[str, RuntimePlugin] = {}
     for role in _WORKFLOW_PLUGIN_ROLES:
-        plugin_id = getattr(wf, f"{role}_plugin_id")
+        plugin_hash = getattr(wf, f"{role}_plugin_hash")
         settings = getattr(wf, f"{role}_settings")
-        if plugin_id:
-            plugin_obj = db.query(Plugin).filter(Plugin.id == plugin_id).first()
+        if plugin_hash:
+            plugin_obj = db.query(Plugin).filter(Plugin.hash == plugin_hash).first()
             if not plugin_obj:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Plugin not found for role '{role}' with id {plugin_id}",
+                    detail=f"Plugin not found for role '{role}' with hash {plugin_hash}",
                 )
             plugins[role] = RuntimePlugin(
                 id=plugin_obj.id,
@@ -103,6 +103,7 @@ def _db_workflow_to_read(wf: Workflow, db: Session) -> WorkflowRead:
         created_by=wf.created_by,
         created_at=wf.created_at,
         updated_at=wf.updated_at,
+        archived=wf.archived,
         plugins=plugins if plugins else None,
     )
 
@@ -178,7 +179,7 @@ def list_workflows(
     q = db.query(Workflow)
     if course_id:
         q = q.filter(Workflow.course_id == course_id)
-    workflows = q.all()
+    workflows = q.filter(Workflow.archived.is_(False)).all()
     return [_db_workflow_to_read(wf, db) for wf in workflows]
 
 
@@ -192,7 +193,7 @@ def get_workflow(
         raise HTTPException(status_code=403, detail="Not authorized to get workflow")
 
     wf = db.get(Workflow, workflow_id)
-    if not wf:
+    if not wf or wf.archived:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
         )
@@ -222,7 +223,7 @@ def update_workflow(
         raise HTTPException(status_code=403, detail="Not authorized to update workflow")
 
     wf = db.get(Workflow, workflow_id)
-    if not wf:
+    if not wf or wf.archived:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
     course = db.get(Course, wf.course_id)
@@ -275,6 +276,8 @@ def delete_workflow(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
         )
+    if wf.archived:
+        return None
 
     course = db.get(Course, wf.course_id)
     if not course:
@@ -288,7 +291,9 @@ def delete_workflow(
             detail="Only the course instructor or admin can delete this workflow",
         )
 
-    db.delete(wf)
+    wf.archived = True
+    wf.updated_at = datetime.now(timezone.utc)
+    db.add(wf)
     db.commit()
     return None
 

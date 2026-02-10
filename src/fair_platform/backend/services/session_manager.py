@@ -276,9 +276,9 @@ class SessionManager:
             db.commit()
             db.refresh(workflow_run)
 
-        # TODO: Just noticed that this doesn't hold a reference to the workflow id
         return WorkflowRunRead(
             id=workflow_run.id,
+            workflow_id=workflow.id,
             run_by=workflow_run.run_by,
             status=workflow_run.status,
             started_at=workflow_run.started_at,
@@ -341,9 +341,9 @@ class SessionManager:
             )
 
         # Transcription
-        if workflow.transcriber_plugin_id:
+        if workflow.transcriber_plugin_hash:
             await session.logger.info("Starting transcription step...")
-            transcriber_cls = get_plugin_object(workflow.transcriber_plugin_id)
+            transcriber_cls = get_plugin_object(workflow.transcriber_plugin_hash)
 
             if not transcriber_cls:
                 return await report_failure(
@@ -356,7 +356,7 @@ class SessionManager:
 
             try:
                 transcriber_instance = transcriber_cls(
-                    session.logger.get_child(workflow.transcriber_plugin_id)
+                    session.logger.get_child(workflow.transcriber_plugin_hash)
                 )
             except Exception as e:
                 return await report_failure(
@@ -642,9 +642,9 @@ class SessionManager:
                 log_message="No transcription step found. Processing without transcription is not supported.",
             )
 
-        if workflow.grader_plugin_id:
+        if workflow.grader_plugin_hash:
             await session.logger.info("Starting grading step")
-            grader_cls = get_plugin_object(workflow.grader_plugin_id)
+            grader_cls = get_plugin_object(workflow.grader_plugin_hash)
             if not grader_cls:
                 return await report_failure(
                     session,
@@ -656,7 +656,7 @@ class SessionManager:
 
             try:
                 grader_instance = grader_cls(
-                    session.logger.get_child(workflow.grader_plugin_id)
+                    session.logger.get_child(workflow.grader_plugin_hash)
                 )
             except Exception as e:
                 return await report_failure(
@@ -890,15 +890,15 @@ class SessionManager:
             await session.logger.info("Grading step completed")
 
         # Validation step
-        if getattr(workflow, "validator_plugin_id", None):
+        if getattr(workflow, "validator_plugin_hash", None):
             await session.logger.info("Starting validation step")
-            validator_cls = get_plugin_object(workflow.validator_plugin_id)
+            validator_cls = get_plugin_object(workflow.validator_plugin_hash)
             if not validator_cls:
                 await session.logger.warning("Validator plugin not found, skipping")
             else:
                 try:
                     validator_instance = validator_cls(
-                        session.logger.get_child(workflow.validator_plugin_id)
+                        session.logger.get_child(workflow.validator_plugin_hash)
                     )
                     validator_instance.set_values(workflow.validator_settings or {})
 
