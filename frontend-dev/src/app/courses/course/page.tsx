@@ -93,7 +93,7 @@ export default function CourseDetailPage() {
           <ParticipantsTab instructor={"instructor" in course ? course.instructor : undefined}/>
         </TabsContent>
         <TabsContent value={"runs"} className={"px-8"}>
-          <RunsTab courseId={courseId} assignments={assignments}/>
+          <RunsTab courseId={courseId}/>
         </TabsContent>
         <TabsContent value={"artifacts"} className={"px-8"}>
           <ArtifactsTab courseId={courseId} assignments={assignments}/>

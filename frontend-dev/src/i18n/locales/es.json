@@ -172,6 +172,9 @@
     "needsReview": "Requiere revisión",
     "failure": "Error",
     "processing": "Procesando",
+    "running": "En ejecución",
+    "success": "Exitoso",
+    "cancelled": "Cancelado",
     "unknown": "Desconocido"
   },
   "properties": {
@@ -243,12 +246,15 @@
     "errorLoading": "Error al cargar artefactos."
   },
   "runs": {
-    "title": "Ejecuciones de flujo de trabajo",
-    "assignment": "Tarea",
-    "submitter": "Remitente",
+    "title": "Ejecuciones de flujo",
+    "workflow": "Flujo de trabajo",
+    "submissions": "Entregas",
     "status": "Estado",
     "runId": "ID de ejecución",
-    "submittedAt": "Enviado el",
+    "startedAt": "Iniciado el",
+    "finishedAt": "Finalizado el",
+    "duration": "Duración",
+    "runBy": "Ejecutado por",
     "empty": "Aún no hay ejecuciones para este curso.",
     "noCourse": "Seleccione un curso para ver ejecuciones.",
     "errorLoading": "Error al cargar ejecuciones."
