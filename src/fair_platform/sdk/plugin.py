@@ -1,4 +1,5 @@
 import inspect
+import hashlib
 from abc import ABC, abstractmethod
 from enum import Enum
 
@@ -190,6 +191,10 @@ class FairPlugin:
                 f"Plugin class '{cls.__name__}' is missing '__extension_hash__' attribute."
             )
 
+        # Include metadata in the final hash to ensure uniqueness even if source code is identical
+        metadata_to_hash = f"{extension_hash}:{self.id}:{self.author}:{self.version}"
+        final_hash = hashlib.sha256(metadata_to_hash.encode()).hexdigest()
+
         source = getattr(current_module, "__extension_dir__", None)
         if source is None:
             raise ValueError(
@@ -213,7 +218,7 @@ class FairPlugin:
             "author": self.author,
             "description": self.description,
             "version": self.version,
-            "hash": extension_hash,
+            "hash": final_hash,
             "source": source,
             "author_email": self.author_email,
             "settings_schema": create_settings_model(cls).model_json_schema(),
@@ -231,21 +236,21 @@ class FairPlugin:
             session.refresh(merged_plugin)
 
         # TODO: Replace id with hash. For now, this is fine to avoid changing workflows schema.
-        PLUGINS[self.id] = runtime_plugin
-        PLUGINS_OBJECTS[self.id] = cls
+        PLUGINS[final_hash] = runtime_plugin
+        PLUGINS_OBJECTS[final_hash] = cls
         return cls
 
 
-def get_plugin_metadata(id: str) -> Optional[PluginMeta]:
-    return PLUGINS.get(id)
+def get_plugin_metadata(hash: str) -> Optional[PluginMeta]:
+    return PLUGINS.get(hash)
 
 
 def get_plugin_object(
-    id: str,
+    hash: str,
 ) -> Optional[
     Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]
 ]:
-    return PLUGINS_OBJECTS.get(id)
+    return PLUGINS_OBJECTS.get(hash)
 
 
 def list_plugins(plugin_type: Optional[PluginType] = None) -> List[PluginMeta]:
