@@ -1,29 +1,17 @@
 import { createWithEqualityFn } from "zustand/traditional";
 import { persist } from "zustand/middleware";
 import { RuntimePlugin, RuntimePluginRead } from "@/hooks/use-plugins";
-import { SubmissionStatus } from "@/hooks/use-submissions";
+import { SubmissionStatus, Submission } from "@/hooks/use-submissions";
 
-export type WorkflowRunSubmission = {
-  assignmentId: string;
-  submitterId: string;
-  createdById: string;
-  submittedAt?: string | null;
-  status: SubmissionStatus;
-  officialRunId?: string | null;
-};
-
-export type WorkflowRunCreate = {
-  status: "pending" | "running" | "success" | "failure" | "cancelled";
-  runBy: string;
-  logs?: Record<string, unknown> | null;
-  submissions?: WorkflowRunSubmission[];
-};
-
-export type WorkflowRun = WorkflowRunCreate & {
+export type WorkflowRun = {
   id: string;
   workflowId: string;
   startedAt?: string | null;
   finishedAt?: string | null;
+  status: SubmissionStatus;
+  runBy: string;
+  logs?: Record<string, unknown> | null;
+  submissions?: Submission[];
 };
 
 export type WorkflowCreate = {
