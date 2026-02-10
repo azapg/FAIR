@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from "zustand/middleware";
-import {SubmissionStatus} from "@/app/assignment/components/submissions/submissions";
+import {SubmissionStatus} from "@/hooks/use-submissions";
 
 
 // TODO: Submission type isn't even finished, it is missing feedback, grade, etc.

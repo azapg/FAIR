@@ -119,11 +119,15 @@ export function SubmissionsTable({
   const [activeView, setActiveView] = useState(SUBMISSION_VIEWS[0].id);
   const [searchQuery, setSearchQuery] = useState("");
   const [rowSelection, setRowSelection] = useState({});
-  const [selectedSubmission, setSelectedSubmission] =
-    useState<Submission | null>(null);
+  const [selectedSubmissionId, setSelectedSubmissionId] =
+    useState<string | null>(null);
   const [focusOn, setFocusOn] = useState<"feedback" | null>(null);
   const returnSubmissions = useReturnSubmissions();
   const hasAutoOpened = useRef(false);
+
+  const selectedSubmission = useMemo(() => {
+    return data.find((s) => s.id === selectedSubmissionId) || null;
+  }, [data, selectedSubmissionId]);
 
   const filteredData = useMemo(() => {
     const view = SUBMISSION_VIEWS.find((item) => item.id === activeView);
@@ -157,13 +161,13 @@ export function SubmissionsTable({
       filteredData.length > 0 &&
       !hasAutoOpened.current
     ) {
-      setSelectedSubmission(filteredData[0]);
+      setSelectedSubmissionId(filteredData[0].id);
       hasAutoOpened.current = true;
     }
   }, [filteredData]);
 
   const onFeedbackClick = (submission: Submission) => {
-    setSelectedSubmission(submission);
+    setSelectedSubmissionId(submission.id);
     setFocusOn("feedback");
   };
 
@@ -259,7 +263,7 @@ export function SubmissionsTable({
                   data-state={row.getIsSelected() ? "selected" : undefined}
                   className="cursor-pointer"
                   onClick={() => {
-                    setSelectedSubmission(row.original);
+                    setSelectedSubmissionId(row.original.id);
                     setFocusOn(null);
                   }}
                 >
@@ -288,7 +292,7 @@ export function SubmissionsTable({
         open={!!selectedSubmission}
         onOpenChange={(open) => {
           if (!open) {
-            setSelectedSubmission(null);
+            setSelectedSubmissionId(null);
             setFocusOn(null);
           }
         }}

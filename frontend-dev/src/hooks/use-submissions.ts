@@ -227,16 +227,82 @@ export function useUpdateSubmissionDraft() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateSubmissionDraftInput }) =>
       updateSubmissionDraft(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: submissionsKeys.detail(variables.id) })
-      queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
-      toast.success('Submission draft updated successfully');
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: submissionsKeys.lists() })
+      await queryClient.cancelQueries({ queryKey: submissionsKeys.detail(variables.id) })
+
+      // Snapshot the previous value
+      const previousSubmission = queryClient.getQueryData<Submission>(
+        submissionsKeys.detail(variables.id),
+      )
+
+      // Optimistically update the detail query
+      if (previousSubmission) {
+        queryClient.setQueryData<Submission>(submissionsKeys.detail(variables.id), {
+          ...previousSubmission,
+          draftScore:
+            variables.data.score !== undefined
+              ? variables.data.score
+              : previousSubmission.draftScore,
+          draftFeedback:
+            variables.data.feedback !== undefined
+              ? variables.data.feedback
+              : previousSubmission.draftFeedback,
+        })
+      }
+
+      // Also optimistically update the list queries
+      queryClient.setQueriesData<Submission[]>(
+        { queryKey: submissionsKeys.lists() },
+        (old) => {
+          if (!old) return old
+          return old.map((s) => {
+            if (s.id === variables.id) {
+              return {
+                ...s,
+                draftScore:
+                  variables.data.score !== undefined
+                    ? variables.data.score
+                    : s.draftScore,
+                draftFeedback:
+                  variables.data.feedback !== undefined
+                    ? variables.data.feedback
+                    : s.draftFeedback,
+              }
+            }
+            return s
+          })
+        },
+      )
+
+      return { previousSubmission }
     },
-    onError: (error: Error) => {
+    onSuccess: (_, variables) => {
+      toast.success('Submission draft updated successfully')
+    },
+    onError: (error: Error, variables, context) => {
+      // Rollback to the previous value if mutation fails
+      if (context?.previousSubmission) {
+        queryClient.setQueryData(
+          submissionsKeys.detail(variables.id),
+          context.previousSubmission,
+        )
+      }
+      // Note: Rolling back the list is more complex if we want to be precise,
+      // but invalidating them below will fix it anyway.
+
       toast.error('Failed to update submission draft', {
-        description: error.message || 'Something went wrong'
-      });
-    }
+        description: error.message || 'Something went wrong',
+      })
+    },
+    onSettled: (_, __, variables) => {
+      // Always refetch after error or success to ensure we have the correct data
+      queryClient.invalidateQueries({
+        queryKey: submissionsKeys.detail(variables.id),
+      })
+      queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+    },
   })
 }
 
