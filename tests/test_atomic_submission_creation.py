@@ -129,7 +129,7 @@ class TestAtomicSubmissionCreation:
         assert submission_data["assignmentId"] == str(data["assignment_id"])
         # Note: submitter is now a Submitter object, not a User
         assert submission_data["submitter"]["name"] == "Test Student"
-        assert submission_data["status"] == "pending"  # Changed from "submitted"
+        assert submission_data["status"] == "submitted"
         assert "artifacts" in submission_data
         assert len(submission_data["artifacts"]) == 2
         

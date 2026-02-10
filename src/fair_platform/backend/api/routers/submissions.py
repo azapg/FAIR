@@ -107,7 +107,7 @@ async def create_submission(
             submitter_id=submitter.id,
             created_by_id=current_user.id,  # Track who created this submission
             submitted_at=datetime.now(timezone.utc),
-            status=SubmissionStatus.pending,
+            status=SubmissionStatus.submitted,
         )
         db.add(sub)
         db.flush()

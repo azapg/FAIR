@@ -56,7 +56,7 @@ def _create_workflow_run_fixture(test_db, *, instructor_id, runner_id):
             submitter_id=submitter.id,
             created_by_id=instructor_id,
             submitted_at=datetime.utcnow(),
-            status=SubmissionStatus.pending,
+            status=SubmissionStatus.submitted,
         )
 
         run = WorkflowRun(
@@ -164,7 +164,7 @@ class TestWorkflowRunsAPI:
                 submitter_id=submitter.id,
                 created_by_id=professor_user.id,
                 submitted_at=datetime.utcnow(),
-                status=SubmissionStatus.pending,
+                status=SubmissionStatus.submitted,
             )
             submission_b = Submission(
                 id=uuid4(),
@@ -172,7 +172,7 @@ class TestWorkflowRunsAPI:
                 submitter_id=submitter.id,
                 created_by_id=professor_user.id,
                 submitted_at=datetime.utcnow(),
-                status=SubmissionStatus.pending,
+                status=SubmissionStatus.submitted,
             )
             run_a = WorkflowRun(
                 id=uuid4(),
