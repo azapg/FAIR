@@ -136,6 +136,13 @@ async def create_submission(
                 )
                 sub.artifacts.append(artifact)
 
+        sub_mgr = get_submission_manager(db)
+        sub_mgr.log_submission_submitted(
+            submission=sub,
+            actor=current_user,
+            artifact_count=len(sub.artifacts),
+        )
+
         db.commit()
         db.refresh(sub)
         return sub

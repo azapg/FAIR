@@ -71,7 +71,7 @@ def test_get_submission_timeline_populates_fields(test_client: TestClient, test_
         event_manual = SubmissionEvent(
             id=uuid4(),
             submission_id=submission.id,
-            event_type=SubmissionEventType.manual_edit,
+            event_type=SubmissionEventType.draft_manually_edited,
             actor_id=professor_user.id,
             details={"score": {"old": None, "new": 85}},
         )
@@ -80,7 +80,7 @@ def test_get_submission_timeline_populates_fields(test_client: TestClient, test_
         event_ai = SubmissionEvent(
             id=uuid4(),
             submission_id=submission.id,
-            event_type=SubmissionEventType.ai_graded,
+            event_type=SubmissionEventType.ai_initial_result_recorded,
             workflow_run_id=workflow_run.id,
             details={"score": 85},
         )
@@ -101,7 +101,9 @@ def test_get_submission_timeline_populates_fields(test_client: TestClient, test_
     assert len(timeline) == 2
     
     # Check manual edit event
-    manual_event = next(e for e in timeline if e["eventType"] == "manual_edit")
+    manual_event = next(
+        e for e in timeline if e["eventType"] == "draft_manually_edited"
+    )
     assert manual_event.get("actorId") is None
     assert manual_event["actor"] is not None
     assert manual_event["actor"]["name"] == professor_user.name
@@ -111,7 +113,9 @@ def test_get_submission_timeline_populates_fields(test_client: TestClient, test_
     assert manual_event["workflowRun"] is None
     
     # Check AI graded event
-    ai_event = next(e for e in timeline if e["eventType"] == "ai_graded")
+    ai_event = next(
+        e for e in timeline if e["eventType"] == "ai_initial_result_recorded"
+    )
     assert ai_event.get("workflowRunId") is None
     assert ai_event["workflowRun"] is not None
     assert ai_event["workflowRun"]["id"] == str(workflow_run.id)

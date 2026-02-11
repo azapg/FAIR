@@ -7,7 +7,7 @@ happen as a single transaction, with proper permission validation.
 """
 
 import pytest
-from uuid import uuid4
+from uuid import UUID, uuid4
 from datetime import datetime, timedelta
 from io import BytesIO
 from unittest.mock import Mock, patch
@@ -18,6 +18,10 @@ from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.artifact import Artifact
 from fair_platform.backend.data.models.submission import Submission
+from fair_platform.backend.data.models.submission_event import (
+    SubmissionEvent,
+    SubmissionEventType,
+)
 from tests.conftest import get_auth_token
 
 
@@ -170,6 +174,16 @@ class TestAtomicSubmissionCreation:
         submission_data = response.json()
         assert submission_data["assignmentId"] == str(data["assignment"].id)
         assert len(submission_data.get("artifacts", [])) == 0
+
+        with test_db() as session:
+            events = (
+                session.query(SubmissionEvent)
+                .filter(SubmissionEvent.submission_id == UUID(submission_data["id"]))
+                .all()
+            )
+            assert len(events) == 1
+            assert events[0].event_type == SubmissionEventType.submission_submitted.value
+            assert events[0].details["artifact_count"] == 0
 
     def test_create_submission_student_cannot_create_submissions(self, test_client, test_db):
         """Test that students cannot create submissions (only professors/admins can)"""

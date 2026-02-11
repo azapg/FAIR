@@ -16,11 +16,12 @@ if TYPE_CHECKING:
 
 
 class SubmissionEventType(str, Enum):
-    ai_graded = "ai_graded"
-    initial_result = "initial_result"
-    manual_edit = "manual_edit"
-    returned = "returned"
-    status_changed = "status_changed"
+    submission_submitted = "submission_submitted"
+    status_transitioned = "status_transitioned"
+    ai_initial_result_recorded = "ai_initial_result_recorded"
+    ai_regrade_result_recorded = "ai_regrade_result_recorded"
+    draft_manually_edited = "draft_manually_edited"
+    returned_to_student = "returned_to_student"
 
 
 class SubmissionEvent(Base):
