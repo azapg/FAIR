@@ -19,11 +19,12 @@ import {
   InlineEditableScore,
   InlineEditableFeedback,
   formatShortDate,
-} from "./submissions";
+} from "@/app/assignment/components/submissions/submissions";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
 import SubmissionTimeline from "@/components/submission-timeline";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 interface SubmissionSheetProps {
   submission: Submission | null;
@@ -105,6 +106,7 @@ export function SubmissionSheet({
                   </PropertyValue>
                 </Property>
               </PropertiesDisplay>
+              <Separator />
               <h1 className="text-xl font-medium">
                 {t("submissions.attachments")}
               </h1>
