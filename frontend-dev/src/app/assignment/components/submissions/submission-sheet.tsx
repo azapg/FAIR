@@ -1,6 +1,19 @@
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { ArrowUpRight, CircleCheck } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  ArrowUpRight,
+  CircleCheck,
+  Ellipsis,
+  Maximize2,
+  PanelBottomClose,
+  PanelRightClose,
+} from "lucide-react";
 import { getIconForMime } from "@/lib/utils";
 import {
   PropertiesDisplay,
@@ -54,87 +67,102 @@ export function SubmissionSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        className="w-full h-9/10 md:h-full md:min-w-4/5 lg:min-w-1/3"
+        className="w-full h-9/10 md:h-full md:min-w-4/5 lg:min-w-1/2 gap-0"
         side={isMobile ? "bottom" : "right"}
         onOpenAutoFocus={(e) => e.preventDefault()}
+        showCloseButton={false}
       >
-        <ScrollArea className="overflow-y-auto">
-          <div className="p-6 overflow-y-auto">
-            <SheetTitle className="text-3xl font-extrabold pb-6 flex items-center justify-between">
-              <span>{submission.submitter?.name}</span>
-              <Button
-                variant="secondary"
-                disabled={!canReturn}
-                onClick={() => returnSubmission.mutate(submission.id)}
-              >
-                <CircleCheck size={16} /> {t("submissions.returnAction")}
+
+        <div className="w-full flex justify-between text-muted-foreground py-2 px-4">
+          <div className="flex items-center">
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon-sm">
+                {isMobile ? <PanelBottomClose /> : <PanelRightClose />}
               </Button>
+            </SheetTrigger>
+            <Button variant="ghost" size="icon-sm">
+              <Maximize2 />
+            </Button>
+          </div>
+          <div className="flex gap-2 items-center">
+            <Button
+              variant="secondary"
+              disabled={!canReturn}
+              onClick={() => returnSubmission.mutate(submission.id)}
+            >
+              <CircleCheck size={16} /> {t("submissions.returnAction")}
+            </Button>
+            <Button variant="ghost" size="icon-sm">
+              <Ellipsis />
+            </Button>
+          </div>
+        </div>
+
+        <ScrollArea className="overflow-y-auto gap-6">
+          <SheetHeader className="gap-3 px-8 md:px-12">
+            <SheetTitle className="text-3xl font-medium">
+              {submission.submitter?.name}
             </SheetTitle>
-            <div className="grid flex-1 auto-rows-min gap-6">
-              <PropertiesDisplay scroll gapX={4} className="items-start">
-                <Property>
-                  <PropertyLabel>{t("submissions.status")}</PropertyLabel>
-                  <PropertyValue>
-                    <SubmissionStatusLabel status={submission.status} />
-                  </PropertyValue>
-                </Property>
+            <PropertiesDisplay scroll gapX={4} className="items-start">
+              <Property>
+                <PropertyLabel>{t("submissions.status")}</PropertyLabel>
+                <PropertyValue>
+                  <SubmissionStatusLabel status={submission.status} />
+                </PropertyValue>
+              </Property>
 
-                <Property>
-                  <PropertyLabel>{t("submissions.turnedIn")}</PropertyLabel>
-                  <PropertyValue className="text-sm">
-                    {formatShortDate(
-                      new Date(submission.submittedAt),
-                      i18n.language,
-                    )}
-                  </PropertyValue>
-                </Property>
+              <Property>
+                <PropertyLabel>{t("submissions.turnedIn")}</PropertyLabel>
+                <PropertyValue className="text-sm">
+                  {formatShortDate(
+                    new Date(submission.submittedAt),
+                    i18n.language,
+                  )}
+                </PropertyValue>
+              </Property>
 
-                <Property>
-                  <PropertyLabel>{t("submissions.grade")}</PropertyLabel>
-                  <PropertyValue>
-                    <InlineEditableScore submission={submission} />
-                  </PropertyValue>
-                </Property>
+              <Property>
+                <PropertyLabel>{t("submissions.grade")}</PropertyLabel>
+                <PropertyValue>
+                  <InlineEditableScore submission={submission} />
+                </PropertyValue>
+              </Property>
 
-                <Property>
-                  <PropertyLabel>{t("submissions.feedback")}</PropertyLabel>
-                  <PropertyValue>
-                    <InlineEditableFeedback
-                      submission={submission}
-                      startInEditMode={focusOn === "feedback"}
-                    />
-                  </PropertyValue>
-                </Property>
-              </PropertiesDisplay>
-              <Separator />
-              <h1 className="text-xl font-medium">
-                {t("submissions.attachments")}
-              </h1>
-              <div className="flex flex-row gap-1 items-center">
-                {submission.artifacts && submission.artifacts.length > 0 ? (
-                  submission.artifacts.map((artifact) => {
-                    const Icon = getIconForMime(artifact.mime);
-                    return (
-                      <Button
-                        key={artifact.id}
-                        variant={"secondary"}
-                        size={"sm"}
-                      >
-                        <Icon />
-                        {artifact.title}
-                        <ArrowUpRight className="text-muted-foreground" />
-                      </Button>
-                    );
-                  })
-                ) : (
-                  <>{t("submissions.noAttachments")}</>
-                )}
-              </div>
-              <h1 className="text-xl font-medium">
-                {t("submissions.timeline")}
-              </h1>
-              <SubmissionTimeline timeline={timeline} />
+              <Property>
+                <PropertyLabel>{t("submissions.feedback")}</PropertyLabel>
+                <PropertyValue>
+                  <InlineEditableFeedback
+                    submission={submission}
+                    startInEditMode={focusOn === "feedback"}
+                  />
+                </PropertyValue>
+              </Property>
+            </PropertiesDisplay>
+          </SheetHeader>
+
+          <div className="grid flex-1 auto-rows-min gap-6 px-8 md:px-12">
+            <Separator className="w-full" />
+            <h1 className="text-xl font-medium">
+              {t("submissions.attachments")}
+            </h1>
+            <div className="flex flex-row gap-1 items-center">
+              {submission.artifacts && submission.artifacts.length > 0 ? (
+                submission.artifacts.map((artifact) => {
+                  const Icon = getIconForMime(artifact.mime);
+                  return (
+                    <Button key={artifact.id} variant={"secondary"} size={"sm"}>
+                      <Icon />
+                      {artifact.title}
+                      <ArrowUpRight className="text-muted-foreground" />
+                    </Button>
+                  );
+                })
+              ) : (
+                <>{t("submissions.noAttachments")}</>
+              )}
             </div>
+            <h1 className="text-xl font-medium">{t("submissions.timeline")}</h1>
+            <SubmissionTimeline timeline={timeline} />
           </div>
         </ScrollArea>
       </SheetContent>
