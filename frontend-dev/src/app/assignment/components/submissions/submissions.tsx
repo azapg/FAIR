@@ -338,6 +338,7 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         },
         cell: ({ row }) => (
           <Checkbox
+            onClick={(e) => e.stopPropagation()}
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
@@ -444,10 +445,10 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className={"cursor-pointer"}>
+      <DropdownMenuTrigger className={"cursor-pointer"} onClick={(e) => e.stopPropagation()}>
         <Ellipsis size={18} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
+      <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className={"gap-2"}>
             <BlocksIcon size={16} className={"text-muted-foreground"} />{" "}
