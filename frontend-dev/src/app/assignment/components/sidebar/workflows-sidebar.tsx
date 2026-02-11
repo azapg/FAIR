@@ -177,25 +177,26 @@ export function WorkflowsSidebar({
         <ExecutionLogsView onBack={() => setShowLogs(false)} />
       ) : workflow && draft ? (
         <>
-          <SidebarContent>
-            <PluginSection
-              title={t("plugins.transcriber")}
-              action={t("plugins.transcribeAll")}
-              type={"transcriber"}
-            />
-            <Separator />
-            <PluginSection
-              title={t("plugins.grader")}
-              action={t("plugins.gradeAll")}
-              type={"grader"}
-            />
-            <Separator />
-            <PluginSection
-              title={t("plugins.validator")}
-              action={t("plugins.validateAll")}
-              type={"validator"}
-            />
-            <Separator />
+            <SidebarContent>
+              <ScrollArea className=" h-full">
+                <PluginSection
+                  title={t("plugins.transcriber")}
+                  action={t("plugins.transcribeAll")}
+                  type={"transcriber"}
+                />
+                <Separator />
+                <PluginSection
+                  title={t("plugins.grader")}
+                  action={t("plugins.gradeAll")}
+                  type={"grader"}
+                />
+                <Separator />
+                <PluginSection
+                  title={t("plugins.validator")}
+                  action={t("plugins.validateAll")}
+                  type={"validator"}
+                />
+              </ScrollArea>
           </SidebarContent>
         </>
       ) : (
@@ -276,6 +277,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const WorkflowEmptyState = ({
   onCreate,
