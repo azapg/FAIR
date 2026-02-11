@@ -23,7 +23,7 @@ from fair_platform.backend.api.schema.submission import (
     SubmissionDraftUpdate,
 )
 from fair_platform.backend.api.schema.submission_result import SubmissionResultRead
-from fair_platform.backend.api.schema.submission_event import SubmissionEventRead
+from fair_platform.backend.api.schema.submission_event import SubmissionTimelineEventRead
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 from fair_platform.backend.services.submission_manager import get_submission_manager
@@ -482,7 +482,7 @@ def return_submission(
         )
 
 
-@router.get("/{submission_id}/timeline", response_model=List[SubmissionEventRead])
+@router.get("/{submission_id}/timeline", response_model=List[SubmissionTimelineEventRead])
 def get_submission_timeline(
     submission_id: UUID,
     db: Session = Depends(session_dependency),
@@ -514,7 +514,8 @@ def get_submission_timeline(
         .filter(SubmissionEvent.submission_id == submission_id)
         .options(
             joinedload(SubmissionEvent.actor),
-            joinedload(SubmissionEvent.workflow_run).joinedload(WorkflowRun.runner)
+            joinedload(SubmissionEvent.workflow_run).joinedload(WorkflowRun.runner),
+            joinedload(SubmissionEvent.workflow_run).joinedload(WorkflowRun.workflow),
         )
         .order_by(SubmissionEvent.created_at)
         .all()

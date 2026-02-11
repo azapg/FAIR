@@ -1,10 +1,8 @@
 from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 
-from fair_platform.backend.data.models.user import User, UserRole
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.submission import Submission, SubmissionStatus
@@ -107,6 +105,9 @@ def test_get_submission_timeline_populates_fields(test_client: TestClient, test_
     assert manual_event.get("actorId") is None
     assert manual_event["actor"] is not None
     assert manual_event["actor"]["name"] == professor_user.name
+    assert "id" not in manual_event["actor"]
+    assert "email" not in manual_event["actor"]
+    assert "role" not in manual_event["actor"]
     assert manual_event["workflowRun"] is None
     
     # Check AI graded event
@@ -114,5 +115,13 @@ def test_get_submission_timeline_populates_fields(test_client: TestClient, test_
     assert ai_event.get("workflowRunId") is None
     assert ai_event["workflowRun"] is not None
     assert ai_event["workflowRun"]["id"] == str(workflow_run.id)
+    assert ai_event["workflowRun"]["status"] == "success"
+    assert ai_event["workflowRun"]["workflow"]["name"] == workflow.name
     assert ai_event["workflowRun"]["runner"]["name"] == admin_user.name
+    assert "workflowId" not in ai_event["workflowRun"]
+    assert "logs" not in ai_event["workflowRun"]
+    assert "id" not in ai_event["workflowRun"]["workflow"]
+    assert "id" not in ai_event["workflowRun"]["runner"]
+    assert "email" not in ai_event["workflowRun"]["runner"]
+    assert "role" not in ai_event["workflowRun"]["runner"]
     assert ai_event["actor"] is None
