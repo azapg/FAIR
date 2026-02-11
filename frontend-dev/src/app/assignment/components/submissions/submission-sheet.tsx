@@ -37,7 +37,7 @@ import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
 import SubmissionTimeline from "@/components/submission-timeline";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SubmissionSheetProps {
   submission: Submission | null;
@@ -72,7 +72,6 @@ export function SubmissionSheet({
         onOpenAutoFocus={(e) => e.preventDefault()}
         showCloseButton={false}
       >
-
         <div className="w-full flex justify-between text-muted-foreground py-2 px-4">
           <div className="flex items-center">
             <SheetTrigger asChild>
@@ -140,32 +139,55 @@ export function SubmissionSheet({
             </PropertiesDisplay>
           </SheetHeader>
 
-          <div className="grid flex-1 auto-rows-min gap-6 px-8 md:px-12">
-            <Separator className="w-full" />
-            <h1 className="text-xl font-medium">
-              {t("submissions.attachments")}
-            </h1>
-            <div className="flex flex-row gap-1 items-center">
-              {submission.artifacts && submission.artifacts.length > 0 ? (
-                submission.artifacts.map((artifact) => {
-                  const Icon = getIconForMime(artifact.mime);
-                  return (
-                    <Button key={artifact.id} variant={"secondary"} size={"sm"}>
-                      <Icon />
-                      {artifact.title}
-                      <ArrowUpRight className="text-muted-foreground" />
-                    </Button>
-                  );
-                })
-              ) : (
-                <>{t("submissions.noAttachments")}</>
-              )}
-            </div>
-            <h1 className="text-xl font-medium">{t("submissions.timeline")}</h1>
-            <SubmissionTimeline timeline={timeline} />
+          <div className="px-8 md:px-12">
+            <Tabs defaultValue="attachments" className="w-full">
+              <TabsList className="w-full justify-start">
+                <TabsTrigger value="attachments">
+                  {t("submissions.attachments")}
+                </TabsTrigger>
+                <TabsTrigger value="timeline">
+                  {t("submissions.timeline")}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="attachments" className="py-3">
+                <SubmissionAttachments artifacts={submission.artifacts} />
+              </TabsContent>
+              <TabsContent value="timeline" className="py-3">
+                <SubmissionTimeline timeline={timeline} />
+              </TabsContent>
+            </Tabs>
           </div>
         </ScrollArea>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function SubmissionAttachments({
+  artifacts,
+}: {
+  artifacts: Submission["artifacts"];
+}) {
+  const { t } = useTranslation();
+
+  if (!artifacts || artifacts.length === 0) {
+    return (
+      <div className="text-muted-foreground">{t("submissions.noAttachments")}</div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {artifacts.map((artifact) => {
+        const Icon = getIconForMime(artifact.mime);
+        return (
+          <Button key={artifact.id} variant={"secondary"} size={"sm"}>
+            <Icon size={16} />
+            {artifact.title}
+            <ArrowUpRight size={14} className="text-muted-foreground ml-1" />
+          </Button>
+        );
+      })}
+    </div>
   );
 }
