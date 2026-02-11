@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SubmissionEvent, SubmissionEventType } from "@/hooks/use-submissions";
-import UserAvatar from "./user-avatar";
+import UserAvatar from "@/components/user-avatar";
 
 interface TimelineProps {
   timeline?: SubmissionEvent[];
@@ -45,15 +45,11 @@ const TimelineItem = ({
 }) => {
   const { icon: Icon, color, title } = getEventMeta(event);
 
-  let actorName;
-  if (event.actorId && !event.workflowRunId) {
-    actorName = "Instructor";
-  } else if (event.workflowRunId) {
-    // TODO: Right now we only have access to the workflow run id, but backend should hydrate
-    // that with WorkflowRunRead so we can have access to the person who ran it.
-    actorName = event.workflowRunId;
-  } else {
-    actorName = "System";
+  let actorName = "System";
+  if (event.actor) {
+    actorName = event.actor.name;
+  } else if (event.workflowRun) {
+    actorName = event.workflowRun.runner?.name || "Automation";
   }
 
   return (
@@ -69,7 +65,7 @@ const TimelineItem = ({
 
       <div className="flex flex-col gap-2">
         <div className="flex align-center gap-2 text-muted-foreground">
-          <UserAvatar size="sm" username="Allan Zapata" />
+          <UserAvatar size="sm" username={actorName} />
           <div>
             <span className="font-semibold text-foreground mr-1">
               {actorName}

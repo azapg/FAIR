@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { Artifact } from "@/hooks/use-artifacts"
 import { toast } from 'sonner'
+import { AuthUser } from "@/contexts/auth-context"
+import { WorkflowRun } from "@/store/workflows-store"
 
 export type SubmissionEventType =
   | "ai_graded"
@@ -14,8 +16,8 @@ export type SubmissionEvent = {
   id: string
   submissionId: string
   eventType: SubmissionEventType
-  actorId?: string | null
-  workflowRunId?: string | null
+  actor?: AuthUser | null
+  workflowRun?: WorkflowRun | null
   details?: Record<string, unknown> | null
   createdAt: string
 }

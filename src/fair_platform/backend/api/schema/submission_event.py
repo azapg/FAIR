@@ -6,6 +6,8 @@ from pydantic import BaseModel
 
 from fair_platform.backend.data.models.submission_event import SubmissionEventType
 from fair_platform.backend.api.schema.utils import schema_config
+from fair_platform.backend.api.schema.user import UserRead
+from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
 
 
 class SubmissionEventRead(BaseModel):
@@ -14,8 +16,8 @@ class SubmissionEventRead(BaseModel):
     id: UUID
     submission_id: UUID
     event_type: SubmissionEventType
-    actor_id: Optional[UUID] = None
-    workflow_run_id: Optional[UUID] = None
+    actor: Optional[UserRead] = None
+    workflow_run: Optional[WorkflowRunRead] = None
     details: Optional[dict] = None
     created_at: datetime
 

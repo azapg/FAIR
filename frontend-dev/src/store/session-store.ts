@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist } from "zustand/middleware";
 import {SubmissionStatus, Submission} from "@/hooks/use-submissions";
+import { AuthUser } from "@/contexts/auth-context";
 
 type Session = {
   id: string;
-  run_by: string; // user id
+  runner: AuthUser; // user object
   status: 'pending' | 'running' | 'success' | 'failure' | 'cancelled';
   started_at: string;
   finished_at: string | null;

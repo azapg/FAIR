@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.submission import (
@@ -27,6 +27,7 @@ from fair_platform.backend.api.schema.submission_event import SubmissionEventRea
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 from fair_platform.backend.services.submission_manager import get_submission_manager
+from fair_platform.backend.data.models.workflow_run import WorkflowRun, WorkflowRunStatus
 from fair_platform.backend.data.models.submission_event import SubmissionEvent
 
 router = APIRouter()
@@ -511,6 +512,10 @@ def get_submission_timeline(
     events = (
         db.query(SubmissionEvent)
         .filter(SubmissionEvent.submission_id == submission_id)
+        .options(
+            joinedload(SubmissionEvent.actor),
+            joinedload(SubmissionEvent.workflow_run).joinedload(WorkflowRun.runner)
+        )
         .order_by(SubmissionEvent.created_at)
         .all()
     )

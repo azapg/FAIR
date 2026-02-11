@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from fair_platform.backend.api.schema.submission import SubmissionBase
 from fair_platform.backend.data.models.workflow_run import WorkflowRunStatus
 from fair_platform.backend.api.schema.utils import schema_config
+from fair_platform.backend.api.schema.user import UserRead
 
 
 class WorkflowRunBase(BaseModel):
@@ -32,7 +33,7 @@ class WorkflowRunUpdate(BaseModel):
 class WorkflowRunRead(WorkflowRunBase):
     id: UUID
     workflow_id: UUID
-    run_by: UUID
+    runner: UserRead
     started_at: Optional[datetime]
     finished_at: Optional[datetime] = None
 

@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 
 from fair_platform.backend.api.schema.submission import SubmissionBase
+from fair_platform.backend.api.schema.user import UserRead
 from fair_platform.sdk import (
     GradeResult,
     Submitter as SDKSubmitter,
@@ -279,7 +280,7 @@ class SessionManager:
         return WorkflowRunRead(
             id=workflow_run.id,
             workflow_id=workflow.id,
-            run_by=workflow_run.run_by,
+            runner=UserRead.model_validate(user),
             status=workflow_run.status,
             started_at=workflow_run.started_at,
             finished_at=workflow_run.finished_at,
