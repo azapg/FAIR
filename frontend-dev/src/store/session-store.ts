@@ -1,19 +1,6 @@
 import { create } from 'zustand';
 import { persist } from "zustand/middleware";
-import {SubmissionStatus} from "@/hooks/use-submissions";
-
-
-// TODO: Submission type isn't even finished, it is missing feedback, grade, etc.
-// TODO: Also, I should update the backend to not send snake case 🤮🤮🤮
-type Submission = {
-  id: string;
-  assignment_id: string;
-  submitter_id: string;
-  submitted_at: string;
-  status: SubmissionStatus;
-  official_run_id: string | null;
-  artifacts: any[];
-}
+import {SubmissionStatus, Submission} from "@/hooks/use-submissions";
 
 type Session = {
   id: string;
