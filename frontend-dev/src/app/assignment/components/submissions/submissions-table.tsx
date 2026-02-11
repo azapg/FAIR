@@ -202,9 +202,9 @@ export function SubmissionsTable({
   const hasReturnableSelection = returnableSubmissionIds.length > 0;
 
   return (
-    <div className="w-full space-y-4">
+    <div className="space-y-4">
       <Tabs value={activeView} onValueChange={setActiveView}>
-        <TabsList className="w-full justify-start">
+        <TabsList>
           {SUBMISSION_VIEWS.map((view) => (
             <TabsTrigger key={view.id} value={view.id}>
               {t(view.labelKey)}
@@ -238,7 +238,7 @@ export function SubmissionsTable({
         </div>
       </div>
 
-      <div className="w-full rounded-md border">
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
