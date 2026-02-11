@@ -154,7 +154,7 @@ export default function AssignmentPage() {
               );
             })()}
 
-            <PropertiesDisplay scroll>
+            <PropertiesDisplay scroll className="items-start pt-3">
                 <Property>
                   <PropertyLabel>{t("properties.title")}</PropertyLabel>
                   <PropertyValue className="flex flex-row gap-1 items-center">
