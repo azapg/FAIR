@@ -5,7 +5,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { TableProperties, ArrowUpRightIcon } from "lucide-react";
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState } from "react";
 
 import {
   Table,
@@ -123,7 +123,6 @@ export function SubmissionsTable({
     useState<string | null>(null);
   const [focusOn, setFocusOn] = useState<"feedback" | null>(null);
   const returnSubmissions = useReturnSubmissions();
-  const hasAutoOpened = useRef(false);
 
   const selectedSubmission = useMemo(() => {
     return data.find((s) => s.id === selectedSubmissionId) || null;
@@ -152,19 +151,6 @@ export function SubmissionsTable({
       return searchTargets.includes(normalizedQuery);
     });
   }, [activeView, data, searchQuery]);
-
-  // DEV ONLY: Auto-open first submission for development convenience
-  // Remove this block in production
-  useEffect(() => {
-    if (
-      process.env.NODE_ENV === "development" &&
-      filteredData.length > 0 &&
-      !hasAutoOpened.current
-    ) {
-      setSelectedSubmissionId(filteredData[0].id);
-      hasAutoOpened.current = true;
-    }
-  }, [filteredData]);
 
   const onFeedbackClick = (submission: Submission) => {
     setSelectedSubmissionId(submission.id);
