@@ -71,7 +71,7 @@ export function SubmissionSheet({
               </Button>
             </SheetTitle>
             <div className="grid flex-1 auto-rows-min gap-6">
-              <PropertiesDisplay scroll gapX={7} className="items-start">
+              <PropertiesDisplay scroll gapX={4} className="items-start">
                 <Property>
                   <PropertyLabel>{t("submissions.status")}</PropertyLabel>
                   <PropertyValue>
@@ -81,7 +81,7 @@ export function SubmissionSheet({
 
                 <Property>
                   <PropertyLabel>{t("submissions.turnedIn")}</PropertyLabel>
-                  <PropertyValue>
+                  <PropertyValue className="text-sm">
                     {formatShortDate(
                       new Date(submission.submittedAt),
                       i18n.language,
