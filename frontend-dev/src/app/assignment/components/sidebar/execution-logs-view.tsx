@@ -55,20 +55,22 @@ export function ExecutionLogsView({ onBack }: { onBack: () => void }) {
         </div>
       </div>
       <Separator />
-      <div className="flex-1 overflow-auto px-2.5 py-3 space-y-2">
-        <ScrollArea className="h-full">
+      <div className="flex-1 overflow-auto">
+        <ScrollArea className="h-full p-3">
           {grouped.length === 0 && (
             <div className="text-sm text-muted-foreground px-2">
               No logs yet. When a workflow runs, messages will appear here in
               real time.
             </div>
           )}
+          <div className="flex flex-col gap-3">
           {grouped.map((log) => (
             <LogRow
               key={`${log.index}-${log.type}-${log.ts ?? ""}`}
               log={log}
             />
           ))}
+            </div>
           <div ref={bottomRef} />
         </ScrollArea>
       </div>
