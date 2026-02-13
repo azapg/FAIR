@@ -103,7 +103,7 @@ function LogRow({ log }: { log: SessionLog }) {
     return (
       <div className="rounded-md border p-2 text-sm">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 truncate">
             <LevelBadge level={log.level} />
             {log.plugin && (
               <span className="text-xs text-muted-foreground">
@@ -117,7 +117,7 @@ function LogRow({ log }: { log: SessionLog }) {
             </span>
           )}
         </div>
-        {log.message && <div className="mt-1">{log.message}</div>}
+        {log.message && <div className="mt-1 break-words">{log.message}</div>}
       </div>
     );
   }
