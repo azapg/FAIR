@@ -37,6 +37,7 @@ import {
   Submission,
   useReturnSubmission,
   useUpdateSubmissionDraft,
+  useCanReturnSubmission,
 } from "@/hooks/use-submissions";
 
 import { useTranslation } from "react-i18next";
@@ -422,10 +423,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
     return workflows[0];
   }, [activeWorkflowId, workflows]);
 
-  const hasDraft =
-    submission.draftScore != null || submission.draftFeedback != null;
-  const canReturn =
-    hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
+  const canReturn = useCanReturnSubmission(submission);
 
   function runPlugin(plugin?: RuntimePlugin) {
     if (!plugin) return;

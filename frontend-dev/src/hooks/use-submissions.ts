@@ -364,6 +364,13 @@ export function useReturnSubmission() {
   })
 }
 
+export function useCanReturnSubmission(submission: Submission) {
+  const returnSubmission = useReturnSubmission();
+  const hasDraft = submission.draftScore != null || submission.draftFeedback != null;
+  const canReturn = hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
+  return canReturn;
+}
+
 export function useReturnSubmissions() {
   const queryClient = useQueryClient()
 

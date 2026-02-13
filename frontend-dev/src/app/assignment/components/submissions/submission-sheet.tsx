@@ -26,6 +26,7 @@ import {
   Submission,
   useSubmissionTimeline,
   useReturnSubmission,
+  useCanReturnSubmission,
 } from "@/hooks/use-submissions";
 import {
   SubmissionStatusLabel,
@@ -59,10 +60,7 @@ export function SubmissionSheet({
 
   if (!submission) return null;
 
-  const hasDraft =
-    submission.draftScore != null || submission.draftFeedback != null;
-  const canReturn =
-    hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
+  const canReturn = useCanReturnSubmission(submission);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
