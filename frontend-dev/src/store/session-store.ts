@@ -9,7 +9,7 @@ type Session = {
   status: 'pending' | 'running' | 'success' | 'failure' | 'cancelled';
   started_at: string;
   finished_at: string | null;
-  logs: any[];
+  logs: SessionLog[];
   submissions: Submission[];
 }
 
@@ -18,10 +18,10 @@ export type SessionLog = {
   type: string;
   ts?: string | null;
   level?: 'debug' | 'info' | 'warning' | 'error' | string;
-  plugin?: string | null;
+  plugin?: Record<string, any>;
   message?: string | null;
   object?: string | null;
-  payload?: any;
+  payload?: Record<string, any>;
 }
 
 type State = {

@@ -113,11 +113,9 @@ function LogRow({ log }: { log: SessionLog }) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 truncate">
             <LevelBadge level={log.level} />
-            {log.plugin && (
-              <span className="text-xs text-muted-foreground">
-                {log.plugin}
-              </span>
-            )}
+            <span className="text-xs text-muted-foreground">
+              {log.payload?.plugin?.name || "System"}
+            </span>
           </div>
           {log.ts && (
             <span className="text-[10px] text-muted-foreground">

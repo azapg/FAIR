@@ -21,9 +21,9 @@ class BasePlugin:
             self.logger = logger
         else:
             self.logger = PluginLogger(
-                identifier=self.__class__.__name__,
                 session_id="debug",
                 bus=DebugEventBus(),
+                plugin=None,
             )
 
     def __init_subclass__(cls, **kwargs) -> None:

@@ -382,9 +382,7 @@ class SessionManager:
 
             try:
                 transcriber_instance = transcriber_cls(
-                    session.logger.get_child(
-                        f"{transcriber_plugin.name}:{transcriber_plugin.hash}"
-                    )
+                    session.logger.get_child(transcriber_plugin)
                 )
             except Exception as e:
                 return await report_failure(
@@ -702,9 +700,7 @@ class SessionManager:
 
             try:
                 grader_instance = grader_cls(
-                    session.logger.get_child(
-                        f"{grader_plugin.name}:{grader_plugin.hash}"
-                    )
+                    session.logger.get_child(grader_plugin)
                 )
             except Exception as e:
                 return await report_failure(
@@ -966,9 +962,7 @@ class SessionManager:
             else:
                 try:
                     validator_instance = validator_cls(
-                        session.logger.get_child(
-                            f"{validator_plugin.name}:{validator_plugin.hash}"
-                        )
+                        session.logger.get_child(validator_plugin)
                     )
                     validator_instance.set_values(workflow.validator_settings or {})
 

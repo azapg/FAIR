@@ -33,11 +33,10 @@ class SessionLogItem(BaseModel):
     type: str
     ts: str | None = None
     level: str | None = None
-    plugin: str | None = None
+    plugin: dict | None = None
     message: str | None = None
     object: str | None = None
     payload: dict | None = None
-
 
 @router.post("/", response_model=SessionResponse)
 async def create_session(
