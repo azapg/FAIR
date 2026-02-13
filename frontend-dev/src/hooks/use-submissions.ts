@@ -3,12 +3,24 @@ import api from '@/lib/api'
 import { Artifact } from "@/hooks/use-artifacts"
 import { toast } from 'sonner'
 
-export type SubmissionEventType =
-  | "ai_graded"
+export type CanonicalSubmissionEventType =
+  | "submission_submitted"
+  | "status_transitioned"
+  | "ai_initial_result_recorded"
+  | "ai_regrade_result_recorded"
+  | "draft_manually_edited"
+  | "returned_to_student"
+
+export type LegacySubmissionEventType =
   | "initial_result"
+  | "ai_graded"
   | "manual_edit"
   | "returned"
   | "status_changed"
+
+export type SubmissionEventType =
+  | CanonicalSubmissionEventType
+  | LegacySubmissionEventType
 
 export type SubmissionEvent = {
   id: string
@@ -116,7 +128,30 @@ const fetchSubmission = async (id: string): Promise<Submission> => {
 
 const fetchSubmissionTimeline = async (id: string): Promise<SubmissionEvent[]> => {
   const res = await api.get(`/submissions/${id}/timeline`)
-  return res.data
+  return (res.data as SubmissionEvent[]).map((event) => ({
+    ...event,
+    eventType: normalizeSubmissionEventType(event.eventType),
+  }))
+}
+
+const LEGACY_SUBMISSION_EVENT_TYPE_MAP: Record<
+  LegacySubmissionEventType,
+  CanonicalSubmissionEventType
+> = {
+  initial_result: "ai_initial_result_recorded",
+  ai_graded: "ai_regrade_result_recorded",
+  manual_edit: "draft_manually_edited",
+  returned: "returned_to_student",
+  status_changed: "status_transitioned",
+}
+
+function normalizeSubmissionEventType(
+  eventType: SubmissionEventType,
+): CanonicalSubmissionEventType {
+  if (eventType in LEGACY_SUBMISSION_EVENT_TYPE_MAP) {
+    return LEGACY_SUBMISSION_EVENT_TYPE_MAP[eventType as LegacySubmissionEventType]
+  }
+  return eventType as CanonicalSubmissionEventType
 }
 
 const createSubmission = async (data: CreateSubmissionInput): Promise<Submission> => {

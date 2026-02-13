@@ -164,7 +164,40 @@
     "turnedIn": "Turned in",
     "attachments": "Attachments",
     "noAttachments": "This submission doesn't include attachments.",
-    "timeline": "Timeline"
+    "timeline": "Timeline",
+    "timelineEvents": {
+      "actor": {
+        "system": "System",
+        "automation": "Automation"
+      },
+      "actions": {
+        "submitted": "submitted this submission",
+        "withArtifacts": "with {{count}} artifact(s)",
+        "statusTransitioned": "changed status from {{from}} to {{to}}",
+        "aiInitialResult": "recorded initial AI result",
+        "aiRegradeResult": "recorded AI regrade result",
+        "attempt": "(attempt {{value}})",
+        "editedScoreAndFeedback": "edited draft score and feedback",
+        "scoreChanged": "changed draft score from {{from}} to {{to}}",
+        "feedbackEdited": "edited draft feedback",
+        "draftEdited": "edited draft",
+        "returnedToStudent": "returned the submission to the student",
+        "withScore": "(score: {{score}})",
+        "unknownEvent": "updated submission"
+      },
+      "labels": {
+        "feedbackEdited": "Feedback edited",
+        "hidePrevious": "Hide previous",
+        "compare": "Compare",
+        "empty": "(empty)",
+        "showFeedback": "Show feedback",
+        "hideFeedback": "Hide feedback",
+        "showDetails": "Show details",
+        "hideDetails": "Hide details",
+        "unknown": "Unknown",
+        "noEvents": "No events."
+      }
+    }
   },
   "status": {
     "pending": "Pending",
