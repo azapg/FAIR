@@ -262,7 +262,16 @@ class SessionManager:
         parallelism: int = 10,
     ) -> WorkflowRunRead:
         with get_session() as db:
-            workflow = db.get(Workflow, workflow_id)
+            workflow = (
+                db.query(Workflow)
+                .options(
+                    joinedload(Workflow.transcriber_plugin),
+                    joinedload(Workflow.grader_plugin),
+                    joinedload(Workflow.validator_plugin),
+                )
+                .filter(Workflow.id == workflow_id)
+                .first()
+            )
 
             if not workflow:
                 raise ValueError("Workflow not found")
@@ -316,6 +325,10 @@ class SessionManager:
             f"Starting session for workflow {workflow.name} for {len(submission_ids)} submissions",
         )
 
+        transcriber_plugin = workflow.transcriber_plugin
+        grader_plugin = workflow.grader_plugin
+        validator_plugin = workflow.validator_plugin
+
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:
@@ -354,9 +367,9 @@ class SessionManager:
             )
 
         # Transcription
-        if workflow.transcriber_plugin_hash:
+        if transcriber_plugin:
             await session.logger.info("Starting transcription step...")
-            transcriber_cls = get_plugin_object(workflow.transcriber_plugin_hash)
+            transcriber_cls = get_plugin_object(transcriber_plugin.hash)
 
             if not transcriber_cls:
                 return await report_failure(
@@ -364,12 +377,14 @@ class SessionManager:
                     session_id,
                     submission_ids,
                     reason="Session failed due to missing transcriber plugin",
-                    log_message="Transcriber plugin not found",
+                    log_message=f"Transcriber plugin not found: {transcriber_plugin.name} ({transcriber_plugin.hash})",
                 )
 
             try:
                 transcriber_instance = transcriber_cls(
-                    session.logger.get_child(workflow.transcriber_plugin_hash)
+                    session.logger.get_child(
+                        f"{transcriber_plugin.name}:{transcriber_plugin.hash}"
+                    )
                 )
             except Exception as e:
                 return await report_failure(
@@ -673,21 +688,23 @@ class SessionManager:
                 log_message="No transcription step found. Processing without transcription is not supported.",
             )
 
-        if workflow.grader_plugin_hash:
+        if grader_plugin:
             await session.logger.info("Starting grading step")
-            grader_cls = get_plugin_object(workflow.grader_plugin_hash)
+            grader_cls = get_plugin_object(grader_plugin.hash)
             if not grader_cls:
                 return await report_failure(
                     session,
                     session_id,
                     submission_ids,
                     reason="Session failed due to missing grader plugin",
-                    log_message="Grader plugin not found",
+                    log_message=f"Grader plugin not found: {grader_plugin.name} ({grader_plugin.hash})",
                 )
 
             try:
                 grader_instance = grader_cls(
-                    session.logger.get_child(workflow.grader_plugin_hash)
+                    session.logger.get_child(
+                        f"{grader_plugin.name}:{grader_plugin.hash}"
+                    )
                 )
             except Exception as e:
                 return await report_failure(
@@ -939,15 +956,19 @@ class SessionManager:
             await session.logger.info("Grading step completed")
 
         # Validation step
-        if getattr(workflow, "validator_plugin_hash", None):
+        if validator_plugin:
             await session.logger.info("Starting validation step")
-            validator_cls = get_plugin_object(workflow.validator_plugin_hash)
+            validator_cls = get_plugin_object(validator_plugin.hash)
             if not validator_cls:
-                await session.logger.warning("Validator plugin not found, skipping")
+                await session.logger.warning(
+                    f"Validator plugin not found, skipping: {validator_plugin.name} ({validator_plugin.hash})"
+                )
             else:
                 try:
                     validator_instance = validator_cls(
-                        session.logger.get_child(workflow.validator_plugin_hash)
+                        session.logger.get_child(
+                            f"{validator_plugin.name}:{validator_plugin.hash}"
+                        )
                     )
                     validator_instance.set_values(workflow.validator_settings or {})
 
