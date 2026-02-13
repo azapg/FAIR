@@ -11,6 +11,7 @@ import { useSessionStore, SessionLog } from "@/store/session-store";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarContent } from "@/components/ui/sidebar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function ExecutionLogsView({ onBack }: { onBack: () => void }) {
   const { currentSession, sessionLogs, setLogs } = useSessionStore();
@@ -55,16 +56,21 @@ export function ExecutionLogsView({ onBack }: { onBack: () => void }) {
       </div>
       <Separator />
       <div className="flex-1 overflow-auto px-2.5 py-3 space-y-2">
-        {grouped.length === 0 && (
-          <div className="text-sm text-muted-foreground px-2">
-            No logs yet. When a workflow runs, messages will appear here in real
-            time.
-          </div>
-        )}
-        {grouped.map((log) => (
-          <LogRow key={`${log.index}-${log.type}-${log.ts ?? ""}`} log={log} />
-        ))}
-        <div ref={bottomRef} />
+        <ScrollArea className="h-full">
+          {grouped.length === 0 && (
+            <div className="text-sm text-muted-foreground px-2">
+              No logs yet. When a workflow runs, messages will appear here in
+              real time.
+            </div>
+          )}
+          {grouped.map((log) => (
+            <LogRow
+              key={`${log.index}-${log.type}-${log.ts ?? ""}`}
+              log={log}
+            />
+          ))}
+          <div ref={bottomRef} />
+        </ScrollArea>
       </div>
     </SidebarContent>
   );
