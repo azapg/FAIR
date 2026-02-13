@@ -104,7 +104,7 @@ class TestWorkflowRunsAPI:
         assert len(runs) == 1
         run = runs[0]
         assert run["workflowId"] == str(data["workflow"].id)
-        assert run["runBy"] == str(admin_user.id)
+        assert run["runner"]['id'] == str(admin_user.id)
         assert run["submissions"]
         assert run["submissions"][0]["assignmentId"] == str(data["assignment"].id)
 
