@@ -150,6 +150,7 @@
     "grade": "Grade",
     "submissionDate": "Submission Date",
     "feedback": "Feedback",
+    "feedbackPlaceholder": "No feedback provided",
     "views": {
       "inbox": "Inbox",
       "active": "Active",

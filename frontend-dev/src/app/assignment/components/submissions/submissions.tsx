@@ -305,7 +305,7 @@ export function InlineEditableFeedback({
           inputRef.current?.blur();
         }
       }}
-      placeholder="—"
+      placeholder={t("submissions.feedbackPlaceholder")}
       aria-label={t("submissions.feedback")}
       disabled={isDisabled}
     />
@@ -394,7 +394,7 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
                 );
               }}
             >
-              {feedback || "—"}
+              {feedback || <p className="italic text-muted-foreground">{t("submissions.feedbackPlaceholder")}</p>}
             </p>
           );
         },

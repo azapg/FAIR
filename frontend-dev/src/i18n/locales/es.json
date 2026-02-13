@@ -150,6 +150,7 @@
     "grade": "Calificación",
     "submissionDate": "Fecha de entrega",
     "feedback": "Retroalimentación",
+    "feedbackPlaceholder": "Sin retroalimentación",
     "views": {
       "inbox": "Bandeja de entrada",
       "active": "Activas",

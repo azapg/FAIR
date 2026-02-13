@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/empty";
 import { useTranslation } from "react-i18next";
 import { Submission, SubmissionStatus, useReturnSubmissions } from "@/hooks/use-submissions";
-import { SubmissionSheet } from "./submission-sheet";
+import { SubmissionSheet } from "@/app/assignment/components/submissions/submission-sheet";
 
 interface DataTableProps {
   columns: ColumnDef<Submission>[];
