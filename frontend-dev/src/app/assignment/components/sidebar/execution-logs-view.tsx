@@ -148,13 +148,6 @@ function LogRow({ log }: { log: SessionLog }) {
     );
   }
 
-  // Fallback
-  return (
-    <div className="rounded-md border p-2 text-xs">
-      <div className="font-medium">{log.type}</div>
-      <pre className="mt-1 overflow-auto rounded bg-muted p-2 text-[11px] leading-tight">
-        {JSON.stringify(log.payload ?? {}, null, 2)}
-      </pre>
-    </div>
-  );
+  console.warn("Unknown log type:", log);
+  return null;
 }
