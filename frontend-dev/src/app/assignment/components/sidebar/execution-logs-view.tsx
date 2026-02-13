@@ -128,21 +128,6 @@ function LogRow({ log }: { log: SessionLog }) {
     );
   }
 
-  if (log.type === "update") {
-    return (
-      //       <div className="rounded-md border p-2 text-xs">
-      //         <div className="flex items-center justify-between">
-      //           <div className="font-medium">Update{log.object ? `: ${log.object}` : ''}</div>
-      //           {log.ts && <span className="text-[10px] text-muted-foreground">{new Date(log.ts).toLocaleTimeString()}</span>}
-      //         </div>
-      //         <pre className="mt-1 overflow-auto rounded bg-muted p-2 text-[11px] leading-tight">
-      // {JSON.stringify(log.payload, null, 2)}
-      //         </pre>
-      //       </div>
-      <></>
-    );
-  }
-
   if (log.type === "close") {
     return (
       <div className="rounded-md border border-green-500/40 bg-green-500/5 p-2 text-sm">
