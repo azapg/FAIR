@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 
 from fair_platform.backend.api.schema.submission import SubmissionBase
+from fair_platform.backend.api.schema.user import UserRead
 from fair_platform.sdk import (
     GradeResult,
     Submitter as SDKSubmitter,
@@ -126,9 +127,19 @@ async def _update_workflow_run(
 async def _update_submissions(
     db, session: Session, submissions: List[Submission], **updates
 ) -> List[Submission]:
+    reason = updates.get("reason")
+    sub_mgr = SubmissionManager(db)
     for sub in submissions:
+        previous_status = sub.status
         if "status" in updates:
             sub.status = updates["status"]
+            sub_mgr.log_status_transition(
+                submission_id=sub.id,
+                from_status=previous_status,
+                to_status=sub.status,
+                workflow_run_id=updates.get("official_run_id") or sub.official_run_id,
+                reason=reason,
+            )
         if "official_run_id" in updates:
             sub.official_run_id = updates["official_run_id"]
     db.commit()
@@ -232,6 +243,7 @@ async def report_failure(
                     session,
                     submissions,
                     status=SubmissionStatus.failure,
+                    reason=reason,
                 )
 
     await session.bus.emit("close", {"reason": reason})
@@ -279,7 +291,7 @@ class SessionManager:
         return WorkflowRunRead(
             id=workflow_run.id,
             workflow_id=workflow.id,
-            run_by=workflow_run.run_by,
+            runner=UserRead.model_validate(user),
             status=workflow_run.status,
             started_at=workflow_run.started_at,
             finished_at=workflow_run.finished_at,
@@ -338,6 +350,7 @@ class SessionManager:
                 updated_submissions,
                 status=SubmissionStatus.processing,
                 official_run_id=workflow_run.id,
+                reason="workflow_run_started",
             )
 
         # Transcription
@@ -396,6 +409,7 @@ class SessionManager:
                         session,
                         db_submissions,
                         status=SubmissionStatus.transcribing,
+                        reason="transcription_started",
                     )
 
                     submitter_ids = [s.submitter_id for s in db_submissions]
@@ -528,6 +542,7 @@ class SessionManager:
                                 session,
                                 to_update,
                                 status=SubmissionStatus.transcribed,
+                                reason="transcription_completed",
                             )
                 else:
                     await session.logger.info(
@@ -574,7 +589,15 @@ class SessionManager:
                                         transcribed_at=datetime.now(),
                                     )
 
+                                    previous_status = db_submission.status
                                     db_submission.status = SubmissionStatus.transcribed
+                                    SubmissionManager(db).log_status_transition(
+                                        submission_id=db_submission.id,
+                                        from_status=previous_status,
+                                        to_status=db_submission.status,
+                                        workflow_run_id=session_id,
+                                        reason="transcription_completed",
+                                    )
                                     db.commit()
                                     await session.bus.emit(
                                         "update",
@@ -598,7 +621,15 @@ class SessionManager:
                                         await session.logger.error(
                                             f"Transcription failed for {submission.submitter.name}'s submission: {e}"
                                         )
+                                        previous_status = db_sub.status
                                         db_sub.status = SubmissionStatus.failure
+                                        SubmissionManager(db).log_status_transition(
+                                            submission_id=db_sub.id,
+                                            from_status=previous_status,
+                                            to_status=db_sub.status,
+                                            workflow_run_id=session_id,
+                                            reason="transcription_failed",
+                                        )
                                         db.commit()
                                         await session.bus.emit(
                                             "update",
@@ -696,6 +727,7 @@ class SessionManager:
                         session,
                         list(db_subs),
                         status=SubmissionStatus.grading,
+                        reason="grading_started",
                     )
 
                 if not valid_t_results:
@@ -770,6 +802,7 @@ class SessionManager:
                                     session,
                                     to_update_success,
                                     status=SubmissionStatus.graded,
+                                    reason="grading_completed",
                                 )
                     else:
                         await session.logger.info(
@@ -826,7 +859,15 @@ class SessionManager:
                                             session_id,
                                         )
 
+                                        previous_status = db_sub.status
                                         db_sub.status = SubmissionStatus.graded
+                                        sub_mgr.log_status_transition(
+                                            submission_id=db_sub.id,
+                                            from_status=previous_status,
+                                            to_status=db_sub.status,
+                                            workflow_run_id=session_id,
+                                            reason="grading_completed",
+                                        )
                                         db.commit()
                                         await session.bus.emit(
                                             "update",
@@ -853,7 +894,15 @@ class SessionManager:
                                             await session.logger.error(
                                                 f"Grading failed for {original.submitter.name}'s submission: {e}"
                                             )
+                                            previous_status = db_sub.status
                                             db_sub.status = SubmissionStatus.failure
+                                            SubmissionManager(db).log_status_transition(
+                                                submission_id=db_sub.id,
+                                                from_status=previous_status,
+                                                to_status=db_sub.status,
+                                                workflow_run_id=session_id,
+                                                reason="grading_failed",
+                                            )
                                             db.commit()
                                             await session.bus.emit(
                                                 "update",

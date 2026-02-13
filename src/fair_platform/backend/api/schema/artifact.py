@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fair_platform.backend.api.schema.utils import schema_config
 
 
@@ -34,8 +34,8 @@ class ArtifactUpdate(BaseModel):
 
 class ArtifactRead(ArtifactBase):
     id: UUID
-    storage_path: str
-    storage_type: str
+    type: str = Field(alias="artifact_type")
+    mime: str
     creator_id: UUID
     created_at: datetime
     updated_at: datetime

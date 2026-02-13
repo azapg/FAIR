@@ -48,7 +48,7 @@ def _serialize_run(run: WorkflowRun) -> WorkflowRunRead:
     return WorkflowRunRead(
         id=run.id,
         workflow_id=run.workflow_id,
-        run_by=run.run_by,
+        runner=run.runner,
         status=run.status,
         started_at=run.started_at,
         finished_at=run.finished_at,
@@ -114,6 +114,7 @@ def list_workflow_runs(
         .options(
             joinedload(WorkflowRun.submissions),
             joinedload(WorkflowRun.workflow),
+            joinedload(WorkflowRun.runner),
         )
     )
 
@@ -161,6 +162,7 @@ def get_workflow_run(
         .options(
             joinedload(WorkflowRun.submissions),
             joinedload(WorkflowRun.workflow),
+            joinedload(WorkflowRun.runner),
         )
         .filter(WorkflowRun.id == workflow_run_id)
         .first()

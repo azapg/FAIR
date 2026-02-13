@@ -2,6 +2,7 @@ import { createWithEqualityFn } from "zustand/traditional";
 import { persist } from "zustand/middleware";
 import { RuntimePlugin, RuntimePluginRead } from "@/hooks/use-plugins";
 import { Submission } from "@/hooks/use-submissions";
+import { AuthUser } from "@/contexts/auth-context";
 
 export type WorkflowRunStatus = "pending" | "running" | "success" | "failure" | "cancelled";
 
@@ -11,7 +12,7 @@ export type WorkflowRun = {
   startedAt?: string | null;
   finishedAt?: string | null;
   status: WorkflowRunStatus;
-  runBy: string;
+  runner: AuthUser;
   logs?: Record<string, unknown> | null;
   submissions?: Submission[];
 };

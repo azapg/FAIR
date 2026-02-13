@@ -3,6 +3,40 @@ import api from '@/lib/api'
 import { Artifact } from "@/hooks/use-artifacts"
 import { toast } from 'sonner'
 
+export type CanonicalSubmissionEventType =
+  | "submission_submitted"
+  | "status_transitioned"
+  | "ai_initial_result_recorded"
+  | "ai_regrade_result_recorded"
+  | "draft_manually_edited"
+  | "returned_to_student"
+
+export type LegacySubmissionEventType =
+  | "initial_result"
+  | "ai_graded"
+  | "manual_edit"
+  | "returned"
+  | "status_changed"
+
+export type SubmissionEventType =
+  | CanonicalSubmissionEventType
+  | LegacySubmissionEventType
+
+export type SubmissionEvent = {
+  id: string
+  submissionId: string
+  eventType: SubmissionEventType
+  actor?: { name: string } | null
+  workflowRun?: {
+    id: string
+    status: "pending" | "running" | "success" | "failure" | "cancelled"
+    workflow?: { name: string } | null
+    runner?: { name: string } | null
+  } | null
+  details?: Record<string, unknown> | null
+  createdAt: string
+}
+
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
 export type SubmissionStatus =
@@ -79,6 +113,7 @@ export const submissionsKeys = {
   list: (params?: ListParams) => [...submissionsKeys.lists(), { params }] as const,
   details: () => [...submissionsKeys.all, 'detail'] as const,
   detail: (id: string) => [...submissionsKeys.details(), id] as const,
+  timeline: (id?: string) => [...submissionsKeys.detail(id || ''), 'timeline'] as const,
 }
 
 const fetchSubmissions = async (params?: ListParams): Promise<Submission[]> => {
@@ -89,6 +124,34 @@ const fetchSubmissions = async (params?: ListParams): Promise<Submission[]> => {
 const fetchSubmission = async (id: string): Promise<Submission> => {
   const res = await api.get(`/submissions/${id}`)
   return res.data
+}
+
+const fetchSubmissionTimeline = async (id: string): Promise<SubmissionEvent[]> => {
+  const res = await api.get(`/submissions/${id}/timeline`)
+  return (res.data as SubmissionEvent[]).map((event) => ({
+    ...event,
+    eventType: normalizeSubmissionEventType(event.eventType),
+  }))
+}
+
+const LEGACY_SUBMISSION_EVENT_TYPE_MAP: Record<
+  LegacySubmissionEventType,
+  CanonicalSubmissionEventType
+> = {
+  initial_result: "ai_initial_result_recorded",
+  ai_graded: "ai_regrade_result_recorded",
+  manual_edit: "draft_manually_edited",
+  returned: "returned_to_student",
+  status_changed: "status_transitioned",
+}
+
+function normalizeSubmissionEventType(
+  eventType: SubmissionEventType,
+): CanonicalSubmissionEventType {
+  if (eventType in LEGACY_SUBMISSION_EVENT_TYPE_MAP) {
+    return LEGACY_SUBMISSION_EVENT_TYPE_MAP[eventType as LegacySubmissionEventType]
+  }
+  return eventType as CanonicalSubmissionEventType
 }
 
 const createSubmission = async (data: CreateSubmissionInput): Promise<Submission> => {
@@ -154,6 +217,14 @@ export function useSubmission(id: string) {
   })
 }
 
+export function useSubmissionTimeline(id?: string) {
+  return useQuery({
+    queryKey: submissionsKeys.timeline(id),
+    queryFn: () => fetchSubmissionTimeline(id!),
+    enabled: !!id,
+  })
+}
+
 export function useCreateSubmission() {
   const queryClient = useQueryClient()
 
@@ -196,16 +267,82 @@ export function useUpdateSubmissionDraft() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateSubmissionDraftInput }) =>
       updateSubmissionDraft(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: submissionsKeys.detail(variables.id) })
-      queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
-      toast.success('Submission draft updated successfully');
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: submissionsKeys.lists() })
+      await queryClient.cancelQueries({ queryKey: submissionsKeys.detail(variables.id) })
+
+      // Snapshot the previous value
+      const previousSubmission = queryClient.getQueryData<Submission>(
+        submissionsKeys.detail(variables.id),
+      )
+
+      // Optimistically update the detail query
+      if (previousSubmission) {
+        queryClient.setQueryData<Submission>(submissionsKeys.detail(variables.id), {
+          ...previousSubmission,
+          draftScore:
+            variables.data.score !== undefined
+              ? variables.data.score
+              : previousSubmission.draftScore,
+          draftFeedback:
+            variables.data.feedback !== undefined
+              ? variables.data.feedback
+              : previousSubmission.draftFeedback,
+        })
+      }
+
+      // Also optimistically update the list queries
+      queryClient.setQueriesData<Submission[]>(
+        { queryKey: submissionsKeys.lists() },
+        (old) => {
+          if (!old) return old
+          return old.map((s) => {
+            if (s.id === variables.id) {
+              return {
+                ...s,
+                draftScore:
+                  variables.data.score !== undefined
+                    ? variables.data.score
+                    : s.draftScore,
+                draftFeedback:
+                  variables.data.feedback !== undefined
+                    ? variables.data.feedback
+                    : s.draftFeedback,
+              }
+            }
+            return s
+          })
+        },
+      )
+
+      return { previousSubmission }
     },
-    onError: (error: Error) => {
+    onSuccess: (_, variables) => {
+      toast.success('Submission draft updated successfully')
+    },
+    onError: (error: Error, variables, context) => {
+      // Rollback to the previous value if mutation fails
+      if (context?.previousSubmission) {
+        queryClient.setQueryData(
+          submissionsKeys.detail(variables.id),
+          context.previousSubmission,
+        )
+      }
+      // Note: Rolling back the list is more complex if we want to be precise,
+      // but invalidating them below will fix it anyway.
+
       toast.error('Failed to update submission draft', {
-        description: error.message || 'Something went wrong'
-      });
-    }
+        description: error.message || 'Something went wrong',
+      })
+    },
+    onSettled: (_, __, variables) => {
+      // Always refetch after error or success to ensure we have the correct data
+      queryClient.invalidateQueries({
+        queryKey: submissionsKeys.detail(variables.id),
+      })
+      queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+    },
   })
 }
 
@@ -225,6 +362,13 @@ export function useReturnSubmission() {
       });
     }
   })
+}
+
+export function useCanReturnSubmission(submission: Submission) {
+  const returnSubmission = useReturnSubmission();
+  const hasDraft = submission.draftScore != null || submission.draftFeedback != null;
+  const canReturn = hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
+  return canReturn;
 }
 
 export function useReturnSubmissions() {

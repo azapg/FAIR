@@ -150,8 +150,8 @@ export function RunsTab({ courseId }: { courseId?: string }) {
                 <TableCell>
                   {formatDuration(run.startedAt, run.finishedAt)}
                 </TableCell>
-                <TableCell className="text-right font-mono text-xs">
-                  {run.runBy}
+                <TableCell className="text-right">
+                  {run.runner?.name || "System"}
                 </TableCell>
               </TableRow>
             );

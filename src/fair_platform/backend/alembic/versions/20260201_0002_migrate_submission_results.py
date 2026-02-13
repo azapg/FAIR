@@ -80,7 +80,9 @@ def upgrade() -> None:
     for row in rows:
         submission_id = row["submission_id"]
         event_type = (
-            "initial_result" if submission_id not in seen_first else "ai_graded"
+            "ai_initial_result_recorded"
+            if submission_id not in seen_first
+            else "ai_regrade_result_recorded"
         )
         seen_first.add(submission_id)
 

@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/empty";
 import { useTranslation } from "react-i18next";
 import { Submission, SubmissionStatus, useReturnSubmissions } from "@/hooks/use-submissions";
+import { SubmissionSheet } from "@/app/assignment/components/submissions/submission-sheet";
 
 interface DataTableProps {
   columns: ColumnDef<Submission>[];
@@ -118,7 +119,14 @@ export function SubmissionsTable({
   const [activeView, setActiveView] = useState(SUBMISSION_VIEWS[0].id);
   const [searchQuery, setSearchQuery] = useState("");
   const [rowSelection, setRowSelection] = useState({});
+  const [selectedSubmissionId, setSelectedSubmissionId] =
+    useState<string | null>(null);
+  const [focusOn, setFocusOn] = useState<"feedback" | null>(null);
   const returnSubmissions = useReturnSubmissions();
+
+  const selectedSubmission = useMemo(() => {
+    return data.find((s) => s.id === selectedSubmissionId) || null;
+  }, [data, selectedSubmissionId]);
 
   const filteredData = useMemo(() => {
     const view = SUBMISSION_VIEWS.find((item) => item.id === activeView);
@@ -144,6 +152,11 @@ export function SubmissionsTable({
     });
   }, [activeView, data, searchQuery]);
 
+  const onFeedbackClick = (submission: Submission) => {
+    setSelectedSubmissionId(submission.id);
+    setFocusOn("feedback");
+  };
+
   const table = useReactTable({
     data: filteredData,
     columns,
@@ -153,12 +166,14 @@ export function SubmissionsTable({
     state: {
       rowSelection,
     },
+    meta: {
+      onFeedbackClick,
+    },
   });
 
   const rows = table.getRowModel().rows;
   const hasRows = rows.length > 0;
   const selectedRowsCount = table.getSelectedRowModel().rows.length;
-
 
   const returnableSubmissionIds = table
     .getSelectedRowModel()
@@ -173,9 +188,9 @@ export function SubmissionsTable({
   const hasReturnableSelection = returnableSubmissionIds.length > 0;
 
   return (
-    <div className="w-full space-y-4">
+    <div className="space-y-4">
       <Tabs value={activeView} onValueChange={setActiveView}>
-        <TabsList className="w-full justify-start">
+        <TabsList>
           {SUBMISSION_VIEWS.map((view) => (
             <TabsTrigger key={view.id} value={view.id}>
               {t(view.labelKey)}
@@ -209,7 +224,7 @@ export function SubmissionsTable({
         </div>
       </div>
 
-      <div className="w-full rounded-md border">
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -232,6 +247,11 @@ export function SubmissionsTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() ? "selected" : undefined}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedSubmissionId(row.original.id);
+                    setFocusOn(null);
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -253,6 +273,17 @@ export function SubmissionsTable({
           </TableBody>
         </Table>
       </div>
+      <SubmissionSheet
+        submission={selectedSubmission}
+        open={!!selectedSubmission}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedSubmissionId(null);
+            setFocusOn(null);
+          }
+        }}
+        focusOn={focusOn}
+      />
     </div>
   );
 }
