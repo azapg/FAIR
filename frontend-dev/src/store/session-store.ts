@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from "zustand/middleware";
-import {SubmissionStatus, Submission} from "@/hooks/use-submissions";
+import {Submission} from "@/hooks/use-submissions";
 import { AuthUser } from "@/contexts/auth-context";
 
 type Session = {
@@ -9,19 +9,49 @@ type Session = {
   status: 'pending' | 'running' | 'success' | 'failure' | 'cancelled';
   started_at: string;
   finished_at: string | null;
-  logs: any[];
+  logs: SessionLog[];
   submissions: Submission[];
 }
 
 export type SessionLog = {
   index: number;
+  ts: string;
   type: string;
-  ts?: string | null;
-  level?: 'debug' | 'info' | 'warning' | 'error' | string;
-  plugin?: string | null;
-  message?: string | null;
-  object?: string | null;
-  payload?: any;
+  level: 'debug' | 'info' | 'warning' | 'error' | string;
+  payload?: {
+    message?: string;
+    reason?: string;
+    plugin?: {
+      id?: string;
+      name?: string;
+      hash?: string;
+      author?: string;
+      version?: string;
+      source?: string;
+      type?: string;
+    };
+    description?: string;
+    image?: {
+      src?: string;
+      alt?: string;
+      mime_type?: string;
+    };
+    images?: Array<{
+      src?: string;
+      alt?: string;
+      mime_type?: string;
+    }>;
+    file?: {
+      name?: string;
+      content?: string;
+      file_type?: "text" | "markdown" | string;
+      mime_type?: "text/plain" | "text/markdown" | string;
+      encoding?: string;
+      size_bytes?: number;
+      language?: string;
+    };
+    [key: string]: any;
+  };
 }
 
 type State = {

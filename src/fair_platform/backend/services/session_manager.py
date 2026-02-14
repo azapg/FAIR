@@ -60,6 +60,9 @@ class Session:
         self.buffer = []  # Circular buffer for logs (500 max entries)
         self.bus = IndexedEventBus()
         self.bus.on("log", self.add_log)
+        self.bus.on("image", self.add_log)
+        self.bus.on("image_group", self.add_log)
+        self.bus.on("file", self.add_log)
         self.bus.on("close", self.add_log)
         self.bus.on("update", self.add_log)
         self.logger = SessionLogger(session_id.hex, self.bus)
@@ -116,9 +119,7 @@ async def _update_workflow_run(
     await session.bus.emit(
         "update",
         {
-            "object": "workflow_run",
-            "type": "update",
-            "payload": payload,
+            "payload": {"object": "workflow_run", "data": payload},
         },
     )
     return workflow_run
@@ -156,9 +157,7 @@ async def _update_submissions(
     await session.bus.emit(
         "update",
         {
-            "object": "submissions",
-            "type": "update",
-            "payload": payload_items,
+            "payload": {"object": "submissions", "data": payload_items},
         },
     )
     return submissions
@@ -222,7 +221,7 @@ async def report_failure(
     with get_session() as db:
         workflow_run = db.get(WorkflowRun, session_id)
         if not workflow_run:
-            await session.bus.emit("close", {"reason": reason})
+            await session.bus.emit("close", {"payload": {"reason": reason}})
             return -1
 
         await _update_workflow_run(
@@ -246,7 +245,7 @@ async def report_failure(
                     reason=reason,
                 )
 
-    await session.bus.emit("close", {"reason": reason})
+    await session.bus.emit("close", {"payload": {"reason": reason}})
     return -1
 
 
@@ -262,7 +261,16 @@ class SessionManager:
         parallelism: int = 10,
     ) -> WorkflowRunRead:
         with get_session() as db:
-            workflow = db.get(Workflow, workflow_id)
+            workflow = (
+                db.query(Workflow)
+                .options(
+                    joinedload(Workflow.transcriber_plugin),
+                    joinedload(Workflow.grader_plugin),
+                    joinedload(Workflow.validator_plugin),
+                )
+                .filter(Workflow.id == workflow_id)
+                .first()
+            )
 
             if not workflow:
                 raise ValueError("Workflow not found")
@@ -316,11 +324,15 @@ class SessionManager:
             f"Starting session for workflow {workflow.name} for {len(submission_ids)} submissions",
         )
 
+        transcriber_plugin = workflow.transcriber_plugin
+        grader_plugin = workflow.grader_plugin
+        validator_plugin = workflow.validator_plugin
+
         with get_session() as db:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:
                 await session.bus.emit(
-                    "close", {"reason": "Workflow run not found in database"}
+                    "close", {"payload": {"reason": "Workflow run not found in database"}}
                 )
                 return -1
 
@@ -354,9 +366,9 @@ class SessionManager:
             )
 
         # Transcription
-        if workflow.transcriber_plugin_hash:
+        if transcriber_plugin:
             await session.logger.info("Starting transcription step...")
-            transcriber_cls = get_plugin_object(workflow.transcriber_plugin_hash)
+            transcriber_cls = get_plugin_object(transcriber_plugin.hash)
 
             if not transcriber_cls:
                 return await report_failure(
@@ -364,12 +376,12 @@ class SessionManager:
                     session_id,
                     submission_ids,
                     reason="Session failed due to missing transcriber plugin",
-                    log_message="Transcriber plugin not found",
+                    log_message=f"Transcriber plugin not found: {transcriber_plugin.name} ({transcriber_plugin.hash})",
                 )
 
             try:
                 transcriber_instance = transcriber_cls(
-                    session.logger.get_child(workflow.transcriber_plugin_hash)
+                    session.logger.get_child(transcriber_plugin)
                 )
             except Exception as e:
                 return await report_failure(
@@ -602,12 +614,12 @@ class SessionManager:
                                     await session.bus.emit(
                                         "update",
                                         {
-                                            # TODO: frontend expects "submissions", in plural, to invalidate that query. Should we change that?
-                                            "object": "submissions",
-                                            "type": "update",
                                             "payload": {
-                                                "id": db_submission.id,
-                                                "status": db_submission.status,
+                                                "object": "submissions",
+                                                "data": {
+                                                    "id": db_submission.id,
+                                                    "status": db_submission.status,
+                                                },
                                             },
                                         },
                                     )
@@ -634,11 +646,12 @@ class SessionManager:
                                         await session.bus.emit(
                                             "update",
                                             {
-                                                "object": "submissions",
-                                                "type": "update",
                                                 "payload": {
-                                                    "id": db_sub.id,
-                                                    "status": db_sub.status,
+                                                    "object": "submissions",
+                                                    "data": {
+                                                        "id": db_sub.id,
+                                                        "status": db_sub.status,
+                                                    },
                                                 },
                                             },
                                         )
@@ -673,21 +686,21 @@ class SessionManager:
                 log_message="No transcription step found. Processing without transcription is not supported.",
             )
 
-        if workflow.grader_plugin_hash:
+        if grader_plugin:
             await session.logger.info("Starting grading step")
-            grader_cls = get_plugin_object(workflow.grader_plugin_hash)
+            grader_cls = get_plugin_object(grader_plugin.hash)
             if not grader_cls:
                 return await report_failure(
                     session,
                     session_id,
                     submission_ids,
                     reason="Session failed due to missing grader plugin",
-                    log_message="Grader plugin not found",
+                    log_message=f"Grader plugin not found: {grader_plugin.name} ({grader_plugin.hash})",
                 )
 
             try:
                 grader_instance = grader_cls(
-                    session.logger.get_child(workflow.grader_plugin_hash)
+                    session.logger.get_child(grader_plugin)
                 )
             except Exception as e:
                 return await report_failure(
@@ -872,11 +885,12 @@ class SessionManager:
                                         await session.bus.emit(
                                             "update",
                                             {
-                                                "object": "submissions",
-                                                "type": "update",
                                                 "payload": {
-                                                    "id": db_sub.id,
-                                                    "status": db_sub.status,
+                                                    "object": "submissions",
+                                                    "data": {
+                                                        "id": db_sub.id,
+                                                        "status": db_sub.status,
+                                                    },
                                                 },
                                             },
                                         )
@@ -907,11 +921,12 @@ class SessionManager:
                                             await session.bus.emit(
                                                 "update",
                                                 {
-                                                    "object": "submissions",
-                                                    "type": "update",
                                                     "payload": {
-                                                        "id": db_sub.id,
-                                                        "status": db_sub.status,
+                                                        "object": "submissions",
+                                                        "data": {
+                                                            "id": db_sub.id,
+                                                            "status": db_sub.status,
+                                                        },
                                                     },
                                                 },
                                             )
@@ -939,15 +954,17 @@ class SessionManager:
             await session.logger.info("Grading step completed")
 
         # Validation step
-        if getattr(workflow, "validator_plugin_hash", None):
+        if validator_plugin:
             await session.logger.info("Starting validation step")
-            validator_cls = get_plugin_object(workflow.validator_plugin_hash)
+            validator_cls = get_plugin_object(validator_plugin.hash)
             if not validator_cls:
-                await session.logger.warning("Validator plugin not found, skipping")
+                await session.logger.warning(
+                    f"Validator plugin not found, skipping: {validator_plugin.name} ({validator_plugin.hash})"
+                )
             else:
                 try:
                     validator_instance = validator_cls(
-                        session.logger.get_child(workflow.validator_plugin_hash)
+                        session.logger.get_child(validator_plugin)
                     )
                     validator_instance.set_values(workflow.validator_settings or {})
 
@@ -992,9 +1009,10 @@ class SessionManager:
                                 await session.bus.emit(
                                     "update",
                                     {
-                                        "object": "submissions",
-                                        "type": "update",
-                                        "payload": {"id": db_sub.id},
+                                        "payload": {
+                                            "object": "submissions",
+                                            "data": {"id": db_sub.id},
+                                        },
                                     },
                                 )
 
@@ -1027,9 +1045,10 @@ class SessionManager:
                             await session.bus.emit(
                                 "update",
                                 {
-                                    "object": "submissions",
-                                    "type": "update",
-                                    "payload": batched_payload,
+                                    "payload": {
+                                        "object": "submissions",
+                                        "data": batched_payload,
+                                    },
                                 },
                             )
                     else:
@@ -1083,7 +1102,11 @@ class SessionManager:
             if not workflow_run:
                 await session.bus.emit(
                     "close",
-                    {"reason": "Workflow run not found in database at completion"},
+                    {
+                        "payload": {
+                            "reason": "Workflow run not found in database at completion"
+                        }
+                    },
                 )
                 return -1
 
@@ -1095,7 +1118,7 @@ class SessionManager:
                 finished_at=datetime.now(),
             )
 
-        await session.bus.emit("close", {"reason": "Session completed"})
+        await session.bus.emit("close", {"payload": {"reason": "Session completed"}})
         return 0
 
 
