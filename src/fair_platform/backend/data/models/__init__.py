@@ -1,6 +1,7 @@
 from .user import User, UserRole
 from .course import Course
 from .assignment import Assignment
+from .enrollment import Enrollment
 from .submitter import Submitter
 from .submission import Submission, SubmissionStatus
 from .submission_event import SubmissionEvent, SubmissionEventType
@@ -16,6 +17,7 @@ __all__ = [
     "UserRole",
     "Course",
     "Assignment",
+    "Enrollment",
     "Submitter",
     "Submission",
     "SubmissionStatus",

@@ -8,6 +8,7 @@ from ..database import Base
 if TYPE_CHECKING:
     from .user import User
     from .assignment import Assignment
+    from .enrollment import Enrollment
     from .workflow import Workflow
     from .artifact import Artifact
 
@@ -31,6 +32,9 @@ class Course(Base):
     )
     artifacts: Mapped[List["Artifact"]] = relationship(
         "Artifact", back_populates="course"
+    )
+    enrollments: Mapped[List["Enrollment"]] = relationship(
+        "Enrollment", back_populates="course"
     )
 
     def __repr__(self) -> str:
