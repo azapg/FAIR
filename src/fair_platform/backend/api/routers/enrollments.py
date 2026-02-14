@@ -23,7 +23,7 @@ def create_enrollment(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    """Enroll a student in a course. Only the course instructor or admin can enroll students."""
+    """Enroll a user in a course. Only the course instructor or admin can enroll users."""
     course = db.get(Course, payload.course_id)
     if not course:
         raise HTTPException(
@@ -37,16 +37,11 @@ def create_enrollment(
             detail="Only the course instructor or admin can enroll students",
         )
 
-    # Verify the user to be enrolled exists and is a student
+    # Verify the user to be enrolled exists
     student = db.get(User, payload.user_id)
     if not student:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
-    if student.role != UserRole.student:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only students can be enrolled in courses",
         )
 
     # Check for duplicate enrollment
@@ -73,14 +68,14 @@ def create_enrollment(
     db.commit()
     db.refresh(enrollment)
 
-    return {
-        "id": enrollment.id,
-        "user_id": enrollment.user_id,
-        "course_id": enrollment.course_id,
-        "enrolled_at": enrollment.enrolled_at,
-        "user_name": student.name,
-        "course_name": course.name,
-    }
+    return EnrollmentRead(
+        id=enrollment.id,
+        user_id=enrollment.user_id,
+        course_id=enrollment.course_id,
+        enrolled_at=enrollment.enrolled_at,
+        user_name=student.name,
+        course_name=course.name,
+    )
 
 
 @router.post("/bulk", response_model=list[EnrollmentRead], status_code=status.HTTP_201_CREATED)
@@ -89,7 +84,7 @@ def bulk_create_enrollments(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    """Bulk enroll multiple students in a course. Only the course instructor or admin can enroll students."""
+    """Bulk enroll multiple users in a course. Only the course instructor or admin can enroll users."""
     course = db.get(Course, payload.course_id)
     if not course:
         raise HTTPException(
@@ -105,8 +100,8 @@ def bulk_create_enrollments(
     results = []
     for user_id in payload.user_ids:
         student = db.get(User, user_id)
-        if not student or student.role != UserRole.student:
-            continue  # Skip non-existent or non-student users in bulk
+        if not student:
+            continue  # Skip non-existent users in bulk
 
         existing = (
             db.query(Enrollment)
@@ -126,14 +121,14 @@ def bulk_create_enrollments(
         )
         db.add(enrollment)
         db.flush()
-        results.append({
-            "id": enrollment.id,
-            "user_id": enrollment.user_id,
-            "course_id": enrollment.course_id,
-            "enrolled_at": enrollment.enrolled_at,
-            "user_name": student.name,
-            "course_name": course.name,
-        })
+        results.append(EnrollmentRead(
+            id=enrollment.id,
+            user_id=enrollment.user_id,
+            course_id=enrollment.course_id,
+            enrolled_at=enrollment.enrolled_at,
+            user_name=student.name,
+            course_name=course.name,
+        ))
 
     db.commit()
     return results
@@ -170,14 +165,14 @@ def list_enrollments(
     for e in enrollments:
         user = db.get(User, e.user_id)
         course = db.get(Course, e.course_id)
-        results.append({
-            "id": e.id,
-            "user_id": e.user_id,
-            "course_id": e.course_id,
-            "enrolled_at": e.enrolled_at,
-            "user_name": user.name if user else None,
-            "course_name": course.name if course else None,
-        })
+        results.append(EnrollmentRead(
+            id=e.id,
+            user_id=e.user_id,
+            course_id=e.course_id,
+            enrolled_at=e.enrolled_at,
+            user_name=user.name if user else None,
+            course_name=course.name if course else None,
+        ))
     return results
 
 
