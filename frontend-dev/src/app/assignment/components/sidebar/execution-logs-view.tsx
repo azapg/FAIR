@@ -4,16 +4,22 @@ import {
   OctagonAlert,
   ShieldAlert,
   Terminal,
+  Filter,
+  X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import api from "@/lib/api";
 import { useSessionStore, SessionLog } from "@/store/session-store";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarContent } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 
 export function ExecutionLogsView({ onBack }: { onBack: () => void }) {
   const { currentSession, sessionLogs, setLogs } = useSessionStore();
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
+  const [selectedPlugin, setSelectedPlugin] = useState<string | null>(null);
 
   useEffect(() => {
     // Backfill from API if we have a session but no logs yet (e.g., page reload)
@@ -30,7 +36,27 @@ export function ExecutionLogsView({ onBack }: { onBack: () => void }) {
     void load();
   }, [currentSession?.id]);
 
-  const grouped = useMemo(() => sessionLogs, [sessionLogs]);
+  // Get unique levels and plugins for filtering
+  const availableLevels = useMemo(() => {
+    const levels = new Set(sessionLogs.map(log => log.level).filter(Boolean));
+    return Array.from(levels) as string[];
+  }, [sessionLogs]);
+
+  const availablePlugins = useMemo(() => {
+    const plugins = new Set(sessionLogs.map(log => log.plugin).filter(Boolean));
+    return Array.from(plugins) as string[];
+  }, [sessionLogs]);
+
+  // Filter logs based on selected filters
+  const filteredLogs = useMemo(() => {
+    return sessionLogs.filter(log => {
+      if (selectedLevel && log.level !== selectedLevel) return false;
+      if (selectedPlugin && log.plugin !== selectedPlugin) return false;
+      return true;
+    });
+  }, [sessionLogs, selectedLevel, selectedPlugin]);
+
+  const grouped = useMemo(() => filteredLogs, [filteredLogs]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   // Always follow the latest entry for a smooth, live log reading experience
@@ -38,30 +64,129 @@ export function ExecutionLogsView({ onBack }: { onBack: () => void }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [grouped.length]);
 
+  const clearFilters = () => {
+    setSelectedLevel(null);
+    setSelectedPlugin(null);
+  };
+
+  const hasActiveFilters = selectedLevel || selectedPlugin;
+
   return (
     <SidebarContent className="flex flex-col h-full">
-      <div className="flex items-center gap-2 p-2.5">
+      {/* Improved Header */}
+      <div className="flex items-center gap-2 p-3">
         <Button size="icon" variant="ghost" onClick={onBack}>
-          <ChevronLeft />
+          <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div className="flex flex-col">
-          <span className="font-semibold">Execution Logs</span>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="font-semibold text-sm">Execution Logs</span>
           {currentSession && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground truncate">
               Session {currentSession.id}
             </span>
           )}
         </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setShowFilters(!showFilters)}
+          className="h-8 w-8"
+        >
+          <Filter className="h-4 w-4" />
+        </Button>
       </div>
+
+      {/* Filters Section */}
+      {showFilters && (
+        <div className="px-3 pb-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Filters</span>
+            {hasActiveFilters && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={clearFilters}
+                className="h-6 w-6"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+          
+          {/* Level Filters */}
+          {availableLevels.length > 0 && (
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Level:</span>
+              <div className="flex flex-wrap gap-1">
+                <Badge
+                  variant={!selectedLevel ? "default" : "outline"}
+                  className="cursor-pointer text-[10px] px-2 py-0.5"
+                  onClick={() => setSelectedLevel(null)}
+                >
+                  All
+                </Badge>
+                {availableLevels.map(level => (
+                  <Badge
+                    key={level}
+                    variant={selectedLevel === level ? "default" : "outline"}
+                    className="cursor-pointer text-[10px] px-2 py-0.5"
+                    onClick={() => setSelectedLevel(level)}
+                  >
+                    {level.toUpperCase()}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Plugin Filters */}
+          {availablePlugins.length > 0 && (
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Plugin:</span>
+              <div className="flex flex-wrap gap-1">
+                <Badge
+                  variant={!selectedPlugin ? "default" : "outline"}
+                  className="cursor-pointer text-[10px] px-2 py-0.5"
+                  onClick={() => setSelectedPlugin(null)}
+                >
+                  All
+                </Badge>
+                {availablePlugins.map(plugin => (
+                  <Badge
+                    key={plugin}
+                    variant={selectedPlugin === plugin ? "default" : "outline"}
+                    className="cursor-pointer text-[10px] px-2 py-0.5"
+                    onClick={() => setSelectedPlugin(plugin)}
+                  >
+                    {plugin}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Active Filters Summary */}
+          {hasActiveFilters && (
+            <div className="text-xs text-muted-foreground">
+              Showing {filteredLogs.length} of {sessionLogs.length} logs
+            </div>
+          )}
+        </div>
+      )}
+      
       <Separator />
-      <div className="flex-1 overflow-auto px-2.5 py-3 space-y-2">
-        {grouped.length === 0 && (
+      
+      {/* Logs Content */}
+      <div className="flex-1 overflow-auto px-3 py-3 space-y-2">
+        {filteredLogs.length === 0 && (
           <div className="text-sm text-muted-foreground px-2">
-            No logs yet. When a workflow runs, messages will appear here in real
-            time.
+            {hasActiveFilters 
+              ? "No logs match the selected filters." 
+              : "No logs yet. When a workflow runs, messages will appear here in real time."
+            }
           </div>
         )}
-        {grouped.map((log) => (
+        {filteredLogs.map((log) => (
           <LogRow key={`${log.index}-${log.type}-${log.ts ?? ""}`} log={log} />
         ))}
         <div ref={bottomRef} />
