@@ -24,6 +24,13 @@ type Crumb = {
   isLast: boolean;
 };
 
+const MAX_LABEL_LENGTH = 25;
+
+const truncateLabel = (label: string, maxLength: number = MAX_LABEL_LENGTH): string => {
+  if (label.length <= maxLength) return label;
+  return label.slice(0, maxLength) + "…";
+};
+
 // Normalize and strongly type the generator
 const generateBreadcrumbs = (baseUrl: string, segments: BreadcrumbSegment[], home: string = "Home"): Crumb[] => {
   const normalizeBase = (s: string) => {
@@ -45,7 +52,11 @@ const generateBreadcrumbs = (baseUrl: string, segments: BreadcrumbSegment[], hom
   });
 
   const lastIndex = crumbs.length - 1;
-  return crumbs.map((c, i) => ({ ...c, isLast: i === lastIndex }));
+  return crumbs.map((c, i) => ({
+    ...c,
+    label: i === lastIndex ? c.label : truncateLabel(c.label),
+    isLast: i === lastIndex,
+  }));
 };
 
 export function BreadcrumbNav({className, segments, baseUrl = ""}: { className?: string, baseUrl?: string, segments: BreadcrumbSegment[] }) {
@@ -59,12 +70,12 @@ export function BreadcrumbNav({className, segments, baseUrl = ""}: { className?:
         <BreadcrumbList>
           {breadcrumbs.map((crumb) => (
             <React.Fragment key={crumb.href}>
-              <BreadcrumbItem>
+              <BreadcrumbItem title={crumb.label} className="max-w-[200px]">
                 {crumb.isLast ? (
-                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                  <BreadcrumbPage className="truncate block">{crumb.label}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link to={crumb.href}>{crumb.label}</Link>
+                    <Link to={crumb.href} className="truncate block">{crumb.label}</Link>
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>
