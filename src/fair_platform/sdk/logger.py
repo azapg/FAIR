@@ -13,6 +13,10 @@ if TYPE_CHECKING:
 
 
 class SessionLogger:
+    _FILE_CONTENT_MAX_BYTES = 256000
+    _ALLOWED_FILE_TYPES = {"text", "markdown"}
+    _ALLOWED_FILE_MIME_TYPES = {"text/plain", "text/markdown"}
+
     def __init__(self, session_id: str, bus: EventBus):
         self.session_id = session_id
         self.bus = bus
@@ -56,6 +60,61 @@ class SessionLogger:
         `dict`) that represents the final payload to be emitted.
         """
         return payload
+
+    @classmethod
+    def _normalize_file_name(cls, name: str) -> str:
+        name = cls._require_non_empty(name, "name")
+        if "/" in name or "\\" in name:
+            raise ValueError("'name' must be a file name, not a path")
+        return name
+
+    @classmethod
+    def _infer_file_type_from_name(cls, name: str) -> str:
+        lower_name = name.lower()
+        if lower_name.endswith(".md") or lower_name.endswith(".markdown"):
+            return "markdown"
+        return "text"
+
+    @classmethod
+    def _normalize_file_type(
+        cls,
+        file_type: Optional[str],
+        *,
+        name: str,
+    ) -> str:
+        normalized = (
+            file_type.strip().lower()
+            if isinstance(file_type, str) and file_type.strip()
+            else cls._infer_file_type_from_name(name)
+        )
+        if normalized not in cls._ALLOWED_FILE_TYPES:
+            raise ValueError("'file_type' must be one of: text, markdown")
+        return normalized
+
+    @classmethod
+    def _normalize_file_mime_type(
+        cls,
+        mime_type: Optional[str],
+        *,
+        file_type: str,
+    ) -> str:
+        if isinstance(mime_type, str) and mime_type.strip():
+            normalized = mime_type.strip().lower()
+            if normalized not in cls._ALLOWED_FILE_MIME_TYPES:
+                raise ValueError("'mime_type' must be one of: text/plain, text/markdown")
+            return normalized
+        return "text/markdown" if file_type == "markdown" else "text/plain"
+
+    @classmethod
+    def _normalize_file_content(cls, content: str) -> tuple[str, int]:
+        content = cls._require_non_empty(content, "content")
+        encoded = content.encode("utf-8")
+        size_bytes = len(encoded)
+        if size_bytes > cls._FILE_CONTENT_MAX_BYTES:
+            raise ValueError(
+                f"'content' exceeds maximum allowed size of {cls._FILE_CONTENT_MAX_BYTES} bytes"
+            )
+        return content, size_bytes
 
     def log(self, level: str, message: str):
         message = self._require_non_empty(message, "message")
@@ -131,6 +190,83 @@ class SessionLogger:
             }
         )
         return self.emit("image_group", payload, level=level)
+
+    def log_file(
+        self,
+        description: str,
+        name: str,
+        content: str,
+        *,
+        level: str = "info",
+        file_type: Optional[str] = None,
+        mime_type: Optional[str] = None,
+        encoding: str = "utf-8",
+        language: Optional[str] = None,
+    ):
+        description = self._require_non_empty(description, "description")
+        name = self._normalize_file_name(name)
+        content, size_bytes = self._normalize_file_content(content)
+        normalized_type = self._normalize_file_type(file_type, name=name)
+        normalized_mime_type = self._normalize_file_mime_type(
+            mime_type,
+            file_type=normalized_type,
+        )
+        encoding = self._require_non_empty(encoding, "encoding")
+
+        payload = self._decorate_payload(
+            {
+                "description": description,
+                "file": {
+                    "name": name,
+                    "content": content,
+                    "file_type": normalized_type,
+                    "mime_type": normalized_mime_type,
+                    "encoding": encoding,
+                    "size_bytes": size_bytes,
+                },
+            }
+        )
+        if isinstance(language, str) and language.strip():
+            payload["file"]["language"] = language.strip()
+        return self.emit("file", payload, level=level)
+
+    def log_md_file(
+        self,
+        description: str,
+        name: str,
+        content: str,
+        *,
+        level: str = "info",
+    ):
+        return self.log_file(
+            description=description,
+            name=name,
+            content=content,
+            level=level,
+            file_type="markdown",
+            mime_type="text/markdown",
+            encoding="utf-8",
+        )
+
+    def log_text_file(
+        self,
+        description: str,
+        name: str,
+        content: str,
+        *,
+        level: str = "info",
+        language: Optional[str] = None,
+    ):
+        return self.log_file(
+            description=description,
+            name=name,
+            content=content,
+            level=level,
+            file_type="text",
+            mime_type="text/plain",
+            encoding="utf-8",
+            language=language,
+        )
 
     async def _emit_async(self, event_type: str, payload: dict, *, level: str = "info"):
         await self.bus.emit(

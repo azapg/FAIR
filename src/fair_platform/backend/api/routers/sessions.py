@@ -169,6 +169,7 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
                 session.bus.off("log", _handler)
                 session.bus.off("image", _handler)
                 session.bus.off("image_group", _handler)
+                session.bus.off("file", _handler)
                 session.bus.off("update", _handler)
                 session.bus.off("close", _close_handler)
 
@@ -184,6 +185,7 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
     session.bus.on("log", _handler)
     session.bus.on("image", _handler)
     session.bus.on("image_group", _handler)
+    session.bus.on("file", _handler)
     session.bus.on("update", _handler)
     session.bus.on("close", _close_handler)
 
@@ -198,6 +200,7 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
             session.bus.off("log", _handler)
             session.bus.off("image", _handler)
             session.bus.off("image_group", _handler)
+            session.bus.off("file", _handler)
             session.bus.off("update", _handler)
             session.bus.off("close", _close_handler)
         with contextlib.suppress(Exception):

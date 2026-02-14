@@ -41,6 +41,15 @@ export type SessionLog = {
       alt?: string;
       mime_type?: string;
     }>;
+    file?: {
+      name?: string;
+      content?: string;
+      file_type?: "text" | "markdown" | string;
+      mime_type?: "text/plain" | "text/markdown" | string;
+      encoding?: string;
+      size_bytes?: number;
+      language?: string;
+    };
     [key: string]: any;
   };
 }
