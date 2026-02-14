@@ -60,6 +60,8 @@ class Session:
         self.buffer = []  # Circular buffer for logs (500 max entries)
         self.bus = IndexedEventBus()
         self.bus.on("log", self.add_log)
+        self.bus.on("image", self.add_log)
+        self.bus.on("image_group", self.add_log)
         self.bus.on("close", self.add_log)
         self.bus.on("update", self.add_log)
         self.logger = SessionLogger(session_id.hex, self.bus)

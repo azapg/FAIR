@@ -167,6 +167,8 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
                 await websocket.close()
             with contextlib.suppress(Exception):
                 session.bus.off("log", _handler)
+                session.bus.off("image", _handler)
+                session.bus.off("image_group", _handler)
                 session.bus.off("update", _handler)
                 session.bus.off("close", _close_handler)
 
@@ -180,6 +182,8 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
 
     # TODO: I should just be able to do this with a wildcard, but for now, explicitly subscribe to known events
     session.bus.on("log", _handler)
+    session.bus.on("image", _handler)
+    session.bus.on("image_group", _handler)
     session.bus.on("update", _handler)
     session.bus.on("close", _close_handler)
 
@@ -192,6 +196,8 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
         active = False
         with contextlib.suppress(Exception):
             session.bus.off("log", _handler)
+            session.bus.off("image", _handler)
+            session.bus.off("image_group", _handler)
             session.bus.off("update", _handler)
             session.bus.off("close", _close_handler)
         with contextlib.suppress(Exception):

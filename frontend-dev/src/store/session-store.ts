@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from "zustand/middleware";
-import {SubmissionStatus, Submission} from "@/hooks/use-submissions";
+import {Submission} from "@/hooks/use-submissions";
 import { AuthUser } from "@/contexts/auth-context";
 
 type Session = {
@@ -18,7 +18,31 @@ export type SessionLog = {
   ts: string;
   type: string;
   level: 'debug' | 'info' | 'warning' | 'error' | string;
-  payload?: Record<string, any>;
+  payload?: {
+    message?: string;
+    reason?: string;
+    plugin?: {
+      id?: string;
+      name?: string;
+      hash?: string;
+      author?: string;
+      version?: string;
+      source?: string;
+      type?: string;
+    };
+    description?: string;
+    image?: {
+      src?: string;
+      alt?: string;
+      mime_type?: string;
+    };
+    images?: Array<{
+      src?: string;
+      alt?: string;
+      mime_type?: string;
+    }>;
+    [key: string]: any;
+  };
 }
 
 type State = {

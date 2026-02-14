@@ -5,13 +5,13 @@ import {
   ShieldAlert,
   Terminal,
 } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import api from "@/lib/api";
 import { useSessionStore, SessionLog } from "@/store/session-store";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarContent } from "@/components/ui/sidebar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 export function ExecutionLogsView({ onBack }: { onBack: () => void }) {
   const { currentSession, sessionLogs, setLogs } = useSessionStore();
@@ -128,6 +128,71 @@ function LogRow({ log }: { log: SessionLog }) {
     );
   }
 
+  if (log.type === "image") {
+    const image = log.payload?.image;
+    if (!image?.src || !image?.alt) return null;
+
+    return (
+      <div className="rounded-md border p-2 text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 truncate">
+            <LevelBadge level={log.level} />
+            <span className="text-xs text-muted-foreground">
+              {log.payload?.plugin?.name || "System"}
+            </span>
+          </div>
+          {log.ts && (
+            <span className="text-[10px] text-muted-foreground">
+              {new Date(log.ts).toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+        {log.payload?.description && (
+          <div className="mt-1 break-words">{log.payload.description}</div>
+        )}
+        <div className="mt-2">
+          <ImageWithFallback src={image.src} alt={image.alt} />
+        </div>
+      </div>
+    );
+  }
+
+  if (log.type === "image_group") {
+    const images = (log.payload?.images || []).filter((img) => img?.src && img?.alt);
+    if (images.length === 0) return null;
+
+    return (
+      <div className="rounded-md border p-2 text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 truncate">
+            <LevelBadge level={log.level} />
+            <span className="text-xs text-muted-foreground">
+              {log.payload?.plugin?.name || "System"}
+            </span>
+          </div>
+          {log.ts && (
+            <span className="text-[10px] text-muted-foreground">
+              {new Date(log.ts).toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+        {log.payload?.description && (
+          <div className="mt-1 break-words">{log.payload.description}</div>
+        )}
+        <ScrollArea className="mt-2 w-full whitespace-nowrap">
+          <div className="flex gap-3 pb-2">
+            {images.map((image, idx) => (
+              <div key={`${log.index}-img-${idx}`} className="w-56 shrink-0">
+                <ImageWithFallback src={image.src!} alt={image.alt!} />
+              </div>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+      </div>
+    );
+  }
+
   if (log.type === "close") {
     return (
       <div className="rounded-md border border-green-500/40 bg-green-500/5 p-2 text-sm">
@@ -150,4 +215,25 @@ function LogRow({ log }: { log: SessionLog }) {
 
   console.warn("Unknown log type:", log);
   return null;
+}
+
+function ImageWithFallback({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className="rounded border bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
+        {alt}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="max-h-64 w-full rounded border object-contain"
+    />
+  );
 }
