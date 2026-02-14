@@ -11,6 +11,7 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .course import Course
+    from .enrollment import Enrollment
     from .workflow import Workflow
     from .workflow_run import WorkflowRun
     from .artifact import Artifact
@@ -56,6 +57,9 @@ class User(Base):
         "Submission", back_populates="created_by", foreign_keys="Submission.created_by_id"
     )
     rubrics: Mapped[List["Rubric"]] = relationship("Rubric", back_populates="creator")
+    enrollments: Mapped[List["Enrollment"]] = relationship(
+        "Enrollment", back_populates="user"
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r} role={self.role}>"
