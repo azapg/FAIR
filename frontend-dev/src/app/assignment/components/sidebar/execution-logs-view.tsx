@@ -107,7 +107,7 @@ function LevelBadge({ level }: { level?: string | null }) {
 }
 
 function LogRow({ log }: { log: SessionLog }) {
-  if (log.type === "log") {
+  if (log.type === "log" || log.type === "system") {
     return (
       <div className="rounded-md border p-2 text-sm">
         <div className="flex items-center justify-between gap-2">
@@ -123,7 +123,7 @@ function LogRow({ log }: { log: SessionLog }) {
             </span>
           )}
         </div>
-        {log.message && <div className="mt-1 break-words">{log.message}</div>}
+        {log.payload?.message && <div className="mt-1 break-words">{log.payload.message}</div>}
       </div>
     );
   }

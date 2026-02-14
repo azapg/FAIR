@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime
 from typing import Optional
 
 from fair_platform.backend.data.models.submission_result import TYPE_CHECKING
@@ -35,10 +34,8 @@ class SessionLogger:
         await self.bus.emit(
             event_type,
             data={
-                "type": "log",
-                "ts": datetime.now().isoformat(),
                 "level": level,
-                "payload": payload,
+                "payload": payload or {},
             },
         )
 

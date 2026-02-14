@@ -15,12 +15,9 @@ type Session = {
 
 export type SessionLog = {
   index: number;
+  ts: string;
   type: string;
-  ts?: string | null;
-  level?: 'debug' | 'info' | 'warning' | 'error' | string;
-  plugin?: Record<string, any>;
-  message?: string | null;
-  object?: string | null;
+  level: 'debug' | 'info' | 'warning' | 'error' | string;
   payload?: Record<string, any>;
 }
 

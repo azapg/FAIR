@@ -116,9 +116,7 @@ async def _update_workflow_run(
     await session.bus.emit(
         "update",
         {
-            "object": "workflow_run",
-            "type": "update",
-            "payload": payload,
+            "payload": {"object": "workflow_run", "data": payload},
         },
     )
     return workflow_run
@@ -156,9 +154,7 @@ async def _update_submissions(
     await session.bus.emit(
         "update",
         {
-            "object": "submissions",
-            "type": "update",
-            "payload": payload_items,
+            "payload": {"object": "submissions", "data": payload_items},
         },
     )
     return submissions
@@ -222,7 +218,7 @@ async def report_failure(
     with get_session() as db:
         workflow_run = db.get(WorkflowRun, session_id)
         if not workflow_run:
-            await session.bus.emit("close", {"reason": reason})
+            await session.bus.emit("close", {"payload": {"reason": reason}})
             return -1
 
         await _update_workflow_run(
@@ -246,7 +242,7 @@ async def report_failure(
                     reason=reason,
                 )
 
-    await session.bus.emit("close", {"reason": reason})
+    await session.bus.emit("close", {"payload": {"reason": reason}})
     return -1
 
 
@@ -333,7 +329,7 @@ class SessionManager:
             workflow_run = db.get(WorkflowRun, session_id)
             if not workflow_run:
                 await session.bus.emit(
-                    "close", {"reason": "Workflow run not found in database"}
+                    "close", {"payload": {"reason": "Workflow run not found in database"}}
                 )
                 return -1
 
@@ -615,12 +611,12 @@ class SessionManager:
                                     await session.bus.emit(
                                         "update",
                                         {
-                                            # TODO: frontend expects "submissions", in plural, to invalidate that query. Should we change that?
-                                            "object": "submissions",
-                                            "type": "update",
                                             "payload": {
-                                                "id": db_submission.id,
-                                                "status": db_submission.status,
+                                                "object": "submissions",
+                                                "data": {
+                                                    "id": db_submission.id,
+                                                    "status": db_submission.status,
+                                                },
                                             },
                                         },
                                     )
@@ -647,11 +643,12 @@ class SessionManager:
                                         await session.bus.emit(
                                             "update",
                                             {
-                                                "object": "submissions",
-                                                "type": "update",
                                                 "payload": {
-                                                    "id": db_sub.id,
-                                                    "status": db_sub.status,
+                                                    "object": "submissions",
+                                                    "data": {
+                                                        "id": db_sub.id,
+                                                        "status": db_sub.status,
+                                                    },
                                                 },
                                             },
                                         )
@@ -885,11 +882,12 @@ class SessionManager:
                                         await session.bus.emit(
                                             "update",
                                             {
-                                                "object": "submissions",
-                                                "type": "update",
                                                 "payload": {
-                                                    "id": db_sub.id,
-                                                    "status": db_sub.status,
+                                                    "object": "submissions",
+                                                    "data": {
+                                                        "id": db_sub.id,
+                                                        "status": db_sub.status,
+                                                    },
                                                 },
                                             },
                                         )
@@ -920,11 +918,12 @@ class SessionManager:
                                             await session.bus.emit(
                                                 "update",
                                                 {
-                                                    "object": "submissions",
-                                                    "type": "update",
                                                     "payload": {
-                                                        "id": db_sub.id,
-                                                        "status": db_sub.status,
+                                                        "object": "submissions",
+                                                        "data": {
+                                                            "id": db_sub.id,
+                                                            "status": db_sub.status,
+                                                        },
                                                     },
                                                 },
                                             )
@@ -1007,9 +1006,10 @@ class SessionManager:
                                 await session.bus.emit(
                                     "update",
                                     {
-                                        "object": "submissions",
-                                        "type": "update",
-                                        "payload": {"id": db_sub.id},
+                                        "payload": {
+                                            "object": "submissions",
+                                            "data": {"id": db_sub.id},
+                                        },
                                     },
                                 )
 
@@ -1042,9 +1042,10 @@ class SessionManager:
                             await session.bus.emit(
                                 "update",
                                 {
-                                    "object": "submissions",
-                                    "type": "update",
-                                    "payload": batched_payload,
+                                    "payload": {
+                                        "object": "submissions",
+                                        "data": batched_payload,
+                                    },
                                 },
                             )
                     else:
@@ -1098,7 +1099,11 @@ class SessionManager:
             if not workflow_run:
                 await session.bus.emit(
                     "close",
-                    {"reason": "Workflow run not found in database at completion"},
+                    {
+                        "payload": {
+                            "reason": "Workflow run not found in database at completion"
+                        }
+                    },
                 )
                 return -1
 
@@ -1110,7 +1115,7 @@ class SessionManager:
                 finished_at=datetime.now(),
             )
 
-        await session.bus.emit("close", {"reason": "Session completed"})
+        await session.bus.emit("close", {"payload": {"reason": "Session completed"}})
         return 0
 
 
