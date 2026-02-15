@@ -8,7 +8,7 @@ export type ListParams = Record<string, string | number | boolean | null | undef
 export type Artifact = {
   id: string
   title: string
-  artifact_type: string
+  artifactType: string
   mime: string
   creatorId: string
   createdAt: string
@@ -17,6 +17,14 @@ export type Artifact = {
   courseId?: string | null
   assignmentId?: string | null
   accessLevel: string
+  meta?: Record<string, unknown> | null
+}
+
+export type SDKArtifact = {
+  id: string
+  title: string
+  artifact_type: string
+  mime: string
   meta?: Record<string, unknown> | null
 }
 
@@ -84,6 +92,16 @@ const updateArtifact = async (id: string, data: UpdateArtifactInput): Promise<Ar
 
 const deleteArtifact = async (id: string): Promise<void> => {
   await api.delete(`/artifacts/${id}`)
+}
+
+export function toSDKArtifact(artifact: Artifact): SDKArtifact {
+  return {
+    id: artifact.id,
+    title: artifact.title,
+    artifact_type: artifact.artifactType,
+    mime: artifact.mime,
+    meta: artifact.meta ?? null,
+  }
 }
 
 export function useArtifacts(params?: ArtifactsListParams, enabled = true) {

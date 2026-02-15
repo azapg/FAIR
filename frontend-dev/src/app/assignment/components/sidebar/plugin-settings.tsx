@@ -4,7 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RuntimePluginRead } from "@/hooks/use-plugins";
+import { SDKArtifact, toSDKArtifact, useArtifacts } from "@/hooks/use-artifacts";
 import { useCallback, useRef } from "react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import { shallow } from "zustand/shallow";
@@ -18,6 +26,8 @@ interface PydanticProperty {
   maximum?: number;
   minLength?: number;
   maxLength?: number;
+  allowed_mime_types?: string[];
+  allowedMimeTypes?: string[];
   $ref?: string;
   [key: string]: unknown;
 }
@@ -208,6 +218,71 @@ function SliderField({ property, value, onChange, name }: BaseInputProps) {
   );
 }
 
+function CourseArtifactsSelectorField({
+  property,
+  value,
+  onChange,
+  name,
+}: BaseInputProps) {
+  const activeCourseId = useWorkflowStore((state) => state.activeCourseId);
+  const { data: artifacts = [], isLoading } = useArtifacts(
+    activeCourseId ? { courseId: activeCourseId } : undefined,
+    !!activeCourseId,
+  );
+
+  const allowedMimeTypes =
+    property.allowed_mime_types ?? property.allowedMimeTypes ?? [];
+  const hasMimeFilter = Array.isArray(allowedMimeTypes) && allowedMimeTypes.length > 0;
+
+  const normalized: SDKArtifact[] = artifacts
+    .filter((artifact) => artifact.accessLevel === "assignment")
+    .filter((artifact) =>
+      hasMimeFilter ? allowedMimeTypes.includes(artifact.mime) : true,
+    )
+    .map(toSDKArtifact);
+  const selectedId = typeof value?.id === "string" ? value.id : "";
+
+  return (
+    <div className="space-y-2">
+      {property.description && (
+        <p className="text-xs text-muted-foreground">{property.description}</p>
+      )}
+      <Select
+        value={selectedId}
+        onValueChange={(artifactId) => {
+          const selected = normalized.find((item) => item.id === artifactId);
+          if (selected) onChange(selected);
+        }}
+        disabled={!activeCourseId || isLoading || normalized.length === 0}
+      >
+        <SelectTrigger id={name} className="w-full" size="sm">
+          <SelectValue
+            placeholder={
+              !activeCourseId
+                ? "Select a course first"
+                : isLoading
+                  ? "Loading artifacts..."
+                  : normalized.length === 0
+                    ? "No course artifacts available"
+                    : "Select an artifact"
+            }
+          />
+        </SelectTrigger>
+        <SelectContent
+          position="popper"
+          className="w-[--radix-select-trigger-width]"
+        >
+          {normalized.map((artifact) => (
+            <SelectItem key={artifact.id} value={artifact.id}>
+              {artifact.title}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 function UnsupportedField({
   property,
 }: {
@@ -232,6 +307,7 @@ const INPUT_COMPONENTS = {
   SensitiveTextField,
   NumberField,
   SliderField,
+  CourseArtifactsSelectorField,
   SwitchField,
   CheckboxField,
   FileField,
