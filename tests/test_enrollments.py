@@ -40,6 +40,20 @@ def _make_course(session, prof):
     return course
 
 
+def _make_course_with_code(session, prof, code="FAIR-1234", enabled=True):
+    course = Course(
+        id=uuid4(),
+        name="Test Course",
+        description="desc",
+        instructor_id=prof.id,
+        enrollment_code=code,
+        is_enrollment_enabled=enabled,
+    )
+    session.add(course)
+    session.commit()
+    return course
+
+
 def _auth(client, email):
     return {"Authorization": f"Bearer {get_auth_token(client, email)}"}
 
@@ -138,6 +152,74 @@ class TestEnrollmentCRUD:
         }, headers=headers)
         assert resp.status_code == 201
         assert len(resp.json()) == 2
+
+
+class TestSelfEnrollment:
+
+    def test_student_can_join_with_valid_code(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, stu1, _ = _make_users(s)
+            course = _make_course_with_code(s, prof, code="FAIR-ABCD", enabled=True)
+
+        headers = _auth(test_client, stu1.email)
+        resp = test_client.post("/api/enrollments/join", json={"code": "FAIR-ABCD"}, headers=headers)
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["courseId"] == str(course.id)
+        assert data["userId"] == str(stu1.id)
+
+    def test_join_rejects_invalid_code(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, stu1, _ = _make_users(s)
+            _make_course_with_code(s, prof, code="FAIR-REAL", enabled=True)
+
+        headers = _auth(test_client, stu1.email)
+        resp = test_client.post("/api/enrollments/join", json={"code": "FAIR-FAKE"}, headers=headers)
+        assert resp.status_code == 404
+
+    def test_join_rejects_when_disabled(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, stu1, _ = _make_users(s)
+            _make_course_with_code(s, prof, code="FAIR-OFF", enabled=False)
+
+        headers = _auth(test_client, stu1.email)
+        resp = test_client.post("/api/enrollments/join", json={"code": "FAIR-OFF"}, headers=headers)
+        assert resp.status_code == 400
+
+    def test_join_rejects_duplicate_enrollment(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, stu1, _ = _make_users(s)
+            _make_course_with_code(s, prof, code="FAIR-DUPL", enabled=True)
+
+        headers = _auth(test_client, stu1.email)
+        first = test_client.post("/api/enrollments/join", json={"code": "FAIR-DUPL"}, headers=headers)
+        assert first.status_code == 201
+        second = test_client.post("/api/enrollments/join", json={"code": "FAIR-DUPL"}, headers=headers)
+        assert second.status_code == 409
+
+    def test_non_students_cannot_join_by_code(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, _, _ = _make_users(s)
+            _make_course_with_code(s, prof, code="FAIR-PROF", enabled=True)
+
+        headers = _auth(test_client, prof.email)
+        resp = test_client.post("/api/enrollments/join", json={"code": "FAIR-PROF"}, headers=headers)
+        assert resp.status_code == 403
+
+    def test_instructor_can_reset_and_toggle_enrollment(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, stu1, _ = _make_users(s)
+            course = _make_course_with_code(s, prof, code="FAIR-INIT", enabled=True)
+
+        headers = _auth(test_client, prof.email)
+        reset = test_client.post(f"/api/courses/{course.id}/reset-code", headers=headers)
+        assert reset.status_code == 200
+        new_code = reset.json().get("enrollmentCode")
+        assert new_code and new_code != "FAIR-INIT"
+
+        disable = test_client.patch(f"/api/courses/{course.id}/settings", json={"is_enrollment_enabled": False}, headers=headers)
+        assert disable.status_code == 200
+        assert disable.json().get("isEnrollmentEnabled") is False
 
 
 # ────────────── Course / Assignment Visibility ──────────────────

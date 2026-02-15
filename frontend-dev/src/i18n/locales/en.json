@@ -92,7 +92,16 @@
     "deleteConfirmation": "This action cannot be undone. To confirm deletion, type the course name exactly:",
     "errorLoading": "Error loading course.",
     "noCourses": "No courses available",
-    "noCoursesDescription": "You haven't created any courses yet. Create your first course to get started."
+    "noCoursesDescription": "You haven't created any courses yet. Create your first course to get started.",
+    "joinCourse": "Join course",
+    "joinCourseCta": "Join a course",
+    "enterCode": "Enter the class code",
+    "codePlaceholder": "e.g. FAIR-1234",
+    "selfEnrollment": "Self-enrollment",
+    "classCode": "Class code",
+    "resetCode": "Reset code",
+    "selfEnrollmentDisabled": "Self-enrollment is disabled for this course.",
+    "selfEnrollmentHint": "Share this code with students so they can enroll themselves. You can reset it anytime."
   },
   "rubrics": {
     "title": "Rubrics",

@@ -92,7 +92,16 @@
     "deleteConfirmation": "Esta acción no se puede deshacer. Para confirmar la eliminación, escribe el nombre del curso exactamente:",
     "errorLoading": "Error al cargar el curso.",
     "noCourses": "No hay cursos disponibles",
-    "noCoursesDescription": "Aún no has creado ningún curso. Crea tu primer curso para comenzar."
+    "noCoursesDescription": "Aún no has creado ningún curso. Crea tu primer curso para comenzar.",
+    "joinCourse": "Unirse al curso",
+    "joinCourseCta": "Únete a un curso",
+    "enterCode": "Ingresa el código de clase",
+    "codePlaceholder": "ej. FAIR-1234",
+    "selfEnrollment": "Autoinscripción",
+    "classCode": "Código de clase",
+    "resetCode": "Restablecer código",
+    "selfEnrollmentDisabled": "La autoinscripción está desactivada para este curso.",
+    "selfEnrollmentHint": "Comparte este código con los estudiantes para que puedan inscribirse. Puedes restablecerlo en cualquier momento."
   },
   "rubrics": {
     "title": "Rúbricas",

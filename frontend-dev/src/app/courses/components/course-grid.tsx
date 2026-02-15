@@ -3,6 +3,7 @@ import CourseCard from "@/app/courses/components/course-card";
 import CourseCardSkeleton from "@/app/courses/components/course-card-skeleton";
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
 import {CircleAlert, BookOpen, ArrowUpRightIcon} from "lucide-react";
+import { ReactNode } from "react";
 import {
   Empty,
   EmptyContent,
@@ -21,9 +22,10 @@ export type CourseGridProps = {
   onCardClickAction?: (id: string) => void;
   onDeleteAction?: (course: Course) => void;
   onCreateCourse?: () => void;
+  emptyActionSlot?: ReactNode;
 };
 
-export default function CourseGrid({ courses, isPending = false, isError = false, onCardClickAction, onDeleteAction, onCreateCourse }: CourseGridProps) {
+export default function CourseGrid({ courses, isPending = false, isError = false, onCardClickAction, onDeleteAction, onCreateCourse, emptyActionSlot }: CourseGridProps) {
   const { t, i18n } = useTranslation();
   const currentLang = i18n.language;
 
@@ -61,9 +63,11 @@ export default function CourseGrid({ courses, isPending = false, isError = false
             </EmptyHeader>
             <EmptyContent>
               <div className="flex gap-2">
-                <Button onClick={onCreateCourse}>
-                  {t("courses.createCourse")}
-                </Button>
+                {emptyActionSlot ?? (
+                  <Button onClick={onCreateCourse}>
+                    {t("courses.createCourse")}
+                  </Button>
+                )}
                 <Button
                   variant="link"
                   asChild

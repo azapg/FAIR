@@ -30,8 +30,15 @@ class EnrollmentRead(BaseModel):
     course_name: Optional[str] = None
 
 
+class EnrollmentJoin(BaseModel):
+    model_config = schema_config
+
+    code: str
+
+
 __all__ = [
     "EnrollmentCreate",
     "EnrollmentBulkCreate",
     "EnrollmentRead",
+    "EnrollmentJoin",
 ]

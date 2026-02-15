@@ -10,6 +10,8 @@ export type Course = {
   instructorId: string
   instructorName?: string
   assignmentsCount: number
+  enrollmentCode?: string | null
+  isEnrollmentEnabled: boolean
 }
 
 export type CourseDetail = {
@@ -30,6 +32,8 @@ export type CourseDetail = {
     createdAt: string,
     updatedAt: string,
   }
+  enrollmentCode?: string | null
+  isEnrollmentEnabled: boolean
 }
 
 export type CreateCourseInput = {
@@ -39,6 +43,17 @@ export type CreateCourseInput = {
 }
 
 export type UpdateCourseInput = Partial<Pick<Course, 'name' | 'description'>>
+
+export type CourseSettingsInput = Partial<Pick<Course, 'isEnrollmentEnabled'>>
+
+export type EnrollmentSummary = {
+  id: string
+  userId: string
+  courseId: string
+  enrolledAt: string
+  userName?: string
+  courseName?: string
+}
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
@@ -72,6 +87,21 @@ const updateCourse = async (id: string, data: UpdateCourseInput): Promise<Course
 
 const deleteCourse = async (id: string): Promise<void> => {
   await api.delete(`/courses/${id}`)
+}
+
+const resetEnrollmentCode = async (id: string): Promise<Course> => {
+  const res = await api.post(`/courses/${id}/reset-code`)
+  return res.data
+}
+
+const updateCourseSettingsApi = async (id: string, data: CourseSettingsInput): Promise<Course> => {
+  const res = await api.patch(`/courses/${id}/settings`, data)
+  return res.data
+}
+
+const joinCourseByCode = async (code: string): Promise<EnrollmentSummary> => {
+  const res = await api.post('/enrollments/join', { code })
+  return res.data
 }
 
 export function useCourses(params?: ListParams, enabled = true) {
@@ -137,6 +167,56 @@ export function useDeleteCourse() {
     onError: (error: Error) => {
       toast.error('Failed to delete Course', {
         description: error.message || 'Something went wrong'
+      });
+    }
+  })
+}
+
+export function useResetEnrollmentCode() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => resetEnrollmentCode(id),
+    onSuccess: (_course, id) => {
+      qc.invalidateQueries({ queryKey: coursesKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: coursesKeys.lists() })
+      toast.success('Enrollment code reset');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to reset enrollment code', {
+        description: error.message || 'Something went wrong'
+      });
+    }
+  })
+}
+
+export function useUpdateCourseSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CourseSettingsInput }) => updateCourseSettingsApi(id, data),
+    onSuccess: (_course, vars) => {
+      qc.invalidateQueries({ queryKey: coursesKeys.detail(vars.id) })
+      qc.invalidateQueries({ queryKey: coursesKeys.lists() })
+      toast.success('Course settings updated');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to update course settings', {
+        description: error.message || 'Something went wrong'
+      });
+    }
+  })
+}
+
+export function useJoinCourseByCode() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (code: string) => joinCourseByCode(code),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: coursesKeys.lists() })
+      toast.success('Joined course successfully');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to join course', {
+        description: error.message || 'Please verify the class code and try again'
       });
     }
   })
