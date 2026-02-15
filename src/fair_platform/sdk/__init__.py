@@ -5,6 +5,7 @@ from fair_platform.sdk.settings import (
     TextField,
     SensitiveTextField,
     NumberField,
+    SliderField,
 )
 from fair_platform.sdk.plugin import (
     BasePlugin,
@@ -35,6 +36,7 @@ __all__ = [
     "TextField",
     "SensitiveTextField",
     "NumberField",
+    "SliderField",
     "BasePlugin",
     "create_settings_model",
     "TranscriptionPlugin",

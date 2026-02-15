@@ -141,3 +141,33 @@ class FileField(SettingsField[FileInput]):
         return FileInput, Field(
             default=self.default, title="FileField", description=self.label
         )
+
+class SliderField(SettingsField[float]):
+    def __init__(
+        self,
+        label: str,
+        default: float,
+        min: float,
+        max: float,
+        step: float,
+        marks: Optional[dict[float, str]] = None # e.g. {0: "Low", 100: "High"}
+    ):
+        super().__init__(label, default)
+        self.min = min
+        self.max = max
+        self.step = step
+        self.marks = marks
+
+    def to_pydantic_field(self):
+        return (
+            float,
+            Field(
+                default=self.default,
+                title="SliderField",
+                description=self.label,
+                ge=self.min,
+                le=self.max,
+                # pyright: ignore[reportCallIssue]
+                json_schema_extra={"step": self.step, "marks": self.marks}  # pyright: ignore[reportArgumentType]
+            )
+        )

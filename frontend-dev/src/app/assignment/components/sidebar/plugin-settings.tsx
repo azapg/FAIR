@@ -2,6 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { RuntimePluginRead } from "@/hooks/use-plugins";
 import { useCallback, useRef } from "react";
 import { useWorkflowStore } from "@/store/workflows-store";
@@ -17,6 +18,7 @@ interface PydanticProperty {
   minLength?: number;
   maxLength?: number;
   $ref?: string;
+  [key: string]: unknown;
 }
 
 interface PydanticSchema {
@@ -131,6 +133,61 @@ function FileField({ property }: BaseInputProps) {
   );
 }
 
+function SliderField({ property, value, onChange, name }: BaseInputProps) {
+  const min = property.minimum ?? 0;
+  const max = property.maximum ?? 100;
+  const step = typeof property.step === "number" ? property.step : 1;
+  const currentValue =
+    typeof value === "number"
+      ? value
+      : typeof property.default === "number"
+        ? property.default
+        : min;
+
+  const marks = property.marks
+    ? Object.entries(property.marks).sort(
+        ([a], [b]) => Number(a) - Number(b),
+      )
+    : [];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        {property.description ? (
+          <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+            {property.description}
+          </p>
+        ) : (
+          <span />
+        )}
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {currentValue}
+        </span>
+      </div>
+      <div className="w-full">
+        <Slider
+          id={name}
+          value={[currentValue]}
+          min={min}
+          max={max}
+          step={step}
+          onValueChange={(values) => onChange(values[0] ?? currentValue)}
+          className="w-full"
+        />
+      </div>
+      {marks.length > 0 && (
+        <div className="w-full flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          {marks.map(([markValue, label]) => (
+            <span key={markValue} className="min-w-0 truncate">
+              {label}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UnsupportedField({
   property,
 }: {
@@ -154,6 +211,7 @@ const INPUT_COMPONENTS = {
   TextField,
   SensitiveTextField,
   NumberField,
+  SliderField,
   SwitchField,
   FileField,
 } as const;
