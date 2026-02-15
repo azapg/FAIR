@@ -30,6 +30,7 @@
     "home": "Home",
     "search": "Search",
     "inbox": "Inbox",
+    "rubrics": "Rubrics",
     "settings": "Settings",
     "help": "Help"
   },
@@ -92,6 +93,44 @@
     "errorLoading": "Error loading course.",
     "noCourses": "No courses available",
     "noCoursesDescription": "You haven't created any courses yet. Create your first course to get started."
+  },
+  "rubrics": {
+    "title": "Rubrics",
+    "subtitle": "Manage your grading rubrics and reuse them in plugins.",
+    "createAction": "Create rubric",
+    "createTitle": "Create rubric",
+    "editTitle": "Edit rubric",
+    "formDescription": "Define or generate a rubric and save it for reuse.",
+    "name": "Name",
+    "namePlaceholder": "Essay Grading Rubric",
+    "criterion": "Criterion",
+    "criterionPlaceholder": "e.g. Evidence and support",
+    "weight": "Weight",
+    "levelLabel": "Level",
+    "levelCriteriaPlaceholder": "Describe this criterion at this level",
+    "addCriterion": "Add criterion",
+    "addLevel": "Add level",
+    "levelMeaningHint": "Each cell describes this criterion at that performance level. Example for Level 1: \"The student did not present any work.\"",
+    "weightHint": "Weights should add up to 1.0 across all criteria.",
+    "aiTitle": "Generate from instruction",
+    "aiPlaceholder": "Describe what should be evaluated, criteria, levels, and weighting style.",
+    "generate": "Generate rubric",
+    "generating": "Generating...",
+    "contentJson": "Rubric JSON",
+    "empty": "No rubrics yet. Create one to get started.",
+    "detailDescription": "Rubric details",
+    "columns": {
+      "name": "Name",
+      "criteria": "Criteria",
+      "levels": "Levels",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "messages": {
+      "instructionRequired": "Instruction is required to generate a rubric.",
+      "nameRequired": "Name is required.",
+      "invalidJson": "Rubric content must be valid JSON."
+    }
   },
   "tabs": {
     "assignments": "Assignments",

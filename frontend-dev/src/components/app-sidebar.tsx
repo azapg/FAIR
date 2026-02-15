@@ -30,6 +30,7 @@ import {
   InboxIcon,
   SettingsIcon,
   MessageCircleQuestionMarkIcon,
+  ClipboardList,
 } from "lucide-react";
 import {
   Collapsible,
@@ -103,6 +104,14 @@ function NavSecondary() {
   const { t } = useTranslation();
   return (
     <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip={t("nav.rubrics")}>
+          <Link to="/rubrics">
+            <ClipboardList />
+            <span>{t("nav.rubrics")}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
       <SidebarMenuItem>
         <SidebarMenuButton asChild tooltip={t("nav.settings")}>
           <Link to="/settings">

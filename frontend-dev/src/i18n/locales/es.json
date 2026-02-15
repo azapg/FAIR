@@ -30,6 +30,7 @@
     "home": "Inicio",
     "search": "Buscar",
     "inbox": "Bandeja",
+    "rubrics": "Rúbricas",
     "settings": "Configuración",
     "help": "Ayuda"
   },
@@ -92,6 +93,44 @@
     "errorLoading": "Error al cargar el curso.",
     "noCourses": "No hay cursos disponibles",
     "noCoursesDescription": "Aún no has creado ningún curso. Crea tu primer curso para comenzar."
+  },
+  "rubrics": {
+    "title": "Rúbricas",
+    "subtitle": "Administra tus rúbricas de evaluación y reutilízalas en plugins.",
+    "createAction": "Crear rúbrica",
+    "createTitle": "Crear rúbrica",
+    "editTitle": "Editar rúbrica",
+    "formDescription": "Define o genera una rúbrica y guárdala para reutilizarla.",
+    "name": "Nombre",
+    "namePlaceholder": "Rúbrica de ensayo",
+    "criterion": "Criterio",
+    "criterionPlaceholder": "ej. Evidencia y sustento",
+    "weight": "Peso",
+    "levelLabel": "Nivel",
+    "levelCriteriaPlaceholder": "Describe este criterio en este nivel",
+    "addCriterion": "Agregar criterio",
+    "addLevel": "Agregar nivel",
+    "levelMeaningHint": "Cada celda describe este criterio en ese nivel de desempeño. Ejemplo para Nivel 1: \"El estudiante no presentó ningún trabajo.\"",
+    "weightHint": "Los pesos deben sumar 1.0 entre todos los criterios.",
+    "aiTitle": "Generar desde instrucción",
+    "aiPlaceholder": "Describe qué se debe evaluar, criterios, niveles y estilo de ponderación.",
+    "generate": "Generar rúbrica",
+    "generating": "Generando...",
+    "contentJson": "JSON de la rúbrica",
+    "empty": "Aún no hay rúbricas. Crea una para comenzar.",
+    "detailDescription": "Detalles de la rúbrica",
+    "columns": {
+      "name": "Nombre",
+      "criteria": "Criterios",
+      "levels": "Niveles",
+      "created": "Creada",
+      "actions": "Acciones"
+    },
+    "messages": {
+      "instructionRequired": "La instrucción es obligatoria para generar una rúbrica.",
+      "nameRequired": "El nombre es obligatorio.",
+      "invalidJson": "El contenido de la rúbrica debe ser JSON válido."
+    }
   },
   "tabs": {
     "assignments": "Tareas",

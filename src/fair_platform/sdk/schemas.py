@@ -27,6 +27,12 @@ class Artifact(BaseModel):
     meta: Optional[Dict[str, Any]] = None
 
 
+class Rubric(BaseModel):
+    id: Optional[str] = None
+    name: str
+    content: Dict[str, Any]
+
+
 class Submission(BaseModel):
     id: str
     submitter: Submitter

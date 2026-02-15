@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { RuntimePluginRead } from "@/hooks/use-plugins";
 import { SDKArtifact, toSDKArtifact, useArtifacts } from "@/hooks/use-artifacts";
+import { Rubric, useRubrics } from "@/hooks/use-rubrics";
 import { useCallback, useRef } from "react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import { shallow } from "zustand/shallow";
@@ -283,6 +284,54 @@ function CourseArtifactsSelectorField({
   );
 }
 
+function RubricField({
+  property,
+  value,
+  onChange,
+  name,
+}: BaseInputProps) {
+  const { data: rubrics = [], isLoading } = useRubrics();
+  const selectedId = typeof value?.id === "string" ? value.id : "";
+
+  return (
+    <div className="space-y-2">
+      {property.description && (
+        <p className="text-xs text-muted-foreground">{property.description}</p>
+      )}
+      <Select
+        value={selectedId}
+        onValueChange={(rubricId) => {
+          const selected = rubrics.find((item: Rubric) => item.id === rubricId);
+          if (selected) onChange(selected);
+        }}
+        disabled={isLoading || rubrics.length === 0}
+      >
+        <SelectTrigger id={name} className="w-full" size="sm">
+          <SelectValue
+            placeholder={
+              isLoading
+                ? "Loading rubrics..."
+                : rubrics.length === 0
+                  ? "No rubrics available"
+                  : "Select a rubric"
+            }
+          />
+        </SelectTrigger>
+        <SelectContent
+          position="popper"
+          className="w-[--radix-select-trigger-width]"
+        >
+          {rubrics.map((rubric) => (
+            <SelectItem key={rubric.id} value={rubric.id}>
+              {rubric.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 function UnsupportedField({
   property,
 }: {
@@ -308,6 +357,7 @@ const INPUT_COMPONENTS = {
   NumberField,
   SliderField,
   CourseArtifactsSelectorField,
+  RubricField,
   SwitchField,
   CheckboxField,
   FileField,
