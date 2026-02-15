@@ -2,6 +2,7 @@ from fair_platform.sdk.schemas import Submission, Submitter, Assignment, Artifac
 from fair_platform.sdk.settings import (
     SettingsField,
     SwitchField,
+    CheckboxField,
     TextField,
     SensitiveTextField,
     NumberField,
@@ -33,6 +34,7 @@ __all__ = [
     "Artifact",
     "SettingsField",
     "SwitchField",
+    "CheckboxField",
     "TextField",
     "SensitiveTextField",
     "NumberField",

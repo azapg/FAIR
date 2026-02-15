@@ -2,6 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { RuntimePluginRead } from "@/hooks/use-plugins";
 import { useCallback, useRef } from "react";
@@ -118,6 +119,25 @@ function SwitchField({ property, value, onChange, name }: BaseInputProps) {
   );
 }
 
+function CheckboxField({ property, value, onChange, name }: BaseInputProps) {
+  return (
+    <div className="flex items-center justify-between space-y-2">
+      <div className="space-y-0.5">
+        {property.description && (
+          <p className="text-xs text-muted-foreground">
+            {property.description}
+          </p>
+        )}
+      </div>
+      <Checkbox
+        id={name}
+        checked={value ?? property.default ?? false}
+        onCheckedChange={(checked) => onChange(checked === true)}
+      />
+    </div>
+  );
+}
+
 function FileField({ property }: BaseInputProps) {
   return (
     <div className="space-y-2">
@@ -213,6 +233,7 @@ const INPUT_COMPONENTS = {
   NumberField,
   SliderField,
   SwitchField,
+  CheckboxField,
   FileField,
 } as const;
 

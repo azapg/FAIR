@@ -121,6 +121,16 @@ class SwitchField(SettingsField[bool]):
         )
 
 
+class CheckboxField(SettingsField[bool]):
+    def __init__(self, label: str, default: bool, required: bool = False):
+        super().__init__(label, default, required)
+
+    def to_pydantic_field(self):
+        return bool, Field(
+            default=self.default, title="CheckboxField", description=self.label
+        )
+
+
 class FileInput(BaseModel):
     filename: str
     url: str
