@@ -2,7 +2,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RuntimePluginRead } from "@/hooks/use-plugins";
+import { SDKArtifact, toSDKArtifact, useArtifacts } from "@/hooks/use-artifacts";
 import { useCallback, useRef } from "react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import { shallow } from "zustand/shallow";
@@ -16,7 +26,10 @@ interface PydanticProperty {
   maximum?: number;
   minLength?: number;
   maxLength?: number;
+  allowed_mime_types?: string[];
+  allowedMimeTypes?: string[];
   $ref?: string;
+  [key: string]: unknown;
 }
 
 interface PydanticSchema {
@@ -116,6 +129,25 @@ function SwitchField({ property, value, onChange, name }: BaseInputProps) {
   );
 }
 
+function CheckboxField({ property, value, onChange, name }: BaseInputProps) {
+  return (
+    <div className="flex items-center justify-between space-y-2">
+      <div className="space-y-0.5">
+        {property.description && (
+          <p className="text-xs text-muted-foreground">
+            {property.description}
+          </p>
+        )}
+      </div>
+      <Checkbox
+        id={name}
+        checked={value ?? property.default ?? false}
+        onCheckedChange={(checked) => onChange(checked === true)}
+      />
+    </div>
+  );
+}
+
 function FileField({ property }: BaseInputProps) {
   return (
     <div className="space-y-2">
@@ -127,6 +159,126 @@ function FileField({ property }: BaseInputProps) {
           File upload not implemented
         </p>
       </div>
+    </div>
+  );
+}
+
+function SliderField({ property, value, onChange, name }: BaseInputProps) {
+  const min = property.minimum ?? 0;
+  const max = property.maximum ?? 100;
+  const step = typeof property.step === "number" ? property.step : 1;
+  const currentValue =
+    typeof value === "number"
+      ? value
+      : typeof property.default === "number"
+        ? property.default
+        : min;
+
+  const marks = property.marks
+    ? Object.entries(property.marks).sort(
+        ([a], [b]) => Number(a) - Number(b),
+      )
+    : [];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        {property.description ? (
+          <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+            {property.description}
+          </p>
+        ) : (
+          <span />
+        )}
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {currentValue}
+        </span>
+      </div>
+      <div className="w-full">
+        <Slider
+          id={name}
+          value={[currentValue]}
+          min={min}
+          max={max}
+          step={step}
+          onValueChange={(values) => onChange(values[0] ?? currentValue)}
+          className="w-full"
+        />
+      </div>
+      {marks.length > 0 && (
+        <div className="w-full flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          {marks.map(([markValue, label]) => (
+            <span key={markValue} className="min-w-0 truncate">
+              {label}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CourseArtifactsSelectorField({
+  property,
+  value,
+  onChange,
+  name,
+}: BaseInputProps) {
+  const activeCourseId = useWorkflowStore((state) => state.activeCourseId);
+  const { data: artifacts = [], isLoading } = useArtifacts(
+    activeCourseId ? { courseId: activeCourseId } : undefined,
+    !!activeCourseId,
+  );
+
+  const allowedMimeTypes =
+    property.allowed_mime_types ?? property.allowedMimeTypes ?? [];
+  const hasMimeFilter = Array.isArray(allowedMimeTypes) && allowedMimeTypes.length > 0;
+
+  const normalized: SDKArtifact[] = artifacts
+    .filter((artifact) => artifact.accessLevel === "assignment")
+    .filter((artifact) =>
+      hasMimeFilter ? allowedMimeTypes.includes(artifact.mime) : true,
+    )
+    .map(toSDKArtifact);
+  const selectedId = typeof value?.id === "string" ? value.id : "";
+
+  return (
+    <div className="space-y-2">
+      {property.description && (
+        <p className="text-xs text-muted-foreground">{property.description}</p>
+      )}
+      <Select
+        value={selectedId}
+        onValueChange={(artifactId) => {
+          const selected = normalized.find((item) => item.id === artifactId);
+          if (selected) onChange(selected);
+        }}
+        disabled={!activeCourseId || isLoading || normalized.length === 0}
+      >
+        <SelectTrigger id={name} className="w-full" size="sm">
+          <SelectValue
+            placeholder={
+              !activeCourseId
+                ? "Select a course first"
+                : isLoading
+                  ? "Loading artifacts..."
+                  : normalized.length === 0
+                    ? "No course artifacts available"
+                    : "Select an artifact"
+            }
+          />
+        </SelectTrigger>
+        <SelectContent
+          position="popper"
+          className="w-[--radix-select-trigger-width]"
+        >
+          {normalized.map((artifact) => (
+            <SelectItem key={artifact.id} value={artifact.id}>
+              {artifact.title}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -154,7 +306,10 @@ const INPUT_COMPONENTS = {
   TextField,
   SensitiveTextField,
   NumberField,
+  SliderField,
+  CourseArtifactsSelectorField,
   SwitchField,
+  CheckboxField,
   FileField,
 } as const;
 

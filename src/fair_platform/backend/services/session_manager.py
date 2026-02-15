@@ -463,6 +463,7 @@ class SessionManager:
 
                         sdk_artifacts = [
                             SDKArtifact(
+                                id=str(a.id),
                                 title=a.title,
                                 artifact_type=a.artifact_type,
                                 mime=a.mime,

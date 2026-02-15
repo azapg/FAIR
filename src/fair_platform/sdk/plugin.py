@@ -7,7 +7,7 @@ from fair_platform.backend.data.database import get_session
 from fair_platform.backend.data.models import Plugin
 from fair_platform.sdk import Submission, SettingsField
 from typing import Any, Type, List, Optional, Dict, Union, Tuple
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, create_model, ValidationError
 
 from fair_platform.sdk.events import DebugEventBus
 from fair_platform.sdk.logger import PluginLogger
@@ -38,15 +38,15 @@ class BasePlugin:
             if field not in settings_fields:
                 raise ValueError(f"Unknown settings field: {field}")
 
+        settings_model = create_settings_model(self.__class__)
+        try:
+            parsed_settings = settings_model.model_validate(values or {})
+        except ValidationError as exc:
+            raise ValueError(f"Invalid plugin settings payload: {exc}") from exc
+
         for name, field in settings_fields.items():
             if name in values:
-                value = values[name]
-                if field.required and value is None:
-                    raise ValueError(f"Missing required settings field: {name}")
-                field.value = value
-            else:
-                if field.required:
-                    raise ValueError(f"Missing required settings field: {name}")
+                field.value = getattr(parsed_settings, name)
 
 
 def create_settings_model(

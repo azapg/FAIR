@@ -2,9 +2,12 @@ from fair_platform.sdk.schemas import Submission, Submitter, Assignment, Artifac
 from fair_platform.sdk.settings import (
     SettingsField,
     SwitchField,
+    CheckboxField,
+    CourseArtifactsSelectorField,
     TextField,
     SensitiveTextField,
     NumberField,
+    SliderField,
 )
 from fair_platform.sdk.plugin import (
     BasePlugin,
@@ -32,9 +35,12 @@ __all__ = [
     "Artifact",
     "SettingsField",
     "SwitchField",
+    "CheckboxField",
+    "CourseArtifactsSelectorField",
     "TextField",
     "SensitiveTextField",
     "NumberField",
+    "SliderField",
     "BasePlugin",
     "create_settings_model",
     "TranscriptionPlugin",
