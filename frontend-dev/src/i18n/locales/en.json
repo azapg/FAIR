@@ -14,6 +14,8 @@
     "noDeadline": "No deadline",
     "home": "Home",
     "learnMore": "Learn more",
+    "showMore": "Show more",
+    "showLess": "Show less",
     "commingSoon": "Comming soon..."
   },
   "header": {
@@ -28,6 +30,7 @@
     "home": "Home",
     "search": "Search",
     "inbox": "Inbox",
+    "rubrics": "Rubrics",
     "settings": "Settings",
     "help": "Help"
   },
@@ -91,6 +94,44 @@
     "noCourses": "No courses available",
     "noCoursesDescription": "You haven't created any courses yet. Create your first course to get started."
   },
+  "rubrics": {
+    "title": "Rubrics",
+    "subtitle": "Manage your grading rubrics and reuse them in plugins.",
+    "createAction": "Create rubric",
+    "createTitle": "Create rubric",
+    "editTitle": "Edit rubric",
+    "formDescription": "Define or generate a rubric and save it for reuse.",
+    "name": "Name",
+    "namePlaceholder": "Essay Grading Rubric",
+    "criterion": "Criterion",
+    "criterionPlaceholder": "e.g. Evidence and support",
+    "weight": "Weight",
+    "levelLabel": "Level",
+    "levelCriteriaPlaceholder": "Describe this criterion at this level",
+    "addCriterion": "Add criterion",
+    "addLevel": "Add level",
+    "levelMeaningHint": "Each cell describes this criterion at that performance level. Example for Level 1: \"The student did not present any work.\"",
+    "weightHint": "Weights should add up to 1.0 across all criteria.",
+    "aiTitle": "Generate from instruction",
+    "aiPlaceholder": "Describe what should be evaluated, criteria, levels, and weighting style.",
+    "generate": "Generate rubric",
+    "generating": "Generating...",
+    "contentJson": "Rubric JSON",
+    "empty": "No rubrics yet. Create one to get started.",
+    "detailDescription": "Rubric details",
+    "columns": {
+      "name": "Name",
+      "criteria": "Criteria",
+      "levels": "Levels",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "messages": {
+      "instructionRequired": "Instruction is required to generate a rubric.",
+      "nameRequired": "Name is required.",
+      "invalidJson": "Rubric content must be valid JSON."
+    }
+  },
   "tabs": {
     "assignments": "Assignments",
     "participants": "Participants",
@@ -108,6 +149,7 @@
     "descriptionPlaceholder": "Brief details...",
     "dueDate": "Due date",
     "gradingType": "Grading type",
+    "editAssignment": "Edit assignment",
     "points": "Points",
     "percentage": "Percentage",
     "letter": "Letter",
@@ -123,10 +165,14 @@
     "creating": "Creating...",
     "titleRequired": "Title is required",
     "failedToCreate": "Failed to create assignment.",
+    "failedToUpdate": "Failed to update assignment.",
     "courseIdRequired": "Course ID is required",
     "noDueDate": "No due date",
     "totalPoints": "Total Points",
-    "na": "N/A"
+    "na": "N/A",
+    "noDescription": "No description provided.",
+    "deleteConfirmTitle": "Delete assignment?",
+    "deleteConfirmDescription": "This will also delete all student submissions for this assignment. This action cannot be undone."
   },
   "submissions": {
     "title": "Submissions",
@@ -143,6 +189,7 @@
     "grade": "Grade",
     "submissionDate": "Submission Date",
     "feedback": "Feedback",
+    "feedbackPlaceholder": "No feedback provided",
     "views": {
       "inbox": "Inbox",
       "active": "Active",
@@ -153,7 +200,44 @@
     "selectedRows": "{{selected}} of {{total}} selected",
     "returnAction": "Return",
     "noSubmissons": "No submissions available",
-    "noSubmissonsDescription": "No submissions yet. They will appear here when students submit. You can add synthetic submissions to experiment."
+    "noSubmissonsDescription": "No submissions yet. They will appear here when students submit. You can add synthetic submissions to experiment.",
+    "turnedIn": "Turned in",
+    "attachments": "Attachments",
+    "noAttachments": "This submission doesn't include attachments.",
+    "timeline": "Timeline",
+    "timelineEvents": {
+      "actor": {
+        "system": "System",
+        "automation": "Automation"
+      },
+      "actions": {
+        "submitted": "submitted this submission",
+        "withArtifacts": "with {{count}} artifact(s)",
+        "statusTransitioned": "changed status from {{from}} to {{to}}",
+        "aiInitialResult": "recorded initial AI result",
+        "aiRegradeResult": "recorded AI regrade result",
+        "attempt": "(attempt {{value}})",
+        "editedScoreAndFeedback": "edited draft score and feedback",
+        "scoreChanged": "changed draft score from {{from}} to {{to}}",
+        "feedbackEdited": "edited draft feedback",
+        "draftEdited": "edited draft",
+        "returnedToStudent": "returned the submission to the student",
+        "withScore": "(score: {{score}})",
+        "unknownEvent": "updated submission"
+      },
+      "labels": {
+        "feedbackEdited": "Feedback edited",
+        "hidePrevious": "Hide previous",
+        "compare": "Compare",
+        "empty": "(empty)",
+        "showFeedback": "Show feedback",
+        "hideFeedback": "Hide feedback",
+        "showDetails": "Show details",
+        "hideDetails": "Hide details",
+        "unknown": "Unknown",
+        "noEvents": "No events."
+      }
+    }
   },
   "status": {
     "pending": "Pending",
@@ -167,6 +251,9 @@
     "needsReview": "Needs Review",
     "failure": "Error",
     "processing": "Processing",
+    "running": "Running",
+    "success": "Success",
+    "cancelled": "Cancelled",
     "unknown": "Unknown"
   },
   "properties": {
@@ -175,6 +262,7 @@
   },
   "workflow": {
     "selectWorkflow": "Select workflow",
+    "noCourseSelected": "Select a course to view its workflows.",
     "noWorkflows": "No workflows available",
     "noWorkflowsMessage": "You haven't created any workflows yet. Create one to get started.",
     "createWorkflow": "Create Workflow",
@@ -186,6 +274,7 @@
     "viewLogs": "View Execution Logs",
     "saveWorkflow": "Save Workflow",
     "abortWorkflow": "Abort Workflow",
+    "errorLoading": "Error loading workflows.",
     "failedToStart": "Failed to start workflow run. Please try again.",
     "noWorkflowSelected": "No workflow selected.",
     "selectFromDropdown": "Select one from the dropdown above.",
@@ -202,7 +291,12 @@
     "validateAll": "Validate all",
     "loadingPlugins": "Loading...",
     "errorLoadingPlugins": "Error loading plugins",
-    "runPlugin": "Run plugin..."
+    "runPlugin": "Run plugin...",
+    "type": "Type",
+    "version": "Version",
+    "author": "Author",
+    "source": "Source",
+    "empty": "No plugins available."
   },
   "actions": {
     "rerunWith": "Rerun with...",
@@ -211,6 +305,38 @@
     "reset": "Reset",
     "remove": "Remove",
     "courseActions": "Course actions"
+  },
+  "participants": {
+    "instructors": "Instructors",
+    "instructorRole": "Instructor",
+    "students": "Students",
+    "noStudents": "No students have been added yet.",
+    "noInstructor": "No instructor information available."
+  },
+  "artifacts": {
+    "title": "Artifacts",
+    "assignment": "Assignment",
+    "status": "Status",
+    "access": "Access",
+    "updated": "Updated",
+    "archivedTitle": "Archived artifacts",
+    "empty": "No artifacts for this course yet.",
+    "noCourse": "Select a course to view artifacts.",
+    "errorLoading": "Error loading artifacts."
+  },
+  "runs": {
+    "title": "Workflow runs",
+    "workflow": "Workflow",
+    "submissions": "Submissions",
+    "status": "Status",
+    "runId": "Run ID",
+    "startedAt": "Started at",
+    "finishedAt": "Finished at",
+    "duration": "Duration",
+    "runBy": "Run by",
+    "empty": "No workflow runs available for this course yet.",
+    "noCourse": "Select a course to view runs.",
+    "errorLoading": "Error loading runs."
   },
   "errors": {
     "somethingWrong": "Something went wrong",

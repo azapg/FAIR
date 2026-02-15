@@ -18,12 +18,19 @@ class Assignment(BaseModel):
 
 
 class Artifact(BaseModel):
+    id: Optional[str] = None
     title: str
     artifact_type: str
     mime: str
-    storage_path: str
-    storage_type: str
+    storage_path: Optional[str] = None
+    storage_type: Optional[str] = None
     meta: Optional[Dict[str, Any]] = None
+
+
+class Rubric(BaseModel):
+    id: Optional[str] = None
+    name: str
+    content: Dict[str, Any]
 
 
 class Submission(BaseModel):

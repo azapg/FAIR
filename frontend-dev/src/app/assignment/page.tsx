@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
   ArrowUpRight,
-  CircleCheck,
   FileText,
   Hourglass,
   Plus,
@@ -10,7 +9,13 @@ import { SubmissionsTable } from "@/app/assignment/components/submissions/submis
 import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
 import { WorkflowsSidebarProvider, WorkflowsSidebarTrigger } from "@/components/ui/sidebar";
 import { WorkflowsSidebar } from "@/app/assignment/components/sidebar/workflows-sidebar";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  PropertiesDisplay,
+  Property,
+  PropertyLabel,
+  PropertyValue,
+} from "@/components/properties-display";
+
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 
@@ -24,6 +29,7 @@ import { CreateSubmissionDialog } from "@/app/assignment/components/submissions/
 import { useArtifacts } from "@/hooks/use-artifacts";
 import { useSubmissions } from "@/hooks/use-submissions";
 import { useTranslation } from "react-i18next";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function AssignmentPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
@@ -50,6 +56,7 @@ export default function AssignmentPage() {
   });
   const { t } = useTranslation();
   const [isCreateSubmissionOpen, setIsCreateSubmissionOpen] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const isOverallLoading =
     isLoading ||
@@ -87,7 +94,8 @@ export default function AssignmentPage() {
       widthMobile="18rem"
     >
 
-      <div className={"w-full h-full overflow-auto break-words"}>
+      <ScrollArea className="w-full h-svh flex-1 min-w-0">
+        <div className="min-w-0 break-words">
         <div className={"flex flex-row justify-between items-center py-2 px-5"}>
           <BreadcrumbNav
             segments={[
@@ -116,54 +124,78 @@ export default function AssignmentPage() {
         <div className={"px-8 pt-2"}>
           <div className={"mb-5"}>
             <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
-            <MarkdownRenderer className={"text-sm text-muted-foreground"}>
-              {assignment.description}
-            </MarkdownRenderer>
-
-            <ScrollArea className={"w-full h-auto"}>
-              <div className={"flex flex-row gap-1 mt-4 items-center"}>
-                <h2 className={"text-muted-foreground mr-4 text-sm"}>
-                  {t("properties.title")}
-                </h2>
-                <Button variant={"ghost"} size={"sm"}>
-                  <Hourglass />{" "}
-                  {assignment.deadline
-                    ? new Date(assignment.deadline).toLocaleDateString(
-                        undefined,
-                        {
-                          day: "2-digit",
-                          month: "short",
-                        },
-                      )
-                    : t("common.noDeadline")}
-                </Button>
-                <Button variant={"ghost"} size={"sm"}>
-                  <Plus />
-                </Button>
-              </div>
-
-              <div className={"flex flex-row gap-1 mt-4 items-center"}>
-                <h2 className={"text-muted-foreground mr-4 text-sm"}>
-                  {t("assignments.resources")}
-                </h2>
-                {artifacts && artifacts.length > 0 ? (
-                  artifacts.map((artifact) => (
-                    <Button key={artifact.id} variant={"secondary"} size={"sm"}>
-                      <FileText />
-                      {artifact.title}
-                      <ArrowUpRight className="text-muted-foreground" />
+            {!assignment.description || assignment.description.trim() === '' ? (
+              <p className="text-muted-foreground italic">{t("assignments.noDescription")}</p>
+            ) : (() => {
+              const lines = assignment.description.split('\n');
+              const words = assignment.description.split(/\s+/);
+              const hasMore = lines.length > 3 || words.length > 80;
+              return (
+                <>
+                  <div className={`relative ${!isDescriptionExpanded && hasMore ? 'line-clamp-3' : ''}`}>
+                    <MarkdownRenderer className={"text-sm text-muted-foreground"}>
+                      {assignment.description}
+                    </MarkdownRenderer>
+                    {!isDescriptionExpanded && hasMore && (
+                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+                    )}
+                  </div>
+                  {hasMore && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      className="p-0 h-auto text-sm"
+                    >
+                      {isDescriptionExpanded ? t("common.showLess") : t("common.showMore")}
                     </Button>
-                  ))
-                ) : (
-                  <></>
-                )}
-                <Button variant={"ghost"} size={"sm"}>
-                  <Plus />
-                </Button>
-              </div>
+                  )}
+                </>
+              );
+            })()}
 
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+            <PropertiesDisplay scroll className="items-start pt-3">
+                <Property>
+                  <PropertyLabel>{t("properties.title")}</PropertyLabel>
+                  <PropertyValue className="flex flex-row gap-1 items-center">
+                    <Button variant={"ghost"} size={"sm"}>
+                      <Hourglass />{" "}
+                      {assignment.deadline
+                        ? new Date(assignment.deadline).toLocaleDateString(
+                            undefined,
+                            {
+                              day: "2-digit",
+                              month: "short",
+                            },
+                          )
+                        : t("common.noDeadline")}
+                    </Button>
+                    <Button variant={"ghost"} size={"sm"}>
+                      <Plus />
+                    </Button>
+                  </PropertyValue>
+                </Property>
+
+                <Property>
+                  <PropertyLabel>{t("assignments.resources")}</PropertyLabel>
+                  <PropertyValue className="flex flex-row gap-1 items-center">
+                    {artifacts && artifacts.length > 0 ? (
+                      artifacts.map((artifact) => (
+                        <Button key={artifact.id} variant={"secondary"} size={"sm"}>
+                          <FileText />
+                          {artifact.title}
+                          <ArrowUpRight className="text-muted-foreground" />
+                        </Button>
+                      ))
+                    ) : (
+                      <></>
+                    )}
+                    <Button variant={"ghost"} size={"sm"}>
+                      <Plus />
+                    </Button>
+                  </PropertyValue>
+                </Property>
+            </PropertiesDisplay>
           </div>
 
           <div className={"space-y-3 mb-5"}>
@@ -182,7 +214,8 @@ export default function AssignmentPage() {
             />
           </div>
         </div>
-      </div>
+        </div>
+      </ScrollArea>
       <WorkflowsSidebar side={"right"} assignmentId={assignmentId ?? ""} />
     </WorkflowsSidebarProvider>
   );

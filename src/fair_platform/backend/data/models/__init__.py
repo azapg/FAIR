@@ -1,6 +1,7 @@
 from .user import User, UserRole
 from .course import Course
 from .assignment import Assignment
+from .enrollment import Enrollment
 from .submitter import Submitter
 from .submission import Submission, SubmissionStatus
 from .submission_event import SubmissionEvent, SubmissionEventType
@@ -9,12 +10,14 @@ from .workflow_run import WorkflowRun, WorkflowRunStatus
 from .plugin import Plugin
 from .artifact import Artifact
 from .submission_result import SubmissionResult
+from .rubric import Rubric
 
 __all__ = [
     "User",
     "UserRole",
     "Course",
     "Assignment",
+    "Enrollment",
     "Submitter",
     "Submission",
     "SubmissionStatus",
@@ -26,4 +29,5 @@ __all__ = [
     "Plugin",
     "Artifact",
     "SubmissionResult",
+    "Rubric",
 ]

@@ -1,6 +1,6 @@
 from uuid import UUID
 from datetime import datetime
-from sqlalchemy import String, Text, ForeignKey, UUID as SAUUID, TIMESTAMP, JSON
+from sqlalchemy import String, Text, ForeignKey, UUID as SAUUID, TIMESTAMP, JSON, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, List, TYPE_CHECKING
 
@@ -8,6 +8,7 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .course import Course
+    from .plugin import Plugin
     from .user import User
     from .workflow_run import WorkflowRun
 
@@ -26,17 +27,18 @@ class Workflow(Base):
     )
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False)
     updated_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
+    archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # TODO: What an ugly schema, needs refactoring.
-    transcriber_plugin_id: Mapped[str] = mapped_column(
-        Text, ForeignKey("plugins.id"), nullable=True
+    transcriber_plugin_hash: Mapped[Optional[str]] = mapped_column(
+        Text, ForeignKey("plugins.hash"), nullable=True
     )
     transcriber_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    grader_plugin_id: Mapped[str] = mapped_column(
-        Text, ForeignKey("plugins.id"), nullable=True
+    grader_plugin_hash: Mapped[Optional[str]] = mapped_column(
+        Text, ForeignKey("plugins.hash"), nullable=True
     )
     grader_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    validator_plugin_id: Mapped[str] = mapped_column(
-        Text, ForeignKey("plugins.id"), nullable=True
+    validator_plugin_hash: Mapped[Optional[str]] = mapped_column(
+        Text, ForeignKey("plugins.hash"), nullable=True
     )
     validator_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
@@ -44,6 +46,18 @@ class Workflow(Base):
     creator: Mapped["User"] = relationship("User", back_populates="created_workflows")
     runs: Mapped[List["WorkflowRun"]] = relationship(
         "WorkflowRun", back_populates="workflow"
+    )
+    transcriber_plugin: Mapped[Optional["Plugin"]] = relationship(
+        "Plugin",
+        foreign_keys=[transcriber_plugin_hash],
+    )
+    grader_plugin: Mapped[Optional["Plugin"]] = relationship(
+        "Plugin",
+        foreign_keys=[grader_plugin_hash],
+    )
+    validator_plugin: Mapped[Optional["Plugin"]] = relationship(
+        "Plugin",
+        foreign_keys=[validator_plugin_hash],
     )
 
     def __repr__(self) -> str:

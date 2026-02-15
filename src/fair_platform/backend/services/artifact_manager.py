@@ -10,6 +10,7 @@ from fair_platform.backend.data.models.user import User, UserRole
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.submission import Submission
+from fair_platform.backend.data.models.enrollment import Enrollment
 from fair_platform.backend.data.storage import storage
 
 
@@ -612,13 +613,15 @@ class ArtifactManager:
                 if submission.submitter_id == user.id:
                     return True
         
-        # Course and assignment level artifacts
-        # TODO: Add enrollment check when enrollment system is implemented
+        # Course and assignment level artifacts — check enrollment
         if artifact.access_level in [AccessLevel.course, AccessLevel.assignment]:
-            # For now, allow access if the user is a student
-            # This will be refined with proper enrollment checking
-            if user.role == UserRole.student:
-                return True
+            if user.role == UserRole.student and artifact.course_id:
+                enrollment = self.db.query(Enrollment).filter(
+                    Enrollment.user_id == user.id,
+                    Enrollment.course_id == artifact.course_id,
+                ).first()
+                if enrollment:
+                    return True
         
         return False
     

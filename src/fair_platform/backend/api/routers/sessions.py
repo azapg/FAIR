@@ -1,5 +1,6 @@
 import contextlib
 from typing import List
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -13,6 +14,7 @@ from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User, Workflow, WorkflowRun
 from fair_platform.backend.services.session_manager import session_manager
+from fair_platform.sdk.events import normalize_event_message
 
 router = APIRouter()
 
@@ -30,14 +32,10 @@ class SessionResponse(BaseModel):
 
 class SessionLogItem(BaseModel):
     index: int
+    ts: str
     type: str
-    ts: str | None = None
-    level: str | None = None
-    plugin: str | None = None
-    message: str | None = None
-    object: str | None = None
+    level: str
     payload: dict | None = None
-
 
 @router.post("/", response_model=SessionResponse)
 async def create_session(
@@ -51,7 +49,7 @@ async def create_session(
         )
 
     workflow = db.get(Workflow, payload.workflow_id)
-    if not workflow:
+    if not workflow or workflow.archived:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
     session = session_manager.create_session(workflow.id, payload.submission_ids, user)
@@ -70,6 +68,21 @@ def get_session_logs(
     ),
     db: Session = Depends(session_dependency),
 ):
+    def _normalize_entry(entry, fallback_index: int) -> SessionLogItem:
+        if isinstance(entry, dict):
+            event_name = (
+                entry.get("type")
+                if isinstance(entry.get("type"), str) and entry.get("type")
+                else "event"
+            )
+        else:
+            event_name = "event"
+
+        normalized = normalize_event_message(event_name, entry)
+        if not isinstance(normalized.get("index"), int):
+            normalized["index"] = fallback_index
+        return SessionLogItem.model_validate(normalized)
+
     # Prefer persisted DB logs when available
     run: WorkflowRun | None = db.get(WorkflowRun, session_id)
     if run and isinstance(run.logs, dict):
@@ -77,48 +90,11 @@ def get_session_logs(
         if isinstance(history, list):
             items: list[SessionLogItem] = []
             for i, entry in enumerate(history):
-                if not isinstance(entry, dict):
-                    if after is not None:
-                        continue
-                    items.append(
-                        SessionLogItem(
-                            index=-1, type="event", payload={"raw": str(entry)}
-                        )
-                    )
-                    continue
-
-                idx = entry.get("index")
-                if not isinstance(idx, int):
-                    idx = i  # derive a stable index if missing
+                item = _normalize_entry(entry, i)
+                idx = item.index
                 if after is not None and idx <= after:
                     continue
-
-                typ = entry.get("type", "event")
-                ts = entry.get("ts")
-                level = entry.get("level")
-                payload = (
-                    entry.get("payload")
-                    if isinstance(entry.get("payload"), dict)
-                    else None
-                )
-                plugin = None
-                message = None
-                if typ == "log" and payload:
-                    plugin = payload.get("plugin")
-                    message = payload.get("message")
-
-                items.append(
-                    SessionLogItem(
-                        index=idx,
-                        type=typ,
-                        ts=ts,
-                        level=level,
-                        plugin=plugin,
-                        message=message,
-                        object=entry.get("object"),
-                        payload=payload or entry,
-                    )
-                )
+                items.append(item)
             return items
 
     # Fallback to in-memory buffer if DB not available or empty
@@ -127,39 +103,12 @@ def get_session_logs(
         raise HTTPException(status_code=404, detail="Session not found")
 
     items: list[SessionLogItem] = []
-    for entry in session.buffer:
-        if not isinstance(entry, dict):
-            if after is not None:
-                continue
-            items.append(
-                SessionLogItem(index=-1, type="event", payload={"raw": str(entry)})
-            )
-            continue
-
-        idx = entry.get("index", -1)
+    for i, entry in enumerate(session.buffer):
+        item = _normalize_entry(entry, i)
+        idx = item.index
         if after is not None and idx <= after:
             continue
-        typ = entry.get("type", "event")
-        ts = entry.get("ts")
-        level = entry.get("level")
-        payload = (
-            entry.get("payload") if isinstance(entry.get("payload"), dict) else None
-        )
-        plugin = payload.get("plugin") if (typ == "log" and payload) else None
-        message = payload.get("message") if (typ == "log" and payload) else None
-
-        items.append(
-            SessionLogItem(
-                index=idx,
-                type=typ,
-                ts=ts,
-                level=level,
-                plugin=plugin,
-                message=message,
-                object=entry.get("object"),
-                payload=payload or entry,
-            )
-        )
+        items.append(item)
 
     return items
 
@@ -172,7 +121,13 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
     if not session:
         with contextlib.suppress(Exception):
             await websocket.send_json(
-                {"type": "close", "reason": "Session not found", "index": -1}
+                {
+                    "index": -1,
+                    "ts": datetime.now().isoformat(),
+                    "type": "close",
+                    "level": "error",
+                    "payload": {"reason": "Session not found"},
+                }
             )
             await websocket.close()
         return
@@ -194,19 +149,27 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
         nonlocal active
         if not active:
             return
-        reason = ""
-        index = -1
         if isinstance(data, dict):
-            reason = data.get("reason", "")
-            index = data.get("index", -1)
+            message = data
+        else:
+            message = normalize_event_message("close", data)
+        if not isinstance(message.get("index"), int):
+            message["index"] = -1
+        if not isinstance(message.get("level"), str) or not message.get("level"):
+            message["level"] = "info"
+        if not isinstance(message.get("ts"), str) or not message.get("ts"):
+            message["ts"] = datetime.now().isoformat()
         try:
-            await _send_safe({"type": "close", "reason": reason, "index": index})
+            await _send_safe(message)
         finally:
             active = False
             with contextlib.suppress(Exception):
                 await websocket.close()
             with contextlib.suppress(Exception):
                 session.bus.off("log", _handler)
+                session.bus.off("image", _handler)
+                session.bus.off("image_group", _handler)
+                session.bus.off("file", _handler)
                 session.bus.off("update", _handler)
                 session.bus.off("close", _close_handler)
 
@@ -220,6 +183,9 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
 
     # TODO: I should just be able to do this with a wildcard, but for now, explicitly subscribe to known events
     session.bus.on("log", _handler)
+    session.bus.on("image", _handler)
+    session.bus.on("image_group", _handler)
+    session.bus.on("file", _handler)
     session.bus.on("update", _handler)
     session.bus.on("close", _close_handler)
 
@@ -232,6 +198,9 @@ async def websocket_session(websocket: WebSocket, session_id: UUID):
         active = False
         with contextlib.suppress(Exception):
             session.bus.off("log", _handler)
+            session.bus.off("image", _handler)
+            session.bus.off("image_group", _handler)
+            session.bus.off("file", _handler)
             session.bus.off("update", _handler)
             session.bus.off("close", _close_handler)
         with contextlib.suppress(Exception):

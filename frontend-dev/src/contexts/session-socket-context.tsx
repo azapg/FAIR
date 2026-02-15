@@ -4,33 +4,6 @@ import { useSessionStore } from "@/store/session-store";
 import { submissionsKeys } from "@/hooks/use-submissions";
 import { getWebSocketUrl } from "@/lib/api";
 
-function shapeIncomingLog(data: any) {
-  // Accept both normalized messages (with payload) and raw ones (e.g., close reason at root)
-  let payload = typeof data?.payload === "object" ? data.payload : undefined;
-  const type = data?.type ?? "event";
-  if (!payload) {
-    // For non-log events like 'close', include the original message so UI can read fields like 'reason'
-    payload =
-      data && typeof data === "object" ? { ...data } : { raw: String(data) };
-  }
-  const plugin = payload?.plugin ?? null;
-  const message =
-    payload?.message ??
-    (type === "close" && typeof payload?.reason === "string"
-      ? payload.reason
-      : null);
-  return {
-    index: typeof data?.index === "number" ? data.index : -1,
-    type,
-    ts: data?.ts ?? null,
-    level: data?.level ?? null,
-    plugin,
-    message,
-    object: data?.object ?? null,
-    payload,
-  };
-}
-
 export function SessionSocketProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const {
@@ -70,9 +43,8 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
 
     newSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      // Normalize and store every event for the logs view
       try {
-        addLog(shapeIncomingLog(data));
+        addLog(data);
       } catch (e) {
         // noop
       }
@@ -85,7 +57,7 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.type == "update") {
-        switch (data.object) {
+        switch (data?.payload?.object) {
           case "submissions":
             queryClient
               .invalidateQueries({

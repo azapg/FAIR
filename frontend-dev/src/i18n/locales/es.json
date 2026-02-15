@@ -14,7 +14,9 @@
     "noDeadline": "Sin fecha límite",
     "home": "Inicio",
     "learnMore": "Saber más",
-    "commingSoon": "Próximamente..."
+    "commingSoon": "Próximamente...",
+    "showMore": "Mostrar más",
+    "showLess": "Mostrar menos"
   },
   "header": {
     "title": "The Fair Platform",
@@ -28,6 +30,7 @@
     "home": "Inicio",
     "search": "Buscar",
     "inbox": "Bandeja",
+    "rubrics": "Rúbricas",
     "settings": "Configuración",
     "help": "Ayuda"
   },
@@ -91,6 +94,44 @@
     "noCourses": "No hay cursos disponibles",
     "noCoursesDescription": "Aún no has creado ningún curso. Crea tu primer curso para comenzar."
   },
+  "rubrics": {
+    "title": "Rúbricas",
+    "subtitle": "Administra tus rúbricas de evaluación y reutilízalas en plugins.",
+    "createAction": "Crear rúbrica",
+    "createTitle": "Crear rúbrica",
+    "editTitle": "Editar rúbrica",
+    "formDescription": "Define o genera una rúbrica y guárdala para reutilizarla.",
+    "name": "Nombre",
+    "namePlaceholder": "Rúbrica de ensayo",
+    "criterion": "Criterio",
+    "criterionPlaceholder": "ej. Evidencia y sustento",
+    "weight": "Peso",
+    "levelLabel": "Nivel",
+    "levelCriteriaPlaceholder": "Describe este criterio en este nivel",
+    "addCriterion": "Agregar criterio",
+    "addLevel": "Agregar nivel",
+    "levelMeaningHint": "Cada celda describe este criterio en ese nivel de desempeño. Ejemplo para Nivel 1: \"El estudiante no presentó ningún trabajo.\"",
+    "weightHint": "Los pesos deben sumar 1.0 entre todos los criterios.",
+    "aiTitle": "Generar desde instrucción",
+    "aiPlaceholder": "Describe qué se debe evaluar, criterios, niveles y estilo de ponderación.",
+    "generate": "Generar rúbrica",
+    "generating": "Generando...",
+    "contentJson": "JSON de la rúbrica",
+    "empty": "Aún no hay rúbricas. Crea una para comenzar.",
+    "detailDescription": "Detalles de la rúbrica",
+    "columns": {
+      "name": "Nombre",
+      "criteria": "Criterios",
+      "levels": "Niveles",
+      "created": "Creada",
+      "actions": "Acciones"
+    },
+    "messages": {
+      "instructionRequired": "La instrucción es obligatoria para generar una rúbrica.",
+      "nameRequired": "El nombre es obligatorio.",
+      "invalidJson": "El contenido de la rúbrica debe ser JSON válido."
+    }
+  },
   "tabs": {
     "assignments": "Tareas",
     "participants": "Participantes",
@@ -108,6 +149,7 @@
     "descriptionPlaceholder": "Detalles breves...",
     "dueDate": "Fecha de entrega",
     "gradingType": "Tipo de calificación",
+    "editAssignment": "Editar tarea",
     "points": "Puntos",
     "percentage": "Porcentaje",
     "letter": "Letra",
@@ -123,10 +165,14 @@
     "creating": "Creando...",
     "titleRequired": "El título es requerido",
     "failedToCreate": "Error al crear la tarea.",
+    "failedToUpdate": "Error al actualizar la tarea.",
     "courseIdRequired": "El ID del curso es requerido",
     "noDueDate": "Sin fecha de entrega",
     "totalPoints": "Puntos totales",
-    "na": "N/A"
+    "na": "N/A",
+    "noDescription": "No se proporcionó descripción.",
+    "deleteConfirmTitle": "¿Eliminar tarea?",
+    "deleteConfirmDescription": "Esto también eliminará todas las entregas de los estudiantes para esta tarea. Esta acción no se puede deshacer."
   },
   "submissions": {
     "title": "Entregas",
@@ -143,6 +189,7 @@
     "grade": "Calificación",
     "submissionDate": "Fecha de entrega",
     "feedback": "Retroalimentación",
+    "feedbackPlaceholder": "Sin retroalimentación",
     "views": {
       "inbox": "Bandeja de entrada",
       "active": "Activas",
@@ -153,7 +200,44 @@
     "selectedRows": "{{selected}} de {{total}} seleccionadas",
     "returnAction": "Devolver",
     "noSubmissons": "No hay entregas disponibles",
-    "noSubmissonsDescription": "Aún no hay entregas. Aparecerán aquí cuando los estudiantes entreguen. Puedes agregar entregas sintéticas para experimentar."
+    "noSubmissonsDescription": "Aún no hay entregas. Aparecerán aquí cuando los estudiantes entreguen. Puedes agregar entregas sintéticas para experimentar.",
+    "turnedIn": "Entregado el",
+    "attachments": "Adjuntos",
+    "noAttachments": "Esta entrega no incluye adjuntos.",
+    "timeline": "Cronología",
+    "timelineEvents": {
+      "actor": {
+        "system": "Sistema",
+        "automation": "Automatización"
+      },
+      "actions": {
+        "submitted": "envió esta entrega",
+        "withArtifacts": "con {{count}} archivo(s)",
+        "statusTransitioned": "cambió el estado de {{from}} a {{to}}",
+        "aiInitialResult": "registró el resultado inicial de IA",
+        "aiRegradeResult": "registró una recalificación de IA",
+        "attempt": "(intento {{value}})",
+        "editedScoreAndFeedback": "editó la calificación y la retroalimentación del borrador",
+        "scoreChanged": "cambió la calificación del borrador de {{from}} a {{to}}",
+        "feedbackEdited": "editó la retroalimentación del borrador",
+        "draftEdited": "editó el borrador",
+        "returnedToStudent": "devolvió la entrega al estudiante",
+        "withScore": "(calificación: {{score}})",
+        "unknownEvent": "actualizó la entrega"
+      },
+      "labels": {
+        "feedbackEdited": "Retroalimentación editada",
+        "hidePrevious": "Ocultar anterior",
+        "compare": "Comparar",
+        "empty": "(vacío)",
+        "showFeedback": "Mostrar retroalimentación",
+        "hideFeedback": "Ocultar retroalimentación",
+        "showDetails": "Mostrar detalles",
+        "hideDetails": "Ocultar detalles",
+        "unknown": "Desconocido",
+        "noEvents": "Sin eventos."
+      }
+    }
   },
   "status": {
     "pending": "Pendiente",
@@ -167,6 +251,9 @@
     "needsReview": "Requiere revisión",
     "failure": "Error",
     "processing": "Procesando",
+    "running": "En ejecución",
+    "success": "Exitoso",
+    "cancelled": "Cancelado",
     "unknown": "Desconocido"
   },
   "properties": {
@@ -175,6 +262,7 @@
   },
   "workflow": {
     "selectWorkflow": "Seleccionar flujo de trabajo",
+    "noCourseSelected": "Seleccione un curso para ver sus flujos de trabajo.",
     "noWorkflows": "Aún no hay flujos de trabajo",
     "noWorkflowsMessage": "No has creado ningún flujo de trabajo todavía. Crea uno para comenzar.",
     "createWorkflow": "Crear flujo",
@@ -186,6 +274,7 @@
     "viewLogs": "Ver registros de ejecución",
     "saveWorkflow": "Guardar flujo de trabajo",
     "abortWorkflow": "Abortar flujo de trabajo",
+    "errorLoading": "Error cargando flujos de trabajo.",
     "failedToStart": "Error al iniciar el flujo de trabajo. Por favor intenta de nuevo.",
     "noWorkflowSelected": "Ningún flujo de trabajo seleccionado.",
     "selectFromDropdown": "Selecciona uno del menú desplegable.",
@@ -202,7 +291,12 @@
     "validateAll": "Validar todo",
     "loadingPlugins": "Cargando...",
     "errorLoadingPlugins": "Error al cargar plugins",
-    "runPlugin": "Ejecutar plugin..."
+    "runPlugin": "Ejecutar plugin...",
+    "type": "Tipo",
+    "version": "Versión",
+    "author": "Autor",
+    "source": "Fuente",
+    "empty": "No hay plugins disponibles."
   },
   "actions": {
     "rerunWith": "Reejecutar con...",
@@ -211,6 +305,38 @@
     "reset": "Restablecer",
     "remove": "Eliminar",
     "courseActions": "Acciones del curso"
+  },
+  "participants": {
+    "instructors": "Instructores",
+    "instructorRole": "Instructor",
+    "students": "Estudiantes",
+    "noStudents": "Aún no se han añadido estudiantes.",
+    "noInstructor": "No hay información del instructor."
+  },
+  "artifacts": {
+    "title": "Artefactos",
+    "assignment": "Tarea",
+    "status": "Estado",
+    "access": "Acceso",
+    "updated": "Actualizado",
+    "archivedTitle": "Artefactos archivados",
+    "empty": "Aún no hay artefactos para este curso.",
+    "noCourse": "Seleccione un curso para ver artefactos.",
+    "errorLoading": "Error al cargar artefactos."
+  },
+  "runs": {
+    "title": "Ejecuciones de flujo",
+    "workflow": "Flujo de trabajo",
+    "submissions": "Entregas",
+    "status": "Estado",
+    "runId": "ID de ejecución",
+    "startedAt": "Iniciado el",
+    "finishedAt": "Finalizado el",
+    "duration": "Duración",
+    "runBy": "Ejecutado por",
+    "empty": "Aún no hay ejecuciones para este curso.",
+    "noCourse": "Seleccione un curso para ver ejecuciones.",
+    "errorLoading": "Error al cargar ejecuciones."
   },
   "errors": {
     "somethingWrong": "Algo salió mal",

@@ -35,6 +35,7 @@ class WorkflowRead(WorkflowBase):
     created_at: datetime
     created_by: UUID
     updated_at: Optional[datetime] = None
+    archived: bool = False
     runs: Optional[List[WorkflowRunBase]] = None
 
 

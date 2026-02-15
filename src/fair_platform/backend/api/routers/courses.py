@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.data.models.enrollment import Enrollment
 from fair_platform.backend.api.schema.course import (
     CourseCreate,
     CourseRead,
@@ -89,9 +90,26 @@ def list_courses(
             for c in courses
         ]
 
-    # TODO: Students see nothing for now. Add enrollment table
+    # Students see only courses they are enrolled in
     if current_user.role == UserRole.student:
-        return []
+        courses = (
+            db.query(Course)
+            .options(joinedload(Course.instructor), selectinload(Course.assignments))
+            .join(Enrollment, Enrollment.course_id == Course.id)
+            .filter(Enrollment.user_id == current_user.id)
+            .all()
+        )
+        return [
+            {
+                "id": c.id,
+                "name": c.name,
+                "description": c.description,
+                "instructor_id": c.instructor_id,
+                "instructor_name": c.instructor.name if c.instructor else "",
+                "assignments_count": len(c.assignments or []),
+            }
+            for c in courses
+        ]
 
     courses = (
         db.query(Course)
@@ -124,12 +142,21 @@ def get_course(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    # TODO: Students cannot access individual course details for now because there's no enrollment table
+    # Students can access course details only if enrolled
     if current_user.role == UserRole.student:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Students are not authorized to view course details",
+        enrollment = (
+            db.query(Enrollment)
+            .filter(
+                Enrollment.user_id == current_user.id,
+                Enrollment.course_id == course_id,
+            )
+            .first()
         )
+        if not enrollment:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Students can only view courses they are enrolled in",
+            )
 
     course = (
         db.query(Course)
@@ -146,8 +173,12 @@ def get_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    # Authorization: admin or the course instructor
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    # Authorization: admin, course instructor, or enrolled student (checked above)
+    if (
+        current_user.role != UserRole.admin
+        and current_user.role != UserRole.student
+        and course.instructor_id != current_user.id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can view this course",

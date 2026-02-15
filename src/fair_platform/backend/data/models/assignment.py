@@ -53,7 +53,7 @@ class Assignment(Base):
 
     course: Mapped["Course"] = relationship("Course", back_populates="assignments")
     submissions: Mapped[List["Submission"]] = relationship(
-        "Submission", back_populates="assignment"
+        "Submission", back_populates="assignment", cascade="all, delete-orphan"
     )
 
     direct_artifacts: Mapped[List["Artifact"]] = relationship(

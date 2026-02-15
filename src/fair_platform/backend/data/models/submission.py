@@ -81,7 +81,7 @@ class Submission(Base):
     )
     submitted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     status: Mapped[SubmissionStatus] = mapped_column(
-        String, nullable=False, default=SubmissionStatus.pending
+        String, nullable=False, default=SubmissionStatus.submitted
     )
     official_run_id: Mapped[Optional[UUID]] = mapped_column(
         SAUUID, ForeignKey("workflow_runs.id"), nullable=True

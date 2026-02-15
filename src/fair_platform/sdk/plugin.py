@@ -1,4 +1,5 @@
 import inspect
+import hashlib
 from abc import ABC, abstractmethod
 from enum import Enum
 
@@ -6,7 +7,7 @@ from fair_platform.backend.data.database import get_session
 from fair_platform.backend.data.models import Plugin
 from fair_platform.sdk import Submission, SettingsField
 from typing import Any, Type, List, Optional, Dict, Union, Tuple
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, create_model, ValidationError
 
 from fair_platform.sdk.events import DebugEventBus
 from fair_platform.sdk.logger import PluginLogger
@@ -20,9 +21,9 @@ class BasePlugin:
             self.logger = logger
         else:
             self.logger = PluginLogger(
-                identifier=self.__class__.__name__,
                 session_id="debug",
                 bus=DebugEventBus(),
+                plugin=None,
             )
 
     def __init_subclass__(cls, **kwargs) -> None:
@@ -37,15 +38,15 @@ class BasePlugin:
             if field not in settings_fields:
                 raise ValueError(f"Unknown settings field: {field}")
 
+        settings_model = create_settings_model(self.__class__)
+        try:
+            parsed_settings = settings_model.model_validate(values or {})
+        except ValidationError as exc:
+            raise ValueError(f"Invalid plugin settings payload: {exc}") from exc
+
         for name, field in settings_fields.items():
             if name in values:
-                value = values[name]
-                if field.required and value is None:
-                    raise ValueError(f"Missing required settings field: {name}")
-                field.value = value
-            else:
-                if field.required:
-                    raise ValueError(f"Missing required settings field: {name}")
+                field.value = getattr(parsed_settings, name)
 
 
 def create_settings_model(
@@ -190,6 +191,10 @@ class FairPlugin:
                 f"Plugin class '{cls.__name__}' is missing '__extension_hash__' attribute."
             )
 
+        # Include metadata in the final hash to ensure uniqueness even if source code is identical
+        metadata_to_hash = f"{extension_hash}:{self.id}:{self.author}:{self.version}"
+        final_hash = hashlib.sha256(metadata_to_hash.encode()).hexdigest()
+
         source = getattr(current_module, "__extension_dir__", None)
         if source is None:
             raise ValueError(
@@ -213,7 +218,7 @@ class FairPlugin:
             "author": self.author,
             "description": self.description,
             "version": self.version,
-            "hash": extension_hash,
+            "hash": final_hash,
             "source": source,
             "author_email": self.author_email,
             "settings_schema": create_settings_model(cls).model_json_schema(),
@@ -231,21 +236,21 @@ class FairPlugin:
             session.refresh(merged_plugin)
 
         # TODO: Replace id with hash. For now, this is fine to avoid changing workflows schema.
-        PLUGINS[self.id] = runtime_plugin
-        PLUGINS_OBJECTS[self.id] = cls
+        PLUGINS[final_hash] = runtime_plugin
+        PLUGINS_OBJECTS[final_hash] = cls
         return cls
 
 
-def get_plugin_metadata(id: str) -> Optional[PluginMeta]:
-    return PLUGINS.get(id)
+def get_plugin_metadata(hash: str) -> Optional[PluginMeta]:
+    return PLUGINS.get(hash)
 
 
 def get_plugin_object(
-    id: str,
+    hash: str,
 ) -> Optional[
     Union[Type[TranscriptionPlugin], Type[GradePlugin], Type[ValidationPlugin]]
 ]:
-    return PLUGINS_OBJECTS.get(id)
+    return PLUGINS_OBJECTS.get(hash)
 
 
 def list_plugins(plugin_type: Optional[PluginType] = None) -> List[PluginMeta]:

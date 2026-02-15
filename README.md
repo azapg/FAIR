@@ -1,4 +1,4 @@
-# The Fair Platform [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) ![PyPI - Version](https://img.shields.io/pypi/v/fair-platform) ![PyPI - Downloads](https://img.shields.io/pypi/dm/fair-platform)
+# The Fair Platform [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) ![PyPI - Version](https://img.shields.io/pypi/v/fair-platform) ![PyPI - Downloads](https://img.shields.io/pypi/dm/fair-platform)
 
 
 <img width="1974" height="992" alt="showcase" src="https://github.com/user-attachments/assets/c88cc1ea-c30a-4c0e-9f35-955b92b1bf46" />
@@ -63,22 +63,19 @@ If you're interested in collaborating, open an issue or start a discussion.
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 (GPL-3.0). See LICENSE for the full text and details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for the full text and details.
 
 ### What this means:
 
 **You CAN:**
-- Use, modify, and distribute this software for any purpose, including commercial use.
-- Use insights and knowledge gained from the platform for any purpose.
-- Make modifications and distribute copies, provided that when you distribute the software (or derivative works) you comply with GPL-3.0 requirements.
-- Nonprofit organizations can use it regardless of funding source.
+- Use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software.
+- Use the software in commercial, educational, or research contexts.
+- License your derivative works under any terms you choose.
 
-**You MUST / OBEY GPL-3.0 REQUIREMENTS WHEN DISTRIBUTING:**
-- When distributing the software or derivative works, make the source code available under the terms of GPL-3.0.
-- Preserve copyright and license notices in redistributed source and binaries.
-- License any derivative works under GPL-3.0 when you distribute them.
+**You MUST:**
+- Include the copyright notice and permission notice in all copies or substantial portions of the software.
 
-### For Researchers:
-This platform is intended for academic and research use and may also be used in commercial research or products. Note that if you distribute derived software that includes code from this project, you must do so under GPL-3.0 and provide corresponding source code.
+**Disclaimer:**
+- The software is provided "as is", without warranty of any kind.
 
 **Questions about licensing?** Please open an issue or contact [allan.zapata@up.ac.pa](mailto:allan.zapata@up.ac.pa).

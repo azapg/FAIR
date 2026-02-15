@@ -1,10 +1,14 @@
-from fair_platform.sdk.schemas import Submission, Submitter, Assignment, Artifact
+from fair_platform.sdk.schemas import Submission, Submitter, Assignment, Artifact, Rubric
 from fair_platform.sdk.settings import (
     SettingsField,
     SwitchField,
+    CheckboxField,
+    CourseArtifactsSelectorField,
+    RubricField,
     TextField,
     SensitiveTextField,
     NumberField,
+    SliderField,
 )
 from fair_platform.sdk.plugin import (
     BasePlugin,
@@ -30,11 +34,16 @@ __all__ = [
     "Submitter",
     "Assignment",
     "Artifact",
+    "Rubric",
     "SettingsField",
     "SwitchField",
+    "CheckboxField",
+    "CourseArtifactsSelectorField",
+    "RubricField",
     "TextField",
     "SensitiveTextField",
     "NumberField",
+    "SliderField",
     "BasePlugin",
     "create_settings_model",
     "TranscriptionPlugin",

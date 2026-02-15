@@ -34,8 +34,8 @@ class ArtifactUpdate(BaseModel):
 
 class ArtifactRead(ArtifactBase):
     id: UUID
-    storage_path: str
-    storage_type: str
+    artifact_type: str
+    mime: str
     creator_id: UUID
     created_at: datetime
     updated_at: datetime

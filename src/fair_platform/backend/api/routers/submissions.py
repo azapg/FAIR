@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.submission import (
@@ -23,10 +23,11 @@ from fair_platform.backend.api.schema.submission import (
     SubmissionDraftUpdate,
 )
 from fair_platform.backend.api.schema.submission_result import SubmissionResultRead
-from fair_platform.backend.api.schema.submission_event import SubmissionEventRead
+from fair_platform.backend.api.schema.submission_event import SubmissionTimelineEventRead
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 from fair_platform.backend.services.submission_manager import get_submission_manager
+from fair_platform.backend.data.models.workflow_run import WorkflowRun, WorkflowRunStatus
 from fair_platform.backend.data.models.submission_event import SubmissionEvent
 
 router = APIRouter()
@@ -107,7 +108,7 @@ async def create_submission(
             submitter_id=submitter.id,
             created_by_id=current_user.id,  # Track who created this submission
             submitted_at=datetime.now(timezone.utc),
-            status=SubmissionStatus.pending,
+            status=SubmissionStatus.submitted,
         )
         db.add(sub)
         db.flush()
@@ -134,6 +135,13 @@ async def create_submission(
                     course_id=assignment.course_id,
                 )
                 sub.artifacts.append(artifact)
+
+        sub_mgr = get_submission_manager(db)
+        sub_mgr.log_submission_submitted(
+            submission=sub,
+            actor=current_user,
+            artifact_count=len(sub.artifacts),
+        )
 
         db.commit()
         db.refresh(sub)
@@ -481,7 +489,7 @@ def return_submission(
         )
 
 
-@router.get("/{submission_id}/timeline", response_model=List[SubmissionEventRead])
+@router.get("/{submission_id}/timeline", response_model=List[SubmissionTimelineEventRead])
 def get_submission_timeline(
     submission_id: UUID,
     db: Session = Depends(session_dependency),
@@ -511,6 +519,11 @@ def get_submission_timeline(
     events = (
         db.query(SubmissionEvent)
         .filter(SubmissionEvent.submission_id == submission_id)
+        .options(
+            joinedload(SubmissionEvent.actor),
+            joinedload(SubmissionEvent.workflow_run).joinedload(WorkflowRun.runner),
+            joinedload(SubmissionEvent.workflow_run).joinedload(WorkflowRun.workflow),
+        )
         .order_by(SubmissionEvent.created_at)
         .all()
     )

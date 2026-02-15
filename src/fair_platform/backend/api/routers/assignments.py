@@ -10,6 +10,7 @@ from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.assignment import (
     Assignment,
 )
+from fair_platform.backend.data.models.submission import Submission
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.artifact import ArtifactStatus, AccessLevel
 from fair_platform.backend.api.schema.assignment import (
@@ -18,6 +19,7 @@ from fair_platform.backend.api.schema.assignment import (
 )
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.data.models.enrollment import Enrollment
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 
 router = APIRouter()
@@ -163,8 +165,16 @@ def list_assignments(
 
     if current_user.role == UserRole.admin:
         return query.all()
+    elif current_user.role == UserRole.student:
+        # Students see assignments from courses they are enrolled in
+        return (
+            query.join(Course)
+            .join(Enrollment, Enrollment.course_id == Course.id)
+            .filter(Enrollment.user_id == current_user.id)
+            .all()
+        )
     else:
-        # TODO: Check enrollment once implemented
+        # Instructors see assignments from their own courses
         return query.join(Course).filter(Course.instructor_id == current_user.id).all()
 
 @router.get("/{assignment_id}", response_model=AssignmentRead)
@@ -182,10 +192,26 @@ def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency
         )
 
     if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the course instructor or admin can view this assignment",
-        )
+        # Check if user is an enrolled student
+        if current_user.role == UserRole.student:
+            enrollment = (
+                db.query(Enrollment)
+                .filter(
+                    Enrollment.user_id == current_user.id,
+                    Enrollment.course_id == course.id,
+                )
+                .first()
+            )
+            if not enrollment:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only the course instructor, admin, or enrolled students can view this assignment",
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the course instructor or admin can view this assignment",
+            )
 
     return assignment
 
@@ -256,6 +282,16 @@ def delete_assignment(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this assignment",
         )
+
+    submissions = (
+        db.query(Submission)
+        .filter(Submission.assignment_id == assignment_id)
+        .all()
+    )
+    for submission in submissions:
+        submission.artifacts.clear()
+        submission.runs.clear()
+        db.delete(submission)
 
     db.delete(assignment)
     db.commit()

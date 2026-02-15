@@ -17,9 +17,12 @@ from fair_platform.backend.api.routers.submission_results import (
     router as submission_results_router,
 )
 from fair_platform.backend.api.routers.workflows import router as workflows_router
+from fair_platform.backend.api.routers.workflow_runs import router as workflow_runs_router
 from fair_platform.backend.api.routers.auth import router as auth_router
 from fair_platform.backend.api.routers.sessions import router as sessions_router
 from fair_platform.backend.api.routers.version import router as version_router
+from fair_platform.backend.api.routers.rubrics import router as rubrics_router
+from fair_platform.backend.api.routers.enrollments import router as enrollments_router
 
 from fair_platform.sdk import load_storage_plugins
 
@@ -52,9 +55,12 @@ app.include_router(plugins_router, prefix="/api/plugins", tags=["plugins", "work
 app.include_router(submissions_router, prefix="/api/submissions", tags=["submissions"])
 app.include_router(submission_results_router, prefix="/api/submission-results")
 app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows", "plugins", "sessions"])
+app.include_router(workflow_runs_router, prefix="/api/workflow-runs", tags=["workflow-runs", "workflows"])
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(sessions_router, prefix="/api/sessions", tags=["sessions", "workflows", "plugins"])
 app.include_router(version_router, prefix="/api", tags=["version"])
+app.include_router(rubrics_router, prefix="/api/rubrics", tags=["rubrics"])
+app.include_router(enrollments_router, prefix="/api/enrollments", tags=["enrollments"])
 
 
 @app.get("/health")

@@ -11,11 +11,13 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .course import Course
+    from .enrollment import Enrollment
     from .workflow import Workflow
     from .workflow_run import WorkflowRun
     from .artifact import Artifact
     from .submitter import Submitter
     from .submission import Submission
+    from .rubric import Rubric
 
 
 class UserRole(str, Enum):
@@ -53,6 +55,10 @@ class User(Base):
     # Relationship to submissions created by this user (professor/admin)
     created_submissions: Mapped[List["Submission"]] = relationship(
         "Submission", back_populates="created_by", foreign_keys="Submission.created_by_id"
+    )
+    rubrics: Mapped[List["Rubric"]] = relationship("Rubric", back_populates="creator")
+    enrollments: Mapped[List["Enrollment"]] = relationship(
+        "Enrollment", back_populates="user"
     )
 
     def __repr__(self) -> str:

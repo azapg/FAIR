@@ -18,7 +18,7 @@ class SubmissionBase(BaseModel):
     submitter_id: UUID
     created_by_id: UUID
     submitted_at: Optional[datetime] = None
-    status: SubmissionStatus = SubmissionStatus.pending
+    status: SubmissionStatus = SubmissionStatus.submitted
     official_run_id: Optional[UUID] = None
 
 
