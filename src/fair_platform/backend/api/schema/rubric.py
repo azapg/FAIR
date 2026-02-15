@@ -1,6 +1,5 @@
 from uuid import UUID
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -14,6 +13,13 @@ class RubricCreate(BaseModel):
     content: dict
 
 
+class RubricUpdate(BaseModel):
+    model_config = schema_config
+
+    name: str | None = None
+    content: dict | None = None
+
+
 class RubricRead(BaseModel):
     model_config = schema_config
 
@@ -24,4 +30,22 @@ class RubricRead(BaseModel):
     created_at: datetime
 
 
-__all__ = ["RubricCreate", "RubricRead"]
+class RubricGenerateRequest(BaseModel):
+    model_config = schema_config
+
+    instruction: str
+
+
+class RubricGenerateResponse(BaseModel):
+    model_config = schema_config
+
+    content: dict
+
+
+__all__ = [
+    "RubricCreate",
+    "RubricUpdate",
+    "RubricRead",
+    "RubricGenerateRequest",
+    "RubricGenerateResponse",
+]

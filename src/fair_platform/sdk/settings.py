@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 from typing import Any, Optional, TypeVar, Generic
 from pydantic import Field, BaseModel
-from fair_platform.sdk.schemas import Artifact
+from fair_platform.sdk.schemas import Artifact, Rubric
 
 T = TypeVar("T")
 UNSET = object()
@@ -190,6 +190,30 @@ class CourseArtifactsSelectorField(SettingsField[Artifact]):
                     "source": "course_artifacts",
                     "selection": "single",
                     "allowed_mime_types": self.allowed_mime_types,
+                },
+            ),
+        )
+
+
+class RubricField(SettingsField[Rubric]):
+    def __init__(
+        self,
+        label: str,
+        default: Optional[Rubric] = None,
+        required: bool = False,
+    ):
+        super().__init__(label, default, required)
+
+    def to_pydantic_field(self):
+        return (
+            Rubric,
+            Field(
+                default=self.pydantic_default(),
+                title="RubricField",
+                description=self.label,
+                json_schema_extra={
+                    "source": "rubrics",
+                    "selection": "single",
                 },
             ),
         )

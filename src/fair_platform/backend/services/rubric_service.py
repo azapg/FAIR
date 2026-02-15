@@ -1,4 +1,6 @@
 import math
+import json
+import re
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -7,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.models.rubric import Rubric
 from fair_platform.backend.data.models.user import User
+from fair_platform.backend.services.ai_service import get_ai_client, get_llm_model
 
 
 WEIGHT_TOLERANCE = 1e-9
@@ -136,6 +139,27 @@ class RubricService:
     def get_rubric(self, rubric_id: UUID) -> Optional[Rubric]:
         return self.db.get(Rubric, rubric_id)
 
+    def update_rubric(
+        self,
+        rubric_id: UUID,
+        name: str | None = None,
+        content: dict | None = None,
+    ) -> Optional[Rubric]:
+        rubric = self.db.get(Rubric, rubric_id)
+        if not rubric:
+            return None
+
+        if name is not None:
+            rubric.name = name
+
+        if content is not None:
+            validate_rubric_content(content)
+            rubric.content = content
+
+        self.db.add(rubric)
+        self.db.flush()
+        return rubric
+
     def delete_rubric(self, rubric_id: UUID) -> bool:
         rubric = self.db.get(Rubric, rubric_id)
         if not rubric:
@@ -144,9 +168,95 @@ class RubricService:
         self.db.flush()
         return True
 
+    async def generate_rubric_from_instruction(self, instruction: str) -> dict:
+        prompt = (
+            "You generate grading rubrics in strict JSON.\n"
+            "Return only a JSON object with this exact structure:\n"
+            "{\n"
+            '  "levels": ["Level 1", "Level 2", ...],\n'
+            '  "criteria": [\n'
+            "    {\n"
+            '      "name": "Criterion name",\n'
+            '      "weight": 0.25,\n'
+            '      "levels": ["desc for level 1", "desc for level 2", ...]\n'
+            "    }\n"
+            "  ]\n"
+            "}\n"
+            "Rules:\n"
+            "- criteria weights must sum exactly to 1.0\n"
+            "- each criterion levels array length must match top-level levels length\n"
+            "- keep names concise and clear\n"
+            "- output valid JSON only, with no markdown code fences\n"
+            f"Instruction:\n{instruction}"
+        )
+
+        client = get_ai_client()
+        model = get_llm_model()
+
+        try:
+            response = await client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=1,
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to generate rubric content: {str(e)}",
+            ) from e
+
+        content = response.choices[0].message.content if response.choices else None
+        if not content:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Model returned empty rubric content",
+            )
+
+        parsed = _extract_rubric_json(content)
+        validate_rubric_content(parsed)
+        return parsed
+
+
+def _extract_rubric_json(content: str) -> dict:
+    cleaned = content.strip()
+    code_block_match = re.search(r"```(?:json)?\s*(\{[\s\S]*\})\s*```", cleaned)
+    if code_block_match:
+        cleaned = code_block_match.group(1).strip()
+
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        first_brace = cleaned.find("{")
+        last_brace = cleaned.rfind("}")
+        if first_brace == -1 or last_brace == -1 or first_brace >= last_brace:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Model output did not contain valid rubric JSON",
+            )
+
+        try:
+            parsed = json.loads(cleaned[first_brace:last_brace + 1])
+        except json.JSONDecodeError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Model output did not contain valid rubric JSON",
+            ) from e
+
+    if not isinstance(parsed, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Model output must be a JSON object",
+        )
+    return parsed
+
 
 def get_rubric_service(db: Session) -> RubricService:
     return RubricService(db)
 
 
-__all__ = ["RubricService", "get_rubric_service", "validate_rubric_content", "WEIGHT_TOLERANCE"]
+__all__ = [
+    "RubricService",
+    "get_rubric_service",
+    "validate_rubric_content",
+    "WEIGHT_TOLERANCE",
+]
