@@ -91,7 +91,7 @@ def create_course(
         description=course.description,
         instructor_id=course.instructor_id,
         enrollment_code=enrollment_code,
-        is_enrollment_enabled=False,
+        is_enrollment_enabled=True,
     )
     db.add(db_course)
     db.commit()

@@ -221,6 +221,22 @@ class TestSelfEnrollment:
         assert disable.status_code == 200
         assert disable.json().get("isEnrollmentEnabled") is False
 
+    def test_course_creation_returns_enabled_code(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, _, _ = _make_users(s)
+
+        headers = _auth(test_client, prof.email)
+        resp = test_client.post("/api/courses/", json={
+            "name": "New Course",
+            "description": "desc",
+            "instructor_id": str(prof.id),
+        }, headers=headers)
+
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body.get("enrollmentCode")
+        assert body.get("isEnrollmentEnabled") is True
+
 
 # ────────────── Course / Assignment Visibility ──────────────────
 

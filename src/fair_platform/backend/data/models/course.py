@@ -26,7 +26,7 @@ class Course(Base):
         String(32), unique=True, nullable=True
     )
     is_enrollment_enabled: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
+        Boolean, default=True, nullable=False
     )
 
     instructor: Mapped["User"] = relationship("User", back_populates="courses")
