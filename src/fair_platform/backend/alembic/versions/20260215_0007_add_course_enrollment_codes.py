@@ -32,21 +32,28 @@ def _generate_code(existing: set[str]) -> str:
 
 
 def upgrade() -> None:
-    op.add_column(
-        "courses",
-        sa.Column("enrollment_code", sa.String(length=32), nullable=True, unique=True),
-    )
-    op.add_column(
-        "courses",
-        sa.Column(
-            "is_enrollment_enabled",
-            sa.Boolean(),
-            server_default=sa.true(),
-            nullable=False,
-        ),
-    )
-
     bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_columns = {col["name"] for col in inspector.get_columns("courses")}
+
+    # Make migration idempotent across divergent branch histories.
+    if "enrollment_code" not in existing_columns:
+        op.add_column(
+            "courses",
+            sa.Column("enrollment_code", sa.String(length=32), nullable=True, unique=True),
+        )
+
+    if "is_enrollment_enabled" not in existing_columns:
+        op.add_column(
+            "courses",
+            sa.Column(
+                "is_enrollment_enabled",
+                sa.Boolean(),
+                server_default=sa.true(),
+                nullable=False,
+            ),
+        )
+
     courses = sa.table(
         "courses",
         sa.column("id", sa.UUID()),
@@ -54,12 +61,12 @@ def upgrade() -> None:
         sa.column("is_enrollment_enabled", sa.Boolean()),
     )
 
-    result = bind.execute(sa.select(courses.c.id, courses.c.enrollment_code, courses.c.is_enrollment_enabled))
+    result = bind.execute(
+        sa.select(courses.c.id, courses.c.enrollment_code, courses.c.is_enrollment_enabled)
+    )
     rows = result.fetchall()
 
-    existing_codes: set[str] = {
-        row.enrollment_code for row in rows if row.enrollment_code
-    }
+    existing_codes: set[str] = {row.enrollment_code for row in rows if row.enrollment_code}
 
     for row in rows:
         if row.enrollment_code:
@@ -80,5 +87,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_column("courses", "is_enrollment_enabled")
-    op.drop_column("courses", "enrollment_code")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_columns = {col["name"] for col in inspector.get_columns("courses")}
+
+    # Keep downgrade safe if schema drift exists.
+    if "is_enrollment_enabled" in existing_columns:
+        op.drop_column("courses", "is_enrollment_enabled")
+    if "enrollment_code" in existing_columns:
+        op.drop_column("courses", "enrollment_code")
