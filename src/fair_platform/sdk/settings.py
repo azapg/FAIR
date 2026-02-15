@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from typing import Optional, TypeVar, Generic
+from typing import Any, Optional, TypeVar, Generic
 from pydantic import Field, BaseModel
 
 T = TypeVar("T")
@@ -21,7 +21,7 @@ class SettingsField(Generic[T], ABC):
             owner._settings_fields = {}
         owner._settings_fields[name] = self
     @abstractmethod
-    def to_pydantic_field(self):
+    def to_pydantic_field(self) -> tuple[type, Any]:
         pass
 
 
