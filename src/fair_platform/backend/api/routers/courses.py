@@ -56,7 +56,7 @@ def _course_to_response(course: Course, include_code: bool) -> dict:
         "instructor_name": course.instructor.name if course.instructor else "",
         "assignments_count": len(course.assignments or []),
         "enrollment_code": course.enrollment_code if include_code else None,
-        "is_enrollment_enabled": course.is_enrollment_enabled,
+        "is_enrollment_enabled": course.is_enrollment_enabled if include_code else None,
     }
 
 
@@ -207,7 +207,7 @@ def get_course(
             "assignments": course.assignments or [],
             "workflows": course.workflows or [],
             "enrollment_code": course.enrollment_code if include_code else None,
-            "is_enrollment_enabled": course.is_enrollment_enabled,
+            "is_enrollment_enabled": course.is_enrollment_enabled if include_code else None,
         }
 
     return _course_to_response(course, include_code=include_code)

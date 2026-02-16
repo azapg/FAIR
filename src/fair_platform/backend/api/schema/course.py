@@ -32,7 +32,7 @@ class CourseRead(CourseBase):
     instructor_name: str
     assignments_count: int
     enrollment_code: Optional[str] = None
-    is_enrollment_enabled: bool = False
+    is_enrollment_enabled: Optional[bool] = None
 
 
 class CourseDetailRead(BaseModel):
@@ -45,7 +45,7 @@ class CourseDetailRead(BaseModel):
     assignments: List[AssignmentRead] = []
     workflows: List[WorkflowRead] = []
     enrollment_code: Optional[str] = None
-    is_enrollment_enabled: bool = False
+    is_enrollment_enabled: Optional[bool] = None
 
 
 class CourseSettingsUpdate(BaseModel):

@@ -238,6 +238,29 @@ class TestSelfEnrollment:
         assert body.get("enrollmentCode")
         assert body.get("isEnrollmentEnabled") is True
 
+    def test_student_cannot_see_enrollment_settings(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, stu1, _ = _make_users(s)
+            course = _make_course_with_code(s, prof, code="ABCD", enabled=True)
+            s.add(Enrollment(id=uuid4(), user_id=stu1.id, course_id=course.id))
+            s.commit()
+
+        headers = _auth(test_client, stu1.email)
+        
+        # Test list
+        resp_list = test_client.get("/api/courses/", headers=headers)
+        assert resp_list.status_code == 200
+        course_data = resp_list.json()[0]
+        assert course_data.get("enrollmentCode") is None
+        assert course_data.get("isEnrollmentEnabled") is None
+
+        # Test detail
+        resp_detail = test_client.get(f"/api/courses/{course.id}", headers=headers)
+        assert resp_detail.status_code == 200
+        detail_data = resp_detail.json()
+        assert detail_data.get("enrollmentCode") is None
+        assert detail_data.get("isEnrollmentEnabled") is None
+
 
 # ────────────── Course / Assignment Visibility ──────────────────
 
