@@ -16,7 +16,9 @@
     "learnMore": "Learn more",
     "showMore": "Show more",
     "showLess": "Show less",
-    "commingSoon": "Comming soon..."
+    "commingSoon": "Coming soon...",
+    "enable": "Enable",
+    "disable": "Disable"
   },
   "header": {
     "title": "The Fair Platform",
@@ -92,7 +94,16 @@
     "deleteConfirmation": "This action cannot be undone. To confirm deletion, type the course name exactly:",
     "errorLoading": "Error loading course.",
     "noCourses": "No courses available",
-    "noCoursesDescription": "You haven't created any courses yet. Create your first course to get started."
+    "noCoursesDescription": "You haven't created any courses yet. Create your first course to get started.",
+    "joinCourse": "Join course",
+    "joinCourseCta": "Join a course",
+    "enterCode": "Enter the class code",
+    "codePlaceholder": "e.g. ABCD",
+    "selfEnrollment": "Self-enrollment",
+    "classCode": "Class code",
+    "resetCode": "Reset code",
+    "selfEnrollmentDisabled": "Self-enrollment is disabled for this course. Turn it on to allow students to enroll themselves using a class code.",
+    "selfEnrollmentHint": "Share this code with students so they can join the course. You can reset it or disable it anytime."
   },
   "rubrics": {
     "title": "Rubrics",

@@ -1,5 +1,5 @@
 from uuid import UUID
-from sqlalchemy import String, Text, ForeignKey, UUID as _UUID
+from sqlalchemy import String, Text, ForeignKey, UUID as _UUID, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, List, TYPE_CHECKING
 
@@ -21,6 +21,12 @@ class Course(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     instructor_id: Mapped[UUID] = mapped_column(
         _UUID, ForeignKey("users.id"), nullable=False
+    )
+    enrollment_code: Mapped[Optional[str]] = mapped_column(
+        String(32), unique=True, nullable=True
+    )
+    is_enrollment_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
     )
 
     instructor: Mapped["User"] = relationship("User", back_populates="courses")

@@ -10,6 +10,7 @@ from fair_platform.backend.api.schema.enrollment import (
     EnrollmentCreate,
     EnrollmentBulkCreate,
     EnrollmentRead,
+    EnrollmentJoin,
 )
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.api.routers.auth import get_current_user
@@ -132,6 +133,69 @@ def bulk_create_enrollments(
 
     db.commit()
     return results
+
+
+@router.post("/join", response_model=EnrollmentRead, status_code=status.HTTP_201_CREATED)
+def join_course_by_code(
+    payload: EnrollmentJoin,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    """Allow a student to self-enroll using a class code."""
+    if current_user.role != UserRole.student:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only students can join courses with a code",
+        )
+
+    course = (
+        db.query(Course)
+        .filter(Course.enrollment_code == payload.code)
+        .first()
+    )
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid enrollment code",
+        )
+
+    if not course.is_enrollment_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Self-enrollment is disabled for this course",
+        )
+
+    existing = (
+        db.query(Enrollment)
+        .filter(
+            Enrollment.user_id == current_user.id,
+            Enrollment.course_id == course.id,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Student is already enrolled in this course",
+        )
+
+    enrollment = Enrollment(
+        id=uuid4(),
+        user_id=current_user.id,
+        course_id=course.id,
+    )
+    db.add(enrollment)
+    db.commit()
+    db.refresh(enrollment)
+
+    return EnrollmentRead(
+        id=enrollment.id,
+        user_id=enrollment.user_id,
+        course_id=enrollment.course_id,
+        enrolled_at=enrollment.enrolled_at,
+        user_name=current_user.name,
+        course_name=course.name,
+    )
 
 
 @router.get("/", response_model=list[EnrollmentRead])

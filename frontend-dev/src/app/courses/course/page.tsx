@@ -13,6 +13,9 @@ import {ArtifactsTab} from "@/app/courses/tabs/artifacts-tab";
 import {WorkflowsTab} from "@/app/courses/tabs/workflows-tab";
 import {PluginsTab} from "@/app/courses/tabs/plugins-tab";
 import {useWorkflowStore} from "@/store/workflows-store";
+import { EnrollmentControls } from "../components/enrollment-controls";
+import {useResetEnrollmentCode, useUpdateCourseSettings} from "@/hooks/use-courses";
+import {AuthUserRole, useAuth} from "@/contexts/auth-context";
 
 const allowedTabs = ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"];
 
@@ -22,7 +25,10 @@ export default function CourseDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const {t} = useTranslation();
+  const {user} = useAuth();
   const {setActiveCourseId} = useWorkflowStore();
+  const resetEnrollmentCode = useResetEnrollmentCode();
+  const updateCourseSettings = useUpdateCourseSettings();
 
   const basePath = location.pathname.split('/').slice(0, -1).join('/');
 
@@ -52,6 +58,29 @@ export default function CourseDetailPage() {
     return <div>{t("courses.errorLoading")}</div>;
   }
 
+  const instructorId = "instructorId" in course ? course.instructorId : course.instructor?.id;
+  const showEnrollmentControls =
+    !!user &&
+    (user.role === AuthUserRole.ADMIN ||
+      (user.role === AuthUserRole.PROFESSOR && instructorId === user.id));
+  const enrollmentCode =
+    "enrollmentCode" in course ? course.enrollmentCode : undefined;
+  const isEnrollmentEnabled =
+    "isEnrollmentEnabled" in course ? course.isEnrollmentEnabled : false;
+
+  const handleToggle = async (next: boolean) => {
+    if (!courseId || !showEnrollmentControls) return;
+    await updateCourseSettings.mutateAsync({
+      id: courseId,
+      data: { isEnrollmentEnabled: next },
+    });
+  };
+
+  const handleResetCode = async () => {
+    if (!courseId || !showEnrollmentControls) return;
+    await resetEnrollmentCode.mutateAsync(courseId);
+  };
+
   const segments: BreadcrumbSegment[] = [
     {label: t("courses.title"), slug: "courses"},
     ...(courseId ? [{label: course?.name ?? "Course", slug: courseId}] : []),
@@ -71,6 +100,17 @@ export default function CourseDetailPage() {
         <h1 className={"text-3xl font-bold pb-1"}>{course?.name}</h1>
         <p className={"text-sm text-muted-foreground"}>{course?.description}</p>
       </div>
+      {showEnrollmentControls && (
+        <EnrollmentControls
+          enrollmentCode={enrollmentCode}
+          isEnrollmentEnabled={isEnrollmentEnabled}
+          onToggle={handleToggle}
+          onResetCode={handleResetCode}
+          isTogglePending={updateCourseSettings.isPending}
+          isResetPending={resetEnrollmentCode.isPending}
+          t={t}
+        />
+      )}
       <Tabs value={effectiveTab} onValueChange={(val: string) => {
         if (!courseId) return;
         navigate(`${basePath}/${val}`, {replace: true});

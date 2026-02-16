@@ -1,8 +1,10 @@
 from uuid import UUID
+from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Query
 from sqlalchemy.orm import Session
+from fastapi.responses import FileResponse
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.artifact import AccessLevel, ArtifactStatus
@@ -98,6 +100,39 @@ def get_artifact(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{artifact_id}/download")
+def download_artifact(
+    artifact_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    """Return artifact file content with permission enforcement."""
+    manager = get_artifact_manager(db)
+
+    artifact = manager.get_artifact(artifact_id, current_user)
+    if not artifact.storage_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artifact file not found",
+        )
+
+    file_path = Path(artifact.storage_path)
+    if not file_path.is_absolute():
+        file_path = manager.storage.uploads_dir / file_path
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artifact file not found",
+        )
+
+    return FileResponse(
+        file_path,
+        media_type=artifact.mime or "application/octet-stream",
+        filename=file_path.name,
+    )
 
 
 @router.put("/{artifact_id}", response_model=ArtifactRead)
