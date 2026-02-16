@@ -11,7 +11,7 @@ export type Course = {
   instructorName?: string
   assignmentsCount: number
   enrollmentCode?: string | null
-  isEnrollmentEnabled: boolean
+  isEnrollmentEnabled: boolean | null
 }
 
 export type CourseDetail = {
@@ -33,7 +33,7 @@ export type CourseDetail = {
     updatedAt: string,
   }
   enrollmentCode?: string | null
-  isEnrollmentEnabled: boolean
+  isEnrollmentEnabled: boolean | null
 }
 
 export type CreateCourseInput = {
