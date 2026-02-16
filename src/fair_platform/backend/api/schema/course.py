@@ -31,6 +31,8 @@ class CourseRead(CourseBase):
     id: UUID
     instructor_name: str
     assignments_count: int
+    enrollment_code: Optional[str] = None
+    is_enrollment_enabled: Optional[bool] = None
 
 
 class CourseDetailRead(BaseModel):
@@ -42,6 +44,14 @@ class CourseDetailRead(BaseModel):
     instructor: UserRead
     assignments: List[AssignmentRead] = []
     workflows: List[WorkflowRead] = []
+    enrollment_code: Optional[str] = None
+    is_enrollment_enabled: Optional[bool] = None
+
+
+class CourseSettingsUpdate(BaseModel):
+    model_config = schema_config
+
+    is_enrollment_enabled: Optional[bool] = None
 
 
 __all__ = [
@@ -50,4 +60,5 @@ __all__ = [
     "CourseUpdate",
     "CourseRead",
     "CourseDetailRead",
+    "CourseSettingsUpdate",
 ]

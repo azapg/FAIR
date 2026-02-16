@@ -1,5 +1,7 @@
 from uuid import UUID, uuid4
 from typing import Optional, Union
+import secrets
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -13,11 +15,49 @@ from fair_platform.backend.api.schema.course import (
     CourseRead,
     CourseUpdate,
     CourseDetailRead,
+    CourseSettingsUpdate,
 )
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.api.routers.auth import get_current_user
 
 router = APIRouter()
+
+CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+CODE_LENGTH = int(os.getenv("FAIR_ENROLLMENT_CODE_LENGTH", "4"))
+MAX_CODE_ATTEMPTS = 10
+
+
+def _generate_enrollment_code() -> str:
+    return "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+
+
+def _generate_unique_enrollment_code(db: Session) -> str:
+    for _ in range(MAX_CODE_ATTEMPTS):
+        code = _generate_enrollment_code()
+        exists = (
+            db.query(Course)
+            .filter(Course.enrollment_code == code)
+            .first()
+        )
+        if not exists:
+            return code
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Failed to generate enrollment code, please try again",
+    )
+
+
+def _course_to_response(course: Course, include_code: bool) -> dict:
+    return {
+        "id": course.id,
+        "name": course.name,
+        "description": course.description,
+        "instructor_id": course.instructor_id,
+        "instructor_name": course.instructor.name if course.instructor else "",
+        "assignments_count": len(course.assignments or []),
+        "enrollment_code": course.enrollment_code if include_code else None,
+        "is_enrollment_enabled": course.is_enrollment_enabled if include_code else None,
+    }
 
 
 @router.post("/", response_model=CourseRead, status_code=status.HTTP_201_CREATED)
@@ -44,23 +84,19 @@ def create_course(
             detail="Not authorized to create a course for this instructor",
         )
 
+    enrollment_code = _generate_unique_enrollment_code(db)
     db_course = Course(
         id=uuid4(),
         name=course.name,
         description=course.description,
         instructor_id=course.instructor_id,
+        enrollment_code=enrollment_code,
+        is_enrollment_enabled=True,
     )
     db.add(db_course)
     db.commit()
     db.refresh(db_course)
-    return {
-        "id": db_course.id,
-        "name": db_course.name,
-        "description": db_course.description,
-        "instructor_id": db_course.instructor_id,
-        "instructor_name": instructor.name,
-        "assignments_count": 0,
-    }
+    return _course_to_response(db_course, include_code=True)
 
 
 @router.get("/", response_model=list[CourseRead])
@@ -79,14 +115,7 @@ def list_courses(
             query = query.filter(Course.instructor_id == instructor_id)
         courses = query.all()
         return [
-            {
-                "id": c.id,
-                "name": c.name,
-                "description": c.description,
-                "instructor_id": c.instructor_id,
-                "instructor_name": c.instructor.name if c.instructor else "",
-                "assignments_count": len(c.assignments or []),
-            }
+            _course_to_response(c, include_code=True)
             for c in courses
         ]
 
@@ -100,14 +129,7 @@ def list_courses(
             .all()
         )
         return [
-            {
-                "id": c.id,
-                "name": c.name,
-                "description": c.description,
-                "instructor_id": c.instructor_id,
-                "instructor_name": c.instructor.name if c.instructor else "",
-                "assignments_count": len(c.assignments or []),
-            }
+            _course_to_response(c, include_code=False)
             for c in courses
         ]
 
@@ -121,16 +143,7 @@ def list_courses(
         .all()
     )
     return [
-        {
-            "id": c.id,
-            "name": c.name,
-            "description": c.description,
-            "instructor_id": c.instructor_id,
-            "instructor_name": c.instructor.name
-            if c.instructor
-            else "Unknown Instructor",
-            "assignments_count": len(c.assignments or []),
-        }
+        _course_to_response(c, include_code=True)
         for c in courses
     ]
 
@@ -184,6 +197,7 @@ def get_course(
             detail="Only the course instructor or admin can view this course",
         )
 
+    include_code = current_user.role == UserRole.admin or course.instructor_id == current_user.id
     if detailed:
         return {
             "id": course.id,
@@ -192,16 +206,11 @@ def get_course(
             "instructor": course.instructor,
             "assignments": course.assignments or [],
             "workflows": course.workflows or [],
+            "enrollment_code": course.enrollment_code if include_code else None,
+            "is_enrollment_enabled": course.is_enrollment_enabled if include_code else None,
         }
 
-    return {
-        "id": course.id,
-        "name": course.name,
-        "description": course.description,
-        "instructor_id": course.instructor_id,
-        "instructor_name": course.instructor.name if course.instructor else "",
-        "assignments_count": len(course.assignments or []),
-    }
+    return _course_to_response(course, include_code=include_code)
 
 
 @router.put("/{course_id}", response_model=CourseRead)
@@ -252,14 +261,75 @@ def update_course(
     db.add(course)
     db.commit()
     db.refresh(course)
-    return {
-        "id": course.id,
-        "name": course.name,
-        "description": course.description,
-        "instructor_id": course.instructor_id,
-        "instructor_name": course.instructor.name if course.instructor else "",
-        "assignments_count": len(course.assignments or []),
-    }
+    include_code = current_user.role == UserRole.admin or course.instructor_id == current_user.id
+    return _course_to_response(course, include_code=include_code)
+
+
+@router.post("/{course_id}/reset-code", response_model=CourseRead)
+def reset_enrollment_code(
+    course_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    course = (
+        db.query(Course)
+        .options(joinedload(Course.instructor), selectinload(Course.assignments))
+        .filter(Course.id == course_id)
+        .first()
+    )
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+        )
+
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can reset this code",
+        )
+
+    course.enrollment_code = _generate_unique_enrollment_code(db)
+    db.add(course)
+    db.commit()
+    db.refresh(course)
+    include_code = current_user.role == UserRole.admin or course.instructor_id == current_user.id
+    return _course_to_response(course, include_code=include_code)
+
+
+@router.patch("/{course_id}/settings", response_model=CourseRead)
+def update_course_settings(
+    course_id: UUID,
+    payload: CourseSettingsUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    course = (
+        db.query(Course)
+        .options(joinedload(Course.instructor), selectinload(Course.assignments))
+        .filter(Course.id == course_id)
+        .first()
+    )
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+        )
+
+    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can update course settings",
+        )
+
+    if payload.is_enrollment_enabled is not None:
+        if payload.is_enrollment_enabled and not course.enrollment_code:
+            course.enrollment_code = _generate_unique_enrollment_code(db)
+        course.is_enrollment_enabled = payload.is_enrollment_enabled
+
+    db.add(course)
+    db.commit()
+    db.refresh(course)
+    include_code = current_user.role == UserRole.admin or course.instructor_id == current_user.id
+    return _course_to_response(course, include_code=include_code)
 
 
 @router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
