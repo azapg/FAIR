@@ -42,18 +42,11 @@
             "groups": [
               {
                 "group": "Introduction",
-                "pages": ["en/introduction"]
-              },
-              {
-                "group": "Getting started",
-                "pages": [
-                  "en/getting-started/installation",
-                  "en/getting-started/the-platform"
-                ]
+                "pages": ["en/introduction", "en/quickstart", "en/cli", "en/troubleshooting", "en/roadmap"]
               },
               {
                 "group": "Development",
-                "pages": ["en/development/releases"]
+                "pages": ["en/development/releases", "en/development/migrations"]
               }
             ]
           },

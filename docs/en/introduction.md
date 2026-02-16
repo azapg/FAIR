@@ -1,58 +1,89 @@
 ---
-title: Welcome to FAIR Platform
-description: Open-source platform for AI-powered grading systems
+title: Welcome to Fair Grade
 ---
-FAIR (or _The Fair Platform_) is an open-source platform that makes it easy to experiment with automatic grading systems using AI. It provides a flexible and extensible environment for building, testing, and comparing grading approaches, from interpreters and rubrics to agent-based systems and research datasets.
+**Fair Grade** is an open-source ecosystem designed to allow researchers, professors, students, and policymakers integrate AI safely into the education system. Our Platform serves professors as a new AI-first _Learning Management System_ (LMS) where they can manage their courses and assignments using cutting edge AI tools based on the latest research in the field.
 
-The goal is to support researchers, educators, and students who want to explore how AI can improve assessment, reduce manual grading workload, and enable reproducible experiments in educational technology.
+The platform is part of the [Fair Grade Project](https://fairgradeproject.org), a research initiative that aims to explore the impact of AI on education and develop tools to ensure that AI is used in a way that is fair and equitable for all students. In these early stages of development, we are focused on building a robust and user-friendly LMS with AI graders and feedback tools, a core pillar of the **Fair Grade** vision. 
 
-## Features
+Watch how FAIR transforms the grading workflow, processing nearly 200 pages of student submissions in seconds to provide detailed, criteria-based feedback.
 
-### Flexible Architecture
-Define courses, assignments, and grading modules with full customization.
+<iframe
+  className="w-full aspect-video rounded-xl"
+  src="https://www.youtube.com/embed/-MeTvNEhCK8"
+  title="FAIR Platform Demo"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+></iframe>
 
-### Interpreters
-Parse and standardize student submissions (PDFs, images, code, etc.) into structured artifacts.
+## The LMS Platform
+While Fair Grade functions as a standalone LMS, it is designed to be a flexible infrastructure that supports three key objectives:
 
-### Graders
-Apply configurable rubrics, AI models, or hybrid approaches to evaluate submissions.
+* **Seamless Integration**. You don't need to abandon your current setup. Our platform is built to connect with existing systems like **Google Classroom** and other industry-standard LMS providers, allowing you to bring AI-first workflows into your current environment.
+* **A Research Sandbox**. Beyond daily teaching, the platform provides researchers with a "live" environment to build, deploy, and test new AI methodologies in real-world educational settings. It is a lab for the future of pedagogy.
 
-### Experimentation First
-Swap modules, run A/B tests, and measure performance across approaches.
+* **Open & Accessible**. We are committed to the public good. Fair Grade is entirely open-source and free for educators and researchers. By keeping the code transparent and the access free, we ensure that the most powerful AI tools aren't locked behind a paywall.
 
-### Research-Friendly
-Designed for reproducibility, with plans for standardized datasets and benchmarks.
 
-### Extensible
-Build plugins for compilers, proof validators, RAG systems, or agentic graders.
+## Our vision for the future of education
+At Fair Grade, we believe in the potential of AI to transform education, but we also recognize the risks. While we are starting with grading and feedback, our long-term vision is for Fair Grade to serve as the primary operating system for educational institutions. We are building toward a unified environment that replaces fragmented, non-specialized tools with a single, AI-native infrastructure that handles everything from policy to pedagogy.
 
-## Quick Start
+### Beyond the LMS: What we are building
 
-Get started with FAIR Platform in just a few commands:
+Our roadmap includes the development of core academic utilities that ensure students and faculty never have to leave a safe, governed environment:
 
-```bash
-pip install fair-platform
-fair serve
-```
+* **Secure Student Study-Chats**. Private, course-aware LLM interfaces that act as a personalized Teaching Assistant (TA). Unlike public tools like ChatGPT or Gemini which are often used as shortcuts, these chats are grounded in specific course materials and designed to support learning within a governed environment. The system brings students and professors closer: if the AI agent cannot resolve a complex query, it can forward the question directly to the professor, transforming the AI from a tool for cheating into a bridge for deeper engagement.
 
-The platform will start on `http://localhost:8000` by default.
+* **Academic Knowledge Engines**. A research-first alternative to tools like NotebookLM designed for deep study and content curation. This module allows professors to convert their books, notes, and guides into beautiful diagrams, videos, and even podcasts to increase student engagement. It serves as a hub where instructors share approved infographics and summaries, while students can quickly exchange notes, images, and resources generated by their agents within a collaborative, verified knowledge base.
 
-## What's Next?
+* **Institutional Intelligence**. Tools for policymakers to oversee AI usage at scale, ensuring ethical deployment across entire departments or universities. This includes features for monitoring, auditing, and analyzing AI interactions to ensure compliance with institutional policies and ethical standards.
 
-- Check out the [Installation Guide](/getting-started/installation) for detailed setup instructions
-- Learn about [Releases](/development/releases) and the release automation process
-- Explore the platform features and start building your own grading modules
+### Prototypes & Labs
 
-## Contributing
+We aren't just theorizing; we are building. Below are early looks at how we are integrating personalized learning and advanced psychometric analysis into the platform.
 
-FAIR is open for contributions! You can:
+<Columns cols={1}>
+    <Frame caption="Study-Chats: Personalized AI Teaching Assistants">
+      <img src="/assets/test.png" alt="Screenshot showcasing an early prototype of study chats at the platform." />
+    </Frame>
+    <Frame caption="Psychometric Analysis: Deep Insights into Student Performance">
+      <img src="/assets/test.png" alt="Screenshot showcasing an early prototype of psychometric analysis at the platform." />  
+    </Frame>
+    <Frame caption="Knowledge Engines: Transforming Course Materials into Engaging Content">
+      <img src="/assets/test.png" alt="Screenshot showcasing an early prototype of knowledge engines at the platform." />
+    </Frame>
+</Columns>
 
-- Submit issues and feature requests
-- Propose or implement new grading modules
-- Share experimental datasets and benchmarks
+Read more about the future of the platform in our roadmap. We are excited to collaborate with the education community to write the playbook for responsible AI in education.
 
-If you're interested in collaborating, open an issue or start a discussion on [GitHub](https://github.com/azapg/FAIR).
-
-## License
-
-This project is licensed under the GNU General Public License v3.0 (GPL-3.0). See the [LICENSE](https://github.com/azapg/FAIR/blob/main/LICENSE) for details.
+## Next Steps
+<Columns cols={2}>
+    <Card
+      title="Quickstart Guide"
+      icon="link"
+      href="/en/quickstart"
+      arrow="true"
+      cta="Read the guide"
+    >
+      Get your first course running in under 5 minutes.
+    </Card>
+    
+    <Card
+      title="Workflows and Plugins"
+      icon="link"
+      href="/en/platform/workflows"
+      arrow="true"
+      cta="Learn more"
+    >
+      Deep dive into how our research-backed graders work.
+    </Card>
+    
+    <Card
+      title="Integration Guide"
+      icon="link"
+      href="/en/platform/integration"
+      arrow="true"
+      cta="Learn more"
+    >
+      Learn how to sync Fair Grade with your existing courses.
+    </Card>
+</Columns>
