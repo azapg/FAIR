@@ -35,6 +35,10 @@
       {
         "language": "en",
         "default": true,
+        "banner": {
+          "content": "The Fair Platform v0.7 is now live! See our [ changelog](/changelog) for details.",
+          "dismissible": true
+        },
         "tabs": [
           {
             "tab": "Docs",
@@ -132,6 +136,10 @@
       },
       {
         "language": "es",
+        "banner": {
+          "content": "¡The Fair Platform v0.7 ya está disponible! Consulta nuestro [changelog](/changelog) para más detalles.",
+          "dismissible": true
+        },
         "tabs": [
           {
             "tab": "Docs",
@@ -155,7 +163,7 @@
             ]
           },
           {
-            "tab": "Referencia API",
+            "tab": "Referencia de API",
             "openapi": "assets/openapi.json",
             "icon": "code",
             "groups": [
@@ -175,7 +183,7 @@
           },
           {
             "tab": "SDK",
-            "icon": "puzzle-piece",
+            "icon": "blocks",
             "groups": [
               {
                 "group": "Resumen",
@@ -224,13 +232,6 @@
         ]
       }
     ]
-  },
-  "navbar": {
-    "primary": {
-      "type": "button",
-      "label": "Get started",
-      "href": "/en/getting-started/installation"
-    }
   },
   "footer": {
     "socials": {
