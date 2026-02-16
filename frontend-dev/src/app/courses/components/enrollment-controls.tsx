@@ -85,7 +85,7 @@ export function EnrollmentControls({
         </CardContent>
 
         <CardFooter className="text-xs text-muted-foreground max-w-xl">
-          {isEnrollmentEnabled ? t("courses.selfEnrollmentHint") : <></>}
+          {isEnrollmentEnabled && t("courses.selfEnrollmentHint")}
         </CardFooter>
       </Card>
     </div>
