@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import {
-  ArrowUpRight,
   FileText,
   Hourglass,
   Plus,
@@ -30,6 +29,7 @@ import { useArtifacts } from "@/hooks/use-artifacts";
 import { useSubmissions } from "@/hooks/use-submissions";
 import { useTranslation } from "react-i18next";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ArtifactAction } from "@/components/artifact-action";
 
 export default function AssignmentPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
@@ -181,11 +181,13 @@ export default function AssignmentPage() {
                   <PropertyValue className="flex flex-row gap-1 items-center">
                     {artifacts && artifacts.length > 0 ? (
                       artifacts.map((artifact) => (
-                        <Button key={artifact.id} variant={"secondary"} size={"sm"}>
-                          <FileText />
-                          {artifact.title}
-                          <ArrowUpRight className="text-muted-foreground" />
-                        </Button>
+                        <ArtifactAction
+                          key={artifact.id}
+                          artifact={artifact}
+                          icon={FileText}
+                          variant="secondary"
+                          size="sm"
+                        />
                       ))
                     ) : (
                       <></>
