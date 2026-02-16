@@ -47,14 +47,14 @@ export function EnrollmentControls({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                disabled={isTogglePending}
+                disabled={isResetPending}
                 onClick={() => onResetCode()}
               >
                 <RefreshCw />
                 {t("courses.resetCode")}
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={isResetPending}
+                disabled={isTogglePending}
                 onClick={() => onToggle(!isEnrollmentEnabled)}
               >
                 <Hash />
