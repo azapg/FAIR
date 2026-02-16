@@ -21,7 +21,7 @@
       "anchors": [
         {
           "anchor": "GitHub",
-          "href": "https://github.com/allanzapata/fair-platform",
+          "href": "https://github.com/azapg/fair",
           "icon": "github"
         },
         {
@@ -230,7 +230,7 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/allanzapata/fair-platform"
+      "github": "https://github.com/azapg/fair"
     },
     "links": [
       {
@@ -238,11 +238,11 @@
         "items": [
           {
             "label": "Repository",
-            "href": "https://github.com/allanzapata/fair-platform"
+            "href": "https://github.com/azapg/fair"
           },
           {
             "label": "License (GPL-3.0)",
-            "href": "https://github.com/allanzapata/fair-platform/blob/main/LICENSE"
+            "href": "https://github.com/azapg/fair/blob/main/LICENSE"
           }
         ]
       },
