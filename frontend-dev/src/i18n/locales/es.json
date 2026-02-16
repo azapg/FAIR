@@ -16,7 +16,9 @@
     "learnMore": "Saber más",
     "commingSoon": "Próximamente...",
     "showMore": "Mostrar más",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "enable": "Habilitar",
+    "disable": "Deshabilitar"
   },
   "header": {
     "title": "The Fair Platform",
@@ -100,8 +102,8 @@
     "selfEnrollment": "Autoinscripción",
     "classCode": "Código de clase",
     "resetCode": "Restablecer código",
-    "selfEnrollmentDisabled": "La autoinscripción está desactivada para este curso.",
-    "selfEnrollmentHint": "Comparte este código con los estudiantes para que puedan inscribirse. Puedes restablecerlo en cualquier momento."
+    "selfEnrollmentDisabled": "La autoinscripción está desactivada para este curso. Actívala para permitir que los estudiantes se inscriban usando un código de clase único.",
+    "selfEnrollmentHint": "Comparte este código con los estudiantes para que puedan unirse al curso. Puedes restablecerlo o desactivarlo en cualquier momento."
   },
   "rubrics": {
     "title": "Rúbricas",

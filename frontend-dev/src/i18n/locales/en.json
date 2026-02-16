@@ -16,7 +16,9 @@
     "learnMore": "Learn more",
     "showMore": "Show more",
     "showLess": "Show less",
-    "commingSoon": "Comming soon..."
+    "commingSoon": "Comming soon...",
+    "enable": "Enable",
+    "disable": "Disable"
   },
   "header": {
     "title": "The Fair Platform",
@@ -100,8 +102,8 @@
     "selfEnrollment": "Self-enrollment",
     "classCode": "Class code",
     "resetCode": "Reset code",
-    "selfEnrollmentDisabled": "Self-enrollment is disabled for this course.",
-    "selfEnrollmentHint": "Share this code with students so they can enroll themselves. You can reset it anytime."
+    "selfEnrollmentDisabled": "Self-enrollment is disabled for this course. Turn it on to allow students to enroll themselves using a class code.",
+    "selfEnrollmentHint": "Share this code with students so they can join the course. You can reset it or disable it anytime."
   },
   "rubrics": {
     "title": "Rubrics",

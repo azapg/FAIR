@@ -13,11 +13,7 @@ import {ArtifactsTab} from "@/app/courses/tabs/artifacts-tab";
 import {WorkflowsTab} from "@/app/courses/tabs/workflows-tab";
 import {PluginsTab} from "@/app/courses/tabs/plugins-tab";
 import {useWorkflowStore} from "@/store/workflows-store";
-import {Badge} from "@/components/ui/badge";
-import {Button} from "@/components/ui/button";
-import {Switch} from "@/components/ui/switch";
-import {Label} from "@/components/ui/label";
-import {RefreshCw} from "lucide-react";
+import { EnrollmentControls } from "../components/enrollment-controls";
 import {useResetEnrollmentCode, useUpdateCourseSettings} from "@/hooks/use-courses";
 import {AuthUserRole, useAuth} from "@/contexts/auth-context";
 
@@ -105,52 +101,15 @@ export default function CourseDetailPage() {
         <p className={"text-sm text-muted-foreground"}>{course?.description}</p>
       </div>
       {showEnrollmentControls && (
-        <div className="px-8 pb-3">
-          <div className="flex flex-col gap-3 rounded-lg border bg-muted/40 px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant={isEnrollmentEnabled ? "default" : "outline"}>
-                  {t("courses.selfEnrollment")}
-                </Badge>
-                {!isEnrollmentEnabled && (
-                  <span className="text-xs text-muted-foreground">
-                    {t("courses.selfEnrollmentDisabled")}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="font-mono rounded-md border bg-background px-2 py-1 text-sm">
-                  {enrollmentCode ?? "—"}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {t("courses.classCode")}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground max-w-xl">
-                {t("courses.selfEnrollmentHint")}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={isEnrollmentEnabled}
-                  onCheckedChange={handleToggle}
-                  disabled={updateCourseSettings.isPending}
-                />
-                <Label className="text-sm">{t("courses.selfEnrollment")}</Label>
-              </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleResetCode}
-                disabled={resetEnrollmentCode.isPending}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                {resetEnrollmentCode.isPending ? t("common.wait") : t("courses.resetCode")}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <EnrollmentControls
+          enrollmentCode={enrollmentCode}
+          isEnrollmentEnabled={isEnrollmentEnabled}
+          onToggle={handleToggle}
+          onResetCode={handleResetCode}
+          isTogglePending={updateCourseSettings.isPending}
+          isResetPending={resetEnrollmentCode.isPending}
+          t={t}
+        />
       )}
       <Tabs value={effectiveTab} onValueChange={(val: string) => {
         if (!courseId) return;
