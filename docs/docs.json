@@ -42,15 +42,17 @@
             "groups": [
               {
                 "group": "Introduction",
-                "pages": ["en/introduction", "en/quickstart", "en/cli", "en/troubleshooting", "en/roadmap"]
+                "pages": [
+                  "en/introduction",
+                  "en/quickstart",
+                  "en/cli",
+                  "en/troubleshooting",
+                  "en/roadmap"
+                ]
               },
               {
                 "group": "Platform",
                 "pages": ["en/platform/workflows", "en/platform/integrations"]
-              },
-              {
-                "group": "Development",
-                "pages": ["en/development/releases", "en/development/migrations"]
               }
             ]
           },
@@ -61,7 +63,12 @@
             "groups": [
               {
                 "group": "Overview",
-                "pages": ["en/api-reference/overview"]
+                "pages": [
+                  "en/api-reference/overview",
+                  "en/api-reference/releases",
+                  "en/api-reference/migrations",
+                  "en/api-reference/dev-env"
+                ]
               },
               {
                 "group": "Authentication",
@@ -259,13 +266,6 @@
     ]
   },
   "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "grok"
-    ]
+    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "grok"]
   }
 }
