@@ -7,7 +7,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  ArrowUpRight,
   CircleCheck,
   Ellipsis,
   Maximize2,
@@ -38,6 +37,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import SubmissionTimeline from "@/components/submission-timeline";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArtifactAction } from "@/components/artifact-action";
 
 interface SubmissionSheetProps {
   submission: Submission | null;
@@ -181,11 +181,13 @@ function SubmissionAttachments({
       {artifacts.map((artifact) => {
         const Icon = getIconForMime(artifact.mime);
         return (
-          <Button key={artifact.id} variant={"secondary"} size={"sm"}>
-            <Icon size={16} />
-            {artifact.title}
-            <ArrowUpRight size={14} className="text-muted-foreground ml-1" />
-          </Button>
+          <ArtifactAction
+            key={artifact.id}
+            artifact={artifact}
+            icon={Icon}
+            variant="secondary"
+            size="sm"
+          />
         );
       })}
     </div>
