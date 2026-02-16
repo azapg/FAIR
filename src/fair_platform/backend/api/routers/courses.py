@@ -1,6 +1,7 @@
 from uuid import UUID, uuid4
 from typing import Optional, Union
 import secrets
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -21,14 +22,13 @@ from fair_platform.backend.api.routers.auth import get_current_user
 
 router = APIRouter()
 
-CODE_PREFIX = "FAIR-"
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-CODE_LENGTH = 6
+CODE_LENGTH = int(os.getenv("FAIR_ENROLLMENT_CODE_LENGTH", "4"))
 MAX_CODE_ATTEMPTS = 10
 
 
 def _generate_enrollment_code() -> str:
-    return f"{CODE_PREFIX}{''.join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))}"
+    return "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
 
 
 def _generate_unique_enrollment_code(db: Session) -> str:
