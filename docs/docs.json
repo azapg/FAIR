@@ -45,6 +45,10 @@
                 "pages": ["en/introduction", "en/quickstart", "en/cli", "en/troubleshooting", "en/roadmap"]
               },
               {
+                "group": "Platform",
+                "pages": ["en/platform/workflows", "en/platform/integrations"]
+              },
+              {
                 "group": "Development",
                 "pages": ["en/development/releases", "en/development/migrations"]
               }
