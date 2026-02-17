@@ -194,8 +194,6 @@ class RubricService:
         client = get_ai_client()
         model = get_llm_model()
 
-        last_parse_validation_error: HTTPException | None = None
-
         for attempt in range(RUBRIC_GENERATION_MAX_ATTEMPTS):
             try:
                 response = await client.chat.completions.create(
@@ -221,17 +219,11 @@ class RubricService:
                 validate_rubric_content(parsed)
                 return parsed
             except HTTPException as e:
-                last_parse_validation_error = e
+                if e.status_code != status.HTTP_400_BAD_REQUEST:
+                    raise
                 if attempt == RUBRIC_GENERATION_MAX_ATTEMPTS - 1:
                     raise
 
-        if last_parse_validation_error is not None:
-            raise last_parse_validation_error
-
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Failed to generate rubric content",
-        )
 
 
 def _extract_rubric_json(content: str) -> dict:
