@@ -50,7 +50,7 @@ function htmlNodeToMarkdownNodes(html: string): any[] {
         type: "image",
         url: src,
         alt: element.getAttribute("alt") ?? "",
-        title: title ?? undefined,
+        title,
       }];
     }
 
