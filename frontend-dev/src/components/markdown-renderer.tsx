@@ -41,6 +41,7 @@ function htmlNodeToMarkdownNodes(html: string): any[] {
 
     if (tagName === "img") {
       const src = element.getAttribute("src") ?? "";
+      const title = element.getAttribute("title");
       if (!isSafeImageSrc(src)) {
         return [];
       }
@@ -49,7 +50,7 @@ function htmlNodeToMarkdownNodes(html: string): any[] {
         type: "image",
         url: src,
         alt: element.getAttribute("alt") ?? "",
-        title: element.getAttribute("title") ?? undefined,
+        title: title || undefined,
       }];
     }
 
