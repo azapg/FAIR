@@ -35,7 +35,8 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
 
     // New session: proactively clear any stale logs before connecting
     if (!activeAssignmentId) return;
-    clearLogs(activeAssignmentId);
+    const assignmentId = activeAssignmentId;
+    clearLogs(assignmentId);
 
     const wsUrl = getWebSocketUrl(`/api/sessions/${currentSession.id}`);
     const newSocket = new WebSocket(wsUrl);
@@ -43,17 +44,13 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
 
     newSocket.onopen = () => {
       lastSessionId.current = currentSession.id;
-      if (activeAssignmentId) {
-        clearLogs(activeAssignmentId);
-      }
+      clearLogs(assignmentId);
     };
 
     newSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       try {
-        if (activeAssignmentId) {
-          addLog(activeAssignmentId, data);
-        }
+        addLog(assignmentId, data);
       } catch (e) {
         // noop
       }
@@ -61,9 +58,7 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
       if (data.type == "close") {
         newSocket.close();
         setSocket(null);
-        if (activeAssignmentId) {
-          setCurrentSession(activeAssignmentId, null);
-        }
+        setCurrentSession(assignmentId, null);
         return;
       }
 
