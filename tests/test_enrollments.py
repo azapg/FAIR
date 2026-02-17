@@ -357,3 +357,75 @@ class TestArtifactEnrollmentPermissions:
         headers = _auth(test_client, stu2.email)
         resp = test_client.get(f"/api/artifacts/{art_id}", headers=headers)
         assert resp.status_code == 403
+
+
+class TestLimitedViewsAndOwnership:
+
+    def test_enrolled_user_gets_limited_course_detailed_view(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, stu1, _ = _make_users(s)
+            course = _make_course_with_code(s, prof, code="LIM1", enabled=True)
+            s.add(Enrollment(id=uuid4(), user_id=stu1.id, course_id=course.id))
+            s.commit()
+
+        headers = _auth(test_client, stu1.email)
+        resp = test_client.get(f"/api/courses/{course.id}?detailed=true", headers=headers)
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["id"] == str(course.id)
+        assert payload.get("enrollmentCode") is None
+        assert payload.get("isEnrollmentEnabled") is None
+        # Limited response should not expose instructor-only nested data.
+        assert "workflows" not in payload
+        assert "instructor" not in payload
+
+    def test_enrolled_user_cannot_list_workflows_for_foreign_course(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, stu1, _ = _make_users(s)
+            course = _make_course(s, prof)
+            s.add(Enrollment(id=uuid4(), user_id=stu1.id, course_id=course.id))
+            s.commit()
+
+        headers = _auth(test_client, stu1.email)
+        resp = test_client.get(f"/api/workflows/?course_id={course.id}", headers=headers)
+        assert resp.status_code == 403
+
+    def test_enrolled_user_cannot_create_assignment_in_foreign_course(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, stu1, _ = _make_users(s)
+            course = _make_course(s, prof)
+            s.add(Enrollment(id=uuid4(), user_id=stu1.id, course_id=course.id))
+            s.commit()
+
+        headers = _auth(test_client, stu1.email)
+        payload = {
+            "course_id": str(course.id),
+            "title": "New Assignment",
+            "description": "desc",
+        }
+        resp = test_client.post("/api/assignments/", data=payload, headers=headers)
+        assert resp.status_code == 403
+
+    def test_enrolled_user_keeps_full_assignment_read_data(self, test_client, test_db):
+        with test_db() as s:
+            _, prof, stu1, _ = _make_users(s)
+            course = _make_course(s, prof)
+            assignment = Assignment(
+                id=uuid4(),
+                course_id=course.id,
+                title="Visible Assignment",
+                description="Must remain visible",
+                deadline=datetime.now() + timedelta(days=2),
+                max_grade={"type": "points", "value": 100},
+            )
+            s.add(assignment)
+            s.add(Enrollment(id=uuid4(), user_id=stu1.id, course_id=course.id))
+            s.commit()
+
+        headers = _auth(test_client, stu1.email)
+        resp = test_client.get(f"/api/assignments/{assignment.id}", headers=headers)
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["description"] == "Must remain visible"
+        assert payload["maxGrade"] == {"type": "points", "value": 100}
+        assert payload["deadline"] is not None

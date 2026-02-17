@@ -59,7 +59,25 @@ class TestRubricAPI:
         response = test_client.post("/api/rubrics/", json=payload, headers=headers)
         assert response.status_code == 201
 
-    def test_create_rubric_as_student_fails(self, test_client: TestClient, student_user):
+    def test_create_rubric_as_student_succeeds_in_community(self, test_client: TestClient, student_user):
+        token = get_auth_token(test_client, student_user.email)
+        headers = {"Authorization": f"Bearer {token}"}
+
+        payload = {
+            "name": "Student Rubric",
+            "content": make_valid_rubric_content()
+        }
+
+        response = test_client.post("/api/rubrics/", json=payload, headers=headers)
+        assert response.status_code == 201
+
+    def test_create_rubric_as_student_fails_in_enterprise(
+        self,
+        test_client: TestClient,
+        student_user,
+        monkeypatch,
+    ):
+        monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "ENTERPRISE")
         token = get_auth_token(test_client, student_user.email)
         headers = {"Authorization": f"Bearer {token}"}
 
@@ -330,7 +348,24 @@ class TestRubricAPI:
         assert "content" in data
         assert "criteria" in data["content"]
 
-    def test_generate_rubric_as_student_fails(self, test_client: TestClient, student_user):
+    def test_generate_rubric_as_student_succeeds_in_community(self, test_client: TestClient, student_user):
+        token = get_auth_token(test_client, student_user.email)
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = test_client.post(
+            "/api/rubrics/generate",
+            json={"instruction": "Create a rubric"},
+            headers=headers,
+        )
+        assert response.status_code == 200
+
+    def test_generate_rubric_as_student_fails_in_enterprise(
+        self,
+        test_client: TestClient,
+        student_user,
+        monkeypatch,
+    ):
+        monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "ENTERPRISE")
         token = get_auth_token(test_client, student_user.email)
         headers = {"Authorization": f"Bearer {token}"}
 
