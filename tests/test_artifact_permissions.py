@@ -547,6 +547,25 @@ class TestArtifactAPIPermissions:
         # Could be 401 (if auth required) or 200 (if public access allowed)
         assert response.status_code in [200, 401]
 
+    def test_cleanup_endpoint_requires_cleanup_capability(self, test_client, test_db):
+        data = self.setup_test_data(test_db)
+
+        prof_token = get_auth_token(test_client, data["prof1"].email)
+        prof_headers = {"Authorization": f"Bearer {prof_token}"}
+        prof_response = test_client.post(
+            "/api/artifacts/admin/cleanup-orphaned",
+            headers=prof_headers,
+        )
+        assert prof_response.status_code == 403
+
+        admin_token = get_auth_token(test_client, data["admin"].email)
+        admin_headers = {"Authorization": f"Bearer {admin_token}"}
+        admin_response = test_client.post(
+            "/api/artifacts/admin/cleanup-orphaned",
+            headers=admin_headers,
+        )
+        assert admin_response.status_code == 200
+
     # TODO(2026-02-05): Disabled failing test `test_permission_computed_fields`. See tests/TODO.md.
     # def test_permission_computed_fields(self, test_client, test_db):
     #     """Test that artifact responses include computed permission fields"""

@@ -352,11 +352,15 @@ class TestRubricAPI:
         token = get_auth_token(test_client, student_user.email)
         headers = {"Authorization": f"Bearer {token}"}
 
-        response = test_client.post(
-            "/api/rubrics/generate",
-            json={"instruction": "Create a rubric"},
-            headers=headers,
-        )
+        with patch(
+            "fair_platform.backend.services.rubric_service.RubricService.generate_rubric_from_instruction",
+            new=AsyncMock(return_value=make_valid_rubric_content()),
+        ):
+            response = test_client.post(
+                "/api/rubrics/generate",
+                json={"instruction": "Create a rubric"},
+                headers=headers,
+            )
         assert response.status_code == 200
 
     def test_generate_rubric_as_student_fails_in_enterprise(
