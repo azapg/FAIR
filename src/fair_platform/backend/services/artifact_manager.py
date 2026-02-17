@@ -6,12 +6,13 @@ from sqlalchemy.orm import Session
 from fastapi import UploadFile, HTTPException
 
 from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus, AccessLevel
-from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.submission import Submission
 from fair_platform.backend.data.models.enrollment import Enrollment
 from fair_platform.backend.data.storage import storage
+from fair_platform.backend.core.security.permissions import has_capability, has_capability_or_owner
 
 
 class ArtifactManager:
@@ -256,7 +257,7 @@ class ArtifactManager:
             raise HTTPException(status_code=403, detail="Permission denied")
         
         if hard_delete:
-            if user.role != UserRole.admin:
+            if not has_capability(user, "cleanup_orphaned_artifacts"):
                 raise HTTPException(
                     status_code=403,
                     detail="Hard delete requires admin privileges"
@@ -590,7 +591,7 @@ class ArtifactManager:
             True if user can view, False otherwise
         """
         # Admins can view everything
-        if user.role == UserRole.admin:
+        if has_capability(user, "manage_users"):
             return True
         
         # Creator can always view their own artifacts
@@ -602,9 +603,9 @@ class ArtifactManager:
             return True
         
         # Course instructors can view course-level artifacts
-        if artifact.course_id and user.role == UserRole.professor:
+        if artifact.course_id and has_capability(user, "manage_artifact"):
             course = self.db.get(Course, artifact.course_id)
-            if course and course.instructor_id == user.id:
+            if course and has_capability_or_owner(user, "manage_artifact", course.instructor_id):
                 return True
         
         # Students can view artifacts from their own submissions
@@ -615,7 +616,7 @@ class ArtifactManager:
         
         # Course and assignment level artifacts — check enrollment
         if artifact.access_level in [AccessLevel.course, AccessLevel.assignment]:
-            if user.role == UserRole.student and artifact.course_id:
+            if artifact.course_id:
                 enrollment = self.db.query(Enrollment).filter(
                     Enrollment.user_id == user.id,
                     Enrollment.course_id == artifact.course_id,
@@ -640,15 +641,15 @@ class ArtifactManager:
         Returns:
             True if user can edit, False otherwise
         """
-        if user.role == UserRole.admin:
+        if has_capability(user, "manage_users"):
             return True
         
         if artifact.creator_id == user.id:
             return True
 
-        if artifact.course_id and user.role == UserRole.professor:
+        if artifact.course_id and has_capability(user, "manage_artifact"):
             course = self.db.get(Course, artifact.course_id)
-            if course and course.instructor_id == user.id:
+            if course and has_capability_or_owner(user, "manage_artifact", course.instructor_id):
                 valid_levels = [AccessLevel.course, AccessLevel.assignment, AccessLevel.public]
                 if artifact.access_level in valid_levels:
                     return True
@@ -672,7 +673,7 @@ class ArtifactManager:
             True if user can delete, False otherwise
         """
         # Admins can delete everything
-        if user.role == UserRole.admin:
+        if has_capability(user, "manage_users"):
             return True
         
         # Creator can delete their own artifacts
@@ -680,9 +681,9 @@ class ArtifactManager:
             return True
         
         # Course instructors can delete certain artifacts from their courses
-        if artifact.course_id and user.role == UserRole.professor:
+        if artifact.course_id and has_capability(user, "manage_artifact"):
             course = self.db.get(Course, artifact.course_id)
-            if course and course.instructor_id == user.id:
+            if course and has_capability_or_owner(user, "manage_artifact", course.instructor_id):
                 # Can delete course, assignment, and public artifacts
                 valid_levels = [AccessLevel.course, AccessLevel.assignment, AccessLevel.public]
                 if artifact.access_level in valid_levels:

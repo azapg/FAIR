@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.workflow import Workflow
 from fair_platform.backend.data.models.course import Course
-from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.plugin import Plugin  # Needed for plugin name lookup
 from fair_platform.backend.api.schema.workflow import (
     WorkflowCreate,
@@ -17,6 +17,8 @@ from fair_platform.backend.api.schema.workflow import (
 )
 from fair_platform.backend.api.schema.plugin import RuntimePlugin
 from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.core.security.permissions import has_capability_or_owner
+from fair_platform.backend.core.security.dependencies import require_capability
 
 router = APIRouter()
 
@@ -108,13 +110,18 @@ def _db_workflow_to_read(wf: Workflow, db: Session) -> WorkflowRead:
     )
 
 
-@router.post("/", response_model=WorkflowRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=WorkflowRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_capability("create_workflow"))],
+)
 def create_workflow(
     payload: WorkflowCreate,
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
+    if not has_capability_or_owner(current_user, "create_workflow", None):
         raise HTTPException(
             status_code=403, detail="Not authorized to create workflows"
         )
@@ -125,7 +132,7 @@ def create_workflow(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "create_workflow", course.instructor_id):
         raise HTTPException(
             status_code=403,
             detail="Only the course instructor or admin can create workflows",
@@ -160,25 +167,25 @@ def list_workflows(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
-        raise HTTPException(status_code=403, detail="Not authorized to list workflows")
-
     if course_id:
         course = db.get(Course, course_id)
         if not course:
             raise HTTPException(status_code=400, detail="Course not found")
-        if (
-            current_user.role == UserRole.professor
-            and course.instructor_id != current_user.id
-        ):
+        if not has_capability_or_owner(current_user, "read_workflow", course.instructor_id):
             raise HTTPException(
                 status_code=403,
                 detail="Not authorized to list workflows for this course",
             )
+    elif not has_capability_or_owner(current_user, "read_workflow", None):
+        raise HTTPException(status_code=403, detail="Not authorized to list workflows")
 
     q = db.query(Workflow)
     if course_id:
         q = q.filter(Workflow.course_id == course_id)
+    elif not has_capability_or_owner(current_user, "update_any_course", None):
+        q = q.join(Course, Workflow.course_id == Course.id).filter(
+            Course.instructor_id == current_user.id
+        )
     workflows = q.filter(Workflow.archived.is_(False)).all()
     return [_db_workflow_to_read(wf, db) for wf in workflows]
 
@@ -189,9 +196,6 @@ def get_workflow(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
-        raise HTTPException(status_code=403, detail="Not authorized to get workflow")
-
     wf = db.get(Workflow, workflow_id)
     if not wf or wf.archived:
         raise HTTPException(
@@ -204,7 +208,7 @@ def get_workflow(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if current_user.role == UserRole.professor and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "read_workflow", course.instructor_id):
         raise HTTPException(
             status_code=403,
             detail="Not authorized to get this workflow",
@@ -219,9 +223,6 @@ def update_workflow(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
-        raise HTTPException(status_code=403, detail="Not authorized to update workflow")
-
     wf = db.get(Workflow, workflow_id)
     if not wf or wf.archived:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -233,7 +234,7 @@ def update_workflow(
             detail="Cannot find course for this workflow. Data integrity issue?",
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "update_workflow", course.instructor_id):
         raise HTTPException(
             status_code=403,
             detail="Only the course instructor or admin can update this workflow",
@@ -285,7 +286,7 @@ def delete_workflow(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "delete_workflow", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this workflow",

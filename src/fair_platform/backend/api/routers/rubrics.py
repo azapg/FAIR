@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.rubric import Rubric
-from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.api.schema.rubric import (
     RubricCreate,
     RubricUpdate,
@@ -15,6 +15,7 @@ from fair_platform.backend.api.schema.rubric import (
     RubricGenerateResponse,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.core.security.permissions import has_capability, has_capability_or_owner
 from fair_platform.backend.services.rubric_service import get_rubric_service
 
 router = APIRouter()
@@ -26,10 +27,10 @@ def create_rubric(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role not in (UserRole.admin, UserRole.professor):
+    if not has_capability(current_user, "create_rubric"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only professors or admins can create rubrics",
+            detail="Not authorized to create rubrics",
         )
 
     try:
@@ -58,7 +59,7 @@ def list_rubrics(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role == UserRole.admin:
+    if has_capability(current_user, "manage_users"):
         rubrics = db.query(Rubric).all()
     else:
         rubrics = db.query(Rubric).filter(Rubric.created_by_id == current_user.id).all()
@@ -71,10 +72,10 @@ async def generate_rubric(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role not in (UserRole.admin, UserRole.professor):
+    if not has_capability(current_user, "generate_rubric"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only professors or admins can generate rubrics",
+            detail="Not authorized to generate rubrics",
         )
 
     instruction = payload.instruction.strip()
@@ -111,7 +112,7 @@ def get_rubric(
             detail="Rubric not found",
         )
 
-    if current_user.role != UserRole.admin and rubric.created_by_id != current_user.id:
+    if not has_capability_or_owner(current_user, "manage_rubric", rubric.created_by_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this rubric",
@@ -134,7 +135,7 @@ def update_rubric(
             detail="Rubric not found",
         )
 
-    if current_user.role != UserRole.admin and rubric.created_by_id != current_user.id:
+    if not has_capability_or_owner(current_user, "manage_rubric", rubric.created_by_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this rubric",
@@ -185,7 +186,7 @@ def delete_rubric(
             detail="Rubric not found",
         )
 
-    if current_user.role != UserRole.admin and rubric.created_by_id != current_user.id:
+    if not has_capability_or_owner(current_user, "manage_rubric", rubric.created_by_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this rubric",

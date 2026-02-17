@@ -2,9 +2,13 @@ import React, {createContext, useCallback, useContext, useEffect, useMemo, useSt
 import api from "@/lib/api";
 
 export enum AuthUserRole {
-  STUDENT = 'student',
-  PROFESSOR = 'professor',
+  USER = 'user',
+  INSTRUCTOR = 'instructor',
   ADMIN = 'admin'
+}
+
+export type UserPreferences = {
+  interfaceMode: 'simple' | 'expert'
 }
 
 export type AuthUser = {
@@ -12,6 +16,8 @@ export type AuthUser = {
   name: string
   email: string
   role: AuthUserRole
+  capabilities: string[]
+  preferences: UserPreferences
 }
 
 type LoginInput = { username: string; password: string; remember_me?: boolean }
@@ -25,9 +31,29 @@ type AuthContextValue = {
   login: (input: LoginInput) => Promise<void>
   register: (input: RegisterInput) => Promise<void>
   logout: () => void
+  hasCapability: (action: string) => boolean
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+
+const normalizeRole = (role: string): AuthUserRole => {
+  if (role === 'student') return AuthUserRole.USER
+  if (role === 'professor') return AuthUserRole.INSTRUCTOR
+  if (role === AuthUserRole.ADMIN) return AuthUserRole.ADMIN
+  if (role === AuthUserRole.INSTRUCTOR) return AuthUserRole.INSTRUCTOR
+  return AuthUserRole.USER
+}
+
+const normalizeUser = (raw: Partial<AuthUser> & { role?: string }): AuthUser => ({
+  id: raw.id ?? '',
+  name: raw.name ?? '',
+  email: raw.email ?? '',
+  role: normalizeRole(raw.role ?? AuthUserRole.USER),
+  capabilities: Array.isArray(raw.capabilities) ? raw.capabilities : [],
+  preferences: {
+    interfaceMode: raw.preferences?.interfaceMode ?? 'simple',
+  },
+})
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -47,7 +73,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           try {
             // Validate the token by making a request to the /auth/me endpoint
             const userRes = await api.get('/auth/me')
-            const validatedUser: AuthUser = userRes.data
+            const validatedUser: AuthUser = normalizeUser(userRes.data)
             
             // If validation succeeds, set both token and user
             setUser(validatedUser)
@@ -130,7 +156,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const userRes = await api.get('/auth/me')
 
-      const nextUser: AuthUser = userRes.data
+      const nextUser: AuthUser = normalizeUser(userRes.data)
       setToken(accessToken)
       setUser(nextUser)
       persist(accessToken, nextUser)
@@ -144,7 +170,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const res = await api.post('/auth/register', input)
       const accessToken: string | undefined = res.data?.access_token
-      const user: AuthUser | undefined = res.data?.user
+      const user = res.data?.user ? normalizeUser(res.data.user) : undefined
       if (accessToken && user) {
         setToken(accessToken)
         setUser(user)
@@ -162,6 +188,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     persist(null, null)
   }, [persist])
 
+  const hasCapability = useCallback((action: string) => {
+    return !!user?.capabilities?.includes(action)
+  }, [user])
+
   const value = useMemo<AuthContextValue>(() => ({
     user,
     token,
@@ -170,7 +200,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     login,
     register,
     logout,
-  }), [user, token, loading, login, register, logout])
+    hasCapability,
+  }), [user, token, loading, login, register, logout, hasCapability])
 
   return (
     <AuthContext.Provider value={value}>

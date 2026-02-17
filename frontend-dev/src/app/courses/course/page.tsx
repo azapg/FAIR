@@ -15,7 +15,8 @@ import {PluginsTab} from "@/app/courses/tabs/plugins-tab";
 import {useWorkflowStore} from "@/store/workflows-store";
 import { EnrollmentControls } from "../components/enrollment-controls";
 import {useResetEnrollmentCode, useUpdateCourseSettings} from "@/hooks/use-courses";
-import {AuthUserRole, useAuth} from "@/contexts/auth-context";
+import {useAuth} from "@/contexts/auth-context";
+import {usePermission} from "@/hooks/use-permission";
 
 const allowedTabs = ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"];
 
@@ -26,6 +27,7 @@ export default function CourseDetailPage() {
   const location = useLocation();
   const {t} = useTranslation();
   const {user} = useAuth();
+  const canManageAnyCourseSettings = usePermission("manage_course_settings_any");
   const {setActiveCourseId} = useWorkflowStore();
   const resetEnrollmentCode = useResetEnrollmentCode();
   const updateCourseSettings = useUpdateCourseSettings();
@@ -61,8 +63,7 @@ export default function CourseDetailPage() {
   const instructorId = "instructorId" in course ? course.instructorId : course.instructor?.id;
   const showEnrollmentControls =
     !!user &&
-    (user.role === AuthUserRole.ADMIN ||
-      (user.role === AuthUserRole.PROFESSOR && instructorId === user.id));
+    (canManageAnyCourseSettings || instructorId === user.id);
   const enrollmentCode =
     "enrollmentCode" in course ? course.enrollmentCode : undefined;
   const isEnrollmentEnabled =

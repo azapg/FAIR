@@ -4,11 +4,12 @@ import secrets
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload, selectinload
 
 from fair_platform.backend.data.models.course import Course
-from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.enrollment import Enrollment
 from fair_platform.backend.api.schema.course import (
     CourseCreate,
@@ -19,6 +20,11 @@ from fair_platform.backend.api.schema.course import (
 )
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.core.security.permissions import (
+    has_capability,
+    has_capability_or_owner,
+)
+from fair_platform.backend.core.security.dependencies import require_capability
 
 router = APIRouter()
 
@@ -60,7 +66,12 @@ def _course_to_response(course: Course, include_code: bool) -> dict:
     }
 
 
-@router.post("/", response_model=CourseRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=CourseRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_capability("create_course"))],
+)
 def create_course(
     course: CourseCreate,
     db: Session = Depends(session_dependency),
@@ -72,13 +83,22 @@ def create_course(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Instructor not found"
         )
 
-    if instructor.role == UserRole.student:
+    if not has_capability(instructor, "create_course"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Students cannot create courses",
+            detail="This user cannot own courses in the current deployment mode",
         )
 
-    if current_user.role != UserRole.admin and current_user.id != course.instructor_id:
+    if not has_capability(current_user, "create_course"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to create courses",
+        )
+
+    if (
+        current_user.id != course.instructor_id
+        and not has_capability(current_user, "update_any_course")
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to create a course for this instructor",
@@ -105,7 +125,8 @@ def list_courses(
     current_user: User = Depends(get_current_user),
     instructor_id: Optional[UUID] = None,
 ):
-    if current_user.role == UserRole.admin:
+    is_admin = has_capability(current_user, "update_any_course")
+    if is_admin:
         query = db.query(Course).options(
             joinedload(Course.instructor),
             selectinload(Course.assignments),
@@ -120,7 +141,7 @@ def list_courses(
         ]
 
     # Students see only courses they are enrolled in
-    if current_user.role == UserRole.student:
+    if not has_capability(current_user, "create_course"):
         courses = (
             db.query(Course)
             .options(joinedload(Course.instructor), selectinload(Course.assignments))
@@ -136,14 +157,18 @@ def list_courses(
     courses = (
         db.query(Course)
         .options(joinedload(Course.instructor), selectinload(Course.assignments))
-        # Instructors (non-admin, non-student) see only their own courses.
-        # maybe in the future we should just send all courses a user is enrolled or is instructing,
-        # without caring about the role.
-        .filter(Course.instructor_id == current_user.id)
+        .outerjoin(Enrollment, Enrollment.course_id == Course.id)
+        .filter(
+            or_(
+                Course.instructor_id == current_user.id,
+                Enrollment.user_id == current_user.id,
+            )
+        )
+        .distinct()
         .all()
     )
     return [
-        _course_to_response(c, include_code=True)
+        _course_to_response(c, include_code=(c.instructor_id == current_user.id))
         for c in courses
     ]
 
@@ -155,22 +180,6 @@ def get_course(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    # Students can access course details only if enrolled
-    if current_user.role == UserRole.student:
-        enrollment = (
-            db.query(Enrollment)
-            .filter(
-                Enrollment.user_id == current_user.id,
-                Enrollment.course_id == course_id,
-            )
-            .first()
-        )
-        if not enrollment:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Students can only view courses they are enrolled in",
-            )
-
     course = (
         db.query(Course)
         .options(
@@ -186,18 +195,26 @@ def get_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    # Authorization: admin, course instructor, or enrolled student (checked above)
-    if (
-        current_user.role != UserRole.admin
-        and current_user.role != UserRole.student
-        and course.instructor_id != current_user.id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the course instructor or admin can view this course",
-        )
+    is_admin = has_capability(current_user, "update_any_course")
+    owns_course = course.instructor_id == current_user.id
+    can_manage_course = is_admin or owns_course
 
-    include_code = current_user.role == UserRole.admin or course.instructor_id == current_user.id
+    if not can_manage_course:
+        enrollment = (
+            db.query(Enrollment)
+            .filter(
+                Enrollment.user_id == current_user.id,
+                Enrollment.course_id == course_id,
+            )
+            .first()
+        )
+        if not enrollment:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only enrolled users, the course owner, or admin can view this course",
+            )
+
+    include_code = can_manage_course
     if detailed:
         return {
             "id": course.id,
@@ -231,7 +248,7 @@ def update_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "update_any_course", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this course",
@@ -244,10 +261,13 @@ def update_course(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Instructor not found"
             )
 
-        if instructor.role == UserRole.student:
+        if (
+            not has_capability(instructor, "create_course")
+            and instructor.id != course.instructor_id
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Students cannot be assigned as instructors",
+                detail="This user cannot be assigned as course owner",
             )
 
         course.instructor_id = payload.instructor_id
@@ -261,7 +281,7 @@ def update_course(
     db.add(course)
     db.commit()
     db.refresh(course)
-    include_code = current_user.role == UserRole.admin or course.instructor_id == current_user.id
+    include_code = has_capability(current_user, "update_any_course") or course.instructor_id == current_user.id
     return _course_to_response(course, include_code=include_code)
 
 
@@ -282,7 +302,7 @@ def reset_enrollment_code(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "manage_course_settings_any", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can reset this code",
@@ -292,7 +312,7 @@ def reset_enrollment_code(
     db.add(course)
     db.commit()
     db.refresh(course)
-    include_code = current_user.role == UserRole.admin or course.instructor_id == current_user.id
+    include_code = has_capability(current_user, "update_any_course") or course.instructor_id == current_user.id
     return _course_to_response(course, include_code=include_code)
 
 
@@ -314,7 +334,7 @@ def update_course_settings(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "manage_course_settings_any", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update course settings",
@@ -328,7 +348,7 @@ def update_course_settings(
     db.add(course)
     db.commit()
     db.refresh(course)
-    include_code = current_user.role == UserRole.admin or course.instructor_id == current_user.id
+    include_code = has_capability(current_user, "update_any_course") or course.instructor_id == current_user.id
     return _course_to_response(course, include_code=include_code)
 
 
@@ -344,7 +364,7 @@ def delete_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "delete_any_course", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this course",

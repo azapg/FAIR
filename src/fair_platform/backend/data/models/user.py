@@ -21,9 +21,12 @@ if TYPE_CHECKING:
 
 
 class UserRole(str, Enum):
-    professor = "professor"
-    student = "student"
+    user = "user"
+    instructor = "instructor"
     admin = "admin"
+    # Backward-compatible aliases
+    professor = "instructor"
+    student = "user"
 
 
 class User(Base):

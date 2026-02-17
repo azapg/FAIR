@@ -17,9 +17,9 @@ from fair_platform.backend.data.models import (
     Course,
     Submission,
     SubmissionResult,
-    UserRole,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.core.security.permissions import has_capability_or_owner
 from fair_platform.backend.data.models.user import User
 
 
@@ -86,19 +86,15 @@ def update_result(
             detail="Only the official result can be edited",
         )
 
-    if current_user.role != UserRole.admin:
-        assignment = db.get(Assignment, submission.assignment_id)
-        course = db.get(Course, assignment.course_id) if assignment else None
-        if current_user.role != UserRole.professor or not course:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only instructors or admin can update results",
-            )
-        if course.instructor_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the course instructor or admin can update results",
-            )
+    assignment = db.get(Assignment, submission.assignment_id)
+    course = db.get(Course, assignment.course_id) if assignment else None
+    if not course or not has_capability_or_owner(
+        current_user, "update_submission_results", course.instructor_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can update results",
+        )
 
     data = payload.model_dump(exclude_unset=True)
     if not data:

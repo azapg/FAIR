@@ -18,7 +18,8 @@ from fair_platform.backend.api.schema.assignment import (
     AssignmentUpdate,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.core.security.permissions import has_capability, has_capability_or_owner
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.enrollment import Enrollment
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 
@@ -58,7 +59,7 @@ async def create_assignment(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "create_assignment", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can create assignments",
@@ -163,9 +164,9 @@ def list_assignments(
 
         query = query.filter(Assignment.course_id == course_id)
 
-    if current_user.role == UserRole.admin:
+    if has_capability(current_user, "manage_users"):
         return query.all()
-    elif current_user.role == UserRole.student:
+    elif not has_capability(current_user, "create_assignment"):
         # Students see assignments from courses they are enrolled in
         return (
             query.join(Course)
@@ -174,8 +175,17 @@ def list_assignments(
             .all()
         )
     else:
-        # Instructors see assignments from their own courses
-        return query.join(Course).filter(Course.instructor_id == current_user.id).all()
+        # Instructors in community mode can also see courses where they are enrolled.
+        return (
+            query.join(Course)
+            .outerjoin(Enrollment, Enrollment.course_id == Course.id)
+            .filter(
+                (Course.instructor_id == current_user.id)
+                | (Enrollment.user_id == current_user.id)
+            )
+            .distinct()
+            .all()
+        )
 
 @router.get("/{assignment_id}", response_model=AssignmentRead)
 def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
@@ -191,26 +201,19 @@ def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
-        # Check if user is an enrolled student
-        if current_user.role == UserRole.student:
-            enrollment = (
-                db.query(Enrollment)
-                .filter(
-                    Enrollment.user_id == current_user.id,
-                    Enrollment.course_id == course.id,
-                )
-                .first()
+    if not has_capability_or_owner(current_user, "manage_assignment", course.instructor_id):
+        enrollment = (
+            db.query(Enrollment)
+            .filter(
+                Enrollment.user_id == current_user.id,
+                Enrollment.course_id == course.id,
             )
-            if not enrollment:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Only the course instructor, admin, or enrolled students can view this assignment",
-                )
-        else:
+            .first()
+        )
+        if not enrollment:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the course instructor or admin can view this assignment",
+                detail="Only the course instructor, admin, or enrolled users can view this assignment",
             )
 
     return assignment
@@ -235,7 +238,7 @@ def update_assignment(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "manage_assignment", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this assignment",
@@ -277,7 +280,7 @@ def delete_assignment(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "manage_assignment", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this assignment",

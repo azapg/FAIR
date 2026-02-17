@@ -15,7 +15,7 @@ from fair_platform.backend.data.models.submission import (
 from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.course import Course
-from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus, AccessLevel
 from fair_platform.backend.api.schema.submission import (
     SubmissionRead,
@@ -27,8 +27,9 @@ from fair_platform.backend.api.schema.submission_event import SubmissionTimeline
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 from fair_platform.backend.services.submission_manager import get_submission_manager
-from fair_platform.backend.data.models.workflow_run import WorkflowRun, WorkflowRunStatus
+from fair_platform.backend.data.models.workflow_run import WorkflowRun
 from fair_platform.backend.data.models.submission_event import SubmissionEvent
+from fair_platform.backend.core.security.permissions import has_capability, has_capability_or_owner
 
 router = APIRouter()
 
@@ -61,20 +62,13 @@ async def create_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found"
         )
 
-    if current_user.role == UserRole.admin:
-        pass
-    elif current_user.role == UserRole.professor:
-
-        course = db.get(Course, assignment.course_id)
-        if not course or course.instructor_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the course instructor or admin can create submissions for this assignment",
-            )
-    else:
+    course = db.get(Course, assignment.course_id)
+    if not course or not has_capability_or_owner(
+        current_user, "create_submission", course.instructor_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only instructors or admin can create submissions",
+            detail="Only the course instructor or admin can create submissions for this assignment",
         )
 
 
@@ -170,13 +164,16 @@ def list_submissions(
     """List all submissions, optionally filtered by assignment ID."""
     query = db.query(Submission)
 
-    if current_user.role == UserRole.admin:
+    if has_capability(current_user, "manage_users"):
         pass
-    elif current_user.role == UserRole.professor:
+    elif has_capability(current_user, "create_submission"):
         query = (
             query.join(Assignment, Submission.assignment_id == Assignment.id)
                  .join(Course, Assignment.course_id == Course.id)
-                 .filter(Course.instructor_id == current_user.id)
+                 .filter(
+                     (Course.instructor_id == current_user.id)
+                     | (Submission.created_by_id == current_user.id)
+                 )
         )
     else:
         query = query.filter(Submission.created_by_id == current_user.id)
@@ -259,21 +256,17 @@ def get_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
-    if current_user.role != UserRole.admin:
-        if current_user.role == UserRole.professor:
-            assignment = db.get(Assignment, sub.assignment_id)
-            course = db.get(Course, assignment.course_id) if assignment else None
-            if not course or course.instructor_id != current_user.id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Not authorized to view this submission",
-                )
-        else:
-            if sub.created_by_id != current_user.id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Not authorized to view this submission",
-                )
+    if not has_capability(current_user, "manage_users"):
+        assignment = db.get(Assignment, sub.assignment_id)
+        course = db.get(Course, assignment.course_id) if assignment else None
+        can_manage = bool(
+            course and has_capability_or_owner(current_user, "manage_submission", course.instructor_id)
+        )
+        if not can_manage and sub.created_by_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to view this submission",
+            )
 
     submitter = db.get(Submitter, sub.submitter_id)
 
@@ -331,16 +324,13 @@ def update_submission(
         )
 
 
-    if current_user.role != UserRole.admin:
-        assignment = db.get(Assignment, sub.assignment_id)
-        course = db.get(Course, assignment.course_id) if assignment else None
-        if not course or course.instructor_id != current_user.id:
-            raise HTTPException(
-
-                status_code=status.HTTP_403_FORBIDDEN,
-
-                detail="Only the course instructor or admin can update this submission",
-            )
+    assignment = db.get(Assignment, sub.assignment_id)
+    course = db.get(Course, assignment.course_id) if assignment else None
+    if not course or not has_capability_or_owner(current_user, "manage_submission", course.instructor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can update this submission",
+        )
 
     if payload.artifact_ids is not None:
         manager = get_artifact_manager(db)
@@ -377,14 +367,13 @@ def delete_submission(
         )
 
 
-    if current_user.role != UserRole.admin:
-        assignment = db.get(Assignment, sub.assignment_id)
-        course = db.get(Course, assignment.course_id) if assignment else None
-        if not course or course.instructor_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the course instructor or admin can delete this submission",
-            )
+    assignment = db.get(Assignment, sub.assignment_id)
+    course = db.get(Course, assignment.course_id) if assignment else None
+    if not course or not has_capability_or_owner(current_user, "manage_submission", course.instructor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can delete this submission",
+        )
 
 
     db.delete(sub)
@@ -405,18 +394,13 @@ def update_submission_draft(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
-    if current_user.role != UserRole.admin:
-        assignment = db.get(Assignment, sub.assignment_id)
-        course = db.get(Course, assignment.course_id) if assignment else None
-        if (
-            current_user.role != UserRole.professor
-            or not course
-            or course.instructor_id != current_user.id
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the course instructor or admin can edit drafts",
-            )
+    assignment = db.get(Assignment, sub.assignment_id)
+    course = db.get(Course, assignment.course_id) if assignment else None
+    if not course or not has_capability_or_owner(current_user, "manage_submission", course.instructor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can edit drafts",
+        )
 
     data = payload.model_dump(exclude_unset=True)
     if not data:
@@ -459,18 +443,13 @@ def return_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
-    if current_user.role != UserRole.admin:
-        assignment = db.get(Assignment, sub.assignment_id)
-        course = db.get(Course, assignment.course_id) if assignment else None
-        if (
-            current_user.role != UserRole.professor
-            or not course
-            or course.instructor_id != current_user.id
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the course instructor or admin can return submissions",
-            )
+    assignment = db.get(Assignment, sub.assignment_id)
+    course = db.get(Course, assignment.course_id) if assignment else None
+    if not course or not has_capability_or_owner(current_user, "manage_submission", course.instructor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can return submissions",
+        )
 
     try:
         mgr = get_submission_manager(db)
@@ -501,20 +480,15 @@ def get_submission_timeline(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
-    if current_user.role != UserRole.admin:
-        if current_user.role == UserRole.professor:
-            assignment = db.get(Assignment, sub.assignment_id)
-            course = db.get(Course, assignment.course_id) if assignment else None
-            if not course or course.instructor_id != current_user.id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Not authorized to view this submission's timeline",
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only instructors or admin can view the submission timeline",
-            )
+    assignment = db.get(Assignment, sub.assignment_id)
+    course = db.get(Course, assignment.course_id) if assignment else None
+    if not course or not has_capability_or_owner(
+        current_user, "view_submission_timeline", course.instructor_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this submission's timeline",
+        )
 
     events = (
         db.query(SubmissionEvent)

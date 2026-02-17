@@ -1,11 +1,12 @@
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.models.enrollment import Enrollment
 from fair_platform.backend.data.models.course import Course
-from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.api.schema.enrollment import (
     EnrollmentCreate,
     EnrollmentBulkCreate,
@@ -14,6 +15,10 @@ from fair_platform.backend.api.schema.enrollment import (
 )
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.core.security.permissions import (
+    has_capability,
+    has_capability_or_owner,
+)
 
 router = APIRouter()
 
@@ -32,7 +37,7 @@ def create_enrollment(
         )
 
     # Only admin or the course instructor can enroll students
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "manage_enrollments_any", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can enroll students",
@@ -92,7 +97,7 @@ def bulk_create_enrollments(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if current_user.role != UserRole.admin and course.instructor_id != current_user.id:
+    if not has_capability_or_owner(current_user, "manage_enrollments_any", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can enroll students",
@@ -142,10 +147,10 @@ def join_course_by_code(
     current_user: User = Depends(get_current_user),
 ):
     """Allow a student to self-enroll using a class code."""
-    if current_user.role != UserRole.student:
+    if not has_capability(current_user, "join_course"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only students can join courses with a code",
+            detail="You are not allowed to join courses with a code",
         )
 
     course = (
@@ -208,16 +213,18 @@ def list_enrollments(
     """List enrollments. Students can only see their own enrollments."""
     query = db.query(Enrollment)
 
-    if current_user.role == UserRole.student:
+    if has_capability(current_user, "update_any_course"):
+        pass
+    elif has_capability(current_user, "create_course"):
+        query = query.join(Course).filter(
+            or_(
+                Enrollment.user_id == current_user.id,
+                Course.instructor_id == current_user.id,
+            )
+        )
+    else:
         # Students can only see their own enrollments
         query = query.filter(Enrollment.user_id == current_user.id)
-    elif current_user.role == UserRole.professor:
-        # Professors see enrollments for their own courses (or their own if user_id matches)
-        if user_id and user_id == current_user.id:
-            query = query.filter(Enrollment.user_id == current_user.id)
-        else:
-            query = query.join(Course).filter(Course.instructor_id == current_user.id)
-    # Admin sees all
 
     if course_id is not None:
         query = query.filter(Enrollment.course_id == course_id)
@@ -254,8 +261,8 @@ def delete_enrollment(
         )
 
     course = db.get(Course, enrollment.course_id)
-    if current_user.role != UserRole.admin and (
-        not course or course.instructor_id != current_user.id
+    if not has_capability_or_owner(
+        current_user, "manage_enrollments_any", course.instructor_id if course else None
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
