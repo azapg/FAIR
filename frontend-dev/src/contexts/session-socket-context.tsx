@@ -8,12 +8,16 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const {
     socket,
-    currentSession,
+    activeAssignmentId,
+    sessionsByAssignment,
     setSocket,
     setCurrentSession,
     addLog,
     clearLogs,
   } = useSessionStore();
+  const currentSession = activeAssignmentId
+    ? sessionsByAssignment[activeAssignmentId] ?? null
+    : null;
   const lastSessionId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -30,7 +34,8 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
     }
 
     // New session: proactively clear any stale logs before connecting
-    clearLogs();
+    if (!activeAssignmentId) return;
+    clearLogs(activeAssignmentId);
 
     const wsUrl = getWebSocketUrl(`/api/sessions/${currentSession.id}`);
     const newSocket = new WebSocket(wsUrl);
@@ -38,13 +43,17 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
 
     newSocket.onopen = () => {
       lastSessionId.current = currentSession.id;
-      clearLogs();
+      if (activeAssignmentId) {
+        clearLogs(activeAssignmentId);
+      }
     };
 
     newSocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       try {
-        addLog(data);
+        if (activeAssignmentId) {
+          addLog(activeAssignmentId, data);
+        }
       } catch (e) {
         // noop
       }
@@ -52,7 +61,9 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
       if (data.type == "close") {
         newSocket.close();
         setSocket(null);
-        setCurrentSession(null);
+        if (activeAssignmentId) {
+          setCurrentSession(activeAssignmentId, null);
+        }
         return;
       }
 
@@ -88,7 +99,7 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
         newSocket.close();
       }
     };
-  }, [currentSession?.id]);
+  }, [activeAssignmentId, currentSession?.id]);
 
   return <>{children}</>;
 }

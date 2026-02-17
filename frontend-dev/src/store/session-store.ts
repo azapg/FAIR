@@ -56,40 +56,76 @@ export type SessionLog = {
 
 type State = {
   socket: WebSocket | null;
-  currentSession: Session | null;
-  sessionLogs: SessionLog[];
-  lastLogIndex: number;
+  activeAssignmentId: string | null;
+  sessionsByAssignment: Record<string, Session | null>;
+  logsByAssignment: Record<string, SessionLog[]>;
+  lastLogIndexByAssignment: Record<string, number>;
 }
 
 type Actions = {
   setSocket: (socket: State['socket']) => void;
-  setCurrentSession: (session: State['currentSession']) => void;
-  setLogs: (logs: SessionLog[]) => void;
-  addLog: (log: SessionLog) => void;
-  clearLogs: () => void;
+  setCurrentSession: (assignmentId: string, session: Session | null) => void;
+  setLogs: (assignmentId: string, logs: SessionLog[]) => void;
+  addLog: (assignmentId: string, log: SessionLog) => void;
+  clearLogs: (assignmentId: string) => void;
 }
 
 export const useSessionStore = create<State & Actions>()(
   persist(
     (set) => ({
       socket: null,
-      currentSession: null,
-      sessionLogs: [],
-      lastLogIndex: -1,
+      activeAssignmentId: null,
+      sessionsByAssignment: {},
+      logsByAssignment: {},
+      lastLogIndexByAssignment: {},
       setSocket: (socket) => set({ socket }),
-      setCurrentSession: (session) => set({ currentSession: session }),
-      setLogs: (logs) => set({ sessionLogs: logs, lastLogIndex: logs.reduce((max, l) => Math.max(max, l.index ?? -1), -1) }),
-      addLog: (log) => set((state) => {
-        if (typeof log.index === 'number' && log.index <= state.lastLogIndex) {
+      setCurrentSession: (assignmentId, session) =>
+        set((state) => ({
+          activeAssignmentId: session
+            ? assignmentId
+            : state.activeAssignmentId === assignmentId
+              ? null
+              : state.activeAssignmentId,
+          sessionsByAssignment: {
+            ...state.sessionsByAssignment,
+            [assignmentId]: session,
+          },
+        })),
+      setLogs: (assignmentId, logs) =>
+        set((state) => ({
+          logsByAssignment: { ...state.logsByAssignment, [assignmentId]: logs },
+          lastLogIndexByAssignment: {
+            ...state.lastLogIndexByAssignment,
+            [assignmentId]: logs.reduce((max, l) => Math.max(max, l.index ?? -1), -1),
+          },
+        })),
+      addLog: (assignmentId, log) => set((state) => {
+        const lastLogIndex = state.lastLogIndexByAssignment[assignmentId] ?? -1;
+        if (typeof log.index === 'number' && log.index <= lastLogIndex) {
           // Ignore duplicates/out-of-order old entries
           return state;
         }
         return {
-          sessionLogs: [...state.sessionLogs, log],
-          lastLogIndex: typeof log.index === 'number' ? log.index : state.lastLogIndex,
+          logsByAssignment: {
+            ...state.logsByAssignment,
+            [assignmentId]: [...(state.logsByAssignment[assignmentId] ?? []), log],
+          },
+          lastLogIndexByAssignment: {
+            ...state.lastLogIndexByAssignment,
+            [assignmentId]: typeof log.index === 'number' ? log.index : lastLogIndex,
+          },
         };
       }),
-      clearLogs: () => set({ sessionLogs: [], lastLogIndex: -1 }),
+      clearLogs: (assignmentId) => set((state) => ({
+        logsByAssignment: {
+          ...state.logsByAssignment,
+          [assignmentId]: [],
+        },
+        lastLogIndexByAssignment: {
+          ...state.lastLogIndexByAssignment,
+          [assignmentId]: -1,
+        },
+      })),
     }),
     {
       name: 'fair-session'

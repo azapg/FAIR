@@ -84,7 +84,9 @@ export function WorkflowsSidebar({
 
   const setCurrentSession = useSessionStore((state) => state.setCurrentSession);
   const clearLogs = useSessionStore((state) => state.clearLogs);
-  const currentSession = useSessionStore((state) => state.currentSession);
+  const currentSession = useSessionStore(
+    (state) => state.sessionsByAssignment[assignmentId] ?? null,
+  );
 
   const [isRunning, setIsRunning] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
@@ -114,7 +116,7 @@ export function WorkflowsSidebar({
     if (isRunning || !workflow || !activeWorkflowId) return;
     setIsRunning(true);
     // Open logs immediately and clear any stale logs to avoid flicker from previous sessions
-    clearLogs();
+    clearLogs(assignmentId);
     setShowLogs(true);
     try {
       await persistDrafts();
@@ -122,7 +124,7 @@ export function WorkflowsSidebar({
         workflow_id: activeWorkflowId,
         submission_ids: submissions?.map((s) => s.id) || [],
       });
-      setCurrentSession(response.data.session);
+      setCurrentSession(assignmentId, response.data.session);
     } catch (error) {
       const errorMessage = isAxiosError(error)
         ? error.response?.data?.detail
@@ -174,7 +176,10 @@ export function WorkflowsSidebar({
       )}
       <Separator />
       {showLogs ? (
-        <ExecutionLogsView onBack={() => setShowLogs(false)} />
+        <ExecutionLogsView
+          assignmentId={assignmentId}
+          onBack={() => setShowLogs(false)}
+        />
       ) : workflow && draft ? (
         <>
             <SidebarContent>

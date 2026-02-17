@@ -8,8 +8,20 @@ import { SidebarContent } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LogRow } from "@/app/assignment/components/sidebar/logs/log-row";
 
-export function ExecutionLogsView({ onBack }: { onBack: () => void }) {
-  const { currentSession, sessionLogs, setLogs } = useSessionStore();
+export function ExecutionLogsView({
+  onBack,
+  assignmentId,
+}: {
+  onBack: () => void;
+  assignmentId: string;
+}) {
+  const currentSession = useSessionStore(
+    (state) => state.sessionsByAssignment[assignmentId] ?? null,
+  );
+  const sessionLogs = useSessionStore(
+    (state) => state.logsByAssignment[assignmentId] ?? [],
+  );
+  const setLogs = useSessionStore((state) => state.setLogs);
 
   useEffect(() => {
     // Backfill from API if we have a session but no logs yet (e.g., page reload)
@@ -18,13 +30,13 @@ export function ExecutionLogsView({ onBack }: { onBack: () => void }) {
       if (sessionLogs.length > 0) return;
       try {
         const res = await api.get(`/sessions/${currentSession.id}/logs`);
-        setLogs(res.data || []);
+        setLogs(assignmentId, res.data || []);
       } catch (e) {
         // Silently ignore; live updates will still populate logs
       }
     };
     void load();
-  }, [currentSession?.id]);
+  }, [assignmentId, currentSession?.id, setLogs, sessionLogs.length]);
 
   const grouped = useMemo(() => sessionLogs, [sessionLogs]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
