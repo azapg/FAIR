@@ -594,7 +594,7 @@ class ArtifactManager:
             True if user can view, False otherwise
         """
         # Admins can view everything
-        if has_capability(user, "manage_users"):
+        if has_capability(user, "view_all_artifacts"):
             return True
         
         # Creator can always view their own artifacts

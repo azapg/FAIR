@@ -62,7 +62,7 @@ def list_rubrics(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if has_capability(current_user, "manage_users"):
+    if has_capability(current_user, "view_all_rubrics"):
         rubrics = db.query(Rubric).all()
     else:
         rubrics = db.query(Rubric).filter(Rubric.created_by_id == current_user.id).all()

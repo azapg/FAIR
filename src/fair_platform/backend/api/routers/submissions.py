@@ -167,7 +167,7 @@ def list_submissions(
     """List all submissions, optionally filtered by assignment ID."""
     query = db.query(Submission)
 
-    if has_capability(current_user, "manage_users"):
+    if has_capability(current_user, "view_all_submissions"):
         pass
     elif has_capability(current_user, "create_submission"):
         query = (
@@ -259,7 +259,7 @@ def get_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
-    if not has_capability(current_user, "manage_users"):
+    if not has_capability(current_user, "view_all_submissions"):
         assignment = db.get(Assignment, sub.assignment_id)
         course = db.get(Course, assignment.course_id) if assignment else None
         can_manage = bool(

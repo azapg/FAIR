@@ -8,6 +8,7 @@ from fair_platform.backend.data.models.user import User, UserRole
 Capability = str
 
 ADMIN_CAPABILITIES: set[Capability] = {
+    "admin",
     "manage_users",
     "create_course",
     "update_any_course",
@@ -23,16 +24,20 @@ ADMIN_CAPABILITIES: set[Capability] = {
     "list_plugins",
     "create_assignment",
     "manage_assignment",
+    "view_all_assignments",
     "create_submission",
     "manage_submission",
+    "view_all_submissions",
     "view_submission_timeline",
     "update_submission_results",
     "create_artifact",
     "manage_artifact",
+    "view_all_artifacts",
     "cleanup_orphaned_artifacts",
     "create_rubric",
     "generate_rubric",
     "manage_rubric",
+    "view_all_rubrics",
 }
 
 INSTRUCTOR_CAPABILITIES: set[Capability] = {
@@ -112,7 +117,7 @@ def has_capability_and_owner(
     capability: Capability,
     owner_id: UUID | None,
     *,
-    admin_capability: Capability = "manage_users",
+    admin_capability: Capability = "admin",
 ) -> bool:
     if has_capability(user, admin_capability):
         return True

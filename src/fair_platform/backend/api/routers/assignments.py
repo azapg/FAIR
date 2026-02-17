@@ -166,7 +166,7 @@ def list_assignments(
 
         query = query.filter(Assignment.course_id == course_id)
 
-    if has_capability(current_user, "manage_users"):
+    if has_capability(current_user, "view_all_assignments"):
         return query.all()
     elif not has_capability(current_user, "create_assignment"):
         # Students see assignments from courses they are enrolled in
