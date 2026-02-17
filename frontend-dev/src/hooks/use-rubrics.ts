@@ -75,7 +75,7 @@ const deleteRubric = async (id: string): Promise<void> => {
 const generateRubric = async (
   data: GenerateRubricInput,
 ): Promise<GenerateRubricOutput> => {
-  const response = await api.post("/rubrics/generate", data);
+  const response = await api.post("/rubrics/generate", data, { timeout: 60000 });
   return response.data;
 };
 
