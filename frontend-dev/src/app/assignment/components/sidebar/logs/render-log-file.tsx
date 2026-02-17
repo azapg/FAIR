@@ -60,7 +60,7 @@ export function RenderLogFile({ log }: { log: SessionLog }) {
           <DialogTitle className="text-sm font-semibold">{name}</DialogTitle>
           <div className="max-h-[78vh] overflow-auto rounded border p-3">
             {fileType === "markdown" ? (
-              <MarkdownRenderer className="text-sm">{content}</MarkdownRenderer>
+              <MarkdownRenderer className="text-sm" allowSafeHtml>{content}</MarkdownRenderer>
             ) : (
               <pre className="whitespace-pre-wrap break-words text-xs">{content}</pre>
             )}
