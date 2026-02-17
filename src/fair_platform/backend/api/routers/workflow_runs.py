@@ -18,7 +18,7 @@ from fair_platform.backend.data.models import (
 )
 from fair_platform.backend.core.security.permissions import (
     has_capability,
-    has_capability_or_owner,
+    has_capability_and_owner,
 )
 
 router = APIRouter()
@@ -29,7 +29,7 @@ def _assert_course_access(db: Session, user: User, course_id: UUID):
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
-    if not has_capability_or_owner(user, "read_workflow_runs", course.instructor_id):
+    if not has_capability_and_owner(user, "read_workflow_runs", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can access these workflow runs",

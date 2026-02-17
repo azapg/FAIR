@@ -22,7 +22,7 @@ from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.core.security.permissions import (
     has_capability,
-    has_capability_or_owner,
+    has_capability_and_owner,
 )
 from fair_platform.backend.core.security.dependencies import require_capability
 
@@ -215,7 +215,7 @@ def get_course(
             )
 
     include_code = can_manage_course
-    if detailed:
+    if detailed and can_manage_course:
         return {
             "id": course.id,
             "name": course.name,
@@ -226,6 +226,10 @@ def get_course(
             "enrollment_code": course.enrollment_code if include_code else None,
             "is_enrollment_enabled": course.is_enrollment_enabled if include_code else None,
         }
+
+    if detailed and not can_manage_course:
+        # Limited view for enrolled/non-owner users.
+        return _course_to_response(course, include_code=False)
 
     return _course_to_response(course, include_code=include_code)
 
@@ -248,7 +252,7 @@ def update_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_or_owner(current_user, "update_any_course", course.instructor_id):
+    if not has_capability_and_owner(current_user, "update_own_course", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this course",
@@ -302,7 +306,7 @@ def reset_enrollment_code(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_or_owner(current_user, "manage_course_settings_any", course.instructor_id):
+    if not has_capability_and_owner(current_user, "manage_course_settings_own", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can reset this code",
@@ -334,7 +338,7 @@ def update_course_settings(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_or_owner(current_user, "manage_course_settings_any", course.instructor_id):
+    if not has_capability_and_owner(current_user, "manage_course_settings_own", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update course settings",
@@ -364,7 +368,7 @@ def delete_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_or_owner(current_user, "delete_any_course", course.instructor_id):
+    if not has_capability_and_owner(current_user, "delete_own_course", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this course",

@@ -29,7 +29,10 @@ from fair_platform.backend.services.artifact_manager import get_artifact_manager
 from fair_platform.backend.services.submission_manager import get_submission_manager
 from fair_platform.backend.data.models.workflow_run import WorkflowRun
 from fair_platform.backend.data.models.submission_event import SubmissionEvent
-from fair_platform.backend.core.security.permissions import has_capability, has_capability_or_owner
+from fair_platform.backend.core.security.permissions import (
+    has_capability,
+    has_capability_and_owner,
+)
 
 router = APIRouter()
 
@@ -63,7 +66,7 @@ async def create_submission(
         )
 
     course = db.get(Course, assignment.course_id)
-    if not course or not has_capability_or_owner(
+    if not course or not has_capability_and_owner(
         current_user, "create_submission", course.instructor_id
     ):
         raise HTTPException(
@@ -260,7 +263,7 @@ def get_submission(
         assignment = db.get(Assignment, sub.assignment_id)
         course = db.get(Course, assignment.course_id) if assignment else None
         can_manage = bool(
-            course and has_capability_or_owner(current_user, "manage_submission", course.instructor_id)
+            course and has_capability_and_owner(current_user, "manage_submission", course.instructor_id)
         )
         if not can_manage and sub.created_by_id != current_user.id:
             raise HTTPException(
@@ -326,7 +329,7 @@ def update_submission(
 
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_or_owner(current_user, "manage_submission", course.instructor_id):
+    if not course or not has_capability_and_owner(current_user, "manage_submission", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this submission",
@@ -369,7 +372,7 @@ def delete_submission(
 
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_or_owner(current_user, "manage_submission", course.instructor_id):
+    if not course or not has_capability_and_owner(current_user, "manage_submission", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this submission",
@@ -396,7 +399,7 @@ def update_submission_draft(
 
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_or_owner(current_user, "manage_submission", course.instructor_id):
+    if not course or not has_capability_and_owner(current_user, "manage_submission", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can edit drafts",
@@ -445,7 +448,7 @@ def return_submission(
 
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_or_owner(current_user, "manage_submission", course.instructor_id):
+    if not course or not has_capability_and_owner(current_user, "manage_submission", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can return submissions",
@@ -482,7 +485,7 @@ def get_submission_timeline(
 
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_or_owner(
+    if not course or not has_capability_and_owner(
         current_user, "view_submission_timeline", course.instructor_id
     ):
         raise HTTPException(

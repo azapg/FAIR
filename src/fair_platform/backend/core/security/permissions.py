@@ -107,6 +107,22 @@ def has_capability_or_owner(
     return owner_id is not None and owner_id == user.id
 
 
+def has_capability_and_owner(
+    user: User,
+    capability: Capability,
+    owner_id: UUID | None,
+    *,
+    admin_capability: Capability = "manage_users",
+) -> bool:
+    if has_capability(user, admin_capability):
+        return True
+    return (
+        has_capability(user, capability)
+        and owner_id is not None
+        and owner_id == user.id
+    )
+
+
 def has_capability_or_resolved_owner(
     user: User,
     capability: Capability,

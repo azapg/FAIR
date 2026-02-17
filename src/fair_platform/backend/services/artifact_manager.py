@@ -12,7 +12,10 @@ from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.submission import Submission
 from fair_platform.backend.data.models.enrollment import Enrollment
 from fair_platform.backend.data.storage import storage
-from fair_platform.backend.core.security.permissions import has_capability, has_capability_or_owner
+from fair_platform.backend.core.security.permissions import (
+    has_capability,
+    has_capability_and_owner,
+)
 
 
 class ArtifactManager:
@@ -605,7 +608,7 @@ class ArtifactManager:
         # Course instructors can view course-level artifacts
         if artifact.course_id and has_capability(user, "manage_artifact"):
             course = self.db.get(Course, artifact.course_id)
-            if course and has_capability_or_owner(user, "manage_artifact", course.instructor_id):
+            if course and has_capability_and_owner(user, "manage_artifact", course.instructor_id):
                 return True
         
         # Students can view artifacts from their own submissions
@@ -613,17 +616,16 @@ class ArtifactManager:
             for submission in artifact.submissions:
                 if submission.submitter_id == user.id:
                     return True
-        
-        # Course and assignment level artifacts — check enrollment
-        if artifact.access_level in [AccessLevel.course, AccessLevel.assignment]:
-            if artifact.course_id:
-                enrollment = self.db.query(Enrollment).filter(
-                    Enrollment.user_id == user.id,
-                    Enrollment.course_id == artifact.course_id,
-                ).first()
-                if enrollment:
-                    return True
-        
+
+        # Enrolled users can view course and assignment scoped artifacts.
+        if artifact.access_level in [AccessLevel.course, AccessLevel.assignment] and artifact.course_id:
+            enrollment = self.db.query(Enrollment).filter(
+                Enrollment.user_id == user.id,
+                Enrollment.course_id == artifact.course_id,
+            ).first()
+            if enrollment:
+                return True
+
         return False
     
     def can_edit(self, user: User, artifact: Artifact) -> bool:
@@ -649,7 +651,7 @@ class ArtifactManager:
 
         if artifact.course_id and has_capability(user, "manage_artifact"):
             course = self.db.get(Course, artifact.course_id)
-            if course and has_capability_or_owner(user, "manage_artifact", course.instructor_id):
+            if course and has_capability_and_owner(user, "manage_artifact", course.instructor_id):
                 valid_levels = [AccessLevel.course, AccessLevel.assignment, AccessLevel.public]
                 if artifact.access_level in valid_levels:
                     return True
@@ -683,7 +685,7 @@ class ArtifactManager:
         # Course instructors can delete certain artifacts from their courses
         if artifact.course_id and has_capability(user, "manage_artifact"):
             course = self.db.get(Course, artifact.course_id)
-            if course and has_capability_or_owner(user, "manage_artifact", course.instructor_id):
+            if course and has_capability_and_owner(user, "manage_artifact", course.instructor_id):
                 # Can delete course, assignment, and public artifacts
                 valid_levels = [AccessLevel.course, AccessLevel.assignment, AccessLevel.public]
                 if artifact.access_level in valid_levels:

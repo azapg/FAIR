@@ -18,7 +18,10 @@ from fair_platform.backend.api.schema.assignment import (
     AssignmentUpdate,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.core.security.permissions import has_capability, has_capability_or_owner
+from fair_platform.backend.core.security.permissions import (
+    has_capability,
+    has_capability_and_owner,
+)
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.enrollment import Enrollment
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
@@ -59,7 +62,7 @@ async def create_assignment(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
-    if not has_capability_or_owner(current_user, "create_assignment", course.instructor_id):
+    if not has_capability_and_owner(current_user, "create_assignment", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can create assignments",
@@ -201,7 +204,7 @@ def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_or_owner(current_user, "manage_assignment", course.instructor_id):
+    if not has_capability_and_owner(current_user, "manage_assignment", course.instructor_id):
         enrollment = (
             db.query(Enrollment)
             .filter(
@@ -238,7 +241,7 @@ def update_assignment(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
 
-    if not has_capability_or_owner(current_user, "manage_assignment", course.instructor_id):
+    if not has_capability_and_owner(current_user, "manage_assignment", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this assignment",
@@ -280,7 +283,7 @@ def delete_assignment(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
 
-    if not has_capability_or_owner(current_user, "manage_assignment", course.instructor_id):
+    if not has_capability_and_owner(current_user, "manage_assignment", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this assignment",

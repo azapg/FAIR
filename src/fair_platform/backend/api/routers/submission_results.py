@@ -19,7 +19,7 @@ from fair_platform.backend.data.models import (
     SubmissionResult,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.core.security.permissions import has_capability_or_owner
+from fair_platform.backend.core.security.permissions import has_capability_and_owner
 from fair_platform.backend.data.models.user import User
 
 
@@ -88,7 +88,7 @@ def update_result(
 
     assignment = db.get(Assignment, submission.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_or_owner(
+    if not course or not has_capability_and_owner(
         current_user, "update_submission_results", course.instructor_id
     ):
         raise HTTPException(

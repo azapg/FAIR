@@ -15,7 +15,10 @@ from fair_platform.backend.api.schema.rubric import (
     RubricGenerateResponse,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.core.security.permissions import has_capability, has_capability_or_owner
+from fair_platform.backend.core.security.permissions import (
+    has_capability,
+    has_capability_and_owner,
+)
 from fair_platform.backend.services.rubric_service import get_rubric_service
 
 router = APIRouter()
@@ -112,7 +115,7 @@ def get_rubric(
             detail="Rubric not found",
         )
 
-    if not has_capability_or_owner(current_user, "manage_rubric", rubric.created_by_id):
+    if not has_capability_and_owner(current_user, "manage_rubric", rubric.created_by_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this rubric",
@@ -135,7 +138,7 @@ def update_rubric(
             detail="Rubric not found",
         )
 
-    if not has_capability_or_owner(current_user, "manage_rubric", rubric.created_by_id):
+    if not has_capability_and_owner(current_user, "manage_rubric", rubric.created_by_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this rubric",
@@ -186,7 +189,7 @@ def delete_rubric(
             detail="Rubric not found",
         )
 
-    if not has_capability_or_owner(current_user, "manage_rubric", rubric.created_by_id):
+    if not has_capability_and_owner(current_user, "manage_rubric", rubric.created_by_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this rubric",
