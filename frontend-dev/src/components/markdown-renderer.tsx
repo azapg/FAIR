@@ -50,7 +50,7 @@ function htmlNodeToMarkdownNodes(html: string): any[] {
         type: "image",
         url: src,
         alt: element.getAttribute("alt") ?? "",
-        title: title || undefined,
+        title: title ?? undefined,
       }];
     }
 
@@ -78,9 +78,10 @@ function remarkSafeLogHtml() {
       node.children = node.children.flatMap((child: any) => {
         if (child?.type === "html" && typeof child.value === "string") {
           return htmlNodeToMarkdownNodes(child.value);
+        } else {
+          visit(child);
+          return [child];
         }
-        visit(child);
-        return [child];
       });
     };
 
