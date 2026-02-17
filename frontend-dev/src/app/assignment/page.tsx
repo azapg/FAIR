@@ -30,16 +30,21 @@ import { useSubmissions } from "@/hooks/use-submissions";
 import { useTranslation } from "react-i18next";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArtifactAction } from "@/components/artifact-action";
+import { useAuth } from "@/contexts/auth-context";
+import { usePermission } from "@/hooks/use-permission";
 
 export default function AssignmentPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const { data: assignment, isLoading, isError } = useAssignment(assignmentId!);
   // TODO: This is ugly, try getting courseId from somewhere else, maybe from parents
-  const { data: course } = useCourse(assignment?.courseId!);
+  const { data: course } = useCourse(assignment?.courseId, Boolean(assignment?.courseId));
+  const { user } = useAuth();
+  const canManageUsers = usePermission("manage_users");
+  const canManageAssignmentUi = !!user && !!course && (course.instructorId === user.id || canManageUsers);
   const setActiveCourseId = useWorkflowStore(
     (state) => state.setActiveCourseId,
   );
-  const { isLoading: isLoadingWorkflows } = useWorkflows();
+  const { isLoading: isLoadingWorkflows } = useWorkflows(canManageAssignmentUi);
   const {
     data: artifacts,
     isLoading: isLoadingArtifacts,
@@ -64,7 +69,7 @@ export default function AssignmentPage() {
     isLoadingArtifacts ||
     isLoadingSubmissions;
 
-  const columns = useSubmissionColumns();
+  const columns = useSubmissionColumns(canManageAssignmentUi);
 
   useEffect(() => {
     if (course?.id) {
@@ -85,6 +90,9 @@ export default function AssignmentPage() {
   ) {
     return <div>{t("errors.errorLoadingAssignment")}</div>;
   }
+
+  const isCourseOwner = !!user && course.instructorId === user.id;
+  const isInstructorView = isCourseOwner || canManageUsers;
 
   return (
     <WorkflowsSidebarProvider
@@ -119,7 +127,7 @@ export default function AssignmentPage() {
               },
             ]}
           />
-          <WorkflowsSidebarTrigger />
+          {isInstructorView && <WorkflowsSidebarTrigger />}
         </div>
         <div className={"px-8 pt-2"}>
           <div className={"mb-5"}>
@@ -170,9 +178,11 @@ export default function AssignmentPage() {
                           )
                         : t("common.noDeadline")}
                     </Button>
-                    <Button variant={"ghost"} size={"sm"}>
-                      <Plus />
-                    </Button>
+                    {isInstructorView && (
+                      <Button variant={"ghost"} size={"sm"}>
+                        <Plus />
+                      </Button>
+                    )}
                   </PropertyValue>
                 </Property>
 
@@ -192,9 +202,11 @@ export default function AssignmentPage() {
                     ) : (
                       <></>
                     )}
-                    <Button variant={"ghost"} size={"sm"}>
-                      <Plus />
-                    </Button>
+                    {isInstructorView && (
+                      <Button variant={"ghost"} size={"sm"}>
+                        <Plus />
+                      </Button>
+                    )}
                   </PropertyValue>
                 </Property>
             </PropertiesDisplay>
@@ -203,22 +215,30 @@ export default function AssignmentPage() {
           <div className={"space-y-3 mb-5"}>
             <div className={"flex justify-between items-center mb-3"}>
               <h2 className={"text-xl font-semibold"}>{t("submissions.title")}</h2>
-              <Button size="sm" onClick={() => setIsCreateSubmissionOpen(true)}>
-                <Plus /> {t("common.add")}
-              </Button>
+              {isInstructorView && (
+                <Button size="sm" onClick={() => setIsCreateSubmissionOpen(true)}>
+                  <Plus /> {t("common.add")}
+                </Button>
+              )}
             </div>
-            <SubmissionsTable columns={columns} data={submissions ?? []} onCreateSubmission={() => setIsCreateSubmissionOpen(true)}
+            <SubmissionsTable
+              columns={columns}
+              data={submissions ?? []}
+              canManage={isInstructorView}
+              onCreateSubmission={isInstructorView ? () => setIsCreateSubmissionOpen(true) : undefined}
             />
-            <CreateSubmissionDialog
-              assignmentId={assignment.id.toString()}
-              open={isCreateSubmissionOpen}
-              onOpenChange={setIsCreateSubmissionOpen}
-            />
+            {isInstructorView && (
+              <CreateSubmissionDialog
+                assignmentId={assignment.id.toString()}
+                open={isCreateSubmissionOpen}
+                onOpenChange={setIsCreateSubmissionOpen}
+              />
+            )}
           </div>
         </div>
         </div>
       </ScrollArea>
-      <WorkflowsSidebar side={"right"} assignmentId={assignmentId ?? ""} />
+      {isInstructorView && <WorkflowsSidebar side={"right"} assignmentId={assignmentId ?? ""} />}
     </WorkflowsSidebarProvider>
   );
 }

@@ -20,9 +20,11 @@ import {
 export default function AssignmentsTab({
   assignments: initialAssignments = [],
   courseId,
+  canManageAssignments = true,
 }: {
   assignments?: Assignment[];
   courseId?: string;
+  canManageAssignments?: boolean;
 }) {
   const [assignments, setAssignments] = useState<Assignment[]>(() => initialAssignments);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
@@ -31,13 +33,14 @@ export default function AssignmentsTab({
   const {t} = useTranslation();
   const deleteAssignment = useDeleteAssignment();
   const columns = useAssignmentColumns({
-    onEdit: (assignment) => {
+    canManage: canManageAssignments,
+    onEdit: canManageAssignments ? (assignment) => {
       setEditingAssignment(assignment);
       setIsEditOpen(true);
-    },
-    onDelete: (assignment) => {
+    } : undefined,
+    onDelete: canManageAssignments ? (assignment) => {
       setDeleteTarget(assignment);
-    },
+    } : undefined,
   });
 
   useEffect(() => {
@@ -70,19 +73,23 @@ export default function AssignmentsTab({
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl">{t("assignments.title")}</h2>
-        <CreateAssignmentDialog 
-          courseId={courseId} 
-          onAssignmentCreated={handleAssignmentCreated}
-        />
+        {canManageAssignments && (
+          <CreateAssignmentDialog
+            courseId={courseId}
+            onAssignmentCreated={handleAssignmentCreated}
+          />
+        )}
       </div>
 
       <AssignmentsTable columns={columns} data={assignments}/>
-      <EditAssignmentDialog
-        assignment={editingAssignment}
-        open={isEditOpen}
-        onOpenChange={handleEditOpenChange}
-        onAssignmentUpdated={handleAssignmentUpdated}
-      />
+      {canManageAssignments && (
+        <EditAssignmentDialog
+          assignment={editingAssignment}
+          open={isEditOpen}
+          onOpenChange={handleEditOpenChange}
+          onAssignmentUpdated={handleAssignmentUpdated}
+        />
+      )}
       <AlertDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => {

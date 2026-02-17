@@ -11,7 +11,7 @@ const keys = {
   workflows: (courseId: string) => ["workflows", courseId] as const,
 };
 
-export function useWorkflows() {
+export function useWorkflows(enabled = true) {
   const drafts = useWorkflowStore((s) => s.drafts);
   const saveDraft = useWorkflowStore((s) => s.saveDraft);
   const courseId = useWorkflowStore((s) => s.activeCourseId);
@@ -19,7 +19,7 @@ export function useWorkflows() {
   const { user } = useAuth();
 
   const query = useQuery<Workflow[]>({
-    enabled: !!courseId,
+    enabled: !!courseId && enabled,
     queryKey: courseId ? keys.workflows(courseId) : ["workflows", "no-course"],
     queryFn: async () => {
       if (!courseId) return [];

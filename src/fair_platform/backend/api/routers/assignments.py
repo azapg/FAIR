@@ -29,6 +29,17 @@ from fair_platform.backend.services.artifact_manager import get_artifact_manager
 router = APIRouter()
 
 
+def _assignment_read_payload(assignment: Assignment) -> dict:
+    return {
+        "id": assignment.id,
+        "course_id": assignment.course_id,
+        "title": assignment.title,
+        "description": assignment.description,
+        "deadline": assignment.deadline,
+        "max_grade": assignment.max_grade,
+    }
+
+
 @router.post("/", response_model=AssignmentRead, status_code=status.HTTP_201_CREATED)
 async def create_assignment(
     course_id: UUID = Form(...),
@@ -171,15 +182,16 @@ def list_assignments(
         return query.all()
     elif not has_capability(current_user, "create_assignment"):
         # Students see assignments from courses they are enrolled in
-        return (
+        assignments = (
             query.join(Course)
             .join(Enrollment, Enrollment.course_id == Course.id)
             .filter(Enrollment.user_id == current_user.id)
             .all()
         )
+        return [_assignment_read_payload(a) for a in assignments]
     else:
         # Instructors in community mode can also see courses where they are enrolled.
-        return (
+        assignments = (
             query.join(Course)
             .outerjoin(Enrollment, Enrollment.course_id == Course.id)
             .filter(
@@ -189,6 +201,10 @@ def list_assignments(
             .distinct()
             .all()
         )
+        return [
+            _assignment_read_payload(a)
+            for a in assignments
+        ]
 
 @router.get("/{assignment_id}", response_model=AssignmentRead)
 def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
@@ -219,7 +235,7 @@ def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency
                 detail="Only the course instructor, admin, or enrolled users can view this assignment",
             )
 
-    return assignment
+    return _assignment_read_payload(assignment)
 
 
 @router.put("/{assignment_id}", response_model=AssignmentRead)
