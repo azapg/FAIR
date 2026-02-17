@@ -13,6 +13,7 @@ from fair_platform.backend.services.ai_service import get_ai_client, get_llm_mod
 
 
 WEIGHT_TOLERANCE = 1e-9
+RUBRIC_GENERATION_MAX_ATTEMPTS = 3
 
 
 def validate_rubric_content(content: dict) -> None:
@@ -193,28 +194,44 @@ class RubricService:
         client = get_ai_client()
         model = get_llm_model()
 
-        try:
-            response = await client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=1,
-            )
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to generate rubric content: {str(e)}",
-            ) from e
+        last_parse_validation_error: HTTPException | None = None
 
-        content = response.choices[0].message.content if response.choices else None
-        if not content:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Model returned empty rubric content",
-            )
+        for attempt in range(RUBRIC_GENERATION_MAX_ATTEMPTS):
+            try:
+                response = await client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=1,
+                )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Failed to generate rubric content: {str(e)}",
+                ) from e
 
-        parsed = _extract_rubric_json(content)
-        validate_rubric_content(parsed)
-        return parsed
+            try:
+                content = response.choices[0].message.content if response.choices else None
+                if not content:
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail="Model returned empty rubric content",
+                    )
+
+                parsed = _extract_rubric_json(content)
+                validate_rubric_content(parsed)
+                return parsed
+            except HTTPException as e:
+                last_parse_validation_error = e
+                if attempt == RUBRIC_GENERATION_MAX_ATTEMPTS - 1:
+                    raise
+
+        if last_parse_validation_error is not None:
+            raise last_parse_validation_error
+
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to generate rubric content",
+        )
 
 
 def _extract_rubric_json(content: str) -> dict:

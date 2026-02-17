@@ -69,3 +69,38 @@ async def test_generate_rubric_from_instruction_rejects_invalid_json():
             await service.generate_rubric_from_instruction("Essay rubric")
 
     assert exc_info.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_generate_rubric_from_instruction_retries_after_invalid_response():
+    invalid_output = "not-json"
+    valid_output = """{
+      "levels": ["Poor", "Fair", "Good", "Excellent"],
+      "criteria": [
+        {"name": "Content", "weight": 0.5, "levels": ["Missing", "Basic", "Solid", "Strong"]},
+        {"name": "Style", "weight": 0.5, "levels": ["Weak", "Developing", "Clear", "Excellent"]}
+      ]
+    }"""
+
+    fake_client = Mock()
+    fake_client.chat.completions.create = AsyncMock(
+        side_effect=[
+            _mock_completion_content(invalid_output),
+            _mock_completion_content(valid_output),
+        ]
+    )
+
+    service = RubricService(db=None)
+
+    with patch(
+        "fair_platform.backend.services.rubric_service.get_ai_client",
+        return_value=fake_client,
+    ), patch(
+        "fair_platform.backend.services.rubric_service.get_llm_model",
+        return_value="test-model",
+    ):
+        generated = await service.generate_rubric_from_instruction("Essay rubric")
+
+    assert generated["levels"] == ["Poor", "Fair", "Good", "Excellent"]
+    assert len(generated["criteria"]) == 2
+    assert fake_client.chat.completions.create.await_count == 2
