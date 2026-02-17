@@ -1,8 +1,8 @@
-import os  
+import os
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
-from fair_platform.backend.api.schema.user import UserCreate, UserRead
+from fair_platform.backend.api.schema.user import AuthUserRead, UserCreate
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
+from fair_platform.backend.data.models.user import UserRole
+from fair_platform.backend.core.security.permissions import auth_user_payload
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -61,7 +63,7 @@ def get_current_user(
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-    except JWTError as e:
+    except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user = db.get(User, UUID(user_id))
@@ -83,7 +85,7 @@ def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
         id=uuid4(),
         name=user_in.name,
         email=user_in.email,
-        role=user_in.role,
+        role=UserRole.user.value,
         password_hash=password_hash
     )
     db.add(user)
@@ -94,7 +96,11 @@ def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
         {"sub": str(user.id), "role": user.role},
         remember_me=False
     )
-    return {"access_token": access_token, "token_type": "bearer", "user": UserRead.model_validate(user)}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": AuthUserRead.model_validate(auth_user_payload(user)),
+    }
 
 
 @router.post("/login")
@@ -119,9 +125,9 @@ def login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/me", response_model=UserRead)
+@router.get("/me", response_model=AuthUserRead)
 def read_me(current_user: User = Depends(get_current_user)):
     """
     Return the currently authenticated user's public information.
     """
-    return current_user
+    return auth_user_payload(current_user)

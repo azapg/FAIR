@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.api.schema.user import UserRead, UserUpdate
 from fair_platform.backend.data.database import session_dependency
+from fair_platform.backend.core.security.permissions import has_capability
 
 router = APIRouter()
 
@@ -16,7 +17,7 @@ def list_users(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin:
+    if not has_capability(current_user, "manage_users"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can list users",
@@ -30,7 +31,7 @@ def get_user(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin:
+    if not has_capability(current_user, "manage_users"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can view users",
@@ -51,7 +52,7 @@ def update_user(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin:
+    if not has_capability(current_user, "manage_users"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can update users",
@@ -85,7 +86,7 @@ def delete_user(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.admin:
+    if not has_capability(current_user, "manage_users"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can delete users",

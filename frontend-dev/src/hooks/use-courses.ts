@@ -22,7 +22,7 @@ export type CourseDetail = {
     id: string,
     name: string,
     email: string,
-    role: 'professor' | 'admin' | 'student',
+    role: 'instructor' | 'admin' | 'user',
   },
   assignments: Assignment[],
   workflows: {

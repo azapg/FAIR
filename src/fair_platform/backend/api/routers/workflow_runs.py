@@ -13,28 +13,23 @@ from fair_platform.backend.data.models import (
     Course,
     Submission,
     User,
-    UserRole,
     Workflow,
     WorkflowRun,
+)
+from fair_platform.backend.core.security.permissions import (
+    has_capability,
+    has_capability_and_owner,
 )
 
 router = APIRouter()
 
 
 def _assert_course_access(db: Session, user: User, course_id: UUID):
-    if user.role == UserRole.admin:
-        return
-    if user.role != UserRole.professor:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only instructors or admin can access workflow runs",
-        )
-
     course = db.get(Course, course_id)
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
-    if course.instructor_id != user.id:
+    if not has_capability_and_owner(user, "read_workflow_runs", course.instructor_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can access these workflow runs",
@@ -67,12 +62,6 @@ def list_workflow_runs(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role not in (UserRole.admin, UserRole.professor):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only instructors or admin can access workflow runs",
-        )
-
     inferred_course_id = course_id
 
     if assignment_id:
@@ -102,7 +91,7 @@ def list_workflow_runs(
     allowed_course_ids: Optional[List[UUID]] = None
     if inferred_course_id:
         _assert_course_access(db, current_user, inferred_course_id)
-    elif current_user.role == UserRole.professor:
+    elif not has_capability(current_user, "update_any_course"):
         allowed_course_ids = [
             row[0] for row in db.query(Course.id).filter(Course.instructor_id == current_user.id).all()
         ]
@@ -151,12 +140,6 @@ def get_workflow_run(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role not in (UserRole.admin, UserRole.professor):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only instructors or admin can access workflow runs",
-        )
-
     run = (
         db.query(WorkflowRun)
         .options(
@@ -179,7 +162,7 @@ def get_workflow_run(
 
     if course_id:
         _assert_course_access(db, current_user, course_id)
-    elif current_user.role != UserRole.admin:
+    elif not has_capability(current_user, "update_any_course"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Workflow run is missing its course relationship",

@@ -28,3 +28,24 @@ This file tracks tests removed or disabled because they were AI-generated and fa
 
 - `tests/test_enhanced_artifacts.py`
   - `test_artifact_timestamps_auto_management`: `created_at` and `updated_at` differed by a few microseconds at creation time in GitHub CI.
+
+## Permissions Migration TODOs (2026-02-17)
+- [x] Add mode-aware authorization tests that run the same scenarios under both `FAIR_DEPLOYMENT_MODE=COMMUNITY` and `FAIR_DEPLOYMENT_MODE=ENTERPRISE`.
+- [x] Add a focused matrix test for `/api/auth/me` ensuring returned `capabilities` reflect role + mode combinations.
+- [x] Cover alias compatibility for legacy roles (`student`, `professor`) in auth payload normalization and DB-migrated users.
+- [x] Add API contract tests for course visibility in community mode:
+  - [x] users can see courses they own and courses they are enrolled in.
+  - [x] enrollment code visibility is restricted to owner/admin responses.
+- [ ] Add workflow/workflow-runs tests that are mode-aware:
+  - [x] community user-owner access should pass.
+  - [x] enterprise user (non-owner) should be denied where expected.
+- [ ] Add artifact permission regression tests using capability semantics rather than explicit roles:
+  - [x] create/list/update/delete with owner override.
+  - [x] cleanup endpoint restricted to `cleanup_orphaned_artifacts`.
+- [x] Add submissions/submission-results tests for:
+  - [x] `manage_submission` and `update_submission_results` checks.
+  - [x] ownership override via course instructor.
+  - [x] timeline visibility rules for non-owner users.
+- [x] Add rubrics tests for:
+  - [x] create/generate/list/get/update/delete through `create_rubric`/`manage_rubric`.
+  - [x] own-rubric access vs admin global access.

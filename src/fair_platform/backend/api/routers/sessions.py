@@ -13,6 +13,9 @@ from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User, Workflow, WorkflowRun
+from fair_platform.backend.data.models.course import Course
+from fair_platform.backend.core.security.permissions import has_capability_and_owner
+from fair_platform.backend.core.security.dependencies import require_capability
 from fair_platform.backend.services.session_manager import session_manager
 from fair_platform.sdk.events import normalize_event_message
 
@@ -37,7 +40,7 @@ class SessionLogItem(BaseModel):
     level: str
     payload: dict | None = None
 
-@router.post("/", response_model=SessionResponse)
+@router.post("/", response_model=SessionResponse, dependencies=[Depends(require_capability("run_workflow"))])
 async def create_session(
     payload: SessionCreateRequest,
     user: User = Depends(get_current_user),
@@ -51,6 +54,11 @@ async def create_session(
     workflow = db.get(Workflow, payload.workflow_id)
     if not workflow or workflow.archived:
         raise HTTPException(status_code=404, detail="Workflow not found")
+    course = db.get(Course, workflow.course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    if not has_capability_and_owner(user, "run_workflow", course.instructor_id):
+        raise HTTPException(status_code=403, detail="Not authorized to run this workflow")
 
     session = session_manager.create_session(workflow.id, payload.submission_ids, user)
     return {

@@ -3,7 +3,7 @@ import {Plus} from "lucide-react";
 import {useNavigate} from "react-router-dom";
 import {FormEvent, useState} from "react";
 import {useCourses, useCreateCourse, useDeleteCourse, Course, useJoinCourseByCode} from "@/hooks/use-courses";
-import {AuthUserRole, useAuth} from "@/contexts/auth-context";
+import {useAuth} from "@/contexts/auth-context";
 import CourseGrid from "@/app/courses/components/course-grid";
 import CourseFormDialog from "@/app/courses/components/course-form-dialog";
 import {BreadcrumbNav} from "@/components/breadcrumb-nav";
@@ -11,6 +11,7 @@ import {useTranslation} from "react-i18next";
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
+import {usePermission} from "@/hooks/use-permission";
 
 export default function CoursesPage() {
   const navigate = useNavigate();
@@ -28,9 +29,8 @@ export default function CoursesPage() {
   const [description, setDescription] = useState("");
 
   const courses: Course[] = data ?? [];
-  const isStudent = user?.role === AuthUserRole.STUDENT;
-  const canCreateCourses = isAuthenticated && !isStudent;
-  const canJoinCourses = isAuthenticated && isStudent;
+  const canCreateCourses = isAuthenticated && usePermission("create_course");
+  const canJoinCourses = isAuthenticated && usePermission("join_course");
 
   const openCreateDialog = () => {
     setName("");

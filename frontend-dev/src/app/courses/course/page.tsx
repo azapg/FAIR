@@ -15,9 +15,9 @@ import {PluginsTab} from "@/app/courses/tabs/plugins-tab";
 import {useWorkflowStore} from "@/store/workflows-store";
 import { EnrollmentControls } from "../components/enrollment-controls";
 import {useResetEnrollmentCode, useUpdateCourseSettings} from "@/hooks/use-courses";
-import {AuthUserRole, useAuth} from "@/contexts/auth-context";
-
-const allowedTabs = ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"];
+import {useAuth} from "@/contexts/auth-context";
+import {usePermission} from "@/hooks/use-permission";
+type CourseTab = "assignments" | "participants" | "runs" | "artifacts" | "workflows" | "plugins";
 
 export default function CourseDetailPage() {
   const params = useParams<{ courseId: string, tab: string }>()
@@ -26,6 +26,8 @@ export default function CourseDetailPage() {
   const location = useLocation();
   const {t} = useTranslation();
   const {user} = useAuth();
+  const canManageAnyCourseSettings = usePermission("manage_course_settings_any");
+  const canManageUsers = usePermission("manage_users");
   const {setActiveCourseId} = useWorkflowStore();
   const resetEnrollmentCode = useResetEnrollmentCode();
   const updateCourseSettings = useUpdateCourseSettings();
@@ -35,14 +37,17 @@ export default function CourseDetailPage() {
   const {isLoading, isError, data: course} = useCourse(courseId, Boolean(courseId), true);
   const {data: assignmentsList} = useAssignments(courseId ? {course_id: courseId} : undefined, Boolean(courseId));
 
-  const effectiveTab = tab && allowedTabs.includes(tab) ? tab : "assignments";
-
   useEffect(() => {
     if (!courseId || isLoading || isError || !course) return;
-    if (!tab || !allowedTabs.includes(tab)) {
+    const instructorId = "instructorId" in course ? course.instructorId : course.instructor?.id;
+    const isInstructorView = !!user && (instructorId === user.id || canManageUsers);
+    const visibleTabs: CourseTab[] = isInstructorView
+      ? ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"]
+      : ["assignments", "artifacts"];
+    if (!tab || !visibleTabs.includes(tab as CourseTab)) {
       navigate(`assignments`);
     }
-  }, [tab, courseId, navigate, basePath, isLoading, isError, course]);
+  }, [tab, courseId, navigate, basePath, isLoading, isError, course, user, canManageUsers]);
 
   useEffect(() => {
     if (courseId) {
@@ -59,10 +64,17 @@ export default function CourseDetailPage() {
   }
 
   const instructorId = "instructorId" in course ? course.instructorId : course.instructor?.id;
+  const isCourseOwner = !!user && instructorId === user.id;
+  const isCourseAdmin = !!user && canManageUsers;
+  const isInstructorView = isCourseOwner || isCourseAdmin;
+  const visibleTabs: CourseTab[] = isInstructorView
+    ? ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"]
+    : ["assignments", "artifacts"];
+  const currentTab = (tab && visibleTabs.includes(tab as CourseTab) ? tab : "assignments") as CourseTab;
+
   const showEnrollmentControls =
     !!user &&
-    (user.role === AuthUserRole.ADMIN ||
-      (user.role === AuthUserRole.PROFESSOR && instructorId === user.id));
+    (canManageAnyCourseSettings || isCourseOwner);
   const enrollmentCode =
     "enrollmentCode" in course ? course.enrollmentCode : undefined;
   const isEnrollmentEnabled =
@@ -111,39 +123,47 @@ export default function CourseDetailPage() {
           t={t}
         />
       )}
-      <Tabs value={effectiveTab} onValueChange={(val: string) => {
+      <Tabs value={currentTab} onValueChange={(val: string) => {
         if (!courseId) return;
         navigate(`${basePath}/${val}`, {replace: true});
       }}>
         <ScrollArea className={"w-full border-b"}>
           <TabsList className={"px-8 w-full"}>
             <TabsTrigger value="assignments">{t("tabs.assignments")}</TabsTrigger>
-            <TabsTrigger value="participants">{t("tabs.participants")}</TabsTrigger>
-            <TabsTrigger value="runs">{t("tabs.runs")}</TabsTrigger>
             <TabsTrigger value="artifacts">{t("tabs.artifacts")}</TabsTrigger>
-            <TabsTrigger value="workflows">{t("tabs.workflows")}</TabsTrigger>
-            <TabsTrigger value="plugins">{t("tabs.plugins")}</TabsTrigger>
+            {isInstructorView && <TabsTrigger value="participants">{t("tabs.participants")}</TabsTrigger>}
+            {isInstructorView && <TabsTrigger value="runs">{t("tabs.runs")}</TabsTrigger>}
+            {isInstructorView && <TabsTrigger value="workflows">{t("tabs.workflows")}</TabsTrigger>}
+            {isInstructorView && <TabsTrigger value="plugins">{t("tabs.plugins")}</TabsTrigger>}
           </TabsList>
           <ScrollBar orientation="horizontal" className={"hidden"}/>
         </ScrollArea>
         <TabsContent value={"assignments"} className={"px-8 py-3"}>
-          <AssignmentsTab assignments={assignments} courseId={courseId}/>
-        </TabsContent>
-        <TabsContent value={"participants"} className={"px-8"}>
-          <ParticipantsTab instructor={"instructor" in course ? course.instructor : undefined}/>
-        </TabsContent>
-        <TabsContent value={"runs"} className={"px-8"}>
-          <RunsTab courseId={courseId}/>
+          <AssignmentsTab assignments={assignments} courseId={courseId} canManageAssignments={isInstructorView}/>
         </TabsContent>
         <TabsContent value={"artifacts"} className={"px-8"}>
           <ArtifactsTab courseId={courseId} assignments={assignments}/>
         </TabsContent>
-        <TabsContent value={"workflows"} className={"px-8"}>
-          <WorkflowsTab courseId={courseId}/>
-        </TabsContent>
-        <TabsContent value={"plugins"} className={"px-8"}>
-          <PluginsTab/>
-        </TabsContent>
+        {isInstructorView && (
+          <TabsContent value={"participants"} className={"px-8"}>
+            <ParticipantsTab instructor={"instructor" in course ? course.instructor : undefined}/>
+          </TabsContent>
+        )}
+        {isInstructorView && (
+          <TabsContent value={"runs"} className={"px-8"}>
+            <RunsTab courseId={courseId}/>
+          </TabsContent>
+        )}
+        {isInstructorView && (
+          <TabsContent value={"workflows"} className={"px-8"}>
+            <WorkflowsTab courseId={courseId}/>
+          </TabsContent>
+        )}
+        {isInstructorView && (
+          <TabsContent value={"plugins"} className={"px-8"}>
+            <PluginsTab/>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

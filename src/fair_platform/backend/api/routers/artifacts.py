@@ -13,13 +13,18 @@ from fair_platform.backend.api.schema.artifact import (
     ArtifactUpdate,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.core.security.dependencies import require_capability
+from fair_platform.backend.core.security.permissions import has_capability
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 
 router = APIRouter()
 
 @router.post(
-    "/", status_code=status.HTTP_201_CREATED, response_model=List[ArtifactRead]
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    response_model=List[ArtifactRead],
+    dependencies=[Depends(require_capability("create_artifact"))],
 )
 def create_artifact(
     files: List[UploadFile],
@@ -32,12 +37,6 @@ def create_artifact(
     Creates artifacts in 'pending' status. They must be attached to
     assignments or submissions to become 'attached'.
     """
-    if current_user.role != UserRole.admin and current_user.role != UserRole.professor:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only instructors or admin can create artifacts",
-        )
-
     manager = get_artifact_manager(db)
     
     try:
@@ -316,7 +315,7 @@ def cleanup_orphaned_artifacts(
     Removes artifacts that have been in 'orphaned' status for longer than
     the specified number of days. By default, soft deletes (archives) them.
     """
-    if current_user.role != UserRole.admin:
+    if not has_capability(current_user, "cleanup_orphaned_artifacts"):
         raise HTTPException(
             status_code=403,
             detail="Only admins can cleanup orphaned artifacts"

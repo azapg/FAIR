@@ -21,13 +21,15 @@ export type CreateAssignmentForm = {
 }
 
 export function useAssignmentColumns(options?: {
+  canManage?: boolean;
   onEdit?: (assignment: Assignment) => void;
   onDelete?: (assignment: Assignment) => void;
 }): ColumnDef<Assignment>[] {
   const { t } = useTranslation();
-  const { onEdit, onDelete } = options || {};
+  const { onEdit, onDelete, canManage = true } = options || {};
 
-  return useMemo(() => [
+  return useMemo(() => {
+    const base: ColumnDef<Assignment>[] = [
     {
       accessorKey: "title",
       header: t("assignments.titleLabel"),
@@ -82,36 +84,42 @@ export function useAssignmentColumns(options?: {
         }
       }
     },
-    {
-      id: "actions",
-      header: "",
-      cell: (info) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger className="ml-auto flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
-            <Ellipsis className="h-4 w-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit?.(info.row.original);
-              }}
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              {t("common.edit")}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.(info.row.original);
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t("common.delete")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
+    ];
+
+    if (canManage) {
+      base.push({
+        id: "actions",
+        header: "",
+        cell: (info) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="ml-auto flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
+              <Ellipsis className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.(info.row.original);
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                {t("common.edit")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(info.row.original);
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t("common.delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      });
     }
-  ], [t, onEdit, onDelete]);
+
+    return base;
+  }, [t, onEdit, onDelete, canManage]);
 }

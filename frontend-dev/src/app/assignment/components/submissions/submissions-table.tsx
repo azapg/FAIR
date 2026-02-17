@@ -34,6 +34,7 @@ interface DataTableProps {
   columns: ColumnDef<Submission>[];
   data: Submission[];
   onCreateSubmission?: () => void;
+  canManage?: boolean;
 }
 
 const SUBMISSION_VIEWS: Array<{
@@ -91,9 +92,11 @@ export function EmptyTableState({
       </EmptyHeader>
       <EmptyContent className="items-start lg:items-center">
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onCreateSubmission}>
-            {t("submissions.addSubmissions")}
-          </Button>
+          {onCreateSubmission && (
+            <Button variant="outline" onClick={onCreateSubmission}>
+              {t("submissions.addSubmissions")}
+            </Button>
+          )}
           <Button
             variant="link"
             asChild
@@ -114,6 +117,7 @@ export function SubmissionsTable({
   columns,
   data,
   onCreateSubmission,
+  canManage = true,
 }: DataTableProps) {
   const { t } = useTranslation();
   const [activeView, setActiveView] = useState(SUBMISSION_VIEWS[0].id);
@@ -161,7 +165,7 @@ export function SubmissionsTable({
     data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    enableRowSelection: true,
+    enableRowSelection: canManage,
     onRowSelectionChange: setRowSelection,
     state: {
       rowSelection,
@@ -208,19 +212,23 @@ export function SubmissionsTable({
           />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground md:justify-end">
-          <span>
-            {t("submissions.selectedRows", {
-              selected: selectedRowsCount,
-              total: rows.length,
-            })}
-          </span>
-          <Button
-            variant="secondary"
-            disabled={!hasReturnableSelection || returnSubmissions.isPending}
-            onClick={() => returnSubmissions.mutate(returnableSubmissionIds)}
-          >
-            {t("submissions.returnAction")}
-          </Button>
+          {canManage && (
+            <>
+              <span>
+                {t("submissions.selectedRows", {
+                  selected: selectedRowsCount,
+                  total: rows.length,
+                })}
+              </span>
+              <Button
+                variant="secondary"
+                disabled={!hasReturnableSelection || returnSubmissions.isPending}
+                onClick={() => returnSubmissions.mutate(returnableSubmissionIds)}
+              >
+                {t("submissions.returnAction")}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -266,7 +274,7 @@ export function SubmissionsTable({
             ) : (
               <TableRow className="hover:bg-background">
                 <TableCell colSpan={columns.length}>
-                  <EmptyTableState onCreateSubmission={onCreateSubmission} />
+                  <EmptyTableState onCreateSubmission={canManage ? onCreateSubmission : undefined} />
                 </TableCell>
               </TableRow>
             )}

@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 from fair_platform.backend.data.models import (
@@ -108,7 +109,17 @@ class TestWorkflowRunsAPI:
         assert run["submissions"]
         assert run["submissions"][0]["assignmentId"] == str(data["assignment"].id)
 
-    def test_student_cannot_access_workflow_runs(self, test_client: TestClient, test_db, professor_user, student_user):
+    @pytest.mark.parametrize("mode", ["COMMUNITY", "ENTERPRISE"])
+    def test_student_cannot_access_workflow_runs(
+        self,
+        test_client: TestClient,
+        test_db,
+        professor_user,
+        student_user,
+        monkeypatch,
+        mode,
+    ):
+        monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", mode)
         data = _create_workflow_run_fixture(
             test_db, instructor_id=professor_user.id, runner_id=professor_user.id
         )
@@ -120,6 +131,32 @@ class TestWorkflowRunsAPI:
             f"/api/workflow-runs?course_id={data['course'].id}", headers=headers
         )
         assert response.status_code == 403
+
+    @pytest.mark.parametrize(
+        ("mode", "expected_status"),
+        [("COMMUNITY", 200), ("ENTERPRISE", 403)],
+    )
+    def test_user_course_owner_mode_controls_workflow_run_access(
+        self,
+        test_client: TestClient,
+        test_db,
+        student_user,
+        monkeypatch,
+        mode,
+        expected_status,
+    ):
+        monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", mode)
+        data = _create_workflow_run_fixture(
+            test_db, instructor_id=student_user.id, runner_id=student_user.id
+        )
+
+        token = get_auth_token(test_client, student_user.email)
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = test_client.get(
+            f"/api/workflow-runs?course_id={data['course'].id}", headers=headers
+        )
+        assert response.status_code == expected_status
 
     def test_admin_can_filter_runs_by_assignment(
         self, test_client: TestClient, test_db, professor_user, admin_user

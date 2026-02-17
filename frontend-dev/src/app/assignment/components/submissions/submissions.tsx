@@ -312,12 +312,12 @@ export function InlineEditableFeedback({
   );
 }
 
-export function useSubmissionColumns(): ColumnDef<Submission>[] {
+export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] {
   const { t, i18n } = useTranslation();
 
   return useMemo(
     () => [
-      {
+      ...(canManage ? [{
         id: "select",
         header: ({ table }) => {
           const all = table.getIsAllRowsSelected();
@@ -346,7 +346,7 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         ),
         enableSorting: false,
         enableHiding: false,
-      },
+      }] : []),
       {
         accessorKey: "submitter.name",
         header: t("submissions.studentNameColumn"),
@@ -364,6 +364,10 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         accessorKey: "draftScore",
         header: t("submissions.grade"),
         cell: (info) => {
+          if (!canManage) {
+            const score = info.getValue() as number | null | undefined;
+            return score ?? "—";
+          }
           return <InlineEditableScore submission={info.row.original} />;
         },
       },
@@ -384,6 +388,13 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
         header: t("submissions.feedback"),
         cell: (info) => {
           const feedback = info.getValue() as string;
+          if (!canManage) {
+            return (
+              <p className="block max-w-[240px] truncate">
+                {feedback || <p className="italic text-muted-foreground">{t("submissions.feedbackPlaceholder")}</p>}
+              </p>
+            );
+          }
           return (
             <p
               className="block max-w-[240px] truncate cursor-pointer hover:underline hover:decoration-dotted hover:decoration-gray-500 hover:underline-offset-3"
@@ -399,14 +410,14 @@ export function useSubmissionColumns(): ColumnDef<Submission>[] {
           );
         },
       },
-      {
+      ...(canManage ? [{
         id: "actions",
         cell: (info) => (
           <SubmissionActionsCell submission={info.row.original} />
         ),
-      },
+      }] : []),
     ],
-    [t, i18n.language],
+    [t, i18n.language, canManage],
   );
 }
 

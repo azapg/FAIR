@@ -1,4 +1,9 @@
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
+
+from fair_platform.backend.api.routers.auth import hash_password
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.user import UserRole
 from tests.conftest import create_sample_user_data
 
@@ -161,3 +166,86 @@ class TestAuthenticationFlow:
         assert "email" in user, "Email should be in response"
         assert "name" in user, "Name should be in response"
         assert "role" in user, "Role should be in response"
+
+    def test_auth_me_capabilities_matrix_by_role_and_mode(self, test_client: TestClient, test_db, monkeypatch):
+        scenarios = [
+            ("COMMUNITY", UserRole.admin.value, {"manage_users", "cleanup_orphaned_artifacts"}, {"join_course"}),
+            ("ENTERPRISE", UserRole.admin.value, {"manage_users", "cleanup_orphaned_artifacts"}, {"join_course"}),
+            ("COMMUNITY", UserRole.instructor.value, {"create_workflow", "read_workflow_runs"}, {"cleanup_orphaned_artifacts"}),
+            ("ENTERPRISE", UserRole.instructor.value, {"create_workflow", "read_workflow_runs"}, {"cleanup_orphaned_artifacts"}),
+            ("COMMUNITY", UserRole.user.value, {"join_course", "create_workflow", "read_workflow_runs"}, set()),
+            ("ENTERPRISE", UserRole.user.value, {"join_course"}, {"create_workflow", "read_workflow_runs"}),
+        ]
+
+        for mode, role, expected_present, expected_missing in scenarios:
+            monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", mode)
+            email = f"{mode.lower()}-{role}-{uuid4()}@test.com"
+
+            with test_db() as session:
+                user = User(
+                    id=uuid4(),
+                    name=f"{mode} {role}",
+                    email=email,
+                    role=role,
+                    password_hash=hash_password("test_password_123"),
+                )
+                session.add(user)
+                session.commit()
+
+            login_response = test_client.post(
+                "/api/auth/login",
+                data={"username": email, "password": "test_password_123"},
+            )
+            assert login_response.status_code == 200
+            token = login_response.json()["access_token"]
+
+            me_response = test_client.get(
+                "/api/auth/me",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert me_response.status_code == 200
+            payload = me_response.json()
+            capabilities = set(payload["capabilities"])
+
+            for capability in expected_present:
+                assert capability in capabilities
+            for capability in expected_missing:
+                assert capability not in capabilities
+
+    def test_auth_me_normalizes_legacy_role_aliases_from_db(self, test_client: TestClient, test_db):
+        with test_db() as session:
+            legacy_student = User(
+                id=uuid4(),
+                name="Legacy Student",
+                email=f"legacy-student-{uuid4()}@test.com",
+                role="student",
+                password_hash=hash_password("test_password_123"),
+            )
+            legacy_professor = User(
+                id=uuid4(),
+                name="Legacy Professor",
+                email=f"legacy-professor-{uuid4()}@test.com",
+                role="professor",
+                password_hash=hash_password("test_password_123"),
+            )
+            session.add_all([legacy_student, legacy_professor])
+            session.commit()
+
+        for email, expected_role in [
+            (legacy_student.email, "user"),
+            (legacy_professor.email, "instructor"),
+        ]:
+            login_response = test_client.post(
+                "/api/auth/login",
+                data={"username": email, "password": "test_password_123"},
+            )
+            assert login_response.status_code == 200
+            token = login_response.json()["access_token"]
+
+            me_response = test_client.get(
+                "/api/auth/me",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            assert me_response.status_code == 200
+            payload = me_response.json()
+            assert payload["role"] == expected_role
