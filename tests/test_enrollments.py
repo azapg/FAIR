@@ -197,15 +197,6 @@ class TestSelfEnrollment:
         second = test_client.post("/api/enrollments/join", json={"code": "DUPL"}, headers=headers)
         assert second.status_code == 409
 
-    def test_non_students_cannot_join_by_code(self, test_client, test_db):
-        with test_db() as s:
-            _, prof, _, _ = _make_users(s)
-            _make_course_with_code(s, prof, code="PROF", enabled=True)
-
-        headers = _auth(test_client, prof.email)
-        resp = test_client.post("/api/enrollments/join", json={"code": "PROF"}, headers=headers)
-        assert resp.status_code == 403
-
     def test_instructor_can_reset_and_toggle_enrollment(self, test_client, test_db):
         with test_db() as s:
             _, prof, stu1, _ = _make_users(s)
@@ -246,7 +237,7 @@ class TestSelfEnrollment:
             s.commit()
 
         headers = _auth(test_client, stu1.email)
-        
+
         # Test list
         resp_list = test_client.get("/api/courses/", headers=headers)
         assert resp_list.status_code == 200

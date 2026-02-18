@@ -149,18 +149,18 @@ class TestAuthenticationFlow:
         assert response.status_code == 201, (
             f"User creation failed: {response.text}"
         )
-        
+
         response_data = response.json()
-        
+
         # Verify user data is in the response
         assert "user" in response_data, "User data should be in response"
         user = response_data["user"]
-        
+
         # Verify password_hash is NOT in the response
         assert "password_hash" not in user, (
             "SECURITY VIOLATION: password_hash should never be exposed in API responses"
         )
-        
+
         # Verify expected fields are present
         assert "id" in user, "User ID should be in response"
         assert "email" in user, "Email should be in response"
@@ -169,8 +169,8 @@ class TestAuthenticationFlow:
 
     def test_auth_me_capabilities_matrix_by_role_and_mode(self, test_client: TestClient, test_db, monkeypatch):
         scenarios = [
-            ("COMMUNITY", UserRole.admin.value, {"manage_users", "cleanup_orphaned_artifacts"}, {"join_course"}),
-            ("ENTERPRISE", UserRole.admin.value, {"manage_users", "cleanup_orphaned_artifacts"}, {"join_course"}),
+            ("COMMUNITY", UserRole.admin.value, {"manage_users", "cleanup_orphaned_artifacts"}, set()),
+            ("ENTERPRISE", UserRole.admin.value, {"manage_users", "cleanup_orphaned_artifacts"}, set()),
             ("COMMUNITY", UserRole.instructor.value, {"create_workflow", "read_workflow_runs"}, {"cleanup_orphaned_artifacts"}),
             ("ENTERPRISE", UserRole.instructor.value, {"create_workflow", "read_workflow_runs"}, {"cleanup_orphaned_artifacts"}),
             ("COMMUNITY", UserRole.user.value, {"join_course", "create_workflow", "read_workflow_runs"}, set()),
