@@ -1,12 +1,11 @@
 import { Button } from "@/components/ui/button";
-import {
-  FileText,
-  Hourglass,
-  Plus,
-} from "lucide-react";
+import { FileText, Hourglass, Plus } from "lucide-react";
 import { SubmissionsTable } from "@/app/assignment/components/submissions/submissions-table";
 import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
-import { WorkflowsSidebarProvider, WorkflowsSidebarTrigger } from "@/components/ui/sidebar";
+import {
+  WorkflowsSidebarProvider,
+  WorkflowsSidebarTrigger,
+} from "@/components/ui/sidebar";
 import { WorkflowsSidebar } from "@/app/assignment/components/sidebar/workflows-sidebar";
 import {
   PropertiesDisplay,
@@ -19,28 +18,79 @@ import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 import { useParams } from "react-router-dom";
-import { useAssignment } from "@/hooks/use-assignments";
+import { useAssignment, Assignment } from "@/hooks/use-assignments";
 import { useCourse } from "@/hooks/use-courses";
 import { useWorkflowStore } from "@/store/workflows-store";
 import { useWorkflows } from "@/hooks/use-workflows";
 import { useEffect, useState } from "react";
 import { CreateSubmissionDialog } from "@/app/assignment/components/submissions/create-submission-dialog";
 import { useArtifacts } from "@/hooks/use-artifacts";
-import { useSubmissions } from "@/hooks/use-submissions";
+import { useSubmissions, Submission } from "@/hooks/use-submissions";
 import { useTranslation } from "react-i18next";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArtifactAction } from "@/components/artifact-action";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermission } from "@/hooks/use-permission";
 
+interface InstructorSubmissionsSectionProps {
+  setIsCreateSubmissionOpen: (value: boolean) => void;
+  isCreateSubmissionOpen: boolean;
+  submissions: Submission[] | undefined;
+  columns: any;
+  assignment: Assignment;
+}
+
+function InstructorSubmissionsSection({
+  setIsCreateSubmissionOpen,
+  isCreateSubmissionOpen,
+  submissions,
+  columns,
+  assignment,
+}: InstructorSubmissionsSectionProps) {
+  const { t } = useTranslation();
+
+  return (
+    <div className={"space-y-3 mb-5"}>
+      <div className={"flex justify-between items-center mb-3"}>
+        <h2 className={"text-xl font-semibold"}>{t("submissions.title")}</h2>
+        <Button size="sm" onClick={() => setIsCreateSubmissionOpen(true)}>
+          <Plus /> {t("common.add")}
+        </Button>
+      </div>
+      <SubmissionsTable
+        columns={columns}
+        data={submissions ?? []}
+        canManage={true}
+        onCreateSubmission={() => setIsCreateSubmissionOpen(true)}
+      />
+      <CreateSubmissionDialog
+        assignmentId={assignment.id.toString()}
+        open={isCreateSubmissionOpen}
+        onOpenChange={setIsCreateSubmissionOpen}
+      />
+    </div>
+  );
+}
+
 export default function AssignmentPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const { data: assignment, isLoading, isError } = useAssignment(assignmentId!);
-  // TODO: This is ugly, try getting courseId from somewhere else, maybe from parents
-  const { data: course } = useCourse(assignment?.courseId, Boolean(assignment?.courseId));
+  const { data: course } = useCourse(
+    assignment?.courseId,
+    Boolean(assignment?.courseId),
+  );
   const { user } = useAuth();
+  // TODO: This is ugly. We have to normalize the API. Even if it's not detailed,
+  // we should send course.instructor.id instead of having two different shapes
+  //  for the same data depending on the endpoint.
+  const instructorId = course
+    ? "instructorId" in course
+      ? course.instructorId
+      : course.instructor.id
+    : undefined;
   const canManageUsers = usePermission("manage_users");
-  const canManageAssignmentUi = !!user && !!course && (course.instructorId === user.id || canManageUsers);
+  const canManageAssignmentUi =
+    !!user && !!course && (instructorId === user.id || canManageUsers);
   const setActiveCourseId = useWorkflowStore(
     (state) => state.setActiveCourseId,
   );
@@ -61,7 +111,6 @@ export default function AssignmentPage() {
   });
   const { t } = useTranslation();
   const [isCreateSubmissionOpen, setIsCreateSubmissionOpen] = useState(false);
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const isOverallLoading =
     isLoading ||
@@ -91,7 +140,7 @@ export default function AssignmentPage() {
     return <div>{t("errors.errorLoadingAssignment")}</div>;
   }
 
-  const isCourseOwner = !!user && course.instructorId === user.id;
+  const isCourseOwner = !!user && instructorId === user.id;
   const isInstructorView = isCourseOwner || canManageUsers;
 
   return (
@@ -101,68 +150,53 @@ export default function AssignmentPage() {
       width="22rem"
       widthMobile="18rem"
     >
-
       <ScrollArea className="w-full h-svh flex-1 min-w-0">
         <div className="min-w-0 break-words">
-        <div className={"flex flex-row justify-between items-center py-2 px-5"}>
-          <BreadcrumbNav
-            segments={[
-              {
-                label: t("courses.title"),
-                slug: "courses",
-              },
-              {
-                label: course?.name || assignment?.courseId.toLocaleString(),
-                slug:
-                  course?.id.toLocaleString() ||
-                  assignment?.courseId.toLocaleString(),
-              },
-              {
-                label: t("tabs.assignments"),
-                slug: "assignments",
-              },
-              {
-                label: assignment.title,
-                slug: assignment.id.toLocaleString(),
-              },
-            ]}
-          />
-          {isInstructorView && <WorkflowsSidebarTrigger />}
-        </div>
-        <div className={"px-8 pt-2"}>
-          <div className={"mb-5"}>
-            <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
-            {!assignment.description || assignment.description.trim() === '' ? (
-              <p className="text-muted-foreground italic">{t("assignments.noDescription")}</p>
-            ) : (() => {
-              const lines = assignment.description.split('\n');
-              const words = assignment.description.split(/\s+/);
-              const hasMore = lines.length > 3 || words.length > 80;
-              return (
-                <>
-                  <div className={`relative ${!isDescriptionExpanded && hasMore ? 'line-clamp-3' : ''}`}>
-                    <MarkdownRenderer className={"text-sm text-muted-foreground"}>
-                      {assignment.description}
-                    </MarkdownRenderer>
-                    {!isDescriptionExpanded && hasMore && (
-                      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-                    )}
-                  </div>
-                  {hasMore && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                      className="p-0 h-auto text-sm"
-                    >
-                      {isDescriptionExpanded ? t("common.showLess") : t("common.showMore")}
-                    </Button>
-                  )}
-                </>
-              );
-            })()}
+          <div
+            className={"flex flex-row justify-between items-center py-2 px-5"}
+          >
+            <BreadcrumbNav
+              segments={[
+                {
+                  label: t("courses.title"),
+                  slug: "courses",
+                },
+                {
+                  label: course?.name || assignment?.courseId.toLocaleString(),
+                  slug:
+                    course?.id.toLocaleString() ||
+                    assignment?.courseId.toLocaleString(),
+                },
+                {
+                  label: t("tabs.assignments"),
+                  slug: "assignments",
+                },
+                {
+                  label: assignment.title,
+                  slug: assignment.id.toLocaleString(),
+                },
+              ]}
+            />
+            {isInstructorView && <WorkflowsSidebarTrigger />}
+          </div>
+          <div className={"px-8 pt-2"}>
+            <div className={"mb-5"}>
+              <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
+              {!assignment.description ||
+              assignment.description.trim() === "" ? (
+                <p className="text-muted-foreground italic">
+                  {t("assignments.noDescription")}
+                </p>
+              ) : (
+                <MarkdownRenderer
+                  className={"text-sm text-muted-foreground"}
+                  clamp
+                >
+                  {assignment.description}
+                </MarkdownRenderer>
+              )}
 
-            <PropertiesDisplay scroll className="items-start pt-3">
+              <PropertiesDisplay scroll className="items-start pt-3">
                 <Property>
                   <PropertyLabel>{t("properties.title")}</PropertyLabel>
                   <PropertyValue className="flex flex-row gap-1 items-center">
@@ -209,36 +243,24 @@ export default function AssignmentPage() {
                     )}
                   </PropertyValue>
                 </Property>
-            </PropertiesDisplay>
-          </div>
-
-          <div className={"space-y-3 mb-5"}>
-            <div className={"flex justify-between items-center mb-3"}>
-              <h2 className={"text-xl font-semibold"}>{t("submissions.title")}</h2>
-              {isInstructorView && (
-                <Button size="sm" onClick={() => setIsCreateSubmissionOpen(true)}>
-                  <Plus /> {t("common.add")}
-                </Button>
-              )}
+              </PropertiesDisplay>
             </div>
-            <SubmissionsTable
-              columns={columns}
-              data={submissions ?? []}
-              canManage={isInstructorView}
-              onCreateSubmission={isInstructorView ? () => setIsCreateSubmissionOpen(true) : undefined}
-            />
+
             {isInstructorView && (
-              <CreateSubmissionDialog
-                assignmentId={assignment.id.toString()}
-                open={isCreateSubmissionOpen}
-                onOpenChange={setIsCreateSubmissionOpen}
+              <InstructorSubmissionsSection
+                setIsCreateSubmissionOpen={setIsCreateSubmissionOpen}
+                isCreateSubmissionOpen={isCreateSubmissionOpen}
+                submissions={submissions}
+                columns={columns}
+                assignment={assignment}
               />
             )}
           </div>
         </div>
-        </div>
       </ScrollArea>
-      {isInstructorView && <WorkflowsSidebar side={"right"} assignmentId={assignmentId ?? ""} />}
+      {isInstructorView && (
+        <WorkflowsSidebar side={"right"} assignmentId={assignmentId ?? ""} />
+      )}
     </WorkflowsSidebarProvider>
   );
 }

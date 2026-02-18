@@ -38,6 +38,7 @@ ADMIN_CAPABILITIES: set[Capability] = {
     "generate_rubric",
     "manage_rubric",
     "view_all_rubrics",
+    "join_course"
 }
 
 INSTRUCTOR_CAPABILITIES: set[Capability] = {
@@ -64,6 +65,7 @@ INSTRUCTOR_CAPABILITIES: set[Capability] = {
     "create_rubric",
     "generate_rubric",
     "manage_rubric",
+    "join_course"
 }
 
 USER_ENTERPRISE_CAPABILITIES: set[Capability] = {

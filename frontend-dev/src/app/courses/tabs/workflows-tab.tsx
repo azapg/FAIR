@@ -1,16 +1,17 @@
-import {useTranslation} from "react-i18next";
-import {useMutation, useQuery} from "@tanstack/react-query";
+import { ColumnDef } from "@tanstack/react-table";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
 import api from "@/lib/api";
-import {Button} from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { RuntimePluginRead } from "@/hooks/use-plugins";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
-import {RuntimePluginRead} from "@/hooks/use-plugins";
+  DataTable,
+  DataTableContent,
+  DataTableEmpty,
+  DataTableSearch,
+} from "@/components/data-table";
 
 type WorkflowRow = {
   id: string;
@@ -21,15 +22,15 @@ type WorkflowRow = {
   plugins?: Record<string, RuntimePluginRead>;
 };
 
-export function WorkflowsTab({courseId}: { courseId?: string }) {
-  const {t} = useTranslation();
+export function WorkflowsTab({ courseId }: { courseId?: string }) {
+  const { t } = useTranslation();
 
   const workflowsQuery = useQuery<WorkflowRow[]>({
     enabled: Boolean(courseId),
     queryKey: ["workflows", "course", courseId],
     queryFn: async () => {
       if (!courseId) return [];
-      const res = await api.get("/workflows", {params: {course_id: courseId}});
+      const res = await api.get("/workflows", { params: { course_id: courseId } });
       return res.data;
     },
   });
@@ -38,6 +39,56 @@ export function WorkflowsTab({courseId}: { courseId?: string }) {
     mutationFn: async (workflowId: string) => api.delete(`/workflows/${workflowId}`),
     onSuccess: () => workflowsQuery.refetch(),
   });
+
+  const columns = useMemo<ColumnDef<WorkflowRow>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: t("assignments.titleLabel"),
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      },
+      {
+        accessorKey: "description",
+        header: t("workflow.workflowDetails"),
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {row.original.description || t("assignments.na")}
+          </span>
+        ),
+      },
+      {
+        id: "transcriber",
+        header: t("plugins.transcriber"),
+        cell: ({ row }) => row.original.plugins?.transcriber?.name ?? t("assignments.na"),
+      },
+      {
+        id: "grader",
+        header: t("plugins.grader"),
+        cell: ({ row }) => row.original.plugins?.grader?.name ?? t("assignments.na"),
+      },
+      {
+        id: "validator",
+        header: t("plugins.validator"),
+        cell: ({ row }) => row.original.plugins?.validator?.name ?? t("assignments.na"),
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-right">{t("actions.courseActions")}</div>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => deleteWorkflow.mutate(row.original.id)}
+            >
+              {t("common.delete")}
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [deleteWorkflow, t],
+  );
 
   if (!courseId) {
     return <div className="text-sm text-muted-foreground">{t("workflow.noCourseSelected")}</div>;
@@ -53,47 +104,17 @@ export function WorkflowsTab({courseId}: { courseId?: string }) {
 
   const workflows = workflowsQuery.data ?? [];
 
-  if (workflows.length === 0) {
-    return <div className="text-sm text-muted-foreground">{t("workflow.noWorkflowsMessage")}</div>;
-  }
-
   return (
     <div className="space-y-3">
       <h3 className="text-xl font-semibold">{t("tabs.workflows")}</h3>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{t("assignments.titleLabel")}</TableHead>
-            <TableHead>{t("workflow.workflowDetails")}</TableHead>
-            <TableHead>{t("plugins.transcriber")}</TableHead>
-            <TableHead>{t("plugins.grader")}</TableHead>
-            <TableHead>{t("plugins.validator")}</TableHead>
-            <TableHead className="text-right">{t("actions.courseActions")}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {workflows.map((wf) => (
-            <TableRow key={wf.id}>
-              <TableCell className="font-medium">{wf.name}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {wf.description || t("assignments.na")}
-              </TableCell>
-              <TableCell className="text-sm">{wf.plugins?.transcriber?.name ?? t("assignments.na")}</TableCell>
-              <TableCell className="text-sm">{wf.plugins?.grader?.name ?? t("assignments.na")}</TableCell>
-              <TableCell className="text-sm">{wf.plugins?.validator?.name ?? t("assignments.na")}</TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteWorkflow.mutate(wf.id)}
-                >
-                  {t("common.delete")}
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <DataTable data={workflows} columns={columns} filterKey="name">
+        <div className="pb-3">
+          <DataTableSearch />
+        </div>
+        <DataTableContent>
+          <DataTableEmpty>{t("workflow.noWorkflowsMessage")}</DataTableEmpty>
+        </DataTableContent>
+      </DataTable>
     </div>
   );
 }

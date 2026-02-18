@@ -1,21 +1,22 @@
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
+import { ColumnDef } from "@tanstack/react-table"
+import { TableProperties } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
-import type { KeyboardEvent } from "react"
 
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {Assignment} from "@/hooks/use-assignments";
+  DataTable,
+  DataTableContent,
+  DataTableEmpty,
+  DataTableSearch,
+} from "@/components/data-table"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Assignment } from "@/hooks/use-assignments"
 
 interface DataTableProps {
   columns: ColumnDef<Assignment>[]
@@ -23,64 +24,37 @@ interface DataTableProps {
 }
 
 export function AssignmentsTable({ columns, data }: DataTableProps) {
-  const table = useReactTable<Assignment>({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  })
-
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map(headerGroup => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map(header => (
-                <TableHead key={header.id}>
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext()
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map(row => {
-            const onActivate = () => {
-              const id = row.original.id
-              if (id) {
-                navigate(id, { relative: "path" })
-              }
-            }
+    <DataTable
+      data={data}
+      columns={columns}
+      filterKey="title"
+      onRowClick={(row) => {
+        if (row.id) {
+          navigate(row.id, { relative: "path" })
+        }
+      }}
+    >
+      <div className="py-4">
+        <DataTableSearch />
+      </div>
 
-            return (
-              <TableRow
-                key={row.id}
-                role="button"
-                tabIndex={0}
-                className="group cursor-pointer hover:bg-muted"
-                onClick={onActivate}
-                onKeyDown={(e: KeyboardEvent<HTMLTableRowElement>) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    onActivate()
-                  }
-                }}
-              >
-                {row.getVisibleCells().map(cell => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-    </div>
+      <DataTableContent>
+        <DataTableEmpty>
+          <Empty className="w-full items-start text-left lg:items-center lg:text-center">
+            <EmptyHeader className="items-start text-left lg:items-center lg:text-center">
+              <EmptyMedia variant="icon">
+                <TableProperties />
+              </EmptyMedia>
+              <EmptyTitle>{t("assignments.title")}</EmptyTitle>
+              <EmptyDescription>{t("common.noResults")}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </DataTableEmpty>
+      </DataTableContent>
+    </DataTable>
   )
 }
