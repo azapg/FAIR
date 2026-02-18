@@ -1,22 +1,8 @@
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { type ColumnDef, type RowSelectionState } from "@tanstack/react-table";
 import { TableProperties, ArrowUpRightIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -27,7 +13,19 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { useTranslation } from "react-i18next";
-import { Submission, SubmissionStatus, useReturnSubmissions } from "@/hooks/use-submissions";
+import {
+  DataTable,
+  DataTableContent,
+  DataTableEmpty,
+  DataTablePagination,
+  DataTableSearch,
+  useDataTableContext,
+} from "@/components/data-table";
+import {
+  Submission,
+  SubmissionStatus,
+  useReturnSubmissions,
+} from "@/hooks/use-submissions";
 import { SubmissionSheet } from "@/app/assignment/components/submissions/submission-sheet";
 
 interface DataTableProps {
@@ -113,71 +111,16 @@ export function EmptyTableState({
   );
 }
 
-export function SubmissionsTable({
-  columns,
-  data,
-  onCreateSubmission,
-  canManage = true,
-}: DataTableProps) {
+function SubmissionsToolbar({
+  returnSubmissions,
+}: {
+  returnSubmissions: ReturnType<typeof useReturnSubmissions>;
+}) {
   const { t } = useTranslation();
-  const [activeView, setActiveView] = useState(SUBMISSION_VIEWS[0].id);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [rowSelection, setRowSelection] = useState({});
-  const [selectedSubmissionId, setSelectedSubmissionId] =
-    useState<string | null>(null);
-  const [focusOn, setFocusOn] = useState<"feedback" | null>(null);
-  const returnSubmissions = useReturnSubmissions();
+  const { table } = useDataTableContext<Submission>();
 
-  const selectedSubmission = useMemo(() => {
-    return data.find((s) => s.id === selectedSubmissionId) || null;
-  }, [data, selectedSubmissionId]);
-
-  const filteredData = useMemo(() => {
-    const view = SUBMISSION_VIEWS.find((item) => item.id === activeView);
-    const viewStatuses = view?.statuses ?? [];
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
-    return data.filter((submission) => {
-      // If the view is "all", include every submission regardless of status.
-      const matchesView =
-        view?.id === "all" ? true : viewStatuses.includes(submission.status);
-      if (!matchesView) return false;
-      if (!normalizedQuery) return true;
-
-      const searchTargets = [
-        submission.submitter?.name ?? "",
-        submission.submitter?.email ?? "",
-        submission.status,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return searchTargets.includes(normalizedQuery);
-    });
-  }, [activeView, data, searchQuery]);
-
-  const onFeedbackClick = (submission: Submission) => {
-    setSelectedSubmissionId(submission.id);
-    setFocusOn("feedback");
-  };
-
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    enableRowSelection: canManage,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      rowSelection,
-    },
-    meta: {
-      onFeedbackClick,
-    },
-  });
-
-  const rows = table.getRowModel().rows;
-  const hasRows = rows.length > 0;
   const selectedRowsCount = table.getSelectedRowModel().rows.length;
+  const totalRowsCount = table.getFilteredRowModel().rows.length;
 
   const returnableSubmissionIds = table
     .getSelectedRowModel()
@@ -192,6 +135,63 @@ export function SubmissionsTable({
   const hasReturnableSelection = returnableSubmissionIds.length > 0;
 
   return (
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="w-full md:max-w-sm">
+        <DataTableSearch placeholder={t("submissions.searchPlaceholder")} />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground md:justify-end">
+        <span>
+          {t("submissions.selectedRows", {
+            selected: selectedRowsCount,
+            total: totalRowsCount,
+          })}
+        </span>
+        <Button
+          variant="secondary"
+          disabled={!hasReturnableSelection || returnSubmissions.isPending}
+          onClick={() => returnSubmissions.mutate(returnableSubmissionIds)}
+        >
+          {t("submissions.returnAction")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function SubmissionsTable({
+  columns,
+  data,
+  onCreateSubmission,
+  canManage = true,
+}: DataTableProps) {
+  const { t } = useTranslation();
+  const [activeView, setActiveView] = useState(SUBMISSION_VIEWS[0].id);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [selectedSubmissionId, setSelectedSubmissionId] =
+    useState<string | null>(null);
+  const [focusOn, setFocusOn] = useState<"feedback" | null>(null);
+  const returnSubmissions = useReturnSubmissions();
+
+  const selectedSubmission = useMemo(() => {
+    return data.find((s) => s.id === selectedSubmissionId) || null;
+  }, [data, selectedSubmissionId]);
+
+  const filteredData = useMemo(() => {
+    const view = SUBMISSION_VIEWS.find((item) => item.id === activeView);
+    const viewStatuses = view?.statuses ?? [];
+
+    return data.filter((submission) => {
+      return view?.id === "all" ? true : viewStatuses.includes(submission.status);
+    });
+  }, [activeView, data]);
+
+  const onFeedbackClick = (submission: Submission) => {
+    setSelectedSubmissionId(submission.id);
+    setFocusOn("feedback");
+  };
+
+  return (
     <div className="space-y-4">
       <Tabs value={activeView} onValueChange={setActiveView}>
         <TabsList>
@@ -203,84 +203,35 @@ export function SubmissionsTable({
         </TabsList>
       </Tabs>
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="w-full md:max-w-sm">
-          <Input
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder={t("submissions.searchPlaceholder")}
-          />
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground md:justify-end">
-          {canManage && (
-            <>
-              <span>
-                {t("submissions.selectedRows", {
-                  selected: selectedRowsCount,
-                  total: rows.length,
-                })}
-              </span>
-              <Button
-                variant="secondary"
-                disabled={!hasReturnableSelection || returnSubmissions.isPending}
-                onClick={() => returnSubmissions.mutate(returnableSubmissionIds)}
-              >
-                {t("submissions.returnAction")}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+      <DataTable
+        data={filteredData}
+        columns={columns}
+        filterKey="submitter.name"
+        enableRowSelection={canManage}
+        enablePagination
+        onRowSelectionChange={setRowSelection}
+        state={{ rowSelection }}
+        meta={{ onFeedbackClick }}
+        onRowClick={(submission) => {
+          setSelectedSubmissionId(submission.id);
+          setFocusOn(null);
+        }}
+      >
+        <SubmissionsToolbar
+          returnSubmissions={returnSubmissions}
+        />
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
+        <DataTableContent>
+          <DataTableEmpty>
+            <EmptyTableState
+              onCreateSubmission={canManage ? onCreateSubmission : undefined}
+            />
+          </DataTableEmpty>
+        </DataTableContent>
 
-          <TableBody>
-            {hasRows ? (
-              rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() ? "selected" : undefined}
-                  className="cursor-pointer"
-                  onClick={() => {
-                    setSelectedSubmissionId(row.original.id);
-                    setFocusOn(null);
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow className="hover:bg-background">
-                <TableCell colSpan={columns.length}>
-                  <EmptyTableState onCreateSubmission={canManage ? onCreateSubmission : undefined} />
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+        <DataTablePagination />
+      </DataTable>
+
       <SubmissionSheet
         submission={selectedSubmission}
         open={!!selectedSubmission}

@@ -1,26 +1,19 @@
-import { useMemo } from "react";
+import { ColumnDef } from "@tanstack/react-table";
+import { ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useWorkflowRuns } from "@/hooks/use-workflow-runs";
-import { useWorkflows } from "@/hooks/use-workflows";
-
-import { ReactNode } from "react";
-import {
-  CircleCheck,
+  Circle,
   CircleAlert,
+  CircleCheck,
+  CircleX,
   Loader,
   SquircleDashed,
-  CircleX,
-  Circle,
 } from "lucide-react";
-import { WorkflowRunStatus } from "@/store/workflows-store";
+
+import { DataTable, DataTableContent, DataTableEmpty } from "@/components/data-table";
+import { useWorkflowRuns } from "@/hooks/use-workflow-runs";
+import { useWorkflows } from "@/hooks/use-workflows";
+import { WorkflowRun, WorkflowRunStatus } from "@/store/workflows-store";
 
 const defaultSize = 14;
 
@@ -60,7 +53,7 @@ const WorkflowRunStatusLabel = ({ status }: WorkflowRunStatusLabelProps) => {
 
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-md border pl-1 pr-1 gap-1 text-sm
+      className={`inline-flex items-center justify-center rounded-md border gap-1 pl-1 pr-1 text-sm
         text-${color} bg-${color}/10`}
     >
       {icon}
@@ -97,10 +90,53 @@ export function RunsTab({ courseId }: { courseId?: string }) {
     return map;
   }, [workflows]);
 
+  const columns = useMemo<ColumnDef<WorkflowRun>[]>(
+    () => [
+      {
+        id: "workflow",
+        header: t("runs.workflow"),
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {workflowNames.get(row.original.workflowId) ?? row.original.workflowId}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: t("runs.status"),
+        cell: ({ row }) => <WorkflowRunStatusLabel status={row.original.status} />,
+      },
+      {
+        id: "submissions",
+        header: t("runs.submissions"),
+        cell: ({ row }) => row.original.submissions?.length || 0,
+      },
+      {
+        accessorKey: "startedAt",
+        header: t("runs.startedAt"),
+        cell: ({ row }) =>
+          row.original.startedAt ? new Date(row.original.startedAt).toLocaleString() : "—",
+      },
+      {
+        id: "duration",
+        header: t("runs.duration"),
+        cell: ({ row }) => formatDuration(row.original.startedAt, row.original.finishedAt),
+      },
+      {
+        id: "runBy",
+        header: () => <div className="text-right">{t("runs.runBy")}</div>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            {row.original.runner?.name || t("submissions.timelineEvents.actor.system")}
+          </div>
+        ),
+      },
+    ],
+    [t, workflowNames],
+  );
+
   if (!courseId) {
-    return (
-      <div className="text-sm text-muted-foreground">{t("runs.noCourse")}</div>
-    );
+    return <div className="text-sm text-muted-foreground">{t("runs.noCourse")}</div>;
   }
 
   if (runsLoading) {
@@ -111,53 +147,14 @@ export function RunsTab({ courseId }: { courseId?: string }) {
     return <div>{t("runs.errorLoading")}</div>;
   }
 
-  if (!runs || runs.length === 0) {
-    return (
-      <div className="text-sm text-muted-foreground">{t("runs.empty")}</div>
-    );
-  }
-
   return (
     <div className="space-y-3">
       <h3 className="text-xl font-semibold">{t("runs.title")}</h3>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{t("runs.workflow")}</TableHead>
-            <TableHead>{t("runs.status")}</TableHead>
-            <TableHead>{t("runs.submissions")}</TableHead>
-            <TableHead>{t("runs.startedAt")}</TableHead>
-            <TableHead>{t("runs.duration")}</TableHead>
-            <TableHead className="text-right">{t("runs.runBy")}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {runs.map((run) => {
-            const workflowName =
-              workflowNames.get(run.workflowId) ?? run.workflowId;
-            const startedAt = run.startedAt
-              ? new Date(run.startedAt).toLocaleString()
-              : "—";
-
-            return (
-              <TableRow key={run.id}>
-                <TableCell className="font-medium">{workflowName}</TableCell>
-                <TableCell>
-                  <WorkflowRunStatusLabel status={run.status} />
-                </TableCell>
-                <TableCell>{run.submissions?.length || 0}</TableCell>
-                <TableCell>{startedAt}</TableCell>
-                <TableCell>
-                  {formatDuration(run.startedAt, run.finishedAt)}
-                </TableCell>
-                <TableCell className="text-right">
-                  {run.runner?.name || "System"}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      <DataTable data={runs ?? []} columns={columns}>
+        <DataTableContent>
+          <DataTableEmpty>{t("runs.empty")}</DataTableEmpty>
+        </DataTableContent>
+      </DataTable>
     </div>
   );
 }
