@@ -35,18 +35,11 @@ jobs:
         working-directory: frontend-dev
         run: bun install --frozen-lockfile
 
-      - name: Install docs dependencies
-        working-directory: docs
-        run: bun install --frozen-lockfile
-
       - name: Synchronise project version from tag
         run: python scripts/sync_version.py --version "${{ github.ref_name }}"
 
       - name: Make build.sh executable
         run: chmod +x build.sh
- 
-      - name: Run build pipeline
-        run: ./build.sh --docs
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
