@@ -41,6 +41,9 @@ jobs:
       - name: Make build.sh executable
         run: chmod +x build.sh
 
+      - name: Run build pipeline
+        run: ./build.sh
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
