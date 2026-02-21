@@ -9,8 +9,9 @@ El objetivo es apoyar a investigadores, educadores y estudiantes que deseen expl
 
 Todavía tienes dudas? Mira esta demonstrativa de FAIR en acción:
 <iframe
+  className="w-full aspect-video rounded-xl"
   src="https://www.youtube.com/embed/Hoe42wGnNH0?si=1P-60JlZT_KHIrGj"
   title="YouTube video player"
-  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-  allowfullscreen
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
 ></iframe>
