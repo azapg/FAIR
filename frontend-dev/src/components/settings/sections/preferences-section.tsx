@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import { useTheme } from "@/components/theme-provider";
+import { usePreferenceSettings } from "@/hooks/use-preference-settings";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -9,11 +9,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { SettingsSectionCard } from "@/components/settings/sections/settings-section-card";
 
 export function PreferencesSection() {
-  const { t, i18n } = useTranslation();
-  const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
+  const {
+    effectiveTheme,
+    effectiveLanguage,
+    effectiveSimpleView,
+    setThemePreference,
+    setLanguagePreference,
+    setSimpleViewPreference,
+    isSaving,
+  } = usePreferenceSettings();
 
   return (
     <SettingsSectionCard
@@ -23,8 +32,8 @@ export function PreferencesSection() {
       <div className="space-y-2">
         <Label htmlFor="settings-theme">{t("settings.fields.theme")}</Label>
         <Select
-          value={theme}
-          onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}
+          value={effectiveTheme}
+          onValueChange={(value) => setThemePreference(value as "light" | "dark" | "system")}
         >
           <SelectTrigger id="settings-theme" className="w-full">
             <SelectValue placeholder={t("settings.fields.theme")} />
@@ -40,8 +49,8 @@ export function PreferencesSection() {
       <div className="space-y-2">
         <Label htmlFor="settings-language">{t("settings.fields.language")}</Label>
         <Select
-          value={i18n.language.toLowerCase().startsWith("es") ? "es" : "en"}
-          onValueChange={(value) => i18n.changeLanguage(value)}
+          value={effectiveLanguage}
+          onValueChange={(value) => setLanguagePreference(value as "en" | "es")}
         >
           <SelectTrigger id="settings-language" className="w-full">
             <SelectValue placeholder={t("settings.fields.language")} />
@@ -51,6 +60,21 @@ export function PreferencesSection() {
             <SelectItem value="es">{t("settings.languages.es")}</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex items-start justify-between gap-3 py-1">
+        <div className="space-y-1">
+          <Label htmlFor="settings-simple-view">{t("settings.fields.simpleView")}</Label>
+          <p className="text-xs text-muted-foreground">
+            {t("settings.fields.simpleViewDescription")}
+          </p>
+        </div>
+        <Switch
+          id="settings-simple-view"
+          checked={effectiveSimpleView}
+          onCheckedChange={(checked) => setSimpleViewPreference(Boolean(checked))}
+          disabled={isSaving}
+        />
       </div>
     </SettingsSectionCard>
   );

@@ -79,7 +79,46 @@
       "email": "Email",
       "password": "Password",
       "theme": "Theme",
-      "language": "Language"
+      "language": "Language",
+      "simpleView": "Simple View",
+      "simpleViewDescription": "Condense dense screens for power users and instructors."
+    },
+    "ai": {
+      "chatPersonality": "Chat Personality",
+      "chatPersonalityOptions": {
+        "default": "Default: Balanced and clear",
+        "professional": "Professional: Concise and formal",
+        "friendly": "Friendly: Warm and encouraging"
+      },
+      "aboutYou": "About You (Custom Instructions)",
+      "aboutYouPlaceholder": "What should the AI know about you?",
+      "persistentMemory": "Enable Persistent Memory",
+      "persistentMemoryDescription": "Allow AI to remember your About You details across sessions.",
+      "webSearch": "Web Search",
+      "webSearchDescription": "Allow AI to browse the web for real-time information.",
+      "defaultModel": "Default Model"
+    },
+    "notifications": {
+      "groups": {
+        "gradingAi": "Grading and AI",
+        "studentActivity": "Student Activity",
+        "collaboration": "Collaboration",
+        "systemDelivery": "System and Delivery"
+      },
+      "batchCompletion": "Batch Completion",
+      "lowConfidenceFlags": "Low Confidence Flags",
+      "plagiarismDetection": "Plagiarism/AI Detection",
+      "tokenQuotaLimits": "Token/Quota Limits",
+      "newSubmissions": "New Submissions",
+      "lateSubmissions": "Late Submissions",
+      "feedbackRead": "Feedback Read",
+      "regradeRequests": "Regrade Requests",
+      "rubricChanges": "Rubric Changes",
+      "gradeOverrides": "Grade Overrides",
+      "newCourseInvites": "New Course Invites",
+      "dailyDigest": "Daily Digest",
+      "browserNotifications": "Browser Notifications",
+      "platformUpdates": "Platform Updates"
     },
     "languages": {
       "en": "English",

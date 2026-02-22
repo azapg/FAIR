@@ -79,7 +79,46 @@
       "email": "Correo electrónico",
       "password": "Contraseña",
       "theme": "Tema",
-      "language": "Idioma"
+      "language": "Idioma",
+      "simpleView": "Vista simple",
+      "simpleViewDescription": "Condensa pantallas densas para usuarios avanzados e instructores."
+    },
+    "ai": {
+      "chatPersonality": "Personalidad del chat",
+      "chatPersonalityOptions": {
+        "default": "Predeterminada: equilibrada y clara",
+        "professional": "Profesional: concisa y formal",
+        "friendly": "Amigable: cercana y motivadora"
+      },
+      "aboutYou": "Sobre ti (instrucciones personalizadas)",
+      "aboutYouPlaceholder": "¿Qué debería saber la IA sobre ti?",
+      "persistentMemory": "Habilitar memoria persistente",
+      "persistentMemoryDescription": "Permite que la IA recuerde tus detalles de Sobre ti entre sesiones.",
+      "webSearch": "Búsqueda web",
+      "webSearchDescription": "Permite que la IA navegue la web para información en tiempo real.",
+      "defaultModel": "Modelo predeterminado"
+    },
+    "notifications": {
+      "groups": {
+        "gradingAi": "Calificación e IA",
+        "studentActivity": "Actividad estudiantil",
+        "collaboration": "Colaboración",
+        "systemDelivery": "Sistema y entrega"
+      },
+      "batchCompletion": "Finalización por lotes",
+      "lowConfidenceFlags": "Banderas de baja confianza",
+      "plagiarismDetection": "Detección de plagio/IA",
+      "tokenQuotaLimits": "Límites de tokens/cuota",
+      "newSubmissions": "Nuevas entregas",
+      "lateSubmissions": "Entregas tardías",
+      "feedbackRead": "Retroalimentación leída",
+      "regradeRequests": "Solicitudes de recalificación",
+      "rubricChanges": "Cambios de rúbrica",
+      "gradeOverrides": "Sobrescritura de calificaciones",
+      "newCourseInvites": "Nuevas invitaciones a cursos",
+      "dailyDigest": "Resumen diario",
+      "browserNotifications": "Notificaciones del navegador",
+      "platformUpdates": "Actualizaciones de la plataforma"
     },
     "languages": {
       "en": "Inglés",

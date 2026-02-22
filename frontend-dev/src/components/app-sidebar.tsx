@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/collapsible";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
-import { useTheme } from "@/components/theme-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCourses } from "@/hooks/use-courses";
 import { useAllAssignments } from "@/hooks/use-assignments";
@@ -59,6 +58,8 @@ import {
 import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
+import { usePreferenceSettings } from "@/hooks/use-preference-settings";
+import { IfSetting } from "@/components/if-setting";
 
 const languages = [
   { code: "en", name: "English" },
@@ -89,14 +90,16 @@ function NavMain() {
       </SidebarMenuItem>
 
       {/*inbox*/}
-      <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip={t("nav.inbox")}>
-          <Link to="/inbox">
-            <InboxIcon />
-            <span>{t("nav.inbox")}</span>
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
+      <IfSetting setting="preferences.simpleView" equals={false}>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild tooltip={t("nav.inbox")}>
+            <Link to="/inbox">
+              <InboxIcon />
+              <span>{t("nav.inbox")}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </IfSetting>
     </SidebarMenu>
   );
 }
@@ -142,7 +145,8 @@ export function AppSidebar({
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { user: authUser, isAuthenticated, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { effectiveTheme, setThemePreference, setLanguagePreference } =
+    usePreferenceSettings();
   const isMobile = useIsMobile();
   const { data: courses = [] } = useCourses();
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
@@ -361,9 +365,9 @@ export function AppSidebar({
                           </DropdownMenuSubTrigger>
                           <DropdownMenuSubContent>
                             <DropdownMenuRadioGroup
-                              value={theme}
+                              value={effectiveTheme}
                               onValueChange={(value) =>
-                                setTheme(value as "light" | "dark" | "system")
+                                setThemePreference(value as "light" | "dark" | "system")
                               }
                             >
                               <DropdownMenuRadioItem value="light">
@@ -386,7 +390,7 @@ export function AppSidebar({
                             <DropdownMenuRadioGroup
                               value={currentLanguage.code}
                               onValueChange={(value) =>
-                                i18n.changeLanguage(value)
+                                setLanguagePreference(value as "en" | "es")
                               }
                             >
                               {languages.map((lang) => (

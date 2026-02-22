@@ -1,7 +1,10 @@
 import type { ComponentType } from "react";
 
 import { AccountSection } from "@/components/settings/sections/account-section";
+import { AiModelsSection } from "@/components/settings/sections/ai-models-section";
 import { EmptySectionFromKeys } from "@/components/settings/sections/empty-section";
+import { NotificationsSection } from "@/components/settings/sections/notifications-section";
+import { PersonalizationSection } from "@/components/settings/sections/personalization-section";
 import { PreferencesSection } from "@/components/settings/sections/preferences-section";
 
 export type SettingsCategoryId = "you" | "ai" | "research" | "admin";
@@ -47,36 +50,21 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     category: "you",
     titleKey: "settings.sections.notifications.title",
     descriptionKey: "settings.sections.notifications.description",
-    render: () => (
-      <EmptySectionFromKeys
-        titleKey="settings.sections.notifications.title"
-        descriptionKey="settings.sections.notifications.description"
-      />
-    ),
+    render: NotificationsSection,
   },
   {
     id: "personalization",
     category: "ai",
     titleKey: "settings.sections.personalization.title",
     descriptionKey: "settings.sections.personalization.description",
-    render: () => (
-      <EmptySectionFromKeys
-        titleKey="settings.sections.personalization.title"
-        descriptionKey="settings.sections.personalization.description"
-      />
-    ),
+    render: PersonalizationSection,
   },
   {
     id: "ai-models",
     category: "ai",
     titleKey: "settings.sections.aiModels.title",
     descriptionKey: "settings.sections.aiModels.description",
-    render: () => (
-      <EmptySectionFromKeys
-        titleKey="settings.sections.aiModels.title"
-        descriptionKey="settings.sections.aiModels.description"
-      />
-    ),
+    render: AiModelsSection,
   },
   {
     id: "api-keys",

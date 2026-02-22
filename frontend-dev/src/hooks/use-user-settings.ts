@@ -1,8 +1,4 @@
-import {
-  useMutation,
-  useQueries,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
@@ -42,12 +38,17 @@ const patchMySettings = async (settings: UserSettings): Promise<UserSettings> =>
   return res.data?.settings ?? {};
 };
 
-const getValueAtPath = (source: UserSettings, path: string): unknown => {
-  const keys = path
+const getPathKeys = (path: string): string[] =>
+  path
     .split(".")
     .map((key) => key.trim())
     .filter(Boolean);
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+export const getValueAtPath = (source: UserSettings, path: string): unknown => {
+  const keys = getPathKeys(path);
   if (keys.length === 0) return undefined;
 
   let cursor: unknown = source;
@@ -57,14 +58,88 @@ const getValueAtPath = (source: UserSettings, path: string): unknown => {
     }
     cursor = (cursor as Record<string, unknown>)[key];
   }
+
   return cursor;
 };
+
+/**
+ * Immutably sets a value at a specified nested path within a UserSettings object.
+ *
+ * This function creates a new UserSettings object with the value updated at the given path,
+ * without modifying the original source object. It handles nested paths by creating
+ * intermediate objects as needed.
+ *
+ * @param source - The original UserSettings object to update.
+ * @param path - A dot-separated string representing the nested path (e.g., "theme.color.primary").
+ * @param value - The value to set at the specified path. Can be of any type.
+ * @returns A new UserSettings object with the value set at the path.
+ *
+ * @example
+ * const settings = { theme: { color: { primary: 'blue' } } };
+ * const updated = setValueAtPath(settings, 'theme.color.secondary', 'green');
+ * // updated: { theme: { color: { primary: 'blue', secondary: 'green' } } }
+ * // settings remains unchanged
+ */
+export const setValueAtPath = (
+  source: UserSettings,
+  path: string,
+  value: unknown,
+): UserSettings => {
+  const keys = getPathKeys(path);
+  if (keys.length === 0) return source;
+
+  // shallow copy of the source to ensure immutability
+  const result: UserSettings = { ...source };
+  let cursor: Record<string, unknown> = result;
+
+  // Traverse the path, creating nested objects as needed (stop before the last key)
+  for (let i = 0; i < keys.length - 1; i += 1) {
+    const key = keys[i];
+    const existing = cursor[key];
+    // If existing is an object, shallow copy it; otherwise, create an empty object
+    // This ensures we don't mutate the original nested objects
+    cursor[key] = isObject(existing) ? { ...existing } : {};
+    // Move the cursor down to the newly assigned object
+    cursor = cursor[key] as Record<string, unknown>;
+  }
+
+  // Set the value at the final key in the path
+  cursor[keys[keys.length - 1]] = value;
+  return result;
+};
+
+
+const mergeDeep = (
+  source: Record<string, unknown>,
+  patch: Record<string, unknown>,
+): Record<string, unknown> => {
+  const result: Record<string, unknown> = { ...source };
+
+  for (const [key, value] of Object.entries(patch)) {
+    const existing = result[key];
+    if (isObject(existing) && isObject(value)) {
+      result[key] = mergeDeep(existing, value);
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return result;
+};
+
+export const mergeSettings = (
+  source: UserSettings,
+  patch: UserSettings,
+): UserSettings => mergeDeep(source, patch);
 
 const normalizeFallbackSettings = (
   authMe: AuthMeResponse | undefined,
 ): UserSettings => ({
   preferences: {
     interfaceMode: authMe?.preferences?.interfaceMode ?? "simple",
+    simpleView: false,
+    theme: "system",
+    language: "en",
   },
 });
 
@@ -111,11 +186,32 @@ export function useUserSetting<T = unknown>(path: string, fallback?: T) {
 
 export function useUpdateUserSettings() {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (settings: UserSettings) => patchMySettings(settings),
     onSuccess: (settings) => {
       queryClient.setQueryData(userSettingsKeys.me(), settings);
       queryClient.invalidateQueries({ queryKey: userSettingsKeys.authMe() });
     },
+  });
+}
+
+export function useUpdateUserSetting() {
+  const { settings } = useUserSettings();
+  const updateSettings = useUpdateUserSettings();
+
+  return useMutation({
+    mutationFn: async ({ path, value }: { path: string; value: unknown }) =>
+      updateSettings.mutateAsync(setValueAtPath(settings, path, value)),
+  });
+}
+
+export function usePatchUserSettings() {
+  const { settings } = useUserSettings();
+  const updateSettings = useUpdateUserSettings();
+
+  return useMutation({
+    mutationFn: async (patch: UserSettings) =>
+      updateSettings.mutateAsync(mergeSettings(settings, patch)),
   });
 }
