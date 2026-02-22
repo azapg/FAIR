@@ -83,7 +83,6 @@ function CategoryNavigation({
 }
 
 function DesktopSettingsContent() {
-  const { t } = useTranslation();
   const [selectedSectionId, setSelectedSectionId] = useState<SettingsSectionId>(DEFAULT_SECTION);
 
   const selectedSection = useMemo(
@@ -93,47 +92,41 @@ function DesktopSettingsContent() {
   const SelectedSectionComponent = selectedSection?.render;
 
   return (
-    <>
-      <DialogHeader className="border-b px-6 pt-4 pb-2">
-        <DialogTitle>{t("settings.title")}</DialogTitle>
-        <DialogDescription>{t("settings.description")}</DialogDescription>
-      </DialogHeader>
-      <div className="flex min-h-0 flex-1">
-        <aside className="w-72 border-r">
-          <ScrollArea className="h-full px-3 py-4">
-            <div className="space-y-4">
-              {SETTINGS_CATEGORY_ORDER.map((category) =>
-                category === "admin" ? (
-                  <Can I={ADMIN_PERMISSION} key={category}>
-                    <CategoryNavigation
-                      category={category}
-                      selectedSectionId={selectedSectionId}
-                      onSelectSection={setSelectedSectionId}
-                    />
-                  </Can>
-                ) : (
+    <div className="flex min-h-0 flex-1">
+      <aside className="w-72 border-r">
+        <ScrollArea className="h-full px-3 py-4">
+          <div className="space-y-4">
+            {SETTINGS_CATEGORY_ORDER.map((category) =>
+              category === "admin" ? (
+                <Can I={ADMIN_PERMISSION} key={category}>
                   <CategoryNavigation
-                    key={category}
                     category={category}
                     selectedSectionId={selectedSectionId}
                     onSelectSection={setSelectedSectionId}
                   />
-                ),
-              )}
-            </div>
-          </ScrollArea>
-        </aside>
-        <ScrollArea className="h-full flex-1">
-          <div className="space-y-4 p-6">
-            {selectedSection && sectionIsAdmin(selectedSection) ? (
-              <Can I={ADMIN_PERMISSION}>{SelectedSectionComponent ? <SelectedSectionComponent /> : null}</Can>
-            ) : SelectedSectionComponent ? (
-              <SelectedSectionComponent />
-            ) : null}
+                </Can>
+              ) : (
+                <CategoryNavigation
+                  key={category}
+                  category={category}
+                  selectedSectionId={selectedSectionId}
+                  onSelectSection={setSelectedSectionId}
+                />
+              ),
+            )}
           </div>
         </ScrollArea>
-      </div>
-    </>
+      </aside>
+      <ScrollArea className="h-full flex-1">
+        <div className="space-y-4 p-6">
+          {selectedSection && sectionIsAdmin(selectedSection) ? (
+            <Can I={ADMIN_PERMISSION}>{SelectedSectionComponent ? <SelectedSectionComponent /> : null}</Can>
+          ) : SelectedSectionComponent ? (
+            <SelectedSectionComponent />
+          ) : null}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
 
@@ -144,7 +137,7 @@ function MobileSettingsContent() {
     <>
       <DrawerHeader className="border-b text-left">
         <DrawerTitle>{t("settings.title")}</DrawerTitle>
-        <DrawerDescription>{t("settings.descriptionMobile")}</DrawerDescription>
+        <DrawerDescription>{t("settings.description")}</DrawerDescription>
       </DrawerHeader>
       <ScrollArea className="h-full">
         <div className="space-y-6 px-4 py-4 pb-8">

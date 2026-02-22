@@ -65,7 +65,6 @@
   "settings": {
     "title": "Settings",
     "description": "Manage your workspace preferences and account controls.",
-    "descriptionMobile": "Review and manage each section from one scrollable view.",
     "categories": {
       "you": "Account & Preferences",
       "ai": "AI Features",
