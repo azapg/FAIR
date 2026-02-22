@@ -1,0 +1,102 @@
+---
+title: "Changelog"
+description: "Platform updates and announcements"
+mode: wide
+---
+<Update label="February 21, 2026" description="v0.7.0">
+
+This is a massive release packed with highly requested features to make managing courses, grading submissions, and analyzing logs significantly easier. We've completely revamped the submission workflow, introduced a brand new enrollment system, and added powerful AI-backed rubrics.
+
+### **📝 Revamped Submission Management**
+
+We've completely overhauled how you interact with student submissions to make grading faster and more intuitive.
+
+* **New Submission Lifecycle & Statuses:** Submissions now progress through a clear lifecycle, including new **Returned** and **Excused** statuses.  
+* **Smart Inbox Filtering:** The new submissions table lets professors effortlessly triage their workload into three main views:  
+  * **Inbox:** Fresh submissions that haven't been graded manually or by AI.  
+  * **Active:** Submissions currently being worked on but not yet returned.  
+  * **Done:** Completed submissions that have been returned or excused.  
+* **Private Step-by-Step Grading:** Professors can now work on grading at their own pace. Students will only see the final result when the professor explicitly clicks "Return Submission".  
+* **New Table Views & Bulk Actions:** Submissions now feature robust table views with full search capabilities, bulk selection, and inline quick-editing.  
+* **Submission Detail Overlay:** You can now view submission details in a streamlined overlay without losing your place in the main table.  
+* **Human-in-the-Loop (HITL) Grading:** Added new HITL submission statuses and the ability to officially edit and override results.
+
+<Frame caption="The new submission table with smart filtering and bulk actions.">
+    <img 
+        src="/assets/submissions-table.png" 
+        alt="Screenshot of the new submission table with Inbox/Active/Done filters"
+    />
+</Frame>
+
+### **🏫 Course Management & Student Enrollment**
+
+Getting students into your courses is now completely frictionless.
+
+* **Class-Code Self-Enrollment:** Instructors can now generate unique class codes, allowing students to securely self-enroll into courses.  
+* **Unified Course Data:** Course settings and CRUD (Create, Read, Update, Delete) operations are now seamlessly exposed across all course tabs in the UI.
+
+<Frame caption="Course page showing the new class code generation feature for student self-enrollment.">
+    <img 
+        className="hidden w-1/2 lg:block md:block"
+        src="/assets/course-codes.png" 
+        alt="Screenshot of the course settings page showing class code generation for student enrollment"
+    />
+    
+    <img 
+        className="lg:hidden md:hidden"
+        src="/assets/course-codes.png" 
+        alt="Screenshot of the course settings page showing class code generation for student enrollment"
+    />
+</Frame>
+
+### **🧠 AI-Powered Rubrics**
+
+* **Dedicated Rubrics Page:** A brand new space to manage all your grading rubrics.  
+* **AI Rubric Generation:** Automatically generate comprehensive rubrics using AI. We've optimized the backend (increasing generation timeouts) to ensure high-quality, complex rubrics are created reliably.
+
+<Frame caption="The new Rubrics page with AI-generated rubric examples.">
+    <img 
+        className="hidden w-2/3 lg:block md:block"
+        src="/assets/rubrics.png" 
+        alt="Screenshot of the new Rubrics page showing AI-generated rubric examples"
+    />
+    <img 
+        className="lg:hidden md:hidden"
+        src="/assets/rubrics.png" 
+        alt="Screenshot of the new Rubrics page showing AI-generated rubric examples"
+    />
+</Frame>
+
+### **🔒 Dynamic Capabilities & Deployment Modes**
+
+Previously, users were locked into fixed roles—instructors couldn't join other courses as students, and students couldn't create courses. This made testing and demos difficult! We've migrated to a dynamic permissions system to solve this.
+
+* **Flexible Community Mode:** By default, users can now do both instructor and student tasks within the same account, making onboarding and using our [community instance](https://platform.fairgradeproject.org) a breeze.  
+* **Strict Enterprise Security:** Large universities that want to prevent students from accessing potentially expensive AI features can easily revert to the strict role behavior by simply setting `DEPLOYMENT_MODE=ENTERPRISE`.
+
+### **📊 Enhanced Logging & Artifacts**
+
+* **Rich Log Visualizations:** The markdown log viewer now supports a safe subset of HTML. This is particularly exciting for viewing advanced outputs like GLM-OCR visualizations right inside the browser.  
+* **Secure Artifact Downloads:** Users can now securely download artifacts and view them directly via new frontend actions.  
+* **Updated Sessions Log View:** We've modernized the sessions log view for a much cleaner debugging and monitoring experience.
+
+<Frame caption="The new markdown log viewer showing a GLM-OCR visualization and secure artifact download options.">
+    <img 
+        className="hidden w-1/2 lg:block md:block"
+        src="/assets/logs.png" 
+        alt="The new markdown log viewer showing a GLM-OCR visualization."
+    />
+    <img 
+        className="lg:hidden md:hidden"
+        src="/assets/logs.png" 
+        alt="The new markdown log viewer showing a GLM-OCR visualization."
+    />
+</Frame>
+
+### **🛠️ Developer & SDK Updates**
+
+* **`fair dev` CLI:** A new command to unify and simplify frontend and backend startup for developers.  
+* **Expanded SDK:** Updated and added new SDK inputs to give developers more flexibility when building custom workflows.  
+* **Mintlify Docs:** We've officially migrated our documentation to Mintlify!
+
+</Update>

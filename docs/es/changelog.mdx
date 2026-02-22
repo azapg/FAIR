@@ -1,0 +1,102 @@
+---
+title: "Registro de Cambios"
+description: "Actualizaciones de la plataforma y anuncios"
+mode: wide
+---
+<Update label="21 de febrero de 2026" description="v0.7.0">
+
+Esta es una versión masiva cargada de funciones muy solicitadas para facilitar la gestión de cursos, la calificación de entregas y el análisis de registros. Hemos renovado por completo el flujo de trabajo de entregas, introducido un sistema de inscripción completamente nuevo y añadido potentes rúbricas respaldadas por IA.
+
+### **📝 Gestión de Entregas Renovada**
+
+Hemos rediseñado por completo la forma en que interactúas con las entregas de los estudiantes para hacer la calificación más rápida e intuitiva.
+
+* **Nuevo Ciclo de Vida y Estados de Entrega:** Las entregas ahora progresan a través de un ciclo de vida claro, incluyendo los nuevos estados de **Devuelto** y **Excusado**.  
+* **Filtrado Inteligente de Bandeja de Entrada:** La nueva tabla de entregas permite a los profesores clasificar su carga de trabajo sin esfuerzo en tres vistas principales:  
+  * **Bandeja de Entrada:** Entregas nuevas que no han sido calificadas manualmente ni por IA.  
+  * **Activo:** Entregas en las que se está trabajando actualmente pero que aún no han sido devueltas.  
+  * **Completado:** Entregas finalizadas que han sido devueltas o excusadas.  
+* **Calificación Privada Paso a Paso:** Los profesores ahora pueden trabajar en la calificación a su propio ritmo. Los estudiantes solo verán el resultado final cuando el profesor haga clic explícitamente en "Devolver Entrega".  
+* **Nuevas Vistas de Tabla y Acciones Masivas:** Las entregas ahora cuentan con vistas de tabla robustas con capacidades completas de búsqueda, selección masiva y edición rápida en línea.  
+* **Superposición de Detalles de Entrega:** Ahora puedes ver los detalles de la entrega en una superposición optimizada sin perder tu lugar en la tabla principal.  
+* **Calificación con Intervención Humana (HITL):** Se añadieron nuevos estados de entrega HITL y la capacidad de editar y anular resultados oficialmente.
+
+<Frame caption="La nueva tabla de entregas con filtrado inteligente y acciones masivas.">
+    <img 
+        src="/assets/submissions-table.png" 
+        alt="Captura de pantalla de la nueva tabla de entregas con filtros de Bandeja de Entrada/Activo/Completado"
+    />
+</Frame>
+
+### **🏫 Gestión de Cursos e Inscripción de Estudiantes**
+
+Ahora es completamente sencillo incorporar estudiantes a tus cursos.
+
+* **Auto-Inscripción por Código de Clase:** Los instructores ahora pueden generar códigos de clase únicos, permitiendo que los estudiantes se inscriban de forma segura por sí mismos.  
+* **Datos de Curso Unificados:** La configuración del curso y las operaciones CRUD (Crear, Leer, Actualizar, Eliminar) ahora se muestran de manera fluida en todas las pestañas del curso en la interfaz.
+
+<Frame caption="Página del curso mostrando la nueva función de generación de códigos para auto-inscripción de estudiantes.">
+    <img 
+        className="hidden w-1/2 lg:block md:block"
+        src="/assets/course-codes.png" 
+        alt="Captura de pantalla de la página de configuración del curso mostrando la generación de códigos de clase para inscripción de estudiantes"
+    />
+    
+    <img 
+        className="lg:hidden md:hidden"
+        src="/assets/course-codes.png" 
+        alt="Captura de pantalla de la página de configuración del curso mostrando la generación de códigos de clase para inscripción de estudiantes"
+    />
+</Frame>
+
+### **🧠 Rúbricas Impulsadas por IA**
+
+* **Página Dedicada de Rúbricas:** Un espacio completamente nuevo para gestionar todas tus rúbricas de calificación.  
+* **Generación de Rúbricas con IA:** Genera automáticamente rúbricas completas utilizando IA. Hemos optimizado el backend (aumentando los tiempos de espera de generación) para garantizar la creación confiable de rúbricas complejas y de alta calidad.
+
+<Frame caption="La nueva página de Rúbricas con ejemplos de rúbricas generadas por IA.">
+    <img 
+        className="hidden w-2/3 lg:block md:block"
+        src="/assets/rubrics.png" 
+        alt="Captura de pantalla de la nueva página de Rúbricas mostrando ejemplos de rúbricas generadas por IA"
+    />
+    <img 
+        className="lg:hidden md:hidden"
+        src="/assets/rubrics.png" 
+        alt="Captura de pantalla de la nueva página de Rúbricas mostrando ejemplos de rúbricas generadas por IA"
+    />
+</Frame>
+
+### **🔒 Capacidades Dinámicas y Modos de Despliegue**
+
+Anteriormente, los usuarios estaban limitados a roles fijos: los instructores no podían unirse a otros cursos como estudiantes, y los estudiantes no podían crear cursos. ¡Esto dificultaba las pruebas y demostraciones! Hemos migrado a un sistema de permisos dinámico para resolver esto.
+
+* **Modo Comunitario Flexible:** Por defecto, los usuarios ahora pueden realizar tanto tareas de instructor como de estudiante dentro de la misma cuenta, facilitando la incorporación y el uso de nuestra [instancia comunitaria](https://platform.fairgradeproject.org).  
+* **Seguridad Empresarial Estricta:** Las grandes universidades que desean evitar que los estudiantes accedan a funciones de IA potencialmente costosas pueden volver fácilmente al comportamiento estricto de roles simplemente configurando `DEPLOYMENT_MODE=ENTERPRISE`.
+
+### **📊 Registros y Artefactos Mejorados**
+
+* **Visualizaciones Enriquecidas de Registros:** El visor de registros en markdown ahora admite un subconjunto seguro de HTML. Esto es particularmente emocionante para visualizar salidas avanzadas como las visualizaciones GLM-OCR directamente en el navegador.  
+* **Descargas Seguras de Artefactos:** Los usuarios ahora pueden descargar artefactos de forma segura y verlos directamente mediante nuevas acciones de frontend.  
+* **Vista de Registro de Sesiones Actualizada:** Hemos modernizado la vista de registro de sesiones para una experiencia de depuración y monitoreo mucho más limpia.
+
+<Frame caption="El nuevo visor de registros en markdown mostrando una visualización GLM-OCR y opciones de descarga segura de artefactos.">
+    <img 
+        className="hidden w-1/2 lg:block md:block"
+        src="/assets/logs.png" 
+        alt="El nuevo visor de registros en markdown mostrando una visualización GLM-OCR."
+    />
+    <img 
+        className="lg:hidden md:hidden"
+        src="/assets/logs.png" 
+        alt="El nuevo visor de registros en markdown mostrando una visualización GLM-OCR."
+    />
+</Frame>
+
+### **🛠️ Actualizaciones para Desarrolladores y SDK**
+
+* **CLI `fair dev`:** Un nuevo comando para unificar y simplificar el inicio del frontend y backend para desarrolladores.  
+* **SDK Ampliado:** Se actualizaron y añadieron nuevas entradas al SDK para dar a los desarrolladores más flexibilidad al crear flujos de trabajo personalizados.  
+* **Documentación de Mintlify:** ¡Hemos migrado oficialmente nuestra documentación a Mintlify!
+
+</Update>
