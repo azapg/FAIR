@@ -67,7 +67,7 @@
     "description": "Administra las preferencias de tu espacio y controles de cuenta.",
     "descriptionMobile": "Revisa y administra cada sección en una sola vista desplazable.",
     "categories": {
-      "you": "Cuenta y prefencias",
+      "you": "Cuenta y preferencias",
       "ai": "Funciones de IA",
       "research": "Investigación",
       "admin": "Admin"
