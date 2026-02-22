@@ -20,6 +20,7 @@ import type { ComponentProps } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   BookOpen,
+  ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
   FileText,
@@ -192,7 +193,8 @@ export function AppSidebar({
 
   const sidebarStyle = {
     ...(style ?? {}),
-    ["--sidebar-width" as string]: inboxOpen ? "36rem" : "16rem",
+    ["--sidebar-width" as string]: !isSidebarMobile && inboxOpen ? "40rem" : "20rem",
+    ["--app-sidebar-main-width" as string]: "20rem",
   } as React.CSSProperties;
 
   return (
@@ -204,7 +206,42 @@ export function AppSidebar({
       {...props}
     >
       <div className="flex h-full w-full overflow-hidden">
-      <div className="flex h-full w-64 min-w-64 flex-col group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[collapsible=icon]:min-w-(--sidebar-width-icon)">
+      {isSidebarMobile && inboxOpen ? (
+        <div className="flex h-full w-full flex-col">
+          <SidebarHeader className="pb-0 pt-4">
+            <div className="flex items-center gap-2 px-2">
+              <button
+                type="button"
+                onClick={() => setInboxOpen(false)}
+                className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md p-1"
+                aria-label="Back to sidebar"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <h2 className="text-sm font-medium">{t("nav.inbox")}</h2>
+            </div>
+            <SidebarSeparator className="mx-0" />
+          </SidebarHeader>
+          <ScrollArea className="h-full">
+            <div className="p-2">
+              {inboxLogs.map((log) => (
+                <button
+                  key={log.id}
+                  type="button"
+                  className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground w-full rounded-md border-b p-3 text-left last:border-b-0"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{log.title}</span>
+                    <span className="text-muted-foreground ml-auto text-xs">{log.time}</span>
+                  </div>
+                  <p className="text-muted-foreground mt-1 text-xs">{log.detail}</p>
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      ) : (
+      <div className="flex h-full w-full flex-col md:w-(--app-sidebar-main-width) md:min-w-(--app-sidebar-main-width) group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[collapsible=icon]:min-w-(--sidebar-width-icon)">
         <SidebarHeader className="pb-0 pt-4">
           <SidebarMenu>
             <SidebarMenuItem>
@@ -481,6 +518,7 @@ export function AppSidebar({
           </SidebarGroup>
         </SidebarFooter>
       </div>
+      )}
       {inboxOpen && (
         <aside className="hidden w-80 border-l bg-sidebar md:flex md:flex-col">
           <div className="border-b p-4">
