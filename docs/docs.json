@@ -68,67 +68,10 @@
               {
                 "group": "Overview",
                 "pages": [
-                  "en/api-reference/overview",
                   "en/api-reference/releases",
                   "en/api-reference/migrations",
                   "en/api-reference/dev-env"
                 ]
-              },
-              {
-                "group": "Authentication",
-                "pages": ["en/api-reference/authentication"]
-              },
-              {
-                "group": "Endpoints",
-                "pages": ["en/api-reference/endpoints"]
-              }
-            ]
-          },
-          {
-            "tab": "SDK",
-            "icon": "blocks",
-            "groups": [
-              {
-                "group": "Overview",
-                "pages": ["en/sdk/overview"]
-              },
-              {
-                "group": "Plugins",
-                "pages": ["en/sdk/plugins"]
-              },
-              {
-                "group": "Schemas",
-                "pages": ["en/sdk/schemas"]
-              },
-              {
-                "group": "Examples",
-                "pages": ["en/sdk/examples"]
-              }
-            ]
-          },
-          {
-            "tab": "Guides",
-            "icon": "graduation-cap",
-            "groups": [
-              {
-                "group": "Setup",
-                "pages": ["en/guides/installation"]
-              },
-              {
-                "group": "Development",
-                "pages": [
-                  "en/guides/development-workflow",
-                  "en/guides/frontend",
-                  "en/guides/backend"
-                ]
-              },
-              {
-                "group": "Extending",
-                "pages": ["en/guides/plugins"]
-              },
-              {
-                "group": "Releases",
-                "pages": ["en/guides/releases"]
               }
             ]
           },
@@ -168,73 +111,6 @@
               {
                 "group": "Plataforma",
                 "pages": ["es/platform/workflows", "es/platform/integrations"]
-              }
-            ]
-          },
-          {
-            "tab": "Referencia de API",
-            "openapi": "assets/openapi.json",
-            "icon": "code",
-            "groups": [
-              {
-                "group": "Resumen",
-                "pages": ["es/api-reference/overview"]
-              },
-              {
-                "group": "Autenticación",
-                "pages": ["es/api-reference/authentication"]
-              },
-              {
-                "group": "Endpoints",
-                "pages": ["es/api-reference/endpoints"]
-              }
-            ]
-          },
-          {
-            "tab": "SDK",
-            "icon": "blocks",
-            "groups": [
-              {
-                "group": "Resumen",
-                "pages": ["es/sdk/overview"]
-              },
-              {
-                "group": "Plugins",
-                "pages": ["es/sdk/plugins"]
-              },
-              {
-                "group": "Esquemas",
-                "pages": ["es/sdk/schemas"]
-              },
-              {
-                "group": "Ejemplos",
-                "pages": ["es/sdk/examples"]
-              }
-            ]
-          },
-          {
-            "tab": "Guías",
-            "icon": "graduation-cap",
-            "groups": [
-              {
-                "group": "Instalación",
-                "pages": ["es/guides/installation"]
-              },
-              {
-                "group": "Desarrollo",
-                "pages": [
-                  "es/guides/development-workflow",
-                  "es/guides/frontend",
-                  "es/guides/backend"
-                ]
-              },
-              {
-                "group": "Extensiones",
-                "pages": ["es/guides/plugins"]
-              },
-              {
-                "group": "Lanzamientos",
-                "pages": ["es/guides/releases"]
               }
             ]
           },
