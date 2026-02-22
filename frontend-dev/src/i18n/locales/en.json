@@ -27,7 +27,8 @@
     "next": "Next",
     "last": "Last",
     "enable": "Enable",
-    "disable": "Disable"
+    "disable": "Disable",
+    "or": "or"
   },
   "header": {
     "title": "The Fair Platform",
@@ -136,7 +137,11 @@
         "title": "Profile",
         "description": "Review your email, avatar, and password controls.",
         "avatarAction": "Change avatar",
-        "changePassword": "Change password"
+        "changePassword": "Change password",
+        "changeEmail": "Change email",
+        "yourName": "Your name",
+        "addProfilePictureAction": "Add a profile picture",
+        "generateProfilePictureAction": "generate a random face."
       },
       "dangerZone": {
         "title": "Danger zone",

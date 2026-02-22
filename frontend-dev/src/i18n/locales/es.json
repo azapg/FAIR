@@ -27,7 +27,8 @@
     "next": "Siguiente",
     "last": "Última",
     "enable": "Habilitar",
-    "disable": "Deshabilitar"
+    "disable": "Deshabilitar",
+    "or": "o"
   },
   "header": {
     "title": "The Fair Platform",
@@ -136,7 +137,11 @@
         "title": "Perfil",
         "description": "Revisa tu correo, avatar y controles de contraseña.",
         "avatarAction": "Cambiar avatar",
-        "changePassword": "Cambiar contraseña"
+        "changePassword": "Cambiar contraseña",
+        "changeEmail": "Cambiar correo electrónico",
+        "yourName": "Tu nombre",
+        "addProfilePictureAction": "Agregar una foto de perfil",
+        "generateProfilePictureAction": "generar una cara aleatoria."
       },
       "dangerZone": {
         "title": "Zona de peligro",
