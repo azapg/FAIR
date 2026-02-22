@@ -5,11 +5,34 @@ from sqlalchemy.orm import Session
 
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.data.models.user import User
-from fair_platform.backend.api.schema.user import UserRead, UserUpdate
+from fair_platform.backend.api.schema.user import (
+    UserRead,
+    UserSettingsRead,
+    UserSettingsUpdate,
+    UserUpdate,
+)
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.core.security.permissions import has_capability
 
 router = APIRouter()
+
+
+@router.get("/me/settings", response_model=UserSettingsRead)
+def get_my_settings(current_user: User = Depends(get_current_user)):
+    return {"settings": current_user.settings if isinstance(current_user.settings, dict) else {}}
+
+
+@router.patch("/me/settings", response_model=UserSettingsRead)
+def update_my_settings(
+    payload: UserSettingsUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.settings = payload.settings
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    return {"settings": current_user.settings if isinstance(current_user.settings, dict) else {}}
 
 
 @router.get("/", response_model=list[UserRead])

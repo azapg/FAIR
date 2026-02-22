@@ -249,3 +249,63 @@ class TestAuthenticationFlow:
             assert me_response.status_code == 200
             payload = me_response.json()
             assert payload["role"] == expected_role
+
+    def test_auth_me_preferences_are_loaded_from_user_settings(self, test_client: TestClient, test_db):
+        email = f"settings-{uuid4()}@test.com"
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="Settings User",
+                email=email,
+                role=UserRole.user.value,
+                password_hash=hash_password("test_password_123"),
+                settings={"preferences": {"interface_mode": "expert"}},
+            )
+            session.add(user)
+            session.commit()
+
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+        token = login_response.json()["access_token"]
+
+        me_response = test_client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert me_response.status_code == 200
+        payload = me_response.json()
+        assert payload["preferences"]["interfaceMode"] == "expert"
+
+    def test_user_can_get_and_update_own_settings(self, test_client: TestClient, student_user):
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        read_response = test_client.get("/api/users/me/settings", headers=headers)
+        assert read_response.status_code == 200
+        assert read_response.json()["settings"] == {}
+
+        payload = {
+            "settings": {
+                "preferences": {"interface_mode": "expert"},
+                "ui": {"show_tips": False},
+            }
+        }
+        update_response = test_client.patch(
+            "/api/users/me/settings",
+            json=payload,
+            headers=headers,
+        )
+        assert update_response.status_code == 200
+        assert update_response.json()["settings"] == payload["settings"]
+
+        verify_response = test_client.get("/api/users/me/settings", headers=headers)
+        assert verify_response.status_code == 200
+        assert verify_response.json()["settings"] == payload["settings"]
