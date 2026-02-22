@@ -13,8 +13,9 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ComponentProps } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -65,7 +66,21 @@ const languages = [
   { code: "es", name: "Español" },
 ];
 
-function NavMain() {
+const inboxLogs = [
+  { id: "1", title: "Workflow started", detail: "Run #2048 queued for CS101", time: "2m ago" },
+  { id: "2", title: "Plugin warning", detail: "lint-check reported 3 warnings", time: "7m ago" },
+  { id: "3", title: "Submission updated", detail: "Student #A127 uploaded new files", time: "15m ago" },
+  { id: "4", title: "Run completed", detail: "Run #2041 finished successfully", time: "28m ago" },
+  { id: "5", title: "Artifact generated", detail: "feedback.json is ready to download", time: "1h ago" },
+];
+
+function NavMain({
+  isInboxOpen,
+  onInboxToggle,
+}: {
+  isInboxOpen: boolean;
+  onInboxToggle: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <SidebarMenu>
@@ -89,11 +104,13 @@ function NavMain() {
       </SidebarMenuItem>
 
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip={t("nav.inbox")}>
-          <Link to="/inbox">
-            <InboxIcon />
-            <span>{t("nav.inbox")}</span>
-          </Link>
+        <SidebarMenuButton
+          tooltip={t("nav.inbox")}
+          onClick={onInboxToggle}
+          isActive={isInboxOpen}
+        >
+          <InboxIcon />
+          <span>{t("nav.inbox")}</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
@@ -134,6 +151,7 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
 export function AppSidebar({
   side = "left",
   className,
+  style,
   ...props
 }: ComponentProps<typeof Sidebar> & {
   side?: "left" | "right";
@@ -146,8 +164,22 @@ export function AppSidebar({
   const isMobile = useIsMobile();
   const { data: courses = [] } = useCourses();
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
+  const { setOpen, state, isMobile: isSidebarMobile, openMobile } = useSidebar();
   const [showAllAssignments, setShowAllAssignments] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
+
+  useEffect(() => {
+    if (state !== "expanded") {
+      setInboxOpen(false);
+    }
+  }, [state]);
+
+  useEffect(() => {
+    if (isSidebarMobile && !openMobile) {
+      setInboxOpen(false);
+    }
+  }, [isSidebarMobile, openMobile]);
 
   const displayTitle = t("header.title");
   const userName = authUser?.name || t("header.profile");
@@ -158,8 +190,21 @@ export function AppSidebar({
       i18n.language?.toLowerCase().startsWith(lang.code),
     ) ?? languages[0];
 
+  const sidebarStyle = {
+    ...(style ?? {}),
+    ["--sidebar-width" as string]: inboxOpen ? "36rem" : "16rem",
+  } as React.CSSProperties;
+
   return (
-    <Sidebar side={side} collapsible="icon" className={className} {...props}>
+    <Sidebar
+      side={side}
+      collapsible="icon"
+      className={className}
+      style={sidebarStyle}
+      {...props}
+    >
+      <div className="flex h-full w-full overflow-hidden">
+      <div className="flex h-full w-64 min-w-64 flex-col group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[collapsible=icon]:min-w-(--sidebar-width-icon)">
         <SidebarHeader className="pb-0 pt-4">
           <SidebarMenu>
             <SidebarMenuItem>
@@ -190,7 +235,13 @@ export function AppSidebar({
         <SidebarContent className="gap-0">
           <SidebarGroup>
             <SidebarGroupContent>
-              <NavMain />
+              <NavMain
+                isInboxOpen={inboxOpen}
+                onInboxToggle={() => {
+                  setOpen(true);
+                  setInboxOpen((current) => !current);
+                }}
+              />
             </SidebarGroupContent>
           </SidebarGroup>
           <SidebarGroup>
@@ -429,6 +480,33 @@ export function AppSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarFooter>
+      </div>
+      {inboxOpen && (
+        <aside className="hidden w-80 border-l bg-sidebar md:flex md:flex-col">
+          <div className="border-b p-4">
+            <h2 className="text-sm font-medium">{t("nav.inbox")}</h2>
+            <p className="text-muted-foreground mt-1 text-xs">Recent log activity</p>
+          </div>
+          <ScrollArea className="h-full">
+            <div className="p-2">
+              {inboxLogs.map((log) => (
+                <button
+                  key={log.id}
+                  type="button"
+                  className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground w-full rounded-md border-b p-3 text-left last:border-b-0"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{log.title}</span>
+                    <span className="text-muted-foreground ml-auto text-xs">{log.time}</span>
+                  </div>
+                  <p className="text-muted-foreground mt-1 text-xs">{log.detail}</p>
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </aside>
+      )}
+      </div>
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} isMobile={isMobile} />
     </Sidebar>
   );
