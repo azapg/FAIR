@@ -37,23 +37,7 @@ Our roadmap includes the development of core academic utilities that ensure stud
 
 * **Institutional Intelligence**. Tools for policymakers to oversee AI usage at scale, ensuring ethical deployment across entire departments or universities. This includes features for monitoring, auditing, and analyzing AI interactions to ensure compliance with institutional policies and ethical standards.
 
-### Prototypes & Labs
-
-We aren't just theorizing; we are building. Below are early looks at how we are integrating personalized learning and advanced psychometric analysis into the platform.
-
-<Columns cols={1}>
-    <Frame caption="Study-Chats: Personalized AI Teaching Assistants">
-      <img src="/assets/test.png" alt="Screenshot showcasing an early prototype of study chats at the platform." />
-    </Frame>
-    <Frame caption="Psychometric Analysis: Deep Insights into Student Performance">
-      <img src="/assets/test.png" alt="Screenshot showcasing an early prototype of psychometric analysis at the platform." />  
-    </Frame>
-    <Frame caption="Knowledge Engines: Transforming Course Materials into Engaging Content">
-      <img src="/assets/test.png" alt="Screenshot showcasing an early prototype of knowledge engines at the platform." />
-    </Frame>
-</Columns>
-
-Read more about the future of the platform in our roadmap. We are excited to collaborate with the education community to write the playbook for responsible AI in education.
+Read more about the future of the platform in our [roadmap](/en/roadmap). We are excited to collaborate with the education community to write the playbook for responsible AI in education.
 
 ## Next Steps
 <Columns cols={2}>

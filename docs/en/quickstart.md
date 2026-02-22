@@ -6,7 +6,7 @@ description: How to get started with FAIR Platform
 This page shows the fastest way to start using **FAIR Platform**. You can either try our community instance at [platform.fairgradeproject.org](https://platform.fairgradeproject.org) or install it locally on your machine. Both are, and will always be, completely free.
 
 <Card
-title="community instance"
+title="Community Instance"
 href="https://platform.fairgradeproject.org"
 arrow="true"
 cta="Explore the community instance"
