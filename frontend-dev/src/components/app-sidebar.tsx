@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SettingsDialog } from "@/components/settings/settings-dialog";
 
 const languages = [
   { code: "en", name: "English" },
@@ -100,7 +101,7 @@ function NavMain() {
   );
 }
 
-function NavSecondary() {
+function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
   const { t } = useTranslation();
   return (
     <SidebarMenu>
@@ -113,11 +114,9 @@ function NavSecondary() {
         </SidebarMenuButton>
       </SidebarMenuItem>
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip={t("nav.settings")}>
-          <Link to="/settings">
-            <SettingsIcon />
-            <span>{t("nav.settings")}</span>
-          </Link>
+        <SidebarMenuButton tooltip={t("nav.settings")} onClick={onSettingsClick}>
+          <SettingsIcon />
+          <span>{t("nav.settings")}</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
       {/*Help*/}
@@ -148,6 +147,7 @@ export function AppSidebar({
   const { data: courses = [] } = useCourses();
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
   const [showAllAssignments, setShowAllAssignments] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const displayTitle = t("header.title");
   const userName = authUser?.name || t("header.profile");
@@ -290,7 +290,7 @@ export function AppSidebar({
 
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
-              <NavSecondary />
+              <NavSecondary onSettingsClick={() => setSettingsOpen(true)} />
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
@@ -429,6 +429,7 @@ export function AppSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarFooter>
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} isMobile={isMobile} />
     </Sidebar>
   );
 }

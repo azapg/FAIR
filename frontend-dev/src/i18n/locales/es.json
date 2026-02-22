@@ -62,6 +62,77 @@
     "language": "Idioma",
     "logout": "Cerrar sesión"
   },
+  "settings": {
+    "title": "Configuración",
+    "description": "Administra las preferencias de tu espacio y controles de cuenta.",
+    "descriptionMobile": "Revisa y administra cada sección en una sola vista desplazable.",
+    "categories": {
+      "you": "Tú",
+      "ai": "IA",
+      "research": "Investigación",
+      "admin": "Admin"
+    },
+    "groups": {
+      "account": "Cuenta"
+    },
+    "fields": {
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "theme": "Tema",
+      "language": "Idioma"
+    },
+    "languages": {
+      "en": "Inglés",
+      "es": "Español"
+    },
+    "empty": {
+      "title": "Sección en desarrollo",
+      "description": "Esta parte de configuración se está desarrollando actualmente."
+    },
+    "sections": {
+      "profile": {
+        "title": "Perfil",
+        "description": "Revisa tu correo, avatar y controles de contraseña.",
+        "avatarAction": "Cambiar avatar",
+        "changePassword": "Cambiar contraseña"
+      },
+      "dangerZone": {
+        "title": "Zona de peligro",
+        "description": "Acciones de cuenta de alto impacto.",
+        "warning": "Procede con cuidado. Estas acciones pueden afectar los datos de tu cuenta.",
+        "deleteAccount": "Eliminar cuenta",
+        "exportData": "Exportar datos"
+      },
+      "preferences": {
+        "title": "Preferencias",
+        "description": "Controla los valores predeterminados de tu espacio."
+      },
+      "notifications": {
+        "title": "Notificaciones",
+        "description": "Administra canales y frecuencia de notificaciones."
+      },
+      "personalization": {
+        "title": "Personalización",
+        "description": "Ajusta cómo la IA se adapta a tu flujo de trabajo."
+      },
+      "aiModels": {
+        "title": "Modelos",
+        "description": "Configura modelos para funciones de IA."
+      },
+      "apiKeys": {
+        "title": "Claves API",
+        "description": "Administra credenciales para integraciones de investigación."
+      },
+      "adminPeople": {
+        "title": "Personas",
+        "description": "Administra miembros y acceso administrativo."
+      },
+      "adminModels": {
+        "title": "Modelos",
+        "description": "Controla políticas de modelos a nivel organización."
+      }
+    }
+  },
   "auth": {
     "welcomeBack": "Bienvenido de nuevo",
     "loginToFair": "Inicia sesión en The Fair Platform",
