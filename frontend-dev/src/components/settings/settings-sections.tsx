@@ -51,7 +51,7 @@ function SettingsSectionCard({
   children,
 }: SettingsSectionCardProps) {
   return (
-    <section className="rounded-lg border bg-card p-5">
+    <section className="rounded-lg bg-card p-5">
       <header className="mb-4 space-y-1">
         <h3 className="text-base font-semibold">{title}</h3>
         <p className="text-sm text-muted-foreground">{description}</p>
