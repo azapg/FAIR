@@ -59,7 +59,6 @@ import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { usePreferenceSettings } from "@/hooks/use-preference-settings";
-import { IfSetting } from "@/components/if-setting";
 
 const languages = [
   { code: "en", name: "English" },
@@ -89,17 +88,14 @@ function NavMain() {
         </SidebarMenuButton>
       </SidebarMenuItem>
 
-      {/*inbox*/}
-      <IfSetting setting="preferences.simpleView" equals={false}>
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild tooltip={t("nav.inbox")}>
-            <Link to="/inbox">
-              <InboxIcon />
-              <span>{t("nav.inbox")}</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </IfSetting>
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip={t("nav.inbox")}>
+          <Link to="/inbox">
+            <InboxIcon />
+            <span>{t("nav.inbox")}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
     </SidebarMenu>
   );
 }
