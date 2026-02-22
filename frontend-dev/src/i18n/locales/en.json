@@ -67,8 +67,8 @@
     "description": "Manage your workspace preferences and account controls.",
     "descriptionMobile": "Review and manage each section from one scrollable view.",
     "categories": {
-      "you": "You",
-      "ai": "AI",
+      "you": "Account & Preferences",
+      "ai": "AI Features",
       "research": "Research",
       "admin": "Admin"
     },
@@ -159,7 +159,7 @@
         "description": "Tune how AI adapts to your workflow."
       },
       "aiModels": {
-        "title": "Models",
+        "title": "AI Features",
         "description": "Configure model choices for AI features."
       },
       "apiKeys": {

@@ -67,8 +67,8 @@
     "description": "Administra las preferencias de tu espacio y controles de cuenta.",
     "descriptionMobile": "Revisa y administra cada sección en una sola vista desplazable.",
     "categories": {
-      "you": "Tú",
-      "ai": "IA",
+      "you": "Cuenta y prefencias",
+      "ai": "Funciones de IA",
       "research": "Investigación",
       "admin": "Admin"
     },
@@ -159,7 +159,7 @@
         "description": "Ajusta cómo la IA se adapta a tu flujo de trabajo."
       },
       "aiModels": {
-        "title": "Modelos",
+        "title": "Funciones de IA",
         "description": "Configura modelos para funciones de IA."
       },
       "apiKeys": {
