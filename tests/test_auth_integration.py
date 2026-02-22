@@ -277,9 +277,9 @@ class TestAuthenticationFlow:
         )
         assert me_response.status_code == 200
         payload = me_response.json()
-        assert payload["preferences"]["interfaceMode"] == "expert"
+        assert payload["settings"]["preferences"]["interfaceMode"] == "expert"
 
-    def test_user_can_get_and_update_own_settings(self, test_client: TestClient, student_user):
+    def test_user_can_get_and_update_own_settings(self, test_client: TestClient, student_user, test_db):
         login_response = test_client.post(
             "/api/auth/login",
             data={"username": student_user.email, "password": "test_password_123"},
@@ -292,10 +292,47 @@ class TestAuthenticationFlow:
         assert read_response.status_code == 200
         assert read_response.json()["settings"] == {}
 
-        payload = {
+        patch_payload = {
             "settings": {
+                "preferences": {"interfaceMode": "expert"},
+                "ui": {"showTips": False},
+            }
+        }
+        update_response = test_client.patch(
+            "/api/users/me/settings",
+            json=patch_payload,
+            headers=headers,
+        )
+        assert update_response.status_code == 200
+        assert update_response.json()["settings"] == patch_payload["settings"]
+
+        verify_response = test_client.get("/api/users/me/settings", headers=headers)
+        assert verify_response.status_code == 200
+        assert verify_response.json()["settings"] == patch_payload["settings"]
+
+        with test_db() as session:
+            refreshed_user = session.get(User, student_user.id)
+            assert refreshed_user is not None
+            assert refreshed_user.settings == {
                 "preferences": {"interface_mode": "expert"},
                 "ui": {"show_tips": False},
+            }
+
+    def test_user_settings_patch_rejects_conflicting_casing(self, test_client: TestClient, student_user):
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        payload = {
+            "settings": {
+                "preferences": {
+                    "interfaceMode": "expert",
+                    "interface_mode": "simple",
+                },
             }
         }
         update_response = test_client.patch(
@@ -303,9 +340,5 @@ class TestAuthenticationFlow:
             json=payload,
             headers=headers,
         )
-        assert update_response.status_code == 200
-        assert update_response.json()["settings"] == payload["settings"]
-
-        verify_response = test_client.get("/api/users/me/settings", headers=headers)
-        assert verify_response.status_code == 200
-        assert verify_response.json()["settings"] == payload["settings"]
+        assert update_response.status_code == 422
+        assert "Conflicting keys normalize to 'interface_mode'" in update_response.json()["detail"]

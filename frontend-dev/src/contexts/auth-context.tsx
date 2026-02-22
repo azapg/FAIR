@@ -7,17 +7,13 @@ export enum AuthUserRole {
   ADMIN = 'admin'
 }
 
-export type UserPreferences = {
-  interfaceMode: 'simple' | 'expert'
-}
-
 export type AuthUser = {
   id: string
   name: string
   email: string
   role: AuthUserRole
   capabilities: string[]
-  preferences: UserPreferences
+  settings: Record<string, unknown>
 }
 
 type LoginInput = { username: string; password: string; remember_me?: boolean }
@@ -50,9 +46,10 @@ const normalizeUser = (raw: Partial<AuthUser> & { role?: string }): AuthUser => 
   email: raw.email ?? '',
   role: normalizeRole(raw.role ?? AuthUserRole.USER),
   capabilities: Array.isArray(raw.capabilities) ? raw.capabilities : [],
-  preferences: {
-    interfaceMode: raw.preferences?.interfaceMode ?? 'simple',
-  },
+  settings:
+    raw.settings && typeof raw.settings === 'object' && !Array.isArray(raw.settings)
+      ? raw.settings
+      : {},
 })
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {

@@ -143,7 +143,6 @@ def has_capability_or_resolved_owner(
 
 def auth_user_payload(user: User) -> dict[str, Any]:
     settings = user.settings if isinstance(user.settings, dict) else {}
-    preferences = settings.get("preferences") if isinstance(settings.get("preferences"), dict) else {}
 
     return {
         "id": user.id,
@@ -151,5 +150,5 @@ def auth_user_payload(user: User) -> dict[str, Any]:
         "email": user.email,
         "role": coerce_user_role(user.role),
         "capabilities": sorted(capabilities_for_role(user.role)),
-        "preferences": {"interface_mode": preferences.get("interface_mode", "simple")},
+        "settings": settings,
     }

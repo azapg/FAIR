@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -40,15 +40,9 @@ class UserRead(UserBase):
     id: UUID
 
 
-class UserPreferences(BaseModel):
-    model_config = schema_config
-
-    interface_mode: Literal["simple", "expert"] = "simple"
-
-
 class AuthUserRead(UserRead):
     capabilities: list[str] = Field(default_factory=list)
-    preferences: UserPreferences = Field(default_factory=UserPreferences)
+    settings: dict[str, Any] = Field(default_factory=dict)
 
 
 class UserSettingsRead(BaseModel):
@@ -69,7 +63,6 @@ __all__ = [
     "UserCreate",
     "UserUpdate",
     "UserRead",
-    "UserPreferences",
     "AuthUserRead",
     "UserSettingsRead",
     "UserSettingsUpdate",

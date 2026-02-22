@@ -11,6 +11,11 @@ from fair_platform.backend.api.schema.user import (
     UserSettingsUpdate,
     UserUpdate,
 )
+from fair_platform.backend.api.schema.casing import (
+    KeyConflictError,
+    to_camel_keys,
+    to_snake_keys,
+)
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.core.security.permissions import has_capability
 
@@ -19,7 +24,8 @@ router = APIRouter()
 
 @router.get("/me/settings", response_model=UserSettingsRead)
 def get_my_settings(current_user: User = Depends(get_current_user)):
-    return {"settings": current_user.settings if isinstance(current_user.settings, dict) else {}}
+    settings = current_user.settings if isinstance(current_user.settings, dict) else {}
+    return {"settings": to_camel_keys(settings)}
 
 
 @router.patch("/me/settings", response_model=UserSettingsRead)
@@ -28,11 +34,19 @@ def update_my_settings(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    current_user.settings = payload.settings
+    try:
+        normalized_settings = to_snake_keys(payload.settings)
+    except KeyConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    current_user.settings = normalized_settings
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
-    return {"settings": current_user.settings if isinstance(current_user.settings, dict) else {}}
+    settings = current_user.settings if isinstance(current_user.settings, dict) else {}
+    return {"settings": to_camel_keys(settings)}
 
 
 @router.get("/", response_model=list[UserRead])

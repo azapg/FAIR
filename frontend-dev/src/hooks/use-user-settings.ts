@@ -10,9 +10,7 @@ type UserSettingsResponse = {
 };
 
 type AuthMeResponse = {
-  preferences?: {
-    interfaceMode?: "simple" | "expert";
-  };
+  settings?: UserSettings;
 };
 
 export const userSettingsKeys = {
@@ -134,14 +132,22 @@ export const mergeSettings = (
 
 const normalizeFallbackSettings = (
   authMe: AuthMeResponse | undefined,
-): UserSettings => ({
-  preferences: {
-    interfaceMode: authMe?.preferences?.interfaceMode ?? "simple",
-    simpleView: false,
-    theme: "system",
-    language: "en",
-  },
-});
+): UserSettings => {
+  const baseSettings =
+    authMe?.settings && typeof authMe.settings === "object" ? authMe.settings : {};
+
+  return mergeDeep(
+    {
+      preferences: {
+        interfaceMode: "simple",
+        simpleView: false,
+        theme: "system",
+        language: "en",
+      },
+    },
+    baseSettings,
+  );
+};
 
 export function useUserSettings(enabled = true) {
   const { isAuthenticated } = useAuth();
