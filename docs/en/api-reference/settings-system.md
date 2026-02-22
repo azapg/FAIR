@@ -213,7 +213,7 @@ If translation parity is required later, update other locales too.
 
 Update:
 
-- `docs/en/guides/settings.md` (user-facing)
+- `docs/en/platform/settings.md` (user-facing)
 - this page (system reference)
 
 ## Conditional rendering with settings
