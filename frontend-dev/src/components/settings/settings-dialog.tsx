@@ -27,7 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 const ADMIN_PERMISSION = "admin";
-const DEFAULT_SECTION: SettingsSectionId = "profile";
+const DEFAULT_SECTION: SettingsSectionId = "account";
 
 type SettingsDialogProps = {
   open: boolean;
@@ -55,8 +55,6 @@ function CategoryNavigation({
     return null;
   }
 
-  let previousGroupKey: string | undefined;
-
   return (
     <div className="space-y-1.5">
       <p className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -64,17 +62,8 @@ function CategoryNavigation({
       </p>
       <div className="space-y-1">
         {sections.map((section) => {
-          const showGroupLabel =
-            section.groupKey !== undefined && section.groupKey !== previousGroupKey;
-          previousGroupKey = section.groupKey;
-
           return (
             <div key={section.id}>
-              {showGroupLabel ? (
-                <p className="px-2 pt-2 text-xs font-medium text-muted-foreground/90">
-                  {t(section.groupKey!)}
-                </p>
-              ) : null}
               <button
                 type="button"
                 className={cn(

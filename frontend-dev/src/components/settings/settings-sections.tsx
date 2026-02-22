@@ -1,15 +1,13 @@
 import type { ComponentType } from "react";
 
-import { DangerZoneSection } from "@/components/settings/sections/danger-zone-section";
+import { AccountSection } from "@/components/settings/sections/account-section";
 import { EmptySectionFromKeys } from "@/components/settings/sections/empty-section";
 import { PreferencesSection } from "@/components/settings/sections/preferences-section";
-import { ProfileSection } from "@/components/settings/sections/profile-section";
 
 export type SettingsCategoryId = "you" | "ai" | "research" | "admin";
 
 export type SettingsSectionId =
-  | "profile"
-  | "danger-zone"
+  | "account"
   | "preferences"
   | "notifications"
   | "personalization"
@@ -31,20 +29,11 @@ export const SETTINGS_CATEGORY_ORDER: SettingsCategoryId[] = ["you", "ai", "rese
 
 export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
   {
-    id: "profile",
+    id: "account",
     category: "you",
-    groupKey: "settings.groups.account",
-    titleKey: "settings.sections.profile.title",
-    descriptionKey: "settings.sections.profile.description",
-    render: ProfileSection,
-  },
-  {
-    id: "danger-zone",
-    category: "you",
-    groupKey: "settings.groups.account",
-    titleKey: "settings.sections.dangerZone.title",
-    descriptionKey: "settings.sections.dangerZone.description",
-    render: DangerZoneSection,
+    titleKey: "settings.sections.account.title",
+    descriptionKey: "settings.sections.account.description",
+    render: AccountSection,
   },
   {
     id: "preferences",

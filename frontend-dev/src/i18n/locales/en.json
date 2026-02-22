@@ -90,6 +90,10 @@
       "description": "This part of settings is currently being developed."
     },
     "sections": {
+      "account": {
+        "title": "Account",
+        "description": "Manage profile details and account lifecycle actions."
+      },
       "profile": {
         "title": "Profile",
         "description": "Review your email, avatar, and password controls.",

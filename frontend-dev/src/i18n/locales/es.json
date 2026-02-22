@@ -90,6 +90,10 @@
       "description": "Esta parte de configuración se está desarrollando actualmente."
     },
     "sections": {
+      "account": {
+        "title": "Cuenta",
+        "description": "Administra detalles de perfil y acciones del ciclo de vida de la cuenta."
+      },
       "profile": {
         "title": "Perfil",
         "description": "Revisa tu correo, avatar y controles de contraseña.",
