@@ -26,7 +26,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-const ADMIN_PERMISSION = "manage_users";
+const ADMIN_PERMISSION = "admin";
 const DEFAULT_SECTION: SettingsSectionId = "profile";
 
 type SettingsDialogProps = {
@@ -199,7 +199,7 @@ export function SettingsDialog({ open, onOpenChange, isMobile }: SettingsDialogP
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="h-[92vh]">
+        <DrawerContent className="h-[95vh]">
           <MobileSettingsContent />
         </DrawerContent>
       </Drawer>
@@ -208,7 +208,7 @@ export function SettingsDialog({ open, onOpenChange, isMobile }: SettingsDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!flex h-[90vh] w-[96vw] max-w-[1200px] !flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className="!flex h-[90vh] !w-[calc(100vw-2rem)] !max-w-[calc(100vw-2rem)] !flex-col gap-0 overflow-hidden p-0 sm:!w-[1200px] sm:!max-w-[1200px]">
         <DesktopSettingsContent />
       </DialogContent>
     </Dialog>
