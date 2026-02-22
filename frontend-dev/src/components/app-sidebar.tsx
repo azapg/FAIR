@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/collapsible";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
-import { useTheme } from "@/components/theme-provider";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCourses } from "@/hooks/use-courses";
 import { useAllAssignments } from "@/hooks/use-assignments";
@@ -58,6 +57,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SettingsDialog } from "@/components/settings/settings-dialog";
+import { usePreferenceSettings } from "@/hooks/use-preference-settings";
 
 const languages = [
   { code: "en", name: "English" },
@@ -87,7 +88,6 @@ function NavMain() {
         </SidebarMenuButton>
       </SidebarMenuItem>
 
-      {/*inbox*/}
       <SidebarMenuItem>
         <SidebarMenuButton asChild tooltip={t("nav.inbox")}>
           <Link to="/inbox">
@@ -100,7 +100,7 @@ function NavMain() {
   );
 }
 
-function NavSecondary() {
+function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
   const { t } = useTranslation();
   return (
     <SidebarMenu>
@@ -113,11 +113,9 @@ function NavSecondary() {
         </SidebarMenuButton>
       </SidebarMenuItem>
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip={t("nav.settings")}>
-          <Link to="/settings">
-            <SettingsIcon />
-            <span>{t("nav.settings")}</span>
-          </Link>
+        <SidebarMenuButton tooltip={t("nav.settings")} onClick={onSettingsClick}>
+          <SettingsIcon />
+          <span>{t("nav.settings")}</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
       {/*Help*/}
@@ -143,11 +141,13 @@ export function AppSidebar({
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { user: authUser, isAuthenticated, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { effectiveTheme, setThemePreference, setLanguagePreference } =
+    usePreferenceSettings();
   const isMobile = useIsMobile();
   const { data: courses = [] } = useCourses();
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
   const [showAllAssignments, setShowAllAssignments] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const displayTitle = t("header.title");
   const userName = authUser?.name || t("header.profile");
@@ -290,7 +290,7 @@ export function AppSidebar({
 
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
-              <NavSecondary />
+              <NavSecondary onSettingsClick={() => setSettingsOpen(true)} />
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
@@ -361,9 +361,9 @@ export function AppSidebar({
                           </DropdownMenuSubTrigger>
                           <DropdownMenuSubContent>
                             <DropdownMenuRadioGroup
-                              value={theme}
+                              value={effectiveTheme}
                               onValueChange={(value) =>
-                                setTheme(value as "light" | "dark" | "system")
+                                setThemePreference(value as "light" | "dark" | "system")
                               }
                             >
                               <DropdownMenuRadioItem value="light">
@@ -386,7 +386,7 @@ export function AppSidebar({
                             <DropdownMenuRadioGroup
                               value={currentLanguage.code}
                               onValueChange={(value) =>
-                                i18n.changeLanguage(value)
+                                setLanguagePreference(value as "en" | "es")
                               }
                             >
                               {languages.map((lang) => (
@@ -429,6 +429,7 @@ export function AppSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarFooter>
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} isMobile={isMobile} />
     </Sidebar>
   );
 }

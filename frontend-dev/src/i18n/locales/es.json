@@ -27,7 +27,8 @@
     "next": "Siguiente",
     "last": "Última",
     "enable": "Habilitar",
-    "disable": "Deshabilitar"
+    "disable": "Deshabilitar",
+    "or": "o"
   },
   "header": {
     "title": "The Fair Platform",
@@ -61,6 +62,123 @@
     "theme": "Tema",
     "language": "Idioma",
     "logout": "Cerrar sesión"
+  },
+  "settings": {
+    "title": "Configuración",
+    "description": "Administra las preferencias de tu espacio y controles de cuenta.",
+    "categories": {
+      "you": "Cuenta y preferencias",
+      "ai": "Funciones de IA",
+      "research": "Investigación",
+      "admin": "Admin"
+    },
+    "groups": {
+      "account": "Cuenta"
+    },
+    "fields": {
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "theme": "Tema",
+      "language": "Idioma",
+      "simpleView": "Vista simple",
+      "simpleViewDescription": "Condensa pantallas densas para usuarios avanzados e instructores."
+    },
+    "ai": {
+      "chatPersonality": "Personalidad del chat",
+      "chatPersonalityOptions": {
+        "default": "Predeterminada: equilibrada y clara",
+        "professional": "Profesional: concisa y formal",
+        "friendly": "Amigable: cercana y motivadora"
+      },
+      "aboutYou": "Sobre ti (instrucciones personalizadas)",
+      "aboutYouPlaceholder": "¿Qué debería saber la IA sobre ti?",
+      "persistentMemory": "Habilitar memoria persistente",
+      "persistentMemoryDescription": "Permite que la IA recuerde tus detalles de Sobre ti entre sesiones.",
+      "webSearch": "Búsqueda web",
+      "webSearchDescription": "Permite que la IA navegue la web para información en tiempo real.",
+      "defaultModel": "Modelo predeterminado"
+    },
+    "notifications": {
+      "groups": {
+        "gradingAi": "Calificación e IA",
+        "studentActivity": "Actividad estudiantil",
+        "collaboration": "Colaboración",
+        "systemDelivery": "Sistema y entrega"
+      },
+      "batchCompletion": "Finalización por lotes",
+      "lowConfidenceFlags": "Banderas de baja confianza",
+      "plagiarismDetection": "Detección de plagio/IA",
+      "tokenQuotaLimits": "Límites de tokens/cuota",
+      "newSubmissions": "Nuevas entregas",
+      "lateSubmissions": "Entregas tardías",
+      "feedbackRead": "Retroalimentación leída",
+      "regradeRequests": "Solicitudes de recalificación",
+      "rubricChanges": "Cambios de rúbrica",
+      "gradeOverrides": "Sobrescritura de calificaciones",
+      "newCourseInvites": "Nuevas invitaciones a cursos",
+      "dailyDigest": "Resumen diario",
+      "browserNotifications": "Notificaciones del navegador",
+      "platformUpdates": "Actualizaciones de la plataforma"
+    },
+    "languages": {
+      "en": "Inglés",
+      "es": "Español"
+    },
+    "empty": {
+      "title": "Sección en desarrollo",
+      "description": "Esta parte de configuración se está desarrollando actualmente."
+    },
+    "sections": {
+      "account": {
+        "title": "Cuenta",
+        "description": "Administra detalles de perfil y acciones del ciclo de vida de la cuenta."
+      },
+      "profile": {
+        "title": "Perfil",
+        "description": "Revisa tu correo, avatar y controles de contraseña.",
+        "avatarAction": "Cambiar avatar",
+        "changePassword": "Cambiar contraseña",
+        "changeEmail": "Cambiar correo electrónico",
+        "yourName": "Tu nombre",
+        "addProfilePictureAction": "Agregar una foto de perfil",
+        "generateProfilePictureAction": "generar una cara aleatoria."
+      },
+      "dangerZone": {
+        "title": "Zona de peligro",
+        "description": "Acciones de cuenta de alto impacto.",
+        "warning": "Procede con cuidado. Estas acciones pueden afectar los datos de tu cuenta.",
+        "deleteAccount": "Eliminar cuenta",
+        "exportData": "Exportar datos"
+      },
+      "preferences": {
+        "title": "Preferencias",
+        "description": "Controla los valores predeterminados de tu espacio."
+      },
+      "notifications": {
+        "title": "Notificaciones",
+        "description": "Administra canales y frecuencia de notificaciones."
+      },
+      "personalization": {
+        "title": "Personalización",
+        "description": "Ajusta cómo la IA se adapta a tu flujo de trabajo."
+      },
+      "aiModels": {
+        "title": "Funciones de IA",
+        "description": "Configura modelos para funciones de IA."
+      },
+      "apiKeys": {
+        "title": "Claves API",
+        "description": "Administra credenciales para integraciones de investigación."
+      },
+      "adminPeople": {
+        "title": "Personas",
+        "description": "Administra miembros y acceso administrativo."
+      },
+      "adminModels": {
+        "title": "Modelos",
+        "description": "Controla políticas de modelos a nivel organización."
+      }
+    }
   },
   "auth": {
     "welcomeBack": "Bienvenido de nuevo",

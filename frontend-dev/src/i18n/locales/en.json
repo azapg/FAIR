@@ -27,7 +27,8 @@
     "next": "Next",
     "last": "Last",
     "enable": "Enable",
-    "disable": "Disable"
+    "disable": "Disable",
+    "or": "or"
   },
   "header": {
     "title": "The Fair Platform",
@@ -61,6 +62,123 @@
     "theme": "Theme",
     "language": "Language",
     "logout": "Log out"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage your workspace preferences and account controls.",
+    "categories": {
+      "you": "Account & Preferences",
+      "ai": "AI Features",
+      "research": "Research",
+      "admin": "Admin"
+    },
+    "groups": {
+      "account": "Account"
+    },
+    "fields": {
+      "email": "Email",
+      "password": "Password",
+      "theme": "Theme",
+      "language": "Language",
+      "simpleView": "Simple View",
+      "simpleViewDescription": "Condense dense screens for power users and instructors."
+    },
+    "ai": {
+      "chatPersonality": "Chat Personality",
+      "chatPersonalityOptions": {
+        "default": "Default: Balanced and clear",
+        "professional": "Professional: Concise and formal",
+        "friendly": "Friendly: Warm and encouraging"
+      },
+      "aboutYou": "About You (Custom Instructions)",
+      "aboutYouPlaceholder": "What should the AI know about you?",
+      "persistentMemory": "Enable Persistent Memory",
+      "persistentMemoryDescription": "Allow AI to remember your About You details across sessions.",
+      "webSearch": "Web Search",
+      "webSearchDescription": "Allow AI to browse the web for real-time information.",
+      "defaultModel": "Default Model"
+    },
+    "notifications": {
+      "groups": {
+        "gradingAi": "Grading and AI",
+        "studentActivity": "Student Activity",
+        "collaboration": "Collaboration",
+        "systemDelivery": "System and Delivery"
+      },
+      "batchCompletion": "Batch Completion",
+      "lowConfidenceFlags": "Low Confidence Flags",
+      "plagiarismDetection": "Plagiarism/AI Detection",
+      "tokenQuotaLimits": "Token/Quota Limits",
+      "newSubmissions": "New Submissions",
+      "lateSubmissions": "Late Submissions",
+      "feedbackRead": "Feedback Read",
+      "regradeRequests": "Regrade Requests",
+      "rubricChanges": "Rubric Changes",
+      "gradeOverrides": "Grade Overrides",
+      "newCourseInvites": "New Course Invites",
+      "dailyDigest": "Daily Digest",
+      "browserNotifications": "Browser Notifications",
+      "platformUpdates": "Platform Updates"
+    },
+    "languages": {
+      "en": "English",
+      "es": "Spanish"
+    },
+    "empty": {
+      "title": "Section in development",
+      "description": "This part of settings is currently being developed."
+    },
+    "sections": {
+      "account": {
+        "title": "Account",
+        "description": "Manage profile details and account lifecycle actions."
+      },
+      "profile": {
+        "title": "Profile",
+        "description": "Review your email, avatar, and password controls.",
+        "avatarAction": "Change avatar",
+        "changePassword": "Change password",
+        "changeEmail": "Change email",
+        "yourName": "Your name",
+        "addProfilePictureAction": "Add a profile picture",
+        "generateProfilePictureAction": "generate a random face."
+      },
+      "dangerZone": {
+        "title": "Danger zone",
+        "description": "High impact account actions.",
+        "warning": "Proceed carefully. These actions can affect your account data.",
+        "deleteAccount": "Delete account",
+        "exportData": "Export data"
+      },
+      "preferences": {
+        "title": "Preferences",
+        "description": "Control interface defaults for your workspace."
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Manage notification channels and frequency."
+      },
+      "personalization": {
+        "title": "Personalization",
+        "description": "Tune how AI adapts to your workflow."
+      },
+      "aiModels": {
+        "title": "AI Features",
+        "description": "Configure model choices for AI features."
+      },
+      "apiKeys": {
+        "title": "API Keys",
+        "description": "Manage credentials for research integrations."
+      },
+      "adminPeople": {
+        "title": "People",
+        "description": "Manage members and administrative access."
+      },
+      "adminModels": {
+        "title": "Models",
+        "description": "Control organization-level model policies."
+      }
+    }
   },
   "auth": {
     "welcomeBack": "Welcome back",

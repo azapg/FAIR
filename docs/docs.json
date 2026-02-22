@@ -56,7 +56,11 @@
               },
               {
                 "group": "Platform",
-                "pages": ["en/platform/workflows", "en/platform/integrations"]
+                "pages": [
+                  "en/platform/workflows",
+                  "en/platform/integrations",
+                  "en/platform/settings"
+                ]
               }
             ]
           },
@@ -70,7 +74,8 @@
                 "pages": [
                   "en/api-reference/releases",
                   "en/api-reference/migrations",
-                  "en/api-reference/dev-env"
+                  "en/api-reference/dev-env",
+                  "en/api-reference/settings-system"
                 ]
               }
             ]
@@ -110,7 +115,11 @@
               },
               {
                 "group": "Plataforma",
-                "pages": ["es/platform/workflows", "es/platform/integrations"]
+                "pages": [
+                  "es/platform/workflows",
+                  "es/platform/integrations",
+                  "es/platform/settings"
+                ]
               }
             ]
           },

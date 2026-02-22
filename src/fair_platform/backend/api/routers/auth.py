@@ -13,6 +13,7 @@ from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
 from fair_platform.backend.data.models.user import UserRole
 from fair_platform.backend.core.security.permissions import auth_user_payload
+from fair_platform.backend.api.schema.casing import to_camel_keys
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -96,10 +97,12 @@ def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
         {"sub": str(user.id), "role": user.role},
         remember_me=False
     )
+    auth_user = auth_user_payload(user)
+    auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": AuthUserRead.model_validate(auth_user_payload(user)),
+        "user": AuthUserRead.model_validate(auth_user),
     }
 
 
@@ -130,4 +133,6 @@ def read_me(current_user: User = Depends(get_current_user)):
     """
     Return the currently authenticated user's public information.
     """
-    return auth_user_payload(current_user)
+    auth_user = auth_user_payload(current_user)
+    auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
+    return auth_user

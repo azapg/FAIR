@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Moon, Sun, Check } from "lucide-react"
-import { useTheme } from "@/components/theme-provider"
 import { useTranslation } from "react-i18next"
+import { usePreferenceSettings } from "@/hooks/use-preference-settings"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function ThemeToggle() {
-  const { setTheme, theme } = useTheme()
+  const { setThemePreference, effectiveTheme } = usePreferenceSettings()
   const { t } = useTranslation()
 
   return (
@@ -25,17 +25,17 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => setThemePreference("light")}>
           <span>{t('theme.light')}</span>
-          <Check className={`ml-auto h-4 w-4 ${theme === "light" ? "opacity-100" : "opacity-0"}`} />
+          <Check className={`ml-auto h-4 w-4 ${effectiveTheme === "light" ? "opacity-100" : "opacity-0"}`} />
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => setThemePreference("dark")}>
           <span>{t('theme.dark')}</span>
-          <Check className={`ml-auto h-4 w-4 ${theme === "dark" ? "opacity-100" : "opacity-0"}`} />
+          <Check className={`ml-auto h-4 w-4 ${effectiveTheme === "dark" ? "opacity-100" : "opacity-0"}`} />
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => setThemePreference("system")}>
           <span>{t('theme.system')}</span>
-          <Check className={`ml-auto h-4 w-4 ${theme === "system" ? "opacity-100" : "opacity-0"}`} />
+          <Check className={`ml-auto h-4 w-4 ${effectiveTheme === "system" ? "opacity-100" : "opacity-0"}`} />
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Languages } from "lucide-react";
 import { IconSpain, IconUnitedStates } from "nucleo-flags"
+import { usePreferenceSettings } from "@/hooks/use-preference-settings";
 
 const languages = [
   { code: "en", name: "English", flag: <IconUnitedStates /> },
@@ -16,13 +17,14 @@ const languages = [
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation();
+  const { setLanguagePreference } = usePreferenceSettings();
 
   const currentLanguage = languages.find(
     (lang) => lang.code === i18n.language
   ) || languages[0];
 
   const changeLanguage = (langCode: string) => {
-    i18n.changeLanguage(langCode);
+    setLanguagePreference(langCode as "en" | "es");
   };
 
   return (
