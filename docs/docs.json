@@ -157,18 +157,17 @@
             "groups": [
               {
                 "group": "Introducción",
-                "pages": ["es/introduction"]
-              },
-              {
-                "group": "Primeros pasos",
                 "pages": [
-                  "es/getting-started/installation",
-                  "es/getting-started/extensions"
+                  "es/introduction",
+                  "es/quickstart",
+                  "es/cli",
+                  "es/troubleshooting",
+                  "es/roadmap"
                 ]
               },
               {
-                "group": "Desarrollo",
-                "pages": ["es/development/releases"]
+                "group": "Plataforma",
+                "pages": ["es/platform/workflows", "es/platform/integrations"]
               }
             ]
           },
