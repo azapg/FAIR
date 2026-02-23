@@ -30,6 +30,7 @@ import {
   Home,
   SearchIcon,
   InboxIcon,
+  X,
   SettingsIcon,
   MessageCircleQuestionMarkIcon,
   ClipboardList,
@@ -61,19 +62,47 @@ import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { usePreferenceSettings } from "@/hooks/use-preference-settings";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Button } from "@/components/ui/button";
 
 const languages = [
   { code: "en", name: "English" },
   { code: "es", name: "Español" },
 ];
 
-const inboxLogs = [
-  { id: "1", title: "Workflow started", detail: "Run #2048 queued for CS101", time: "2m ago" },
-  { id: "2", title: "Plugin warning", detail: "lint-check reported 3 warnings", time: "7m ago" },
-  { id: "3", title: "Submission updated", detail: "Student #A127 uploaded new files", time: "15m ago" },
-  { id: "4", title: "Run completed", detail: "Run #2041 finished successfully", time: "28m ago" },
-  { id: "5", title: "Artifact generated", detail: "feedback.json is ready to download", time: "1h ago" },
-];
+function InboxEmptyState() {
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language;
+
+  return (
+    <Empty className="h-full rounded-none border-0 p-6 md:p-8">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <InboxIcon className="size-5" />
+        </EmptyMedia>
+        <EmptyTitle>{t("inbox.empty.title")}</EmptyTitle>
+        <EmptyDescription>{t("inbox.empty.description")}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <a
+          href={`/docs/${currentLang}/platform/workflows`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-muted-foreground text-sm underline underline-offset-4 hover:text-foreground"
+        >
+          {t("common.learnMore")}
+        </a>
+      </EmptyContent>
+    </Empty>
+  );
+}
 
 function NavMain({
   isInboxOpen,
@@ -219,25 +248,19 @@ export function AppSidebar({
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <h2 className="text-sm font-medium">{t("nav.inbox")}</h2>
+              <button
+                type="button"
+                onClick={() => setInboxOpen(false)}
+                className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ml-auto rounded-md p-1"
+                aria-label="Close inbox"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <SidebarSeparator className="mx-0" />
           </SidebarHeader>
           <ScrollArea className="h-full">
-            <div className="p-2">
-              {inboxLogs.map((log) => (
-                <button
-                  key={log.id}
-                  type="button"
-                  className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground w-full rounded-md border-b p-3 text-left last:border-b-0"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{log.title}</span>
-                    <span className="text-muted-foreground ml-auto text-xs">{log.time}</span>
-                  </div>
-                  <p className="text-muted-foreground mt-1 text-xs">{log.detail}</p>
-                </button>
-              ))}
-            </div>
+            <InboxEmptyState />
           </ScrollArea>
         </div>
       ) : (
@@ -520,27 +543,23 @@ export function AppSidebar({
       </div>
       )}
       {inboxOpen && (
-        <aside className="hidden w-80 border-l bg-sidebar md:flex md:flex-col">
+        <aside className="hidden border-l bg-sidebar md:flex md:flex-col">
           <div className="border-b p-4">
-            <h2 className="text-sm font-medium">{t("nav.inbox")}</h2>
-            <p className="text-muted-foreground mt-1 text-xs">Recent log activity</p>
+            <div className="flex items-center">
+              <h2 className="font-medium">{t("nav.inbox")}</h2>
+              <Button
+                onClick={() => setInboxOpen(false)}
+                className="ml-auto"
+                size="icon"
+                variant="ghost"
+                aria-label="Close inbox"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <ScrollArea className="h-full">
-            <div className="p-2">
-              {inboxLogs.map((log) => (
-                <button
-                  key={log.id}
-                  type="button"
-                  className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground w-full rounded-md border-b p-3 text-left last:border-b-0"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{log.title}</span>
-                    <span className="text-muted-foreground ml-auto text-xs">{log.time}</span>
-                  </div>
-                  <p className="text-muted-foreground mt-1 text-xs">{log.detail}</p>
-                </button>
-              ))}
-            </div>
+            <InboxEmptyState />
           </ScrollArea>
         </aside>
       )}

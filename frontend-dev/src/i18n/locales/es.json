@@ -46,6 +46,12 @@
     "settings": "Configuración",
     "help": "Ayuda"
   },
+  "inbox": {
+    "empty": {
+      "title": "La bandeja está limpia",
+      "description": "Aún nada. La actividad de workflows y entregas aparecerá aquí."
+    }
+  },
   "sidebar": {
     "classes": "Tus clases",
     "courses": {
