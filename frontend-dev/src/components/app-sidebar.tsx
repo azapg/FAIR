@@ -38,7 +38,6 @@ import {
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
@@ -168,10 +167,10 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
       {/*Help*/}
       <SidebarMenuItem>
         <SidebarMenuButton asChild tooltip={t("nav.help")}>
-          <Link to="/help">
+          <a href="https://docs.fairgradeproject.org" target="_blank" rel="noreferrer">
             <MessageCircleQuestionMarkIcon />
             <span>{t("nav.help")}</span>
-          </Link>
+          </a>
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
@@ -198,6 +197,8 @@ export function AppSidebar({
   const [showAllAssignments, setShowAllAssignments] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
+  const [coursesOpen, setCoursesOpen] = useState(true);
+  const [assignmentsOpen, setAssignmentsOpen] = useState(false);
 
   useEffect(() => {
     if (state !== "expanded") {
@@ -308,15 +309,25 @@ export function AppSidebar({
             <SidebarGroupLabel>{t("sidebar.classes")}</SidebarGroupLabel>
             <SidebarGroupContent className="flex flex-col">
               <SidebarMenu>
-                <Collapsible defaultOpen className="group/collapsible">
+                <Collapsible open={coursesOpen} onOpenChange={setCoursesOpen} className="group/collapsible">
                   <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={t("sidebar.courses.title")}>
-                        <BookOpen />
-                        <span>{t("sidebar.courses.title")}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
+                    <SidebarMenuButton
+                      tooltip={t("sidebar.courses.title")}
+                      onClick={() => {
+                        if (state === "collapsed") {
+                          setOpen(true);
+                          setCoursesOpen(true);
+                          return;
+                        }
+                        setCoursesOpen((current) => !current);
+                      }}
+                    >
+                      <BookOpen />
+                      <span>{t("sidebar.courses.title")}</span>
+                      <ChevronRight
+                        className={`ml-auto transition-transform duration-200 ${coursesOpen ? "rotate-90" : ""}`}
+                      />
+                    </SidebarMenuButton>
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {courses.slice(0, 3).map((course) => (
@@ -351,17 +362,25 @@ export function AppSidebar({
                   </SidebarMenuItem>
                 </Collapsible>
 
-                <Collapsible className="group/collapsible">
+                <Collapsible open={assignmentsOpen} onOpenChange={setAssignmentsOpen} className="group/collapsible">
                   <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton
-                        tooltip={t("sidebar.assignments.title")}
-                      >
-                        <FileText />
-                        <span>{t("sidebar.assignments.title")}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
+                    <SidebarMenuButton
+                      tooltip={t("sidebar.assignments.title")}
+                      onClick={() => {
+                        if (state === "collapsed") {
+                          setOpen(true);
+                          setAssignmentsOpen(true);
+                          return;
+                        }
+                        setAssignmentsOpen((current) => !current);
+                      }}
+                    >
+                      <FileText />
+                      <span>{t("sidebar.assignments.title")}</span>
+                      <ChevronRight
+                        className={`ml-auto transition-transform duration-200 ${assignmentsOpen ? "rotate-90" : ""}`}
+                      />
+                    </SidebarMenuButton>
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {(showAllAssignments
