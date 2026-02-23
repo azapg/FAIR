@@ -87,8 +87,7 @@ const languages = [
 ];
 
 function InboxEmptyState() {
-  const { t, i18n } = useTranslation();
-  const currentLang = i18n.language;
+  const { t } = useTranslation();
 
   return (
     <Empty className="h-full rounded-none border-0 p-6 md:p-8">
@@ -100,14 +99,6 @@ function InboxEmptyState() {
         <EmptyDescription>{t("inbox.empty.description")}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <a
-          href={`/docs/${currentLang}/platform/workflows`}
-          target="_blank"
-          rel="noreferrer"
-          className="text-muted-foreground text-sm underline underline-offset-4 hover:text-foreground"
-        >
-          {t("common.learnMore")}
-        </a>
       </EmptyContent>
     </Empty>
   );
