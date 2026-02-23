@@ -46,6 +46,12 @@
     "settings": "Settings",
     "help": "Help"
   },
+  "inbox": {
+    "empty": {
+      "title": "Inbox is clear",
+      "description": "Nothing yet. New workflow and submission activity will show up here."
+    }
+  },
   "sidebar": {
     "classes": "Your classes",
     "courses": {

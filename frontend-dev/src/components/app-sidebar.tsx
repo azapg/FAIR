@@ -12,13 +12,16 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarRail,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ComponentProps } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   BookOpen,
+  ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
   FileText,
@@ -28,6 +31,7 @@ import {
   Home,
   SearchIcon,
   InboxIcon,
+  X,
   SettingsIcon,
   MessageCircleQuestionMarkIcon,
   ClipboardList,
@@ -35,7 +39,6 @@ import {
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
@@ -59,13 +62,59 @@ import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { usePreferenceSettings } from "@/hooks/use-preference-settings";
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Button } from "@/components/ui/button";
 
 const languages = [
   { code: "en", name: "English" },
   { code: "es", name: "Español" },
 ];
 
-function NavMain() {
+function InboxEmptyState() {
+  const { t } = useTranslation();
+
+  return (
+    <Empty className="h-full rounded-none border-0 p-6 md:p-8">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <InboxIcon className="size-5" />
+        </EmptyMedia>
+        <EmptyTitle>{t("inbox.empty.title")}</EmptyTitle>
+        <EmptyDescription>{t("inbox.empty.description")}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+      </EmptyContent>
+    </Empty>
+  );
+}
+
+function NavMain({
+  isInboxOpen,
+  onInboxToggle,
+  isSearchOpen,
+  onSearchClick,
+}: {
+  isInboxOpen: boolean;
+  onInboxToggle: () => void;
+  isSearchOpen: boolean;
+  onSearchClick: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <SidebarMenu>
@@ -80,20 +129,24 @@ function NavMain() {
 
       {/*search*/}
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip={t("nav.search")}>
-          <Link to="/search">
-            <SearchIcon />
-            <span>{t("nav.search")}</span>
-          </Link>
+        <SidebarMenuButton
+          tooltip={t("nav.search")}
+          onClick={onSearchClick}
+          isActive={isSearchOpen}
+        >
+          <SearchIcon />
+          <span>{t("nav.search")}</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
 
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip={t("nav.inbox")}>
-          <Link to="/inbox">
-            <InboxIcon />
-            <span>{t("nav.inbox")}</span>
-          </Link>
+        <SidebarMenuButton
+          tooltip={t("nav.inbox")}
+          onClick={onInboxToggle}
+          isActive={isInboxOpen}
+        >
+          <InboxIcon />
+          <span>{t("nav.inbox")}</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
@@ -121,10 +174,10 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
       {/*Help*/}
       <SidebarMenuItem>
         <SidebarMenuButton asChild tooltip={t("nav.help")}>
-          <Link to="/help">
+          <a href="https://docs.fairgradeproject.org" target="_blank" rel="noreferrer">
             <MessageCircleQuestionMarkIcon />
             <span>{t("nav.help")}</span>
-          </Link>
+          </a>
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
@@ -134,6 +187,7 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
 export function AppSidebar({
   side = "left",
   className,
+  style,
   ...props
 }: ComponentProps<typeof Sidebar> & {
   side?: "left" | "right";
@@ -146,8 +200,40 @@ export function AppSidebar({
   const isMobile = useIsMobile();
   const { data: courses = [] } = useCourses();
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
+  const { setOpen, state, isMobile: isSidebarMobile, openMobile } = useSidebar();
   const [showAllAssignments, setShowAllAssignments] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [coursesOpen, setCoursesOpen] = useState(true);
+  const [assignmentsOpen, setAssignmentsOpen] = useState(false);
+
+  const handleSearchInputDebounced = (query: string) => {
+    void query;
+  };
+
+  useEffect(() => {
+    if (state !== "expanded") {
+      setInboxOpen(false);
+    }
+  }, [state]);
+
+  useEffect(() => {
+    if (isSidebarMobile && !openMobile) {
+      setInboxOpen(false);
+    }
+  }, [isSidebarMobile, openMobile]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      handleSearchInputDebounced(searchQuery);
+    }, 250);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   const displayTitle = t("header.title");
   const userName = authUser?.name || t("header.profile");
@@ -158,8 +244,51 @@ export function AppSidebar({
       i18n.language?.toLowerCase().startsWith(lang.code),
     ) ?? languages[0];
 
+  const sidebarStyle = {
+    ...(style ?? {}),
+    ["--sidebar-width" as string]: !isSidebarMobile && inboxOpen ? "40rem" : "20rem",
+    ["--app-sidebar-main-width" as string]: "20rem",
+  } as React.CSSProperties;
+
   return (
-    <Sidebar side={side} collapsible="icon" className={className} {...props}>
+    <Sidebar
+      side={side}
+      collapsible="icon"
+      className={className}
+      style={sidebarStyle}
+      {...props}
+    >
+      <div className="flex h-full w-full overflow-hidden">
+      {isSidebarMobile && inboxOpen ? (
+        <div className="flex h-full w-full flex-col">
+          <SidebarHeader className="pb-0 pt-4">
+            <div className="flex items-center gap-2 px-2">
+              <button
+                type="button"
+                onClick={() => setInboxOpen(false)}
+                className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md p-1"
+                aria-label="Back to sidebar"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <h2 className="text-sm font-medium">{t("nav.inbox")}</h2>
+              <button
+                type="button"
+                onClick={() => setInboxOpen(false)}
+                className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ml-auto rounded-md p-1"
+                aria-label="Close inbox"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <SidebarSeparator className="mx-0" />
+          </SidebarHeader>
+          <ScrollArea className="h-full">
+            <InboxEmptyState />
+          </ScrollArea>
+        </div>
+      ) : (
+      <div className="flex h-full w-full flex-col md:w-(--app-sidebar-main-width) md:min-w-(--app-sidebar-main-width) group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[collapsible=icon]:min-w-(--sidebar-width-icon)">
         <SidebarHeader className="pb-0 pt-4">
           <SidebarMenu>
             <SidebarMenuItem>
@@ -190,22 +319,40 @@ export function AppSidebar({
         <SidebarContent className="gap-0">
           <SidebarGroup>
             <SidebarGroupContent>
-              <NavMain />
+              <NavMain
+                isInboxOpen={inboxOpen}
+                isSearchOpen={searchOpen}
+                onSearchClick={() => setSearchOpen(true)}
+                onInboxToggle={() => {
+                  setOpen(true);
+                  setInboxOpen((current) => !current);
+                }}
+              />
             </SidebarGroupContent>
           </SidebarGroup>
           <SidebarGroup>
             <SidebarGroupLabel>{t("sidebar.classes")}</SidebarGroupLabel>
             <SidebarGroupContent className="flex flex-col">
               <SidebarMenu>
-                <Collapsible defaultOpen className="group/collapsible">
+                <Collapsible open={coursesOpen} onOpenChange={setCoursesOpen} className="group/collapsible">
                   <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton tooltip={t("sidebar.courses.title")}>
-                        <BookOpen />
-                        <span>{t("sidebar.courses.title")}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
+                    <SidebarMenuButton
+                      tooltip={t("sidebar.courses.title")}
+                      onClick={() => {
+                        if (state === "collapsed") {
+                          setOpen(true);
+                          setCoursesOpen(true);
+                          return;
+                        }
+                        setCoursesOpen((current) => !current);
+                      }}
+                    >
+                      <BookOpen />
+                      <span>{t("sidebar.courses.title")}</span>
+                      <ChevronRight
+                        className={`ml-auto transition-transform duration-200 ${coursesOpen ? "rotate-90" : ""}`}
+                      />
+                    </SidebarMenuButton>
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {courses.slice(0, 3).map((course) => (
@@ -240,17 +387,25 @@ export function AppSidebar({
                   </SidebarMenuItem>
                 </Collapsible>
 
-                <Collapsible className="group/collapsible">
+                <Collapsible open={assignmentsOpen} onOpenChange={setAssignmentsOpen} className="group/collapsible">
                   <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton
-                        tooltip={t("sidebar.assignments.title")}
-                      >
-                        <FileText />
-                        <span>{t("sidebar.assignments.title")}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
+                    <SidebarMenuButton
+                      tooltip={t("sidebar.assignments.title")}
+                      onClick={() => {
+                        if (state === "collapsed") {
+                          setOpen(true);
+                          setAssignmentsOpen(true);
+                          return;
+                        }
+                        setAssignmentsOpen((current) => !current);
+                      }}
+                    >
+                      <FileText />
+                      <span>{t("sidebar.assignments.title")}</span>
+                      <ChevronRight
+                        className={`ml-auto transition-transform duration-200 ${assignmentsOpen ? "rotate-90" : ""}`}
+                      />
+                    </SidebarMenuButton>
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {(showAllAssignments
@@ -429,7 +584,73 @@ export function AppSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarFooter>
+      </div>
+      )}
+      {inboxOpen && (
+        <aside className="hidden border-l bg-sidebar md:flex md:flex-col">
+          <div className="border-b p-4">
+            <div className="flex items-center">
+              <h2 className="font-medium">{t("nav.inbox")}</h2>
+              <Button
+                onClick={() => setInboxOpen(false)}
+                className="ml-auto"
+                size="icon"
+                variant="ghost"
+                aria-label="Close inbox"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <ScrollArea className="h-full">
+            <InboxEmptyState />
+          </ScrollArea>
+        </aside>
+      )}
+      </div>
+      <CommandDialog
+        open={searchOpen}
+        onOpenChange={(open) => {
+          setSearchOpen(open);
+          if (!open) {
+            setSearchQuery("");
+            setDebouncedSearchQuery("");
+          }
+        }}
+      >
+        <Command>
+          <CommandInput
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+            placeholder={t("nav.search")}
+          />
+          <CommandList>
+            <CommandEmpty>{t("common.noResults")}</CommandEmpty>
+            <CommandGroup heading="Suggestions">
+              <CommandItem
+                onSelect={() => {
+                  setSearchOpen(false);
+                  navigate("/courses");
+                }}
+              >
+                <BookOpen />
+                <span>Go to courses</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => {
+                  setSearchOpen(false);
+                  setSettingsOpen(true);
+                }}
+              >
+                <SettingsIcon />
+                <span>Open settings</span>
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </CommandDialog>
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} isMobile={isMobile} />
+      <SidebarRail />
     </Sidebar>
   );
 }
