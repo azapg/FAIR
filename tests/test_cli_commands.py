@@ -1,6 +1,11 @@
 import fair_platform.cli.main as cli_main
 from typer.testing import CliRunner
 from pathlib import Path
+import re
+
+
+def _strip_ansi(text: str) -> str:
+    return re.sub(r"\x1b\[[0-9;]*m", "", text)
 
 
 class StubBackendProcess:
@@ -189,7 +194,9 @@ def test_db_migrate_sqlite_to_postgres_requires_target():
         ["db", "migrate-sqlite-to-postgres", "--from-sqlite", "new.db"],
     )
     assert result.exit_code != 0
-    assert "Missing option '--to-postgres'" in result.output
+    clean = _strip_ansi(result.output).replace("\n", " ")
+    assert "Missing option" in clean
+    assert "--to-postgres" in clean
 
 
 def test_db_migrate_sqlite_to_postgres_rejects_invalid_conflict_mode():
