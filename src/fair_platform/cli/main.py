@@ -1,6 +1,9 @@
 import multiprocessing
 import subprocess
 import tomllib
+import json
+import sqlite3
+from collections import OrderedDict
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
@@ -28,6 +31,24 @@ def _get_version() -> str:
 
 __version__ = _get_version()
 _PROCESS_POLL_INTERVAL_SECONDS = 0.5
+_DATA_TABLE_ORDER = [
+    "users",
+    "plugins",
+    "courses",
+    "submitters",
+    "assignments",
+    "workflows",
+    "artifacts",
+    "workflow_runs",
+    "submissions",
+    "enrollments",
+    "rubrics",
+    "assignment_artifacts",
+    "submission_artifacts",
+    "submission_workflow_runs",
+    "submission_results",
+    "submission_events",
+]
 
 
 def _run_backend(port: int, headless: bool) -> None:
@@ -180,6 +201,167 @@ def db_revision(
 def db_migrate():
     """Apply all migrations (alias for `fair db upgrade head`)."""
     _run_alembic("upgrade", "head")
+
+
+def _normalize_postgres_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url[len("postgres://") :]
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url[len("postgresql://") :]
+    return url
+
+
+def _migrate_sqlite_to_postgres(
+    from_sqlite: Path,
+    to_postgres: str,
+    on_conflict: str,
+    dry_run: bool,
+    verify: bool,
+) -> dict[str, int]:
+    import psycopg
+    from psycopg.types.json import Jsonb
+
+    normalized_target = _normalize_postgres_url(to_postgres)
+    if not normalized_target.startswith("postgresql+psycopg://"):
+        raise ValueError("target must be a PostgreSQL DSN")
+    if not from_sqlite.exists():
+        raise ValueError(f"source SQLite file does not exist: {from_sqlite}")
+
+    sqlite_conn = sqlite3.connect(from_sqlite)
+    sqlite_conn.row_factory = sqlite3.Row
+    migrated: OrderedDict[str, int] = OrderedDict()
+
+    pg_dsn_for_psycopg = normalized_target.replace("postgresql+psycopg://", "postgresql://", 1)
+    pg_conn = psycopg.connect(pg_dsn_for_psycopg)
+    pg_conn.autocommit = False
+
+    try:
+        with pg_conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT table_name, column_name, data_type
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                """
+            )
+            pg_types = {(r[0], r[1]): r[2] for r in cur.fetchall()}
+
+            existing_tables = {k[0] for k in pg_types.keys()}
+            missing_tables = [t for t in _DATA_TABLE_ORDER if t not in existing_tables]
+            if missing_tables:
+                raise ValueError(
+                    "target PostgreSQL schema is missing required tables. "
+                    "Run migrations first. Missing: " + ", ".join(missing_tables)
+                )
+
+            if not dry_run:
+                cur.execute(
+                    "TRUNCATE TABLE "
+                    + ", ".join(f'"{t}"' for t in _DATA_TABLE_ORDER)
+                    + " RESTART IDENTITY CASCADE"
+                )
+
+            for table in _DATA_TABLE_ORDER:
+                s_cur = sqlite_conn.cursor()
+                s_cur.execute(f'SELECT * FROM "{table}"')
+                rows = s_cur.fetchall()
+                s_cur.close()
+
+                if not rows:
+                    migrated[table] = 0
+                    continue
+
+                cols = list(rows[0].keys())
+                quoted_cols = ", ".join(f'"{c}"' for c in cols)
+                placeholders = ", ".join(["%s"] * len(cols))
+                insert_sql = f'INSERT INTO "{table}" ({quoted_cols}) VALUES ({placeholders})'
+                if on_conflict == "skip":
+                    insert_sql += " ON CONFLICT DO NOTHING"
+
+                batch = []
+                for row in rows:
+                    converted = []
+                    for c in cols:
+                        v = row[c]
+                        dtype = pg_types.get((table, c), "")
+                        if v is None:
+                            converted.append(None)
+                            continue
+                        if dtype in ("json", "jsonb"):
+                            if isinstance(v, str):
+                                try:
+                                    parsed = json.loads(v)
+                                except json.JSONDecodeError:
+                                    parsed = v
+                            else:
+                                parsed = v
+                            converted.append(Jsonb(parsed) if dtype == "jsonb" else parsed)
+                        elif dtype == "boolean" and isinstance(v, int):
+                            converted.append(bool(v))
+                        else:
+                            converted.append(v)
+                    batch.append(tuple(converted))
+
+                if dry_run:
+                    migrated[table] = len(batch)
+                else:
+                    cur.executemany(insert_sql, batch)
+                    migrated[table] = len(batch)
+
+        if dry_run:
+            pg_conn.rollback()
+        else:
+            pg_conn.commit()
+
+        if verify and not dry_run:
+            with pg_conn.cursor() as cur:
+                for table, expected in migrated.items():
+                    cur.execute(f'SELECT COUNT(*) FROM "{table}"')
+                    got = cur.fetchone()[0]
+                    if on_conflict == "error" and got != expected:
+                        raise RuntimeError(
+                            f"verification failed for {table}: expected {expected}, got {got}"
+                        )
+
+        return dict(migrated)
+    finally:
+        sqlite_conn.close()
+        pg_conn.close()
+
+
+@db_app.command("migrate-sqlite-to-postgres")
+def db_migrate_sqlite_to_postgres(
+    from_sqlite: Annotated[
+        Path, typer.Option("--from-sqlite", help="Path to source SQLite DB file")
+    ] = Path("fair.db"),
+    to_postgres: Annotated[
+        str, typer.Option("--to-postgres", help="Target PostgreSQL DSN")
+    ] = ...,
+    on_conflict: Annotated[
+        str, typer.Option("--on-conflict", help="error|skip conflict handling")
+    ] = "error",
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Parse and validate rows, but do not persist")
+    ] = False,
+    verify: Annotated[
+        bool, typer.Option("--verify", help="Validate destination row counts after copy")
+    ] = False,
+):
+    if on_conflict not in {"error", "skip"}:
+        raise typer.BadParameter("on-conflict must be one of: error, skip")
+
+    typer.echo(f"Starting sqlite -> postgres migration from {from_sqlite} ...")
+    summary = _migrate_sqlite_to_postgres(
+        from_sqlite=from_sqlite,
+        to_postgres=to_postgres.strip(),
+        on_conflict=on_conflict,
+        dry_run=dry_run,
+        verify=verify,
+    )
+
+    typer.echo("Migration summary:")
+    for table, count in summary.items():
+        typer.echo(f"  {table}: {count}")
 
 
 @app.command()

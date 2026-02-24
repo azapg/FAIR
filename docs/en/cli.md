@@ -14,4 +14,6 @@ fair db current
 fair db history
 fair db stamp head
 fair db revision --autogenerate -m "your message"
+# Copy data from SQLite into PostgreSQL (schema must be migrated first)
+fair db migrate-sqlite-to-postgres --from-sqlite fair.db --to-postgres postgresql+psycopg://user:pass@localhost:5432/fair
 ```
