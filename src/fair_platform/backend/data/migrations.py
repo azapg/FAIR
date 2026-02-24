@@ -6,6 +6,11 @@ from alembic import command
 from alembic.config import Config
 
 
+def _escape_for_alembic_ini(value: str) -> str:
+    # Alembic's ConfigParser treats '%' as interpolation markers.
+    return value.replace("%", "%%")
+
+
 def _resolve_alembic_ini_path() -> Path | None:
     candidates = [Path.cwd(), *Path(__file__).resolve().parents]
     for base in candidates:
@@ -28,7 +33,10 @@ def build_alembic_config(database_url: str | None = None) -> Config:
     backend_dir = Path(backend_pkg.__file__).resolve().parent
     config.set_main_option("script_location", str(backend_dir / "alembic"))
     # Keep Alembic target aligned with the runtime SQLAlchemy engine.
-    config.set_main_option("sqlalchemy.url", database_url or str(db_engine.url))
+    config.set_main_option(
+        "sqlalchemy.url",
+        _escape_for_alembic_ini(database_url or str(db_engine.url)),
+    )
     config.set_main_option("fair.runtime_url_locked", "1")
     return config
 
