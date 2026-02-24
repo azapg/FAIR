@@ -49,7 +49,7 @@ If you disable auto-migrate and still want local/test schema bootstrap from ORM 
 If both are disabled, startup proceeds with a warning and no schema bootstrap (runtime DB errors are likely until migrations are applied).
 
 ## Database Contract
-- Primary supported production database: PostgreSQL (target versions 15 and 16).
+- Primary supported production database: PostgreSQL (target version 18).
 - SQLite remains supported for lightweight local/testing scenarios.
 - JSON document fields must use SQLAlchemy JSON with PostgreSQL JSONB variant.
 - Schema changes must be applied through Alembic migrations; avoid relying on runtime `create_all` for production schema evolution.
