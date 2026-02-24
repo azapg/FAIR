@@ -25,7 +25,7 @@ def build_alembic_config() -> Config:
     config = Config(str(config_path)) if config_path else Config()
 
     backend_dir = Path(backend_pkg.__file__).resolve().parent
-    config.set_main_option("script_location", str((backend_dir / "alembic").as_posix()))
+    config.set_main_option("script_location", str(backend_dir / "alembic"))
     config.set_main_option("sqlalchemy.url", "sqlite:///fair.db")
     return config
 

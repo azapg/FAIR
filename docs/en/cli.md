@@ -7,7 +7,7 @@ Your local instance of FAIR is managed through a powerful Command Line Interface
 
 Use `fair db` to run migrations without manually locating `alembic.ini`.
 
-```/dev/null/commands.sh#L1-7
+```bash fair db commands
 fair db upgrade head
 fair db downgrade -1
 fair db current
