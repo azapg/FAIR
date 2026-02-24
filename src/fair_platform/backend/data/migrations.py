@@ -35,3 +35,9 @@ def build_alembic_config(database_url: str | None = None) -> Config:
 
 def run_migrations_to_head(database_url: str | None = None) -> None:
     command.upgrade(build_alembic_config(database_url), "head")
+
+
+def run_migrations_to_revision(
+    revision: str, database_url: str | None = None
+) -> None:
+    command.upgrade(build_alembic_config(database_url), revision)

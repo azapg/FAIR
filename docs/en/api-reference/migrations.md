@@ -126,16 +126,19 @@ If you do this for local-only workflows and still need ORM bootstrap, set `FAIR_
 
 ## Rollout Rehearsal Checklist
 
-Before production rollout, rehearse migrations with both stale and current database snapshots and a PostgreSQL instance.
+Before production rollout, rehearse migrations with:
+- a stale schema state (older revision),
+- current head schema state (idempotency check),
+- and a PostgreSQL instance.
 
 ```/dev/null/commands.sh#L1-12
-# 1) Rehearse on old SQLite snapshot
-Copy-Item old.db old.rehearsal.db
-DATABASE_URL=sqlite:///old.rehearsal.db uv run python -m alembic upgrade head
+# 1) Rehearse from an older SQLite revision to head
+DATABASE_URL=sqlite:///rehearsal-old.sqlite uv run python -m alembic upgrade 20260203_0003
+DATABASE_URL=sqlite:///rehearsal-old.sqlite uv run python -m alembic upgrade head
 
-# 2) Rehearse on current SQLite snapshot (should be mostly no-op)
-Copy-Item new.db new.rehearsal.db
-DATABASE_URL=sqlite:///new.rehearsal.db uv run python -m alembic upgrade head
+# 2) Rehearse head-to-head on SQLite (no-op/idempotency)
+DATABASE_URL=sqlite:///rehearsal-head.sqlite uv run python -m alembic upgrade head
+DATABASE_URL=sqlite:///rehearsal-head.sqlite uv run python -m alembic upgrade head
 
 # 3) Rehearse on PostgreSQL
 DATABASE_URL=postgresql://postgres:postgres@localhost:55432/postgres uv run python -m alembic upgrade head

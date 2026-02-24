@@ -72,13 +72,23 @@ async def test_lifespan_runs_init_db_when_explicitly_enabled(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_lifespan_raises_when_no_migration_and_no_fallback(monkeypatch):
+async def test_lifespan_warns_when_no_migration_and_no_fallback(monkeypatch):
+    calls: list[str] = []
+
     monkeypatch.setattr(backend_main, "_is_auto_migrate_enabled", lambda: False)
     monkeypatch.setattr(backend_main, "_is_create_all_fallback_enabled", lambda: False)
-    monkeypatch.setattr(backend_main, "run_migrations_to_head", lambda: None)
-    monkeypatch.setattr(backend_main, "init_db", lambda: None)
-    monkeypatch.setattr(backend_main, "load_storage_plugins", lambda: None)
+    monkeypatch.setattr(
+        backend_main, "run_migrations_to_head", lambda: calls.append("migrate")
+    )
+    monkeypatch.setattr(backend_main, "init_db", lambda: calls.append("init_db"))
+    monkeypatch.setattr(
+        backend_main, "load_storage_plugins", lambda: calls.append("plugins")
+    )
+    monkeypatch.setattr(
+        backend_main.logger, "warning", lambda *_args, **_kwargs: calls.append("warn")
+    )
 
-    with pytest.raises(RuntimeError, match="FAIR_AUTO_MIGRATE is disabled"):
-        async with backend_main.lifespan(backend_main.app):
-            pass
+    async with backend_main.lifespan(backend_main.app):
+        pass
+
+    assert calls == ["warn", "plugins"]

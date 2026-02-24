@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-import shutil
 import sqlite3
 from pathlib import Path
 
-import pytest
 from alembic.script import ScriptDirectory
 
-from fair_platform.backend.data.migrations import build_alembic_config, run_migrations_to_head
+from fair_platform.backend.data.migrations import (
+    build_alembic_config,
+    run_migrations_to_head,
+    run_migrations_to_revision,
+)
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REHEARSAL_OLD_REVISION = "20260203_0003"
 
 
 def _alembic_head() -> str:
@@ -18,23 +20,34 @@ def _alembic_head() -> str:
     return script.get_current_head()
 
 
-@pytest.mark.parametrize("db_file", ["old.db", "new.db"])
-def test_upgrade_rehearsal_for_local_db_files(tmp_path: Path, db_file: str) -> None:
-    source = REPO_ROOT / db_file
-    if not source.exists():
-        pytest.skip(f"{db_file} is not present in repository root")
+def _read_revision(db_path: Path) -> str:
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute("SELECT version_num FROM alembic_version LIMIT 1").fetchone()
+    assert row is not None
+    return row[0]
 
-    target = tmp_path / db_file
-    shutil.copy2(source, target)
 
-    database_url = f"sqlite:///{target.as_posix()}"
+def test_upgrade_rehearsal_from_old_revision_to_head(tmp_path: Path) -> None:
+    db_path = tmp_path / "rehearsal_old.sqlite"
+    database_url = f"sqlite:///{db_path.as_posix()}"
+
+    run_migrations_to_revision(REHEARSAL_OLD_REVISION, database_url)
+    assert _read_revision(db_path) == REHEARSAL_OLD_REVISION
+
     run_migrations_to_head(database_url)
+    assert _read_revision(db_path) == _alembic_head()
 
-    with sqlite3.connect(target) as conn:
-        version_row = conn.execute(
-            "SELECT version_num FROM alembic_version LIMIT 1"
-        ).fetchone()
 
-    assert version_row is not None
-    assert version_row[0] == _alembic_head()
+def test_upgrade_rehearsal_head_to_head_is_idempotent(tmp_path: Path) -> None:
+    db_path = tmp_path / "rehearsal_head.sqlite"
+    database_url = f"sqlite:///{db_path.as_posix()}"
+
+    run_migrations_to_head(database_url)
+    first = _read_revision(db_path)
+
+    run_migrations_to_head(database_url)
+    second = _read_revision(db_path)
+
+    assert first == _alembic_head()
+    assert second == first
 

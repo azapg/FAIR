@@ -46,6 +46,7 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/fair
 
 Set `FAIR_AUTO_MIGRATE=0` to disable startup auto-migration (`upgrade head` runs automatically by default).
 If you disable auto-migrate and still want local/test schema bootstrap from ORM metadata, set `FAIR_ALLOW_CREATE_ALL=1` explicitly.
+If both are disabled, startup proceeds with a warning and no schema bootstrap (runtime DB errors are likely until migrations are applied).
 
 ## Database Contract
 - Primary supported production database: PostgreSQL (target versions 15 and 16).

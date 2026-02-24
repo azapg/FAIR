@@ -56,6 +56,7 @@ def postgres_database_url() -> Iterator[str]:
     admin_url = make_url(_require_postgres_test_url())
     db_name = f"fair_test_{uuid.uuid4().hex[:10]}"
     test_url: URL = admin_url.set(database=db_name)
+    test_url_str = test_url.render_as_string(hide_password=False)
 
     admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT", future=True)
     try:
@@ -70,12 +71,12 @@ def postgres_database_url() -> Iterator[str]:
 
     try:
         try:
-            run_migrations_to_head(str(test_url))
+            run_migrations_to_head(test_url_str)
         except SQLAlchemyError as exc:
             if _is_strict_mode():
                 raise
             pytest.skip(f"PostgreSQL migration rehearsal unavailable: {exc}")
-        yield str(test_url)
+        yield test_url_str
     finally:
         test_engine = create_engine(test_url, future=True)
         test_engine.dispose()
