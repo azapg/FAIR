@@ -34,13 +34,24 @@ def _is_auto_migrate_enabled() -> bool:
     return raw not in {"0", "false", "no", "off"}
 
 
+def _is_create_all_fallback_enabled() -> bool:
+    raw = os.getenv("FAIR_ALLOW_CREATE_ALL", "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
     if _is_auto_migrate_enabled():
         run_migrations_to_head()
-    else:
-        # Backward-compatible fallback for environments that opt out of auto-migrate.
+    elif _is_create_all_fallback_enabled():
+        # Explicit opt-in fallback for local/test-only environments.
         init_db()
+    else:
+        raise RuntimeError(
+            "Database startup aborted: FAIR_AUTO_MIGRATE is disabled and "
+            "FAIR_ALLOW_CREATE_ALL is not enabled. Run `alembic upgrade head` "
+            "manually or set FAIR_ALLOW_CREATE_ALL=1 for local-only bootstrap."
+        )
     load_storage_plugins()
     try:
         yield

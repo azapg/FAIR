@@ -45,6 +45,7 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/fair
 `env.py` normalizes `postgres://` → `postgresql://` and converts relative SQLite paths to an absolute path at project root so all components share the same DB file.
 
 Set `FAIR_AUTO_MIGRATE=0` to disable startup auto-migration (`upgrade head` runs automatically by default).
+If you disable auto-migrate and still want local/test schema bootstrap from ORM metadata, set `FAIR_ALLOW_CREATE_ALL=1` explicitly.
 
 ## Database Contract
 - Primary supported production database: PostgreSQL (target versions 15 and 16).

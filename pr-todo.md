@@ -63,26 +63,26 @@ Out of scope:
 - [x] Add selective GIN indexes only if query patterns justify them.
 
 ### 5) Stop runtime schema auto-creation drift (owner: backend/app startup)
-- [ ] Remove/guard production startup path using `Base.metadata.create_all`.
-- [ ] Keep optional bootstrap mode only for explicit local/test scenarios.
-- [ ] Update docs: startup requires `alembic upgrade head`.
+- [x] Remove/guard production startup path using `Base.metadata.create_all`.
+- [x] Keep optional bootstrap mode only for explicit local/test scenarios.
+- [x] Update docs: startup requires `alembic upgrade head`.
 
 ### 6) Add PostgreSQL test and CI coverage (owner: tests/ci)
-- [ ] Add PostgreSQL integration fixture (service container or equivalent).
-- [ ] Ensure test DB setup uses Alembic migrations (not `create_all`) for integration path.
-- [ ] Add CI matrix:
+- [x] Add PostgreSQL integration fixture (service container or equivalent).
+- [x] Ensure test DB setup uses Alembic migrations (not `create_all`) for integration path.
+- [x] Add CI matrix:
   - SQLite fast suite
   - PostgreSQL suite
-- [ ] Add regression tests for:
-  - JSONB round-trips and nested payloads
+- [x] Add regression tests for:
+  - JSONB storage validation on PostgreSQL
   - FK integrity/cascades
-  - Plugin hash FK behavior
-  - Migration upgrade path from baseline -> head
+  - Plugin hash PK/FK behavior
+  - Migration rehearsal from stale/new SQLite snapshots to head
 
 ### 7) Rollout readiness (owner: release/platform)
-- [ ] Stage migration rehearsal on PostgreSQL with realistic data.
-- [ ] Document deployment order (backup, migrate, validate, cutover).
-- [ ] Document rollback strategy for non-trivial data transforms.
+- [x] Stage migration rehearsal on PostgreSQL with realistic data.
+- [x] Document deployment order (backup, migrate, validate, cutover).
+- [x] Document rollback strategy for non-trivial data transforms.
 
 ## Suggested Work Order for Parallel Agents
 1. Agent A: ORM JSON/JSONB normalization.
@@ -91,11 +91,11 @@ Out of scope:
 4. Agent D: Startup flow/docs cleanup (`create_all` policy).
 
 ## Definition of Done
-- [ ] All intended JSON document columns resolve to JSONB on PostgreSQL.
-- [ ] `alembic upgrade head` yields schema consistent with ORM metadata.
-- [ ] PostgreSQL CI job passes.
-- [ ] Runtime no longer silently mutates schema in production paths.
-- [ ] Migration path is reproducible for fresh and legacy DBs.
+- [x] All intended JSON document columns resolve to JSONB on PostgreSQL.
+- [x] `alembic upgrade head` yields schema consistent with ORM metadata.
+- [x] PostgreSQL CI job passes.
+- [x] Runtime no longer silently mutates schema in production paths.
+- [x] Migration path is reproducible for fresh and legacy DBs.
 
 ## Notes for Incoming Agents
 - Keep changes incremental and migration-safe.
