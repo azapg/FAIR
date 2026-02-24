@@ -1,7 +1,6 @@
 """Alembic environment configuration.
 
 Usage:
-  cd backend
   alembic upgrade head
   alembic revision --autogenerate -m "message"
 
@@ -52,6 +51,19 @@ target_metadata = Base.metadata
 # --- Helper functions -----------------------------------------------------------------
 
 
+def _compare_type(
+    migration_context,
+    _inspected_column,
+    _metadata_column,
+    inspected_type,
+    metadata_type,
+) -> bool | None:
+    # SQLite reflection is too noisy for type diffs (UUID/JSON/Text aliases); skip type comparison there.
+    if migration_context.dialect.name == "sqlite":
+        return False
+    return None
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")
@@ -60,7 +72,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        compare_type=True,
+        compare_type=_compare_type,
         compare_server_default=True,
     )
 
@@ -80,7 +92,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            compare_type=True,
+            compare_type=_compare_type,
             compare_server_default=True,
         )
 

@@ -35,12 +35,16 @@ def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
     existing_columns = {col["name"] for col in inspector.get_columns("courses")}
+    existing_indexes = {idx["name"] for idx in inspector.get_indexes("courses")}
+    existing_uniques = {
+        uq["name"] for uq in inspector.get_unique_constraints("courses") if uq.get("name")
+    }
 
     # Make migration idempotent across divergent branch histories.
     if "enrollment_code" not in existing_columns:
         op.add_column(
             "courses",
-            sa.Column("enrollment_code", sa.String(length=32), nullable=True, unique=True),
+            sa.Column("enrollment_code", sa.String(length=32), nullable=True),
         )
 
     if "is_enrollment_enabled" not in existing_columns:
@@ -85,13 +89,41 @@ def upgrade() -> None:
             )
         )
 
+    # SQLite cannot ALTER TABLE ADD CONSTRAINT, so enforce uniqueness with a unique index there.
+    if bind.dialect.name == "sqlite":
+        if "uq_courses_enrollment_code" not in existing_indexes:
+            op.create_index(
+                "uq_courses_enrollment_code",
+                "courses",
+                ["enrollment_code"],
+                unique=True,
+            )
+    else:
+        if "uq_courses_enrollment_code" not in existing_uniques:
+            op.create_unique_constraint(
+                "uq_courses_enrollment_code",
+                "courses",
+                ["enrollment_code"],
+            )
+
 
 def downgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
     existing_columns = {col["name"] for col in inspector.get_columns("courses")}
+    existing_indexes = {idx["name"] for idx in inspector.get_indexes("courses")}
+    existing_uniques = {
+        uq["name"] for uq in inspector.get_unique_constraints("courses") if uq.get("name")
+    }
 
     # Keep downgrade safe if schema drift exists.
+    if bind.dialect.name == "sqlite":
+        if "uq_courses_enrollment_code" in existing_indexes:
+            op.drop_index("uq_courses_enrollment_code", table_name="courses")
+    else:
+        if "uq_courses_enrollment_code" in existing_uniques:
+            op.drop_constraint("uq_courses_enrollment_code", "courses", type_="unique")
+
     if "is_enrollment_enabled" in existing_columns:
         op.drop_column("courses", "is_enrollment_enabled")
     if "enrollment_code" in existing_columns:
