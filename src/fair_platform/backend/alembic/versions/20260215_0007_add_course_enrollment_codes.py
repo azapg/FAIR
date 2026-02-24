@@ -22,11 +22,11 @@ CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 CODE_LENGTH = 6
 
 def _generate_code(existing: set[str]) -> str:
-"""Generate a unique enrollment code avoiding ambiguous characters."""
-  while True:
-    code = ''.join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
-    if code not in existing:
-    return code
+    """Generate a unique enrollment code avoiding ambiguous characters."""
+    while True:
+        code = ''.join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+        if code not in existing:
+            return code
 
 
 def upgrade() -> None:
