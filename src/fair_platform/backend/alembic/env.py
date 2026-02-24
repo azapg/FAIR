@@ -31,7 +31,9 @@ import fair_platform.backend.data.models  # noqa: F401,E402  (import models for 
 
 config = context.config
 
-_db_url = get_database_url()
+_db_url = os.getenv("DATABASE_URL", "").strip() or config.get_main_option("sqlalchemy.url")
+if not _db_url:
+    _db_url = get_database_url()
 # Force relative sqlite paths to project root so all components share the same DB file
 if _db_url.startswith("sqlite:///"):
     # Extract path portion

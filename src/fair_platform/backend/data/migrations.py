@@ -20,13 +20,15 @@ def _resolve_alembic_ini_path() -> Path | None:
 
 def build_alembic_config() -> Config:
     import fair_platform.backend as backend_pkg
+    from fair_platform.backend.data.database import engine as db_engine
 
     config_path = _resolve_alembic_ini_path()
     config = Config(str(config_path)) if config_path else Config()
 
     backend_dir = Path(backend_pkg.__file__).resolve().parent
     config.set_main_option("script_location", str(backend_dir / "alembic"))
-    config.set_main_option("sqlalchemy.url", "sqlite:///fair.db")
+    # Keep Alembic target aligned with the runtime SQLAlchemy engine.
+    config.set_main_option("sqlalchemy.url", str(db_engine.url))
     return config
 
 
