@@ -26,7 +26,7 @@ class Enrollment(Base):
         SAUUID, ForeignKey("courses.id"), nullable=False
     )
     enrolled_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP, nullable=False, default=datetime.now
+        TIMESTAMP, nullable=False, default=datetime.utcnow
     )
 
     user: Mapped["User"] = relationship("User", back_populates="enrollments")

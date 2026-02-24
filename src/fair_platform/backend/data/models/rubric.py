@@ -2,11 +2,11 @@ from uuid import UUID, uuid4
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP, JSON
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from .types import json_document_type
 
 if TYPE_CHECKING:
     from .user import User
@@ -21,7 +21,7 @@ class Rubric(Base):
         SAUUID, ForeignKey("users.id"), nullable=False
     )
     content: Mapped[dict] = mapped_column(
-        JSON().with_variant(JSONB, "postgresql"), nullable=False
+        json_document_type(), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, nullable=False, default=datetime.utcnow

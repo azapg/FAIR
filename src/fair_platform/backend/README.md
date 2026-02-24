@@ -46,6 +46,12 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/fair
 
 Set `FAIR_AUTO_MIGRATE=0` to disable startup auto-migration (`upgrade head` runs automatically by default).
 
+## Database Contract
+- Primary supported production database: PostgreSQL (target versions 15 and 16).
+- SQLite remains supported for lightweight local/testing scenarios.
+- JSON document fields must use SQLAlchemy JSON with PostgreSQL JSONB variant.
+- Schema changes must be applied through Alembic migrations; avoid relying on runtime `create_all` for production schema evolution.
+
 ## Adding Models
 1. Create model in `backend/data/models/`
 2. Import it in `backend/data/models/__init__.py`

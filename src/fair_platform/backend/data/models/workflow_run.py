@@ -1,11 +1,12 @@
 from uuid import UUID
 from datetime import datetime
-from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP, JSON
+from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from enum import Enum
 from typing import Optional, List, TYPE_CHECKING
 
 from ..database import Base
+from .types import json_document_type
 
 if TYPE_CHECKING:
     from .submission import Submission
@@ -31,7 +32,7 @@ class WorkflowRun(Base):
     started_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=True)
     finished_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     status: Mapped[WorkflowRunStatus] = mapped_column(String, nullable=False)
-    logs: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    logs: Mapped[Optional[dict]] = mapped_column(json_document_type(), nullable=True)
 
     # Relationships
     workflow = relationship("Workflow", back_populates="runs")
