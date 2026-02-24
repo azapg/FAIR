@@ -29,6 +29,7 @@ def build_alembic_config() -> Config:
     config.set_main_option("script_location", str(backend_dir / "alembic"))
     # Keep Alembic target aligned with the runtime SQLAlchemy engine.
     config.set_main_option("sqlalchemy.url", str(db_engine.url))
+    config.set_main_option("fair.runtime_url_locked", "1")
     return config
 
 
