@@ -22,7 +22,7 @@ Examples:
 DATABASE_URL=sqlite:///fair.db uv run python -m alembic upgrade head
 
 # Use PostgreSQL
-DATABASE_URL=postgresql://user:pass@localhost:5432/fair uv run python -m alembic upgrade head
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/fair uv run python -m alembic upgrade head
 ```
 
 This makes the migration target explicit and avoids surprises when switching environments.
@@ -141,7 +141,7 @@ DATABASE_URL=sqlite:///rehearsal-head.sqlite uv run python -m alembic upgrade he
 DATABASE_URL=sqlite:///rehearsal-head.sqlite uv run python -m alembic upgrade head
 
 # 3) Rehearse on PostgreSQL
-DATABASE_URL=postgresql://postgres:postgres@localhost:55432/postgres uv run python -m alembic upgrade head
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:55432/postgres uv run python -m alembic upgrade head
 ```
 
 Validation checks after rehearsal:

@@ -218,8 +218,14 @@ def _migrate_sqlite_to_postgres(
     dry_run: bool,
     verify: bool,
 ) -> dict[str, int]:
-    import psycopg
-    from psycopg.types.json import Jsonb
+    try:
+        import psycopg
+        from psycopg.types.json import Jsonb
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "PostgreSQL migration requires psycopg. Install fair-platform with its default "
+            "dependencies or run: pip install 'psycopg[binary]>=3.2.0'"
+        ) from exc
 
     normalized_target = _normalize_postgres_url(to_postgres)
     if not normalized_target.startswith("postgresql+psycopg://"):
