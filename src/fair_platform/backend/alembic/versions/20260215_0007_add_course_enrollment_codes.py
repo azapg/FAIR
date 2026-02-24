@@ -36,7 +36,7 @@ CODE_LENGTH = 6
 def _generate_code(existing: set[str]) -> str:
 """Generate a unique enrollment code avoiding ambiguous characters."""
 while True:
-code = ''.join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+  code = ''.join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
 if code not in existing:
 return code
 
