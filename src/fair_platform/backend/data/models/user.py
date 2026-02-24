@@ -5,12 +5,11 @@ from typing import Any
 
 from pydantic import EmailStr
 from sqlalchemy import String, UUID as SAUUID
-from sqlalchemy import JSON
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, TYPE_CHECKING
 
 from ..database import Base
+from .types import json_document_type
 
 if TYPE_CHECKING:
     from .course import Course
@@ -41,7 +40,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String, nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     settings: Mapped[dict[str, Any]] = mapped_column(
-        JSON().with_variant(JSONB, "postgresql"),
+        json_document_type(),
         nullable=False,
         default=dict,
     )

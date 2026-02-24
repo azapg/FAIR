@@ -31,6 +31,11 @@ import fair_platform.backend.data.models  # noqa: F401,E402  (import models for 
 
 config = context.config
 
+
+def _escape_for_alembic_ini(value: str) -> str:
+    # ConfigParser interpolation requires '%' escaping.
+    return value.replace("%", "%%")
+
 _runtime_url_locked = config.get_main_option("fair.runtime_url_locked", "0") == "1"
 if _runtime_url_locked:
     _db_url = config.get_main_option("sqlalchemy.url")
@@ -45,7 +50,7 @@ if _db_url.startswith("sqlite:///"):
     if not os.path.isabs(sqlite_path):
         abs_path = os.path.join(PROJECT_ROOT, sqlite_path)
         _db_url = f"sqlite:///{abs_path.replace(os.sep, '/')}"
-config.set_main_option("sqlalchemy.url", _db_url)
+config.set_main_option("sqlalchemy.url", _escape_for_alembic_ini(_db_url))
 
 # Interpret the config file for Python logging. This line sets up loggers basically.
 if config.config_file_name is not None:

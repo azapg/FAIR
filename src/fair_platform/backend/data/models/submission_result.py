@@ -3,10 +3,11 @@ from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 
 from typing_extensions import deprecated
-from sqlalchemy import UUID as SAUUID, ForeignKey, JSON, TIMESTAMP, Float, Text
+from sqlalchemy import UUID as SAUUID, ForeignKey, TIMESTAMP, Float, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from .types import json_document_type
 
 if TYPE_CHECKING:
     from .submission import Submission
@@ -38,7 +39,9 @@ class SubmissionResult(Base):
     # Grading
     score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    grading_meta: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    grading_meta: Mapped[Optional[dict]] = mapped_column(
+        json_document_type(), nullable=True
+    )
     graded_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
 
     # Relationships

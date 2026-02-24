@@ -22,7 +22,7 @@ Examples:
 DATABASE_URL=sqlite:///fair.db uv run python -m alembic upgrade head
 
 # Use PostgreSQL
-DATABASE_URL=postgresql://user:pass@localhost:5432/fair uv run python -m alembic upgrade head
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/fair uv run python -m alembic upgrade head
 ```
 
 This makes the migration target explicit and avoids surprises when switching environments.
@@ -122,3 +122,35 @@ fair db history
 By default, backend startup runs `upgrade head` automatically, so users upgrading from PyPI get pending migrations applied before serving requests.
 
 Set `FAIR_AUTO_MIGRATE=0` to disable this behavior and manage migrations manually.
+If you do this for local-only workflows and still need ORM bootstrap, set `FAIR_ALLOW_CREATE_ALL=1`.
+
+## Rollout Rehearsal Checklist
+
+Before production rollout, rehearse migrations with:
+- a stale schema state (older revision),
+- current head schema state (idempotency check),
+- and a PostgreSQL instance.
+
+```/dev/null/commands.sh#L1-12
+# 1) Rehearse from an older SQLite revision to head
+DATABASE_URL=sqlite:///rehearsal-old.sqlite uv run python -m alembic upgrade 20260203_0003
+DATABASE_URL=sqlite:///rehearsal-old.sqlite uv run python -m alembic upgrade head
+
+# 2) Rehearse head-to-head on SQLite (no-op/idempotency)
+DATABASE_URL=sqlite:///rehearsal-head.sqlite uv run python -m alembic upgrade head
+DATABASE_URL=sqlite:///rehearsal-head.sqlite uv run python -m alembic upgrade head
+
+# 3) Rehearse on PostgreSQL
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:55432/postgres uv run python -m alembic upgrade head
+```
+
+Validation checks after rehearsal:
+- Confirm `alembic current` equals `head`.
+- Smoke-test API startup with migrations enabled.
+- Verify key JSON columns are `jsonb` on PostgreSQL.
+- Verify plugin PK/FK behavior and cascade deletes on critical tables.
+
+Rollback preparation:
+- Take DB backup immediately before migration.
+- Record migration timing and lock impact from rehearsal.
+- Keep a tested restore procedure for irreversible data transforms.

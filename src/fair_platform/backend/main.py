@@ -1,5 +1,6 @@
 import importlib.resources
 import os
+import logging
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
@@ -28,19 +29,32 @@ from fair_platform.backend.api.routers.enrollments import router as enrollments_
 
 from fair_platform.sdk import load_storage_plugins
 
+logger = logging.getLogger(__name__)
+
 
 def _is_auto_migrate_enabled() -> bool:
     raw = os.getenv("FAIR_AUTO_MIGRATE", "1").strip().lower()
     return raw not in {"0", "false", "no", "off"}
 
 
+def _is_create_all_fallback_enabled() -> bool:
+    raw = os.getenv("FAIR_ALLOW_CREATE_ALL", "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
     if _is_auto_migrate_enabled():
         run_migrations_to_head()
-    else:
-        # Backward-compatible fallback for environments that opt out of auto-migrate.
+    elif _is_create_all_fallback_enabled():
+        # Explicit opt-in fallback for local/test-only environments.
         init_db()
+    else:
+        logger.warning(
+            "FAIR_AUTO_MIGRATE is disabled and FAIR_ALLOW_CREATE_ALL is not enabled. "
+            "Starting without schema migration/bootstrap; runtime DB failures are likely. "
+            "Set FAIR_AUTO_MIGRATE=1 (recommended) or FAIR_ALLOW_CREATE_ALL=1 for local-only bootstrap."
+        )
     load_storage_plugins()
     try:
         yield

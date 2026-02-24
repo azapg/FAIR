@@ -3,11 +3,11 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP, JSON
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from .types import json_document_type
 
 if TYPE_CHECKING:
     from .submission import Submission
@@ -39,7 +39,7 @@ class SubmissionEvent(Base):
         SAUUID, ForeignKey("workflow_runs.id"), nullable=True
     )
     details: Mapped[Optional[dict]] = mapped_column(
-        JSON().with_variant(JSONB, "postgresql"), nullable=True
+        json_document_type(), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, nullable=False, default=datetime.utcnow

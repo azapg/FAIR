@@ -3,10 +3,11 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 
-from sqlalchemy import Text, JSON, UUID as SAUUID, String, TIMESTAMP, ForeignKey
+from sqlalchemy import Text, UUID as SAUUID, String, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from .types import json_document_type
 
 if TYPE_CHECKING:
     from .assignment import Assignment
@@ -38,9 +39,13 @@ class Artifact(Base):
     mime: Mapped[str] = mapped_column(Text, nullable=False)
     storage_path: Mapped[str] = mapped_column(Text, nullable=False)
     storage_type: Mapped[str] = mapped_column(Text, nullable=False)
-    meta: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False, default=datetime.now)
-    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False, default=datetime.now, onupdate=datetime.now)
+    meta: Mapped[Optional[dict]] = mapped_column(json_document_type(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, nullable=False, default=datetime.utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     creator_id: Mapped[UUID] = mapped_column(SAUUID, ForeignKey("users.id"), nullable=False)
     status: Mapped[ArtifactStatus] = mapped_column(String, nullable=False, default=ArtifactStatus.pending)
     access_level: Mapped[AccessLevel] = mapped_column(String, nullable=False, default=AccessLevel.private)
