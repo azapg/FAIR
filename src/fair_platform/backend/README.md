@@ -24,7 +24,6 @@ python -m venv .venv
 pip install -e .
 
 # Run existing migrations (creates fair.db if missing)
-cd backend
 alembic upgrade head
 
 # Create a new migration after editing/adding models
@@ -44,6 +43,8 @@ DATABASE_URL=sqlite:///fair.db
 DATABASE_URL=postgresql://user:pass@localhost:5432/fair
 ```
 `env.py` normalizes `postgres://` → `postgresql://` and converts relative SQLite paths to an absolute path at project root so all components share the same DB file.
+
+Set `FAIR_AUTO_MIGRATE=0` to disable startup auto-migration (`upgrade head` runs automatically by default).
 
 ## Adding Models
 1. Create model in `backend/data/models/`

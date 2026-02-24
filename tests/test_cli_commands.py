@@ -102,3 +102,42 @@ def test_dev_command_handles_keyboard_interrupt(monkeypatch):
 
     assert result.exit_code == 0
     assert backend in stopped
+
+
+def test_db_upgrade_command_invokes_alembic(monkeypatch):
+    runner = CliRunner()
+    captured = {}
+
+    def fake_run(action: str, *args, **kwargs):
+        captured["action"] = action
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+
+    monkeypatch.setattr(cli_main, "_run_alembic", fake_run)
+
+    result = runner.invoke(cli_main.app, ["db", "upgrade", "head"])
+
+    assert result.exit_code == 0
+    assert captured["action"] == "upgrade"
+    assert captured["args"] == ("head",)
+
+
+def test_db_revision_autogenerate_invokes_alembic(monkeypatch):
+    runner = CliRunner()
+    captured = {}
+
+    def fake_run(action: str, *args, **kwargs):
+        captured["action"] = action
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+
+    monkeypatch.setattr(cli_main, "_run_alembic", fake_run)
+
+    result = runner.invoke(
+        cli_main.app, ["db", "revision", "--autogenerate", "-m", "add something"]
+    )
+
+    assert result.exit_code == 0
+    assert captured["action"] == "revision"
+    assert captured["kwargs"]["autogenerate"] is True
+    assert captured["kwargs"]["message"] == "add something"

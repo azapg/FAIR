@@ -6,6 +6,7 @@ from pathlib import Path
 
 import typer
 from typing_extensions import Annotated
+from fair_platform.backend.data.migrations import build_alembic_config
 
 
 def _get_version() -> str:
@@ -104,6 +105,8 @@ def version_callback(value: bool):
 
 
 app = typer.Typer()
+db_app = typer.Typer(help="Manage database migrations")
+app.add_typer(db_app, name="db")
 
 
 @app.callback()
@@ -112,6 +115,71 @@ def common(
     version: bool = typer.Option(None, "--version", "-v", callback=version_callback),
 ):
     pass
+
+
+def _run_alembic(action: str, *args, **kwargs) -> None:
+    from alembic import command
+
+    config = build_alembic_config()
+    action_fn = getattr(command, action)
+    action_fn(config, *args, **kwargs)
+
+
+@db_app.command("upgrade")
+def db_upgrade(
+    revision: Annotated[str, typer.Argument(help="Target revision")] = "head",
+):
+    _run_alembic("upgrade", revision)
+
+
+@db_app.command("downgrade")
+def db_downgrade(
+    revision: Annotated[str, typer.Argument(help="Target revision")] = "-1",
+):
+    _run_alembic("downgrade", revision)
+
+
+@db_app.command("stamp")
+def db_stamp(
+    revision: Annotated[str, typer.Argument(help="Revision to stamp")] = "head",
+):
+    _run_alembic("stamp", revision)
+
+
+@db_app.command("current")
+def db_current(
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Show detailed revision info")
+    ] = False,
+):
+    _run_alembic("current", verbose=verbose)
+
+
+@db_app.command("history")
+def db_history(
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Show detailed revision info")
+    ] = False,
+):
+    _run_alembic("history", verbose=verbose)
+
+
+@db_app.command("revision")
+def db_revision(
+    message: Annotated[
+        str, typer.Option("--message", "-m", help="Revision message")
+    ] = "auto migration",
+    autogenerate: Annotated[
+        bool, typer.Option("--autogenerate", help="Autogenerate migration from models")
+    ] = False,
+):
+    _run_alembic("revision", message=message, autogenerate=autogenerate)
+
+
+@db_app.command("migrate")
+def db_migrate():
+    """Apply all migrations (alias for `fair db upgrade head`)."""
+    _run_alembic("upgrade", "head")
 
 
 @app.command()

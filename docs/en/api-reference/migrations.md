@@ -9,7 +9,7 @@ This guide documents the **official migration workflow** for the backend databas
 
 - Use the project’s Python environment (`uv`)
 - Run Alembic from the repo root
-- Use the backend config at `src/fair_platform/backend/alembic.ini`
+- Use the root config at `alembic.ini`
 
 ## DATABASE_URL (deterministic DB selection)
 
@@ -19,10 +19,10 @@ Examples:
 
 ```/dev/null/commands.sh#L1-3
 # Use a specific local SQLite file
-DATABASE_URL=sqlite:///fair.db uv run python -m alembic -c src/fair_platform/backend/alembic.ini upgrade head
+DATABASE_URL=sqlite:///fair.db uv run python -m alembic upgrade head
 
 # Use PostgreSQL
-DATABASE_URL=postgresql://user:pass@localhost:5432/fair uv run python -m alembic -c src/fair_platform/backend/alembic.ini upgrade head
+DATABASE_URL=postgresql://user:pass@localhost:5432/fair uv run python -m alembic upgrade head
 ```
 
 This makes the migration target explicit and avoids surprises when switching environments.
@@ -33,14 +33,14 @@ Create a new migration after changing models:
 
 ```/dev/null/commands.sh#L1-2
 cd C:\Users\allan\Documents\fair-platform
-uv run python -m alembic -c src/fair_platform/backend/alembic.ini revision --autogenerate -m "your message"
+uv run python -m alembic revision --autogenerate -m "your message"
 ```
 
 Apply all migrations:
 
 ```/dev/null/commands.sh#L1-2
 cd C:\Users\allan\Documents\fair-platform
-uv run python -m alembic -c src/fair_platform/backend/alembic.ini upgrade head
+uv run python -m alembic upgrade head
 ```
 
 ## Standard Workflow
@@ -54,9 +54,9 @@ Example:
 
 ```/dev/null/commands.sh#L1-6
 cd C:\Users\allan\Documents\fair-platform
-uv run python -m alembic -c src/fair_platform/backend/alembic.ini revision --autogenerate -m "add submission events"
+uv run python -m alembic revision --autogenerate -m "add submission events"
 # Inspect the migration file under src/fair_platform/backend/alembic/versions/
-uv run python -m alembic -c src/fair_platform/backend/alembic.ini upgrade head
+uv run python -m alembic upgrade head
 ```
 
 ## Resetting the Dev Database (SQLite)
@@ -66,7 +66,7 @@ If you are in a **local dev environment** and you want a clean database:
 ```/dev/null/commands.sh#L1-3
 cd C:\Users\allan\Documents\fair-platform
 del fair.db
-uv run python -m alembic -c src/fair_platform/backend/alembic.ini upgrade head
+uv run python -m alembic upgrade head
 ```
 
 This is destructive. Only do this for local dev data.
@@ -83,7 +83,7 @@ Always run Alembic with `uv run` so it uses the project environment.
 
 ```/dev/null/commands.sh#L1-2
 cd C:\Users\allan\Documents\fair-platform
-uv run python -m alembic -c src/fair_platform/backend/alembic.ini upgrade head
+uv run python -m alembic upgrade head
 ```
 
 ## Best Practices
@@ -103,5 +103,22 @@ This means you have an existing database without Alembic history. Either:
 
 ```/dev/null/commands.sh#L1-2
 cd C:\Users\allan\Documents\fair-platform
-uv run python -m alembic -c src/fair_platform/backend/alembic.ini stamp head
+uv run python -m alembic stamp head
 ```
+
+## FAIR CLI Wrapper
+
+For PyPI installs (or when you prefer a stable wrapper), use:
+
+```/dev/null/commands.sh#L1-4
+fair db upgrade head
+fair db revision --autogenerate -m "your message"
+fair db current
+fair db history
+```
+
+## Auto-Migrate On Startup
+
+By default, backend startup runs `upgrade head` automatically, so users upgrading from PyPI get pending migrations applied before serving requests.
+
+Set `FAIR_AUTO_MIGRATE=0` to disable this behavior and manage migrations manually.

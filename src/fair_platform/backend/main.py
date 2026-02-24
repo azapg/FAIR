@@ -1,4 +1,5 @@
 import importlib.resources
+import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
@@ -7,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
 from fair_platform.backend.data.database import init_db
+from fair_platform.backend.data.migrations import run_migrations_to_head
 from fair_platform.backend.api.routers.users import router as users_router
 from fair_platform.backend.api.routers.courses import router as courses_router
 from fair_platform.backend.api.routers.artifacts import router as artifacts_router
@@ -27,9 +29,18 @@ from fair_platform.backend.api.routers.enrollments import router as enrollments_
 from fair_platform.sdk import load_storage_plugins
 
 
+def _is_auto_migrate_enabled() -> bool:
+    raw = os.getenv("FAIR_AUTO_MIGRATE", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
-    init_db()
+    if _is_auto_migrate_enabled():
+        run_migrations_to_head()
+    else:
+        # Backward-compatible fallback for environments that opt out of auto-migrate.
+        init_db()
     load_storage_plugins()
     try:
         yield
