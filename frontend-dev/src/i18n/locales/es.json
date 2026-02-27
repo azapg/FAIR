@@ -87,7 +87,9 @@
       "theme": "Tema",
       "language": "Idioma",
       "simpleView": "Vista simple",
-      "simpleViewDescription": "Condensa pantallas densas para usuarios avanzados e instructores."
+      "simpleViewDescription": "Condensa pantallas densas para usuarios avanzados e instructores.",
+      "devMode": "Modo desarrollador",
+      "devModeDescription": "Muestra herramientas internas de prueba y páginas experimentales."
     },
     "ai": {
       "chatPersonality": "Personalidad del chat",
