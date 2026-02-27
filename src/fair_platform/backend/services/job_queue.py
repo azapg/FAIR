@@ -378,7 +378,7 @@ class RedisJobQueue(JobQueue):
 
     async def dequeue(self, timeout: float | None = None) -> JobMessage | None:
         # `BLPOP timeout=0` means "block forever" in Redis.
-        redis_timeout = 0 if timeout is None else int(timeout)
+        redis_timeout = 0 if timeout is None else float(timeout)
         response = await self._redis.blpop(self._queue_name, timeout=redis_timeout)
         if response is None:
             return None
