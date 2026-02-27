@@ -16,6 +16,8 @@ from .job_queue import (
     create_job_queue,
     get_job_queue_backend,
 )
+from .extension_registry import ExtensionRegistration, LocalExtensionRegistry
+from .job_dispatcher import DispatchResult, JobDispatcher
 
 __all__ = [
     "ArtifactManager",
@@ -37,4 +39,8 @@ __all__ = [
     "RedisJobQueue",
     "create_job_queue",
     "get_job_queue_backend",
+    "ExtensionRegistration",
+    "LocalExtensionRegistry",
+    "DispatchResult",
+    "JobDispatcher",
 ]
