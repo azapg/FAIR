@@ -35,6 +35,7 @@ import {
   SettingsIcon,
   MessageCircleQuestionMarkIcon,
   ClipboardList,
+  FlaskConical,
 } from "lucide-react";
 import {
   Collapsible,
@@ -62,6 +63,7 @@ import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { usePreferenceSettings } from "@/hooks/use-preference-settings";
+import { IfSetting } from "@/components/if-setting";
 import {
   Command,
   CommandDialog,
@@ -165,6 +167,16 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
+      <IfSetting setting="ui.devMode" scope="local-first">
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild tooltip="Jobs Lab">
+            <Link to="/jobs-lab">
+              <FlaskConical />
+              <span>Jobs Lab</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </IfSetting>
       <SidebarMenuItem>
         <SidebarMenuButton tooltip={t("nav.settings")} onClick={onSettingsClick}>
           <SettingsIcon />
