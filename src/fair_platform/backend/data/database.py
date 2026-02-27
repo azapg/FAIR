@@ -27,7 +27,9 @@ def get_database_url() -> str:
         print("Using SQLite since DATABASE_URL is not set")
         return f"sqlite:///{storage.local_db_path}"
     if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://") :]
+        return "postgresql+psycopg://" + url[len("postgres://") :]
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url[len("postgresql://") :]
     return url
 
 

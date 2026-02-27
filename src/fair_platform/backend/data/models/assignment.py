@@ -6,7 +6,6 @@ from sqlalchemy import (
     ForeignKey,
     UUID as SAUUID,
     TIMESTAMP,
-    JSON,
     Table,
     Column,
 )
@@ -14,6 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, List, TYPE_CHECKING
 
 from ..database import Base
+from .types import json_document_type
 
 if TYPE_CHECKING:
     from .course import Course
@@ -49,7 +49,7 @@ class Assignment(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     deadline: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
-    max_grade: Mapped[dict] = mapped_column(JSON, nullable=False)
+    max_grade: Mapped[dict] = mapped_column(json_document_type(), nullable=False)
 
     course: Mapped["Course"] = relationship("Course", back_populates="assignments")
     submissions: Mapped[List["Submission"]] = relationship(

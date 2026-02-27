@@ -34,7 +34,8 @@ def upgrade() -> None:
     sa.Column('meta', sa.JSON(), nullable=True),
     sa.Column('type', sa.String(), nullable=False),
     sa.Column('settings_schema', sa.JSON(), nullable=True),
-    sa.PrimaryKeyConstraint('id', 'hash')
+    sa.PrimaryKeyConstraint('id', 'hash'),
+    sa.UniqueConstraint('id', name='uq_plugins_id')
     )
     op.create_table('users',
     sa.Column('id', sa.UUID(), nullable=False),

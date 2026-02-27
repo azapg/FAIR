@@ -19,7 +19,7 @@ on:
       - 'uv.lock'
 
 jobs:
-  test:
+  test-sqlite:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -40,6 +40,45 @@ jobs:
       run: |
         uv sync --extra test
     
-    - name: Run tests
+    - name: Run SQLite tests
       run: |
         uv run pytest
+
+  test-postgresql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Set up Python 3.12
+      run: uv python install 3.12
+
+    - name: Install dependencies
+      run: |
+        uv sync --extra test
+
+    - name: Run PostgreSQL integration tests
+      env:
+        POSTGRES_TEST_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+        POSTGRES_TEST_STRICT: "1"
+      run: |
+        uv run pytest -q tests/test_postgres_compat.py tests/test_migration_rehearsal_files.py tests/test_backend_startup_migrations.py

@@ -24,7 +24,6 @@ python -m venv .venv
 pip install -e .
 
 # Run existing migrations (creates fair.db if missing)
-cd backend
 alembic upgrade head
 
 # Create a new migration after editing/adding models
@@ -41,9 +40,19 @@ Environment variable `DATABASE_URL` (optionally via a `.env` file) overrides the
 Examples:
 ```
 DATABASE_URL=sqlite:///fair.db
-DATABASE_URL=postgresql://user:pass@localhost:5432/fair
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/fair
 ```
-`env.py` normalizes `postgres://` → `postgresql://` and converts relative SQLite paths to an absolute path at project root so all components share the same DB file.
+`env.py` normalizes `postgres://`/`postgresql://` → `postgresql+psycopg://` and converts relative SQLite paths to an absolute path at project root so all components share the same DB file.
+
+Set `FAIR_AUTO_MIGRATE=0` to disable startup auto-migration (`upgrade head` runs automatically by default).
+If you disable auto-migrate and still want local/test schema bootstrap from ORM metadata, set `FAIR_ALLOW_CREATE_ALL=1` explicitly.
+If both are disabled, startup proceeds with a warning and no schema bootstrap (runtime DB errors are likely until migrations are applied).
+
+## Database Contract
+- Primary supported production database: PostgreSQL (target version 18).
+- SQLite remains supported for lightweight local/testing scenarios.
+- JSON document fields must use SQLAlchemy JSON with PostgreSQL JSONB variant.
+- Schema changes must be applied through Alembic migrations; avoid relying on runtime `create_all` for production schema evolution.
 
 ### Job/Extension Communications (Current)
 
@@ -88,6 +97,6 @@ Current scalability status:
 
 ## Troubleshooting
 - If Alembic cannot find models, ensure `backend` root is on `PYTHONPATH` (handled automatically in `env.py`).
-- If using a PostgreSQL DSN starting with `postgres://`, it is rewritten automatically.
+- If using a PostgreSQL DSN starting with `postgres://` or `postgresql://`, it is rewritten automatically to `postgresql+psycopg://`.
 - On Windows, ensure you activate the virtual environment before running commands.
 - Enum changes sometimes need manual edits to migration scripts (especially for PostgreSQL).

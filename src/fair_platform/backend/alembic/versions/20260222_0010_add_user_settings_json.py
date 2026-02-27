@@ -19,21 +19,31 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "users",
-        sa.Column(
-            "settings",
-            sa.JSON().with_variant(postgresql.JSONB, "postgresql"),
-            nullable=True,
-        ),
-    )
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_columns = {col["name"] for col in inspector.get_columns("users")}
+
+    if "settings" not in existing_columns:
+        op.add_column(
+            "users",
+            sa.Column(
+                "settings",
+                sa.JSON().with_variant(postgresql.JSONB, "postgresql"),
+                nullable=True,
+            ),
+        )
 
     users = sa.table(
         "users",
         sa.column("settings", sa.JSON()),
     )
     op.execute(sa.update(users).where(users.c.settings.is_(None)).values(settings={}))
-    op.alter_column("users", "settings", nullable=False)
+
+    if bind.dialect.name == "sqlite":
+        with op.batch_alter_table("users") as batch_op:
+            batch_op.alter_column("settings", existing_type=sa.JSON(), nullable=False)
+    else:
+        op.alter_column("users", "settings", existing_type=sa.JSON(), nullable=False)
 
 
 def downgrade() -> None:
