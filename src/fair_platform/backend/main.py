@@ -26,6 +26,11 @@ from fair_platform.backend.api.routers.sessions import router as sessions_router
 from fair_platform.backend.api.routers.version import router as version_router
 from fair_platform.backend.api.routers.rubrics import router as rubrics_router
 from fair_platform.backend.api.routers.enrollments import router as enrollments_router
+from fair_platform.backend.api.routers.jobs import router as jobs_router
+from fair_platform.backend.api.routers.extensions import router as extensions_router
+from fair_platform.backend.services.extension_registry import LocalExtensionRegistry
+from fair_platform.backend.services.job_dispatcher import JobDispatcher
+from fair_platform.backend.services.job_queue import create_job_queue
 
 from fair_platform.sdk import load_storage_plugins
 
@@ -56,11 +61,23 @@ async def lifespan(_ignored: FastAPI):
             "Set FAIR_AUTO_MIGRATE=1 (recommended) or FAIR_ALLOW_CREATE_ALL=1 for local-only bootstrap."
         )
     load_storage_plugins()
+    app.state.job_queue = await create_job_queue()
+    app.state.extension_registry = LocalExtensionRegistry()
+    app.state.job_dispatcher = JobDispatcher(
+        queue=app.state.job_queue,
+        registry=app.state.extension_registry,
+    )
+    if (os.getenv("FAIR_ENABLE_JOB_DISPATCHER", "false").strip().lower() in {"1", "true", "yes", "on"}):
+        await app.state.job_dispatcher.start()
     try:
         yield
     finally:
-        # teardown?
-        pass
+        dispatcher = getattr(app.state, "job_dispatcher", None)
+        if dispatcher is not None:
+            await dispatcher.stop()
+        queue = getattr(app.state, "job_queue", None)
+        if queue is not None:
+            await queue.close()
 
 
 app = FastAPI(
@@ -86,6 +103,8 @@ app.include_router(sessions_router, prefix="/api/sessions", tags=["sessions", "w
 app.include_router(version_router, prefix="/api", tags=["version"])
 app.include_router(rubrics_router, prefix="/api/rubrics", tags=["rubrics"])
 app.include_router(enrollments_router, prefix="/api/enrollments", tags=["enrollments"])
+app.include_router(jobs_router, prefix="/api/jobs", tags=["jobs"])
+app.include_router(extensions_router, prefix="/api/extensions", tags=["extensions"])
 
 
 @app.get("/health")

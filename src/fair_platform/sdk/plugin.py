@@ -8,11 +8,18 @@ from fair_platform.backend.data.models import Plugin
 from fair_platform.sdk import Submission, SettingsField
 from typing import Any, Type, List, Optional, Dict, Union, Tuple
 from pydantic import BaseModel, create_model, ValidationError
+from typing_extensions import deprecated
 
 from fair_platform.sdk.events import DebugEventBus
 from fair_platform.sdk.logger import PluginLogger
 
+LEGACY_PLUGIN_API_DEPRECATION_MESSAGE = (
+    "Legacy in-process plugin APIs are deprecated. Migrate to the new extension "
+    "registration and jobs/event API."
+)
 
+
+@deprecated(LEGACY_PLUGIN_API_DEPRECATION_MESSAGE)
 class BasePlugin:
     _settings_fields: dict[str, SettingsField[Any]]
 
@@ -72,6 +79,7 @@ class TranscribedSubmission(BaseModel):
     confidence: float
 
 
+@deprecated(LEGACY_PLUGIN_API_DEPRECATION_MESSAGE)
 class TranscriptionPlugin(BasePlugin, ABC):
     @abstractmethod
     def transcribe(self, submission: Submission) -> TranscribedSubmission:
@@ -89,6 +97,7 @@ class GradeResult(BaseModel):
     meta: dict[str, Any] = {}
 
 
+@deprecated(LEGACY_PLUGIN_API_DEPRECATION_MESSAGE)
 class GradePlugin(BasePlugin, ABC):
     @abstractmethod
     def grade(
@@ -110,6 +119,7 @@ class ValidationResult(BaseModel):
     meta: dict[str, Any] = {}
 
 
+@deprecated(LEGACY_PLUGIN_API_DEPRECATION_MESSAGE)
 class ValidationPlugin(BasePlugin, ABC):
     # TODO: I think validation should become "post-processing", but for now
     #  we keep it as is.
@@ -155,6 +165,7 @@ PLUGINS_OBJECTS: Dict[
 ] = {}
 
 
+@deprecated(LEGACY_PLUGIN_API_DEPRECATION_MESSAGE)
 class FairPlugin:
     def __init__(
         self,
@@ -241,10 +252,12 @@ class FairPlugin:
         return cls
 
 
+@deprecated(LEGACY_PLUGIN_API_DEPRECATION_MESSAGE)
 def get_plugin_metadata(hash: str) -> Optional[PluginMeta]:
     return PLUGINS.get(hash)
 
 
+@deprecated(LEGACY_PLUGIN_API_DEPRECATION_MESSAGE)
 def get_plugin_object(
     hash: str,
 ) -> Optional[
@@ -253,6 +266,7 @@ def get_plugin_object(
     return PLUGINS_OBJECTS.get(hash)
 
 
+@deprecated(LEGACY_PLUGIN_API_DEPRECATION_MESSAGE)
 def list_plugins(plugin_type: Optional[PluginType] = None) -> List[PluginMeta]:
     if plugin_type:
         return [plugin for plugin in PLUGINS.values() if plugin.type == plugin_type]

@@ -2,13 +2,18 @@ import contextlib
 from typing import List
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from uuid import UUID
+from typing_extensions import deprecated
 
 from sqlalchemy.orm import Session
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from fair_platform.backend.api.deprecation import (
+    LEGACY_SDK_DEPRECATION_MESSAGE,
+    apply_legacy_sdk_deprecation_headers,
+)
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead
 from fair_platform.backend.data.database import session_dependency
@@ -41,11 +46,15 @@ class SessionLogItem(BaseModel):
     payload: dict | None = None
 
 @router.post("/", response_model=SessionResponse, dependencies=[Depends(require_capability("run_workflow"))])
+@deprecated(LEGACY_SDK_DEPRECATION_MESSAGE)
 async def create_session(
     payload: SessionCreateRequest,
+    response: Response,
     user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ):
+    apply_legacy_sdk_deprecation_headers(response)
+
     if not payload.submission_ids:
         raise HTTPException(
             status_code=400, detail="At least one submission ID must be provided"
@@ -69,13 +78,17 @@ async def create_session(
 
 
 @router.get("/{session_id}/logs", response_model=list[SessionLogItem])
+@deprecated(LEGACY_SDK_DEPRECATION_MESSAGE)
 def get_session_logs(
     session_id: UUID,
+    response: Response,
     after: int | None = Query(
         None, description="Return logs with index greater than this value"
     ),
     db: Session = Depends(session_dependency),
 ):
+    apply_legacy_sdk_deprecation_headers(response)
+
     def _normalize_entry(entry, fallback_index: int) -> SessionLogItem:
         if isinstance(entry, dict):
             event_name = (
@@ -122,6 +135,7 @@ def get_session_logs(
 
 
 @router.websocket("/{session_id}")
+@deprecated(LEGACY_SDK_DEPRECATION_MESSAGE)
 async def websocket_session(websocket: WebSocket, session_id: UUID):
     await websocket.accept()
 

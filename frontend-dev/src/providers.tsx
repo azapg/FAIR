@@ -27,14 +27,18 @@ function SettingsRuntime() {
     useLocalPreference<LanguageCode | undefined>("ui.language");
   const { value: localSimpleView, setValue: setLocalSimpleView } =
     useLocalPreference<boolean | undefined>("ui.simpleView");
+  const { value: localDevMode, setValue: setLocalDevMode } =
+    useLocalPreference<boolean | undefined>("ui.devMode");
 
   const themeServer = useUserSetting<ThemeMode>("preferences.theme", "system").value;
   const languageServer = useUserSetting<LanguageCode>("preferences.language", "en").value;
   const simpleViewServer = useUserSetting<boolean>("preferences.simpleView", false).value;
+  const devModeServer = useUserSetting<boolean>("preferences.devMode", false).value;
 
   const resolvedTheme = localTheme ?? themeServer;
   const resolvedLanguage = localLanguage ?? languageServer;
   const resolvedSimpleView = localSimpleView ?? simpleViewServer;
+  const resolvedDevMode = localDevMode ?? devModeServer;
 
   useEffect(() => {
     if (localTheme === undefined) {
@@ -55,6 +59,12 @@ function SettingsRuntime() {
   }, [localSimpleView, setLocalSimpleView, simpleViewServer]);
 
   useEffect(() => {
+    if (localDevMode === undefined) {
+      setLocalDevMode(devModeServer);
+    }
+  }, [devModeServer, localDevMode, setLocalDevMode]);
+
+  useEffect(() => {
     if (theme !== resolvedTheme) {
       setTheme(resolvedTheme);
     }
@@ -69,6 +79,10 @@ function SettingsRuntime() {
   useEffect(() => {
     document.documentElement.classList.toggle("simple-view", Boolean(resolvedSimpleView));
   }, [resolvedSimpleView]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dev-mode", Boolean(resolvedDevMode));
+  }, [resolvedDevMode]);
 
   return null;
 }
