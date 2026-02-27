@@ -2,6 +2,7 @@ import asyncio
 import binascii
 from typing import Optional
 from urllib.parse import urlparse
+from typing_extensions import deprecated
 
 from fair_platform.backend.data.models.submission_result import TYPE_CHECKING
 from fair_platform.sdk.events import EventBus
@@ -11,7 +12,13 @@ from fair_platform.sdk.events import EventBus
 if TYPE_CHECKING:
     from fair_platform.backend.data.models.plugin import Plugin
 
+LEGACY_SDK_LOGGER_DEPRECATION_MESSAGE = (
+    "SessionLogger/PluginLogger are part of the legacy FAIR SDK runtime and are "
+    "deprecated. Migrate to the new extension jobs/event API."
+)
 
+
+@deprecated(LEGACY_SDK_LOGGER_DEPRECATION_MESSAGE)
 class SessionLogger:
     _FILE_CONTENT_MAX_BYTES = 256000
     _ALLOWED_FILE_TYPES = {"text", "markdown"}
@@ -293,6 +300,7 @@ class SessionLogger:
         return PluginLogger(session_id=self.session_id, bus=self.bus, plugin=plugin)
 
 
+@deprecated(LEGACY_SDK_LOGGER_DEPRECATION_MESSAGE)
 class PluginLogger(SessionLogger):
     def __init__(
         self, session_id: str, bus: EventBus, plugin: Optional["Plugin"] = None
