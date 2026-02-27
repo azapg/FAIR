@@ -69,7 +69,10 @@ class JobDispatcher:
         return await self._dispatch_job(job)
 
     async def _dispatch_job(self, job: JobMessage) -> DispatchResult:
-        attempts = int(job.metadata.get("_dispatch_attempt", 0))
+        try:
+            attempts = int(job.metadata.get("_dispatch_attempt", 0))
+        except (ValueError, TypeError):
+            attempts = 0
         await self._queue.set_state(
             job.job_id,
             JobStatus.DISPATCHED,
