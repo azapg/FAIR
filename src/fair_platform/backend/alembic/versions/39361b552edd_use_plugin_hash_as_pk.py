@@ -23,6 +23,21 @@ def upgrade() -> None:
     # SQLite does not support most ALTER COLUMN operations. 
     # Since these are just type refinements (NUMERIC -> UUID) that SQLite handles as strings anyway,
     # we skip them to avoid "near 'ALTER': syntax error".
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
+    unique_constraints = inspector.get_unique_constraints("plugins")
+    pk_constraint = inspector.get_pk_constraint("plugins")
+
+    has_hash_unique = any(
+        set(uc.get("column_names", [])) == {"hash"} for uc in unique_constraints
+    ) or set(pk_constraint.get("constrained_columns", [])) == {"hash"}
+
+    # PostgreSQL requires referenced columns to be unique/primary-key for FK targets.
+    # Baseline schema uses PK(id, hash), so we explicitly enforce hash uniqueness
+    # before creating workflows.*_plugin_hash foreign keys.
+    if bind.dialect.name != "sqlite" and not has_hash_unique:
+        op.create_unique_constraint("uq_plugins_hash", "plugins", ["hash"])
     
     op.add_column('workflows', sa.Column('transcriber_plugin_hash', sa.Text(), nullable=True))
     op.add_column('workflows', sa.Column('grader_plugin_hash', sa.Text(), nullable=True))

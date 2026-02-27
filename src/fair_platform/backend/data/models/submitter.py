@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy import String, Boolean, UUID as SAUUID, TIMESTAMP, ForeignKey
+from sqlalchemy import String, Boolean, UUID as SAUUID, TIMESTAMP, ForeignKey, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -25,7 +25,9 @@ class Submitter(Base):
     user_id: Mapped[Optional[UUID]] = mapped_column(
         SAUUID, ForeignKey("users.id"), nullable=True
     )
-    is_synthetic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_synthetic: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, nullable=False, default=datetime.utcnow
     )

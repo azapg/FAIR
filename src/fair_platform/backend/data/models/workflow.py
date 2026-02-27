@@ -1,10 +1,11 @@
 from uuid import UUID
 from datetime import datetime
-from sqlalchemy import String, Text, ForeignKey, UUID as SAUUID, TIMESTAMP, JSON, Boolean
+from sqlalchemy import String, Text, ForeignKey, UUID as SAUUID, TIMESTAMP, Boolean, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, List, TYPE_CHECKING
 
 from ..database import Base
+from .types import json_document_type
 
 if TYPE_CHECKING:
     from .course import Course
@@ -27,20 +28,28 @@ class Workflow(Base):
     )
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False)
     updated_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
-    archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    archived: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     # TODO: What an ugly schema, needs refactoring.
     transcriber_plugin_hash: Mapped[Optional[str]] = mapped_column(
         Text, ForeignKey("plugins.hash"), nullable=True
     )
-    transcriber_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    transcriber_settings: Mapped[Optional[dict]] = mapped_column(
+        json_document_type(), nullable=True
+    )
     grader_plugin_hash: Mapped[Optional[str]] = mapped_column(
         Text, ForeignKey("plugins.hash"), nullable=True
     )
-    grader_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    grader_settings: Mapped[Optional[dict]] = mapped_column(
+        json_document_type(), nullable=True
+    )
     validator_plugin_hash: Mapped[Optional[str]] = mapped_column(
         Text, ForeignKey("plugins.hash"), nullable=True
     )
-    validator_settings: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    validator_settings: Mapped[Optional[dict]] = mapped_column(
+        json_document_type(), nullable=True
+    )
 
     course: Mapped["Course"] = relationship("Course", back_populates="workflows")
     creator: Mapped["User"] = relationship("User", back_populates="created_workflows")

@@ -1,7 +1,6 @@
 """Alembic environment configuration.
 
 Usage:
-  cd backend
   alembic upgrade head
   alembic revision --autogenerate -m "message"
 
@@ -32,7 +31,18 @@ import fair_platform.backend.data.models  # noqa: F401,E402  (import models for 
 
 config = context.config
 
-_db_url = get_database_url()
+
+def _escape_for_alembic_ini(value: str) -> str:
+    # ConfigParser interpolation requires '%' escaping.
+    return value.replace("%", "%%")
+
+_runtime_url_locked = config.get_main_option("fair.runtime_url_locked", "0") == "1"
+if _runtime_url_locked:
+    _db_url = config.get_main_option("sqlalchemy.url")
+else:
+    _db_url = os.getenv("DATABASE_URL", "").strip() or config.get_main_option("sqlalchemy.url")
+    if not _db_url:
+        _db_url = get_database_url()
 # Force relative sqlite paths to project root so all components share the same DB file
 if _db_url.startswith("sqlite:///"):
     # Extract path portion
@@ -40,7 +50,7 @@ if _db_url.startswith("sqlite:///"):
     if not os.path.isabs(sqlite_path):
         abs_path = os.path.join(PROJECT_ROOT, sqlite_path)
         _db_url = f"sqlite:///{abs_path.replace(os.sep, '/')}"
-config.set_main_option("sqlalchemy.url", _db_url)
+config.set_main_option("sqlalchemy.url", _escape_for_alembic_ini(_db_url))
 
 # Interpret the config file for Python logging. This line sets up loggers basically.
 if config.config_file_name is not None:
@@ -52,6 +62,19 @@ target_metadata = Base.metadata
 # --- Helper functions -----------------------------------------------------------------
 
 
+def _compare_type(
+    migration_context,
+    _inspected_column,
+    _metadata_column,
+    inspected_type,
+    metadata_type,
+) -> bool | None:
+    # SQLite reflection is too noisy for type diffs (UUID/JSON/Text aliases); skip type comparison there.
+    if migration_context.dialect.name == "sqlite":
+        return False
+    return None
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")
@@ -60,7 +83,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        compare_type=True,
+        compare_type=_compare_type,
         compare_server_default=True,
     )
 
@@ -80,7 +103,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            compare_type=True,
+            compare_type=_compare_type,
             compare_server_default=True,
         )
 
