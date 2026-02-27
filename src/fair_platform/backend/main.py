@@ -23,19 +23,23 @@ from fair_platform.backend.api.routers.sessions import router as sessions_router
 from fair_platform.backend.api.routers.version import router as version_router
 from fair_platform.backend.api.routers.rubrics import router as rubrics_router
 from fair_platform.backend.api.routers.enrollments import router as enrollments_router
+from fair_platform.backend.api.routers.jobs import router as jobs_router
+from fair_platform.backend.services.job_queue import create_job_queue
 
 from fair_platform.sdk import load_storage_plugins
 
 
 @asynccontextmanager
-async def lifespan(_ignored: FastAPI):
+async def lifespan(app: FastAPI):
     init_db()
     load_storage_plugins()
+    app.state.job_queue = await create_job_queue()
     try:
         yield
     finally:
-        # teardown?
-        pass
+        queue = getattr(app.state, "job_queue", None)
+        if queue is not None:
+            await queue.close()
 
 
 app = FastAPI(
@@ -61,6 +65,7 @@ app.include_router(sessions_router, prefix="/api/sessions", tags=["sessions", "w
 app.include_router(version_router, prefix="/api", tags=["version"])
 app.include_router(rubrics_router, prefix="/api/rubrics", tags=["rubrics"])
 app.include_router(enrollments_router, prefix="/api/enrollments", tags=["enrollments"])
+app.include_router(jobs_router, prefix="/api/jobs", tags=["jobs"])
 
 
 @app.get("/health")
