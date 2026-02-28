@@ -38,6 +38,8 @@ def build_alembic_config(database_url: str | None = None) -> Config:
         _escape_for_alembic_ini(database_url or str(db_engine.url)),
     )
     config.set_main_option("fair.runtime_url_locked", "1")
+    # Keep runtime/server logging intact when invoking Alembic programmatically.
+    config.set_main_option("fair.skip_logging_config", "1")
     return config
 
 
