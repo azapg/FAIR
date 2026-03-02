@@ -3,9 +3,10 @@ from uuid import uuid4
 from uuid import UUID
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from fair_platform.backend.api.dependencies import get_job_queue
 from fair_platform.backend.api.schema.job import JobCreateResponse
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.rubric import Rubric
@@ -25,7 +26,6 @@ from fair_platform.backend.services.job_queue import (
     JobMessage,
     JobQueue,
     JobStatus,
-    create_job_queue,
 )
 from fair_platform.backend.services.rubric_service import get_rubric_service
 
@@ -34,14 +34,6 @@ router = APIRouter()
 
 def _rubric_extension_target() -> str:
     return os.getenv("FAIR_RUBRIC_EXTENSION_ID", "fair.core").strip() or "fair.core"
-
-
-async def get_job_queue(request: Request) -> JobQueue:
-    queue = getattr(request.app.state, "job_queue", None)
-    if queue is None:
-        queue = await create_job_queue()
-        request.app.state.job_queue = queue
-    return queue
 
 
 @router.post("/", response_model=RubricRead, status_code=status.HTTP_201_CREATED)
