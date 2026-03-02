@@ -33,9 +33,7 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   // TODO: change to cookies
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-  const hasAuthorizationHeader =
-    !!config.headers?.Authorization || !!config.headers?.authorization
-  if (token && !hasAuthorizationHeader) {
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
