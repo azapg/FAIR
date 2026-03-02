@@ -14,6 +14,13 @@ error() {
     echo "❌ $1"
 }
 
+ensure_python() {
+    if ! command -v python >/dev/null 2>&1; then
+        error "Python is required for the uv fallback, but was not found in PATH."
+        exit 1
+    fi
+}
+
 info "Checking build prerequisites..."
 
 if ! command -v bun >/dev/null 2>&1; then
@@ -27,6 +34,7 @@ if command -v uv >/dev/null 2>&1; then
     uv sync
 else
     warn "uv not found; falling back to Python/pip for dependency installation."
+    ensure_python
     python -m pip install -e .
 fi
 
@@ -63,6 +71,9 @@ if command -v uv >/dev/null 2>&1; then
     uv build
 else
     warn "uv not found; falling back to python -m build."
+    ensure_python
+    warn "Installing Python build backend via pip for fallback packaging."
+    python -m pip install build
     python -m build
 fi
 
