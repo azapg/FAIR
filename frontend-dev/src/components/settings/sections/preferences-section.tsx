@@ -18,9 +18,11 @@ export function PreferencesSection() {
     effectiveTheme,
     effectiveLanguage,
     effectiveSimpleView,
+    effectiveDevMode,
     setThemePreference,
     setLanguagePreference,
     setSimpleViewPreference,
+    setDevModePreference,
     isSaving,
   } = usePreferenceSettings();
 
@@ -73,6 +75,21 @@ export function PreferencesSection() {
           id="settings-simple-view"
           checked={effectiveSimpleView}
           onCheckedChange={(checked) => setSimpleViewPreference(Boolean(checked))}
+          disabled={isSaving}
+        />
+      </div>
+
+      <div className="flex items-start justify-between gap-3 py-1">
+        <div className="space-y-1">
+          <Label htmlFor="settings-dev-mode">{t("settings.fields.devMode")}</Label>
+          <p className="text-xs text-muted-foreground">
+            {t("settings.fields.devModeDescription")}
+          </p>
+        </div>
+        <Switch
+          id="settings-dev-mode"
+          checked={effectiveDevMode}
+          onCheckedChange={(checked) => setDevModePreference(Boolean(checked))}
           disabled={isSaving}
         />
       </div>

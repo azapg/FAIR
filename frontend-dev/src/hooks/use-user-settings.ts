@@ -141,6 +141,7 @@ const normalizeFallbackSettings = (
       preferences: {
         interfaceMode: "simple",
         simpleView: false,
+        devMode: false,
         theme: "system",
         language: "en",
       },

@@ -6,6 +6,8 @@ import RegisterPage from "@/app/register/page";
 import CourseDetailPage from "@/app/courses/course/page";
 import AssignmentPage from "@/app/assignment/page";
 import RubricsPage from "@/app/rubrics/page";
+import JobsLabPage from "@/app/jobs-lab/page";
+import { IfSetting } from "@/components/if-setting";
 
 export function App() {
   return (
