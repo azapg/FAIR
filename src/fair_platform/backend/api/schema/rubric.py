@@ -1,24 +1,15 @@
 from uuid import UUID
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel
 
 from fair_platform.backend.api.schema.utils import schema_config
-
-
-class RubricCriterion(BaseModel):
-    model_config = schema_config
-
-    name: str
-    weight: float
-    levels: list[str]
-
-
-class RubricContent(BaseModel):
-    model_config = schema_config
-
-    levels: list[str]
-    criteria: list[RubricCriterion]
+from fair_platform.extension_sdk.contracts.rubric import (
+    RubricContent,
+    RubricCriterion,
+    RubricGenerateResponse,
+    RubricJobRequest,
+)
 
 
 class RubricCreate(BaseModel):
@@ -45,29 +36,8 @@ class RubricRead(BaseModel):
     created_at: datetime
 
 
-class RubricJobRequest(BaseModel):
-    model_config = schema_config
-
-    instruction: str = Field(min_length=1)
-
-    @field_validator("instruction")
-    @classmethod
-    def validate_instruction(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("Instruction cannot be empty")
-        return normalized
-
-
 class RubricGenerateRequest(RubricJobRequest):
     model_config = schema_config
-
-
-class RubricGenerateResponse(BaseModel):
-    model_config = schema_config
-
-    content: RubricContent
-
 
 __all__ = [
     "RubricCriterion",

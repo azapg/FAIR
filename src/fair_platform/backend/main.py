@@ -1,6 +1,8 @@
 import importlib.resources
 import os
 import logging
+import asyncio
+import sys
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
@@ -31,10 +33,16 @@ from fair_platform.backend.api.routers.extensions import router as extensions_ro
 from fair_platform.backend.services.extension_registry import LocalExtensionRegistry
 from fair_platform.backend.services.job_dispatcher import JobDispatcher
 from fair_platform.backend.services.job_queue import create_job_queue
+from fair_platform.backend.data.database import SessionLocal
+from fair_platform.backend.data.models import ExtensionClient
+from fair_platform.backend.services.extension_auth import hash_extension_secret
 
 from fair_platform.sdk import load_storage_plugins
 
 logger = logging.getLogger(__name__)
+
+CORE_EXTENSION_ID = "fair.core"
+CORE_EXTENSION_SECRET = "fair-core-dev-secret"
 
 
 def _is_auto_migrate_enabled() -> bool:
@@ -65,6 +73,77 @@ def _is_job_dispatcher_enabled() -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
+def _is_core_extension_enabled() -> bool:
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+    raw = os.getenv("FAIR_ENABLE_CORE_EXTENSION", "1").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _core_extension_id() -> str:
+    return os.getenv("FAIR_CORE_EXTENSION_ID", CORE_EXTENSION_ID).strip() or CORE_EXTENSION_ID
+
+
+def _core_extension_secret() -> str:
+    return os.getenv("FAIR_CORE_EXTENSION_SECRET", CORE_EXTENSION_SECRET).strip() or CORE_EXTENSION_SECRET
+
+
+def _core_extension_port() -> str:
+    return os.getenv("FAIR_CORE_EXTENSION_PORT", "8001").strip() or "8001"
+
+
+def _ensure_core_extension_client() -> None:
+    from datetime import datetime, timezone
+
+    extension_id = _core_extension_id()
+    extension_secret = _core_extension_secret()
+    now = datetime.now(timezone.utc)
+    session = SessionLocal()
+    try:
+        row = session.get(ExtensionClient, extension_id)
+        scopes = ["extensions:connect", "jobs:read", "jobs:write"]
+        if row is None:
+            row = ExtensionClient(
+                extension_id=extension_id,
+                secret_hash=hash_extension_secret(extension_secret),
+                scopes=scopes,
+                enabled=True,
+                created_at=now,
+                updated_at=now,
+            )
+        else:
+            row.secret_hash = hash_extension_secret(extension_secret)
+            row.scopes = scopes
+            row.enabled = True
+            row.updated_at = now
+        session.add(row)
+        session.commit()
+    finally:
+        session.close()
+
+
+async def _start_core_extension() -> asyncio.subprocess.Process:
+    env = dict(os.environ)
+    env.setdefault("FAIR_CORE_EXTENSION_ID", _core_extension_id())
+    env.setdefault("FAIR_CORE_EXTENSION_SECRET", _core_extension_secret())
+    env.setdefault("FAIR_CORE_EXTENSION_PORT", _core_extension_port())
+    env.setdefault("FAIR_CORE_PLATFORM_URL", os.getenv("FAIR_CORE_PLATFORM_URL", "http://127.0.0.1:8000"))
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "fair_platform.extensions.core.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        env["FAIR_CORE_EXTENSION_PORT"],
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.DEVNULL,
+        env=env,
+    )
+    return process
+
+
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
     if _is_auto_migrate_enabled():
@@ -85,11 +164,23 @@ async def lifespan(_ignored: FastAPI):
         queue=app.state.job_queue,
         registry=app.state.extension_registry,
     )
+    app.state.core_extension_process = None
+    if _is_core_extension_enabled():
+        _ensure_core_extension_client()
+        app.state.core_extension_process = await _start_core_extension()
     if _is_job_dispatcher_enabled():
         await app.state.job_dispatcher.start()
     try:
         yield
     finally:
+        core_process = getattr(app.state, "core_extension_process", None)
+        if core_process is not None and core_process.returncode is None:
+            core_process.terminate()
+            try:
+                await asyncio.wait_for(core_process.wait(), timeout=10.0)
+            except TimeoutError:
+                core_process.kill()
+                await core_process.wait()
         dispatcher = getattr(app.state, "job_dispatcher", None)
         if dispatcher is not None:
             await dispatcher.stop()
