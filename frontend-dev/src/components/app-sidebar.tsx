@@ -36,6 +36,7 @@ import {
   MessageCircleQuestionMarkIcon,
   ClipboardList,
   FlaskConical,
+  Puzzle,
 } from "lucide-react";
 import {
   Collapsible,
@@ -82,6 +83,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
+import { Can } from "@/components/can";
 
 const languages = [
   { code: "en", name: "English" },
@@ -192,6 +194,16 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
           </a>
         </SidebarMenuButton>
       </SidebarMenuItem>
+      <Can I="admin">
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild tooltip={t("nav.extensions")}>
+            <Link to="/extensions">
+              <Puzzle />
+              <span>{t("nav.extensions")}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </Can>
     </SidebarMenu>
   );
 }

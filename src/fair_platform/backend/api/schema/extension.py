@@ -56,10 +56,18 @@ class ExtensionClientRead(BaseModel):
     updated_at: datetime
 
 
+class ExtensionClientUpdateRequest(BaseModel):
+    model_config = schema_config
+
+    scopes: list[str] = Field(default_factory=list)
+    enabled: bool
+
+
 __all__ = [
     "ExtensionRegisterRequest",
     "ExtensionRead",
     "ExtensionClientIssueRequest",
     "ExtensionClientSecretRead",
     "ExtensionClientRead",
+    "ExtensionClientUpdateRequest",
 ]

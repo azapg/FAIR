@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.api.schema.extension import (
     ExtensionClientIssueRequest,
     ExtensionClientRead,
     ExtensionClientSecretRead,
+    ExtensionClientUpdateRequest,
     ExtensionRead,
     ExtensionRegisterRequest,
 )
@@ -118,6 +120,67 @@ def list_extension_clients(
         )
         for row in rows
     ]
+
+
+@router.get("/admin/clients/{extension_id}", response_model=ExtensionClientRead)
+def get_extension_client(
+    extension_id: str,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    if not has_capability(current_user, "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin users can manage extension clients",
+        )
+    row = db.get(ExtensionClient, extension_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Extension client not found",
+        )
+    return ExtensionClientRead(
+        extension_id=row.extension_id,
+        scopes=list(row.scopes or []),
+        enabled=bool(row.enabled),
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+@router.patch("/admin/clients/{extension_id}", response_model=ExtensionClientRead)
+def update_extension_client(
+    extension_id: str,
+    payload: ExtensionClientUpdateRequest,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    if not has_capability(current_user, "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin users can manage extension clients",
+        )
+    row = db.get(ExtensionClient, extension_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Extension client not found",
+        )
+
+    normalized_scopes = sorted({scope.strip() for scope in payload.scopes if scope.strip()})
+    row.scopes = normalized_scopes
+    row.enabled = payload.enabled
+    row.updated_at = datetime.now(timezone.utc)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return ExtensionClientRead(
+        extension_id=row.extension_id,
+        scopes=list(row.scopes or []),
+        enabled=bool(row.enabled),
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
 
 
 @router.post(
