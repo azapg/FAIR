@@ -102,7 +102,7 @@ def list_extension_clients(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if not has_capability(current_user, "manage_users"):
+    if not has_capability(current_user, "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can manage extension clients",
@@ -130,7 +130,7 @@ def issue_extension_client_secret(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if not has_capability(current_user, "manage_users"):
+    if not has_capability(current_user, "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can manage extension clients",
@@ -158,7 +158,7 @@ def rotate_extension_client_secret(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    if not has_capability(current_user, "manage_users"):
+    if not has_capability(current_user, "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can manage extension clients",
