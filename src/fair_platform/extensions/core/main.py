@@ -1,12 +1,7 @@
 import os
 
-from pydantic import BaseModel, Field
-
 from fair_platform.extension_sdk import FairExtension, JobContext
-
-
-class RubricParams(BaseModel):
-    instruction: str = Field(min_length=1)
+from fair_platform.extension_sdk.contracts.rubric import RubricJobRequest
 
 
 def _core_webhook_url() -> str:
@@ -32,7 +27,7 @@ core_extension = FairExtension(
 
 
 @core_extension.action("rubric.create")
-async def create_rubric(ctx: JobContext, params: RubricParams) -> dict:
+async def create_rubric(ctx: JobContext, params: RubricJobRequest) -> dict:
     await ctx.progress(10, "Reading rubric instruction", status="running")
     await ctx.log("info", "Generating rubric draft")
     await ctx.progress(80, "Finalizing rubric")
