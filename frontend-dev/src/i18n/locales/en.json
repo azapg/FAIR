@@ -87,9 +87,7 @@
       "theme": "Theme",
       "language": "Language",
       "simpleView": "Simple View",
-      "simpleViewDescription": "Condense dense screens for power users and instructors.",
-      "devMode": "Developer Mode",
-      "devModeDescription": "Show internal testing tools and experimental pages."
+      "simpleViewDescription": "Condense dense screens for power users and instructors."
     },
     "ai": {
       "chatPersonality": "Chat Personality",

@@ -57,13 +57,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const url = error.config?.url || ''
-    const headers = error.config?.headers || {}
     // Check if the URL matches any auth endpoint (accounting for query params)
     const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint => 
       url === endpoint || url.startsWith(`${endpoint}?`)
     )
-    const isExtensionAuthRequest = !!headers["X-FAIR-Extension-Id"] || !!headers["x-fair-extension-id"]
-    if (error.response?.status === 401 && !isAuthEndpoint && !isExtensionAuthRequest) {
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       clearAuthData();
     }
     return Promise.reject(error);

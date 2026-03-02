@@ -35,7 +35,6 @@ import {
   SettingsIcon,
   MessageCircleQuestionMarkIcon,
   ClipboardList,
-  FlaskConical,
 } from "lucide-react";
 import {
   Collapsible,
@@ -63,7 +62,6 @@ import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { usePreferenceSettings } from "@/hooks/use-preference-settings";
-import { IfSetting } from "@/components/if-setting";
 import {
   Command,
   CommandDialog,
@@ -157,8 +155,6 @@ function NavMain({
 
 function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
   const { t } = useTranslation();
-  const { state, setOpen } = useSidebar();
-  const [labsOpen, setLabsOpen] = useState(false);
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -169,47 +165,6 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
-      <IfSetting setting="ui.devMode" scope="local-first">
-        <Collapsible open={labsOpen} onOpenChange={setLabsOpen} className="group/collapsible">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="Labs"
-              onClick={() => {
-                if (state === "collapsed") {
-                  setOpen(true);
-                  setLabsOpen(true);
-                  return;
-                }
-                setLabsOpen((current) => !current);
-              }}
-            >
-              <FlaskConical />
-              <span>Labs</span>
-              <ChevronRight
-                className={`ml-auto transition-transform duration-200 ${labsOpen ? "rotate-90" : ""}`}
-              />
-            </SidebarMenuButton>
-            <CollapsibleContent>
-              <SidebarMenuSub>
-                <SidebarMenuSubItem>
-                  <SidebarMenuSubButton asChild>
-                    <Link to="/jobs-lab">
-                      <span>Jobs Lab</span>
-                    </Link>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-                <SidebarMenuSubItem>
-                  <SidebarMenuSubButton asChild>
-                    <Link to="/admin-lab">
-                      <span>Admin Lab</span>
-                    </Link>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              </SidebarMenuSub>
-            </CollapsibleContent>
-          </SidebarMenuItem>
-        </Collapsible>
-      </IfSetting>
       <SidebarMenuItem>
         <SidebarMenuButton tooltip={t("nav.settings")} onClick={onSettingsClick}>
           <SettingsIcon />
