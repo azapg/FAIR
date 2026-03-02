@@ -7,6 +7,7 @@ import CourseDetailPage from "@/app/courses/course/page";
 import AssignmentPage from "@/app/assignment/page";
 import RubricsPage from "@/app/rubrics/page";
 import JobsLabPage from "@/app/jobs-lab/page";
+import AdminLabPage from "@/app/admin-lab/page";
 import { IfSetting } from "@/components/if-setting";
 
 export function App() {
@@ -25,6 +26,14 @@ export function App() {
         element={
           <IfSetting setting="ui.devMode" scope="local-first" fallback={<Navigate to="/courses" replace />}>
             <JobsLabPage />
+          </IfSetting>
+        }
+      />
+      <Route
+        path={"admin-lab"}
+        element={
+          <IfSetting setting="ui.devMode" scope="local-first" fallback={<Navigate to="/courses" replace />}>
+            <AdminLabPage />
           </IfSetting>
         }
       />

@@ -157,6 +157,8 @@ function NavMain({
 
 function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
   const { t } = useTranslation();
+  const { state, setOpen } = useSidebar();
+  const [labsOpen, setLabsOpen] = useState(false);
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -168,14 +170,45 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
         </SidebarMenuButton>
       </SidebarMenuItem>
       <IfSetting setting="ui.devMode" scope="local-first">
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild tooltip="Jobs Lab">
-            <Link to="/jobs-lab">
+        <Collapsible open={labsOpen} onOpenChange={setLabsOpen} className="group/collapsible">
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Labs"
+              onClick={() => {
+                if (state === "collapsed") {
+                  setOpen(true);
+                  setLabsOpen(true);
+                  return;
+                }
+                setLabsOpen((current) => !current);
+              }}
+            >
               <FlaskConical />
-              <span>Jobs Lab</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
+              <span>Labs</span>
+              <ChevronRight
+                className={`ml-auto transition-transform duration-200 ${labsOpen ? "rotate-90" : ""}`}
+              />
+            </SidebarMenuButton>
+            <CollapsibleContent>
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton asChild>
+                    <Link to="/jobs-lab">
+                      <span>Jobs Lab</span>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+                <SidebarMenuSubItem>
+                  <SidebarMenuSubButton asChild>
+                    <Link to="/admin-lab">
+                      <span>Admin Lab</span>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
+            </CollapsibleContent>
+          </SidebarMenuItem>
+        </Collapsible>
       </IfSetting>
       <SidebarMenuItem>
         <SidebarMenuButton tooltip={t("nav.settings")} onClick={onSettingsClick}>

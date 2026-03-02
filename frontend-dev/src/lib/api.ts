@@ -33,7 +33,9 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   // TODO: change to cookies
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-  if (token) {
+  const hasAuthorizationHeader =
+    !!config.headers?.Authorization || !!config.headers?.authorization
+  if (token && !hasAuthorizationHeader) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
@@ -55,11 +57,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const url = error.config?.url || ''
+    const headers = error.config?.headers || {}
     // Check if the URL matches any auth endpoint (accounting for query params)
     const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint => 
       url === endpoint || url.startsWith(`${endpoint}?`)
     )
-    if (error.response?.status === 401 && !isAuthEndpoint) {
+    const isExtensionAuthRequest = !!headers["X-FAIR-Extension-Id"] || !!headers["x-fair-extension-id"]
+    if (error.response?.status === 401 && !isAuthEndpoint && !isExtensionAuthRequest) {
       clearAuthData();
     }
     return Promise.reject(error);

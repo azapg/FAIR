@@ -11,6 +11,7 @@ from .plugin import Plugin
 from .artifact import Artifact
 from .submission_result import SubmissionResult
 from .rubric import Rubric
+from .extension_client import ExtensionClient
 
 __all__ = [
     "User",
@@ -30,4 +31,5 @@ __all__ = [
     "Artifact",
     "SubmissionResult",
     "Rubric",
+    "ExtensionClient",
 ]
