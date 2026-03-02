@@ -1,7 +1,8 @@
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
+from fair_platform.backend.api.schema.rubric import RubricGenerateResponse, RubricJobRequest
 from fair_platform.backend.api.schema.utils import schema_config
 from fair_platform.backend.services.job_queue import JobStatus
 
@@ -37,6 +38,12 @@ class ActionPayload(BaseModel):
     action: str = Field(min_length=1)
     params: dict[str, Any] = Field(default_factory=dict)
 
+    @model_validator(mode="after")
+    def validate_action_params(self) -> "ActionPayload":
+        if self.action == "rubric.create":
+            self.params = RubricJobRequest.model_validate(self.params).model_dump()
+        return self
+
 
 class ProgressPayload(BaseModel):
     model_config = schema_config
@@ -62,6 +69,12 @@ class ResultPayload(BaseModel):
     model_config = schema_config
 
     data: dict[str, Any]
+
+
+class RubricResultPayload(BaseModel):
+    model_config = schema_config
+
+    data: RubricGenerateResponse
 
 
 class ErrorPayload(BaseModel):
@@ -138,6 +151,7 @@ __all__ = [
     "LogPayload",
     "TokenPayload",
     "ResultPayload",
+    "RubricResultPayload",
     "ErrorPayload",
     "JobUpdateProgress",
     "JobUpdateLog",
