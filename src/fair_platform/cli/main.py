@@ -52,7 +52,7 @@ _DATA_TABLE_ORDER = [
 
 
 def _run_backend(port: int, headless: bool) -> None:
-    _run_server(host="127.0.0.1", port=port, headless=headless, dev=True, serve_docs=False)
+    _run_server(host="127.0.0.1", port=port, headless=headless, dev=True)
 
 
 def _get_frontend_dir() -> Path | None:
@@ -77,10 +77,10 @@ def _determine_exit_code(
     return 0
 
 
-def _run_server(host: str, port: int, headless: bool, dev: bool, serve_docs: bool) -> None:
+def _run_server(host: str, port: int, headless: bool, dev: bool) -> None:
     from fair_platform.backend.main import run
 
-    run(host=host, port=port, headless=headless, dev=dev, serve_docs=serve_docs)
+    run(host=host, port=port, headless=headless, dev=dev)
 
 
 def _start_backend_process(port: int, headless: bool) -> multiprocessing.Process:
@@ -381,16 +381,13 @@ def serve(
     no_update_check: Annotated[
         bool, typer.Option("--no-update-check", help="Disable version update check")
     ] = False,
-    docs: Annotated[
-        bool, typer.Option("--docs", help="Serve documentation at /docs endpoint")
-    ] = False,
 ):
     # Check for updates unless disabled
     if not no_update_check:
         from fair_platform.utils.version import check_for_updates
         check_for_updates()
-    
-    _run_server(host="127.0.0.1", port=port, headless=headless, dev=False, serve_docs=docs)
+
+    _run_server(host="127.0.0.1", port=port, headless=headless, dev=False)
 
 
 @app.command()
