@@ -79,8 +79,8 @@ def test_serve_command_disables_dev(monkeypatch):
     runner = CliRunner()
     captured = {}
 
-    def fake_run(host: str, port: int, headless: bool, dev: bool, serve_docs: bool):
-        captured["args"] = (host, port, headless, dev, serve_docs)
+    def fake_run(host: str, port: int, headless: bool, dev: bool):
+        captured["args"] = (host, port, headless, dev)
 
     monkeypatch.setattr(cli_main, "_run_server", fake_run)
 
