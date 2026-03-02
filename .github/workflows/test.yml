@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, canary ]
     paths:
       - 'src/**'
       - 'tests/**'
@@ -10,7 +10,7 @@ on:
       - 'pyproject.toml'
       - 'uv.lock'
   pull_request:
-    branches: [ main ]
+    branches: [ main, canary ]
     paths:
       - 'src/**'
       - 'tests/**'

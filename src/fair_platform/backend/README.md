@@ -66,15 +66,10 @@ Key environment variables:
 ```bash
 FAIR_JOB_QUEUE_BACKEND=local|redis          # default: local
 FAIR_REDIS_URL=redis://127.0.0.1:6379/0     # used when backend=redis
-FAIR_ENABLE_JOB_DISPATCHER=true|false       # default: false
+FAIR_ENABLE_JOB_DISPATCHER=true|false       # default: true
 ```
 
-Why `FAIR_ENABLE_JOB_DISPATCHER` defaults to `false`:
-- Current registration/auth policy is intentionally minimal (no extension credentials yet).
-- Keeping dispatch opt-in avoids accidental job forwarding in environments that have not
-  configured extension trust/auth yet.
-- This will likely switch to default `true` after extension authentication + authorization
-  is added as a stable default path.
+Set `FAIR_ENABLE_JOB_DISPATCHER=false` if you need to disable forwarding jobs to extension webhooks.
 
 Current scalability status:
 - Queue:

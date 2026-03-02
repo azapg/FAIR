@@ -51,3 +51,8 @@ def test_upgrade_rehearsal_head_to_head_is_idempotent(tmp_path: Path) -> None:
     assert first == _alembic_head()
     assert second == first
 
+
+def test_build_alembic_config_skips_runtime_logging_reconfiguration() -> None:
+    config = build_alembic_config("sqlite:///:memory:")
+    assert config.get_main_option("fair.skip_logging_config") == "1"
+

@@ -6,6 +6,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
+from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.api.schema.job import (
     JobCreateRequest,
     JobCreateResponse,
@@ -20,8 +21,11 @@ from fair_platform.backend.services.job_queue import (
     JobUpdate,
     create_job_queue,
 )
+from fair_platform.backend.core.security.dependencies import require_extension_client
+from fair_platform.backend.data.models import ExtensionClient, User
 
 router = APIRouter()
+TERMINAL_JOB_STATUSES = {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED}
 
 
 async def get_job_queue(request: Request) -> JobQueue:
@@ -35,11 +39,9 @@ async def get_job_queue(request: Request) -> JobQueue:
 @router.post("/", status_code=status.HTTP_202_ACCEPTED, response_model=JobCreateResponse)
 async def create_job(
     payload: JobCreateRequest,
+    current_user: User = Depends(get_current_user),
     queue: JobQueue = Depends(get_job_queue),
 ):
-    # TODO(auth): enforce extension/action authorization before enqueueing jobs.
-    # This should validate actor permissions against the target extension and
-    # requested action once extension auth/policies are introduced.
     job_id = payload.job_id or str(uuid4())
     existing = await queue.get_state(job_id)
     if existing is not None:
@@ -55,16 +57,35 @@ async def create_job(
         metadata=payload.metadata,
     )
     await queue.enqueue(job)
+    await queue.set_state(
+        job_id=job_id,
+        status=JobStatus.QUEUED,
+        details={
+            "target": payload.target,
+            "owner_user_id": str(current_user.id),
+            "owner_extension_id": payload.target,
+        },
+    )
     return JobCreateResponse(job_id=job_id, status=JobStatus.QUEUED)
 
 
 @router.get("/{job_id}", response_model=JobStateRead)
-async def get_job_state(job_id: str, queue: JobQueue = Depends(get_job_queue)):
+async def get_job_state(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    queue: JobQueue = Depends(get_job_queue),
+):
     state = await queue.get_state(job_id)
     if state is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Job not found",
+        )
+    owner_user_id = state.details.get("owner_user_id")
+    if owner_user_id and owner_user_id != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authenticated user cannot access this job",
         )
     return JobStateRead(
         job_id=state.job_id,
@@ -78,6 +99,7 @@ async def get_job_state(job_id: str, queue: JobQueue = Depends(get_job_queue)):
 async def publish_job_update(
     job_id: str,
     payload: JobUpdateRequest,
+    _extension_client: ExtensionClient = Depends(require_extension_client),
     queue: JobQueue = Depends(get_job_queue),
 ):
     state = await queue.get_state(job_id)
@@ -85,6 +107,12 @@ async def publish_job_update(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Job not found",
+        )
+    owner_extension_id = state.details.get("owner_extension_id")
+    if owner_extension_id and owner_extension_id != _extension_client.extension_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authenticated extension cannot update this job",
         )
 
     update = JobUpdate(
@@ -96,10 +124,12 @@ async def publish_job_update(
 
     next_status = None
     if payload.status is not None:
+        merged_details = dict(state.details)
+        merged_details.update(payload.details)
         next_state = await queue.set_state(
             job_id=job_id,
             status=payload.status,
-            details=payload.details,
+            details=merged_details,
         )
         next_status = next_state.status
 
@@ -107,25 +137,68 @@ async def publish_job_update(
 
 
 @router.get("/{job_id}/stream")
-async def stream_job_updates(job_id: str, queue: JobQueue = Depends(get_job_queue)):
+async def stream_job_updates(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    queue: JobQueue = Depends(get_job_queue),
+):
     state = await queue.get_state(job_id)
     if state is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Job not found",
         )
+    owner_user_id = state.details.get("owner_user_id")
+    if owner_user_id and owner_user_id != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authenticated user cannot stream this job",
+        )
 
     async def event_stream():
         subscription = await queue.subscribe_updates(job_id)
         async with subscription:
             try:
+                initial_state = await queue.get_state(job_id)
+                if initial_state is not None and initial_state.status in TERMINAL_JOB_STATUSES:
+                    end_data = json.dumps(
+                        {
+                            "job_id": job_id,
+                            "status": initial_state.status,
+                            "updated_at": initial_state.updated_at,
+                        }
+                    )
+                    yield f"event: end\ndata: {end_data}\n\n"
+                    return
                 while True:
                     update = await subscription.get(timeout=15.0)
                     if update is None:
+                        latest_state = await queue.get_state(job_id)
+                        if latest_state is not None and latest_state.status in TERMINAL_JOB_STATUSES:
+                            end_data = json.dumps(
+                                {
+                                    "job_id": job_id,
+                                    "status": latest_state.status,
+                                    "updated_at": latest_state.updated_at,
+                                }
+                            )
+                            yield f"event: end\ndata: {end_data}\n\n"
+                            return
                         yield ": keep-alive\n\n"
                         continue
                     data = json.dumps(asdict(update))
                     yield f"event: {update.event}\ndata: {data}\n\n"
+                    latest_state = await queue.get_state(job_id)
+                    if latest_state is not None and latest_state.status in TERMINAL_JOB_STATUSES:
+                        end_data = json.dumps(
+                            {
+                                "job_id": job_id,
+                                "status": latest_state.status,
+                                "updated_at": latest_state.updated_at,
+                            }
+                        )
+                        yield f"event: end\ndata: {end_data}\n\n"
+                        return
             except asyncio.CancelledError:
                 return
 

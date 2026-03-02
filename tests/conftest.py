@@ -1,6 +1,7 @@
 import pytest
 import os
 import tempfile
+from datetime import datetime, timezone
 from uuid import uuid4
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
@@ -9,7 +10,9 @@ from faker import Faker
 
 from fair_platform.backend.main import app
 from fair_platform.backend.data.database import Base, session_dependency
+from fair_platform.backend.data.models import ExtensionClient
 from fair_platform.backend.data.models.user import User, UserRole
+from fair_platform.backend.services.extension_auth import hash_extension_secret
 
 fake = Faker()
 
@@ -132,4 +135,33 @@ def create_sample_user_data(role: UserRole = UserRole.student) -> dict:
         "email": fake.email(),
         "role": role.value,
         "password": "test_password_123",  # TODO: Implement password hashing
+    }
+
+
+@pytest.fixture
+def extension_client_credentials(test_db):
+    extension_id = "mock.echo"
+    extension_secret = "test-extension-secret"
+    now = datetime.now(timezone.utc)
+
+    with test_db() as session:
+        session.add(
+            ExtensionClient(
+                extension_id=extension_id,
+                secret_hash=hash_extension_secret(extension_secret),
+                scopes=["jobs:read", "jobs:write", "extensions:connect"],
+                enabled=True,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        session.commit()
+
+    return {"extension_id": extension_id, "extension_secret": extension_secret}
+
+
+def extension_auth_headers(extension_client_credentials: dict[str, str]) -> dict[str, str]:
+    return {
+        "X-FAIR-Extension-Id": extension_client_credentials["extension_id"],
+        "Authorization": f"Bearer {extension_client_credentials['extension_secret']}",
     }

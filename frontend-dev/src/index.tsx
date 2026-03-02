@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import Home from "@/home";
 import CoursesPage from "@/app/courses/page";
 import LoginPage from "@/app/login/page";
@@ -20,15 +20,6 @@ export function App() {
       <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage/>}/>
       <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage/>}/>
       <Route path={"rubrics"} element={<RubricsPage/>}/>
-      <Route
-        path={"jobs-lab"}
-        element={
-          <IfSetting setting="ui.devMode" scope="local-first" fallback={<Navigate to="/courses" replace />}>
-            <JobsLabPage />
-          </IfSetting>
-        }
-      />
-
       <Route path={"login"} element={<LoginPage/>}/>
       <Route path={"register"} element={<RegisterPage/>}/>
 

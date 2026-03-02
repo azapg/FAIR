@@ -37,6 +37,7 @@ def _escape_for_alembic_ini(value: str) -> str:
     return value.replace("%", "%%")
 
 _runtime_url_locked = config.get_main_option("fair.runtime_url_locked", "0") == "1"
+_skip_logging_config = config.get_main_option("fair.skip_logging_config", "0") == "1"
 if _runtime_url_locked:
     _db_url = config.get_main_option("sqlalchemy.url")
 else:
@@ -53,7 +54,7 @@ if _db_url.startswith("sqlite:///"):
 config.set_main_option("sqlalchemy.url", _escape_for_alembic_ini(_db_url))
 
 # Interpret the config file for Python logging. This line sets up loggers basically.
-if config.config_file_name is not None:
+if config.config_file_name is not None and not _skip_logging_config:
     fileConfig(config.config_file_name)
 
 # Provide metadata for 'autogenerate'
