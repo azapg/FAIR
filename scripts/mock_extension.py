@@ -103,9 +103,11 @@ async def _simulate_work(config: ExtensionConfig, job_payload: dict[str, Any]) -
             response = await client.post(
                 f"{config.platform_api}/jobs/{job_id}/updates",
                 json={
-                    "event": "progress",
+                    "update": {
+                        "event": "progress",
+                        "payload": payload,
+                    },
                     "status": status,
-                    "payload": payload,
                 },
                 headers=_platform_auth_headers(config),
             )
@@ -116,13 +118,17 @@ async def _simulate_work(config: ExtensionConfig, job_payload: dict[str, Any]) -
         response = await client.post(
             f"{config.platform_api}/jobs/{job_id}/updates",
             json={
-                "event": "result",
-                "status": "completed",
-                "payload": {
-                    "echo": input_payload,
-                    "extensionId": config.extension_id,
-                    "message": "mock result generated",
+                "update": {
+                    "event": "result",
+                    "payload": {
+                        "data": {
+                            "echo": input_payload,
+                            "extensionId": config.extension_id,
+                            "message": "mock result generated",
+                        }
+                    },
                 },
+                "status": "completed",
             },
             headers=_platform_auth_headers(config),
         )

@@ -37,7 +37,7 @@ def get_extension_registry(request: Request) -> LocalExtensionRegistry:
 @router.post("/connect", status_code=status.HTTP_201_CREATED, response_model=ExtensionRead)
 async def register_extension(
     payload: ExtensionRegisterRequest,
-    extension_client: ExtensionClient = Depends(require_extension_client),
+    extension_client: ExtensionClient = Depends(require_extension_client(("extensions:connect",))),
     registry: LocalExtensionRegistry = Depends(get_extension_registry),
 ):
     if extension_client.extension_id != payload.extension_id:

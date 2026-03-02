@@ -28,33 +28,46 @@ def require_capability(action: str) -> Callable[[Annotated[User, Depends(get_cur
 
 
 def require_extension_client(
-    extension_id: Annotated[str | None, Header(alias="X-FAIR-Extension-Id")] = None,
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(extension_bearer)] = None,
-    db: Session = Depends(session_dependency),
-) -> ExtensionClient:
-    resolved_extension_id = extension_id.strip() if extension_id else ""
-    resolved_secret = ""
-    if credentials is not None and credentials.credentials.strip():
-        resolved_secret = credentials.credentials.strip()
+    required_scopes: tuple[str, ...] = (),
+) -> Callable[..., ExtensionClient]:
+    def _dependency(
+        extension_id: Annotated[str | None, Header(alias="X-FAIR-Extension-Id")] = None,
+        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(extension_bearer)] = None,
+        db: Session = Depends(session_dependency),
+    ) -> ExtensionClient:
+        resolved_extension_id = extension_id.strip() if extension_id else ""
+        resolved_secret = ""
+        if credentials is not None and credentials.credentials.strip():
+            resolved_secret = credentials.credentials.strip()
 
-    if not resolved_extension_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing extension id",
+        if not resolved_extension_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing extension id",
+            )
+        if not resolved_secret:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing extension bearer token",
+            )
+        client = authenticate_extension_client(
+            db,
+            extension_id=resolved_extension_id,
+            secret=resolved_secret,
         )
-    if not resolved_secret:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing extension bearer token",
-        )
-    client = authenticate_extension_client(
-        db,
-        extension_id=resolved_extension_id,
-        secret=resolved_secret,
-    )
-    if client is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid extension credentials",
-        )
-    return client
+        if client is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid extension credentials",
+            )
+        if required_scopes:
+            granted_scopes = set(client.scopes or [])
+            missing_scopes = [scope for scope in required_scopes if scope not in granted_scopes]
+            if missing_scopes:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Missing extension scopes: {', '.join(missing_scopes)}",
+                )
+        return client
+
+    return _dependency

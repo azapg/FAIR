@@ -102,7 +102,7 @@ async def get_job_state(
 async def publish_job_update(
     job_id: str,
     payload: JobUpdateRequest,
-    _extension_client: ExtensionClient = Depends(require_extension_client),
+    _extension_client: ExtensionClient = Depends(require_extension_client(("jobs:write",))),
     queue: JobQueue = Depends(get_job_queue),
 ):
     state = await queue.get_state(job_id)
