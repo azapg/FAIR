@@ -53,7 +53,7 @@ async def create_job(
     job = JobMessage(
         job_id=job_id,
         target=payload.target,
-        payload=payload.payload,
+        payload=payload.payload.model_dump(),
         metadata=payload.metadata,
     )
     await queue.enqueue(job)
@@ -117,8 +117,8 @@ async def publish_job_update(
 
     update = JobUpdate(
         job_id=job_id,
-        event=payload.event,
-        payload=payload.payload,
+        event=payload.update.event,
+        payload=payload.update.payload.model_dump(),
     )
     await queue.publish_update(update)
 
