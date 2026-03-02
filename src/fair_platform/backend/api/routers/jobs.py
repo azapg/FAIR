@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.api.schema.job import (
@@ -14,6 +15,7 @@ from fair_platform.backend.api.schema.job import (
     JobUpdateRequest,
     JobUpdateResponse,
 )
+from fair_platform.backend.api.schema.rubric import RubricGenerateResponse
 from fair_platform.backend.services.job_queue import (
     JobMessage,
     JobQueue,
@@ -53,7 +55,7 @@ async def create_job(
     job = JobMessage(
         job_id=job_id,
         target=payload.target,
-        payload=payload.payload,
+        payload=payload.payload.model_dump(),
         metadata=payload.metadata,
     )
     await queue.enqueue(job)
@@ -62,6 +64,7 @@ async def create_job(
         status=JobStatus.QUEUED,
         details={
             "target": payload.target,
+            "action": payload.payload.action,
             "owner_user_id": str(current_user.id),
             "owner_extension_id": payload.target,
         },
@@ -115,10 +118,22 @@ async def publish_job_update(
             detail="Authenticated extension cannot update this job",
         )
 
+    normalized_update_payload = payload.update.payload.model_dump()
+    job_action = state.details.get("action")
+    if job_action == "rubric.create" and payload.update.event == "result":
+        try:
+            rubric_result = RubricGenerateResponse.model_validate(normalized_update_payload["data"])
+        except (KeyError, ValidationError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Rubric result payload must match RubricGenerateResponse schema",
+            ) from exc
+        normalized_update_payload = {"data": rubric_result.model_dump()}
+
     update = JobUpdate(
         job_id=job_id,
-        event=payload.event,
-        payload=payload.payload,
+        event=payload.update.event,
+        payload=normalized_update_payload,
     )
     await queue.publish_update(update)
 

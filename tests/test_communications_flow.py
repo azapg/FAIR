@@ -37,7 +37,7 @@ def test_platform_jobs_api_dispatcher_and_extension_webhook_flow(test_client, ex
         json={
             "jobId": job_id,
             "target": extension_client_credentials["extension_id"],
-            "payload": {"text": "hello flow"},
+            "payload": {"action": "echo.text", "params": {"text": "hello flow"}},
             "metadata": {"source": "integration-test"},
         },
         headers=user_headers,
@@ -68,7 +68,7 @@ def test_platform_jobs_api_dispatcher_and_extension_webhook_flow(test_client, ex
     matched = next((item for item in received if item.get("job_id") == job_id), None)
     assert matched is not None
     assert matched["target"] == extension_client_credentials["extension_id"]
-    assert matched["payload"] == {"text": "hello flow"}
+    assert matched["payload"] == {"action": "echo.text", "params": {"text": "hello flow"}}
 
     state_response = test_client.get(f"/api/jobs/{job_id}", headers=user_headers)
     assert state_response.status_code == 200

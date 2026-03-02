@@ -40,7 +40,7 @@ def create_rubric(
         service = get_rubric_service(db)
         rubric = service.create_rubric(
             name=payload.name,
-            content=payload.content,
+            content=payload.content.model_dump(),
             creator=current_user,
         )
         db.commit()
@@ -81,16 +81,9 @@ async def generate_rubric(
             detail="Not authorized to generate rubrics",
         )
 
-    instruction = payload.instruction.strip()
-    if not instruction:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Instruction cannot be empty",
-        )
-
     try:
         service = get_rubric_service(db)
-        content = await service.generate_rubric_from_instruction(instruction)
+        content = await service.generate_rubric_from_instruction(payload.instruction)
         return {"content": content}
     except HTTPException:
         raise
@@ -155,7 +148,7 @@ def update_rubric(
         updated = service.update_rubric(
             rubric_id=rubric_id,
             name=payload.name,
-            content=payload.content,
+            content=payload.content.model_dump() if payload.content is not None else None,
         )
         if not updated:
             raise HTTPException(
