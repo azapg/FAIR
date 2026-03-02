@@ -8,6 +8,8 @@ import AssignmentPage from "@/app/assignment/page";
 import RubricsPage from "@/app/rubrics/page";
 import JobsLabPage from "@/app/jobs-lab/page";
 import { IfSetting } from "@/components/if-setting";
+import ExtensionsPage from "@/app/extensions/page";
+import ExtensionDetailPage from "@/app/extensions/extension/page";
 
 export function App() {
   return (
@@ -20,6 +22,8 @@ export function App() {
       <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage/>}/>
       <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage/>}/>
       <Route path={"rubrics"} element={<RubricsPage/>}/>
+      <Route path={"extensions"} element={<ExtensionsPage/>}/>
+      <Route path={"extensions/:id"} element={<ExtensionDetailPage/>}/>
       <Route path={"login"} element={<LoginPage/>}/>
       <Route path={"register"} element={<RegisterPage/>}/>
 
