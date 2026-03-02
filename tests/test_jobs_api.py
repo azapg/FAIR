@@ -1,3 +1,7 @@
+from datetime import datetime, timezone
+
+from fair_platform.backend.data.models import ExtensionClient
+from fair_platform.backend.services.extension_auth import hash_extension_secret
 from fair_platform.backend.services.job_queue import JobStatus
 from tests.conftest import extension_auth_headers, get_auth_token
 
@@ -180,3 +184,48 @@ def test_rubric_job_result_must_match_generate_response_shape(
         headers=extension_headers,
     )
     assert valid_result.status_code == 200
+
+
+def test_publish_update_requires_jobs_write_scope(test_client, student_user, test_db):
+    extension_id = "mock.jobs-read-only"
+    extension_secret = "read-only-secret"
+    now = datetime.now(timezone.utc)
+
+    with test_db() as session:
+        session.add(
+            ExtensionClient(
+                extension_id=extension_id,
+                secret_hash=hash_extension_secret(extension_secret),
+                scopes=["jobs:read", "extensions:connect"],
+                enabled=True,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        session.commit()
+
+    user_headers = {"Authorization": f"Bearer {get_auth_token(test_client, student_user.email)}"}
+    created = test_client.post(
+        "/api/jobs/",
+        json={
+            "target": extension_id,
+            "payload": {"action": "submission.grade", "params": {"submissionId": "sub-4"}},
+            "jobId": "job-scope-check-1",
+        },
+        headers=user_headers,
+    )
+    assert created.status_code == 202
+
+    updated = test_client.post(
+        "/api/jobs/job-scope-check-1/updates",
+        json={
+            "update": {"event": "progress", "payload": {"percent": 15}},
+            "status": JobStatus.RUNNING,
+        },
+        headers={
+            "X-FAIR-Extension-Id": extension_id,
+            "Authorization": f"Bearer {extension_secret}",
+        },
+    )
+    assert updated.status_code == 403
+    assert "jobs:write" in updated.json()["detail"]

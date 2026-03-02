@@ -1,3 +1,7 @@
+from datetime import datetime, timezone
+
+from fair_platform.backend.data.models import ExtensionClient
+from fair_platform.backend.services.extension_auth import hash_extension_secret
 from tests.conftest import extension_auth_headers
 from tests.conftest import get_auth_token
 
@@ -54,3 +58,36 @@ def test_admin_can_get_and_update_extension_client(
     assert body["extensionId"] == extension_client_credentials["extension_id"]
     assert body["enabled"] is False
     assert body["scopes"] == ["extensions:connect", "jobs:read"]
+
+
+def test_register_extension_requires_extensions_connect_scope(test_client, test_db):
+    extension_id = "mock.no-connect-scope"
+    extension_secret = "no-connect-secret"
+    now = datetime.now(timezone.utc)
+
+    with test_db() as session:
+        session.add(
+            ExtensionClient(
+                extension_id=extension_id,
+                secret_hash=hash_extension_secret(extension_secret),
+                scopes=["jobs:write"],
+                enabled=True,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        session.commit()
+
+    response = test_client.post(
+        "/api/extensions/connect",
+        json={
+            "extensionId": extension_id,
+            "webhookUrl": "http://localhost:9000/hooks/jobs",
+        },
+        headers={
+            "X-FAIR-Extension-Id": extension_id,
+            "Authorization": f"Bearer {extension_secret}",
+        },
+    )
+    assert response.status_code == 403
+    assert "extensions:connect" in response.json()["detail"]
