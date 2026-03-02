@@ -47,6 +47,24 @@ def _is_create_all_fallback_enabled() -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
+def _configured_cors_origins() -> list[str]:
+    raw = os.getenv("FAIR_CORS_ORIGINS", "").strip()
+    if raw:
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
+    # Sensible local defaults for frontend dev servers.
+    return [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+
+def _is_job_dispatcher_enabled() -> bool:
+    raw = os.getenv("FAIR_ENABLE_JOB_DISPATCHER", "1").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
     if _is_auto_migrate_enabled():
@@ -67,7 +85,7 @@ async def lifespan(_ignored: FastAPI):
         queue=app.state.job_queue,
         registry=app.state.extension_registry,
     )
-    if (os.getenv("FAIR_ENABLE_JOB_DISPATCHER", "false").strip().lower() in {"1", "true", "yes", "on"}):
+    if _is_job_dispatcher_enabled():
         await app.state.job_dispatcher.start()
     try:
         yield
@@ -87,6 +105,14 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_configured_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(users_router, prefix="/api/users", tags=["users"])
@@ -148,15 +174,6 @@ def run(
             if response.status_code == 404:
                 return FileResponse(dist_path / "index.html")
             return response
-
-    if dev:
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
 
     import uvicorn
 
