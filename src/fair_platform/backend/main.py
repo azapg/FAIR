@@ -234,7 +234,7 @@ def main():
 
 
 def run(
-    host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False, serve_docs: bool = False
+    host: str = "127.0.0.1", port: int = 8000, headless: bool = False, dev: bool = False
 ):
     if not headless:
         frontend_files = importlib.resources.files("fair_platform.frontend")
@@ -252,12 +252,6 @@ def run(
         @app.get("/favicon.svg")
         async def favicon():
             return FileResponse(dist_path / "favicon.svg", media_type="image/svg+xml")
-        
-        if serve_docs:
-            docs_dir = frontend_files / "docs"
-            with importlib.resources.as_file(docs_dir) as docs_path:
-                app.mount("/docs", StaticFiles(directory=docs_path, html=True), name="docs")
-
 
         @app.middleware("http")
         async def spa_fallback(request, call_next):
