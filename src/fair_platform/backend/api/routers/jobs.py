@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 
+from fair_platform.backend.api.dependencies import get_job_queue
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.api.schema.job import (
     JobCreateRequest,
@@ -21,21 +22,12 @@ from fair_platform.backend.services.job_queue import (
     JobQueue,
     JobStatus,
     JobUpdate,
-    create_job_queue,
 )
 from fair_platform.backend.core.security.dependencies import require_extension_client
 from fair_platform.backend.data.models import ExtensionClient, User
 
 router = APIRouter()
 TERMINAL_JOB_STATUSES = {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED}
-
-
-async def get_job_queue(request: Request) -> JobQueue:
-    queue = getattr(request.app.state, "job_queue", None)
-    if queue is None:
-        queue = await create_job_queue()
-        request.app.state.job_queue = queue
-    return queue
 
 
 @router.post("/", status_code=status.HTTP_202_ACCEPTED, response_model=JobCreateResponse)
@@ -228,4 +220,4 @@ async def stream_job_updates(
     )
 
 
-__all__ = ["router", "get_job_queue"]
+__all__ = ["router"]

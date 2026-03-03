@@ -1,6 +1,5 @@
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, patch
 
 from tests.conftest import get_auth_token
 
@@ -333,35 +332,33 @@ class TestRubricAPI:
         token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
 
-        with patch(
-            "fair_platform.backend.services.rubric_service.RubricService.generate_rubric_from_instruction",
-            new=AsyncMock(return_value=make_valid_rubric_content()),
-        ):
-            response = test_client.post(
-                "/api/rubrics/generate",
-                json={"instruction": "Create a rubric for essay grading"},
-                headers=headers,
-            )
+        response = test_client.post(
+            "/api/rubrics/generate",
+            json={"instruction": "Create a rubric for essay grading"},
+            headers=headers,
+        )
 
-        assert response.status_code == 200
+        assert response.status_code == 202
         data = response.json()
-        assert "content" in data
-        assert "criteria" in data["content"]
+        assert "jobId" in data
+        assert data["status"] == "queued"
+
+        state_response = test_client.get(f"/api/jobs/{data['jobId']}", headers=headers)
+        assert state_response.status_code == 200
+        state_data = state_response.json()
+        assert state_data["details"]["action"] == "rubric.create"
+        assert state_data["details"]["target"] == "fair.core"
 
     def test_generate_rubric_as_student_succeeds_in_community(self, test_client: TestClient, student_user):
         token = get_auth_token(test_client, student_user.email)
         headers = {"Authorization": f"Bearer {token}"}
 
-        with patch(
-            "fair_platform.backend.services.rubric_service.RubricService.generate_rubric_from_instruction",
-            new=AsyncMock(return_value=make_valid_rubric_content()),
-        ):
-            response = test_client.post(
-                "/api/rubrics/generate",
-                json={"instruction": "Create a rubric"},
-                headers=headers,
-            )
-        assert response.status_code == 200
+        response = test_client.post(
+            "/api/rubrics/generate",
+            json={"instruction": "Create a rubric"},
+            headers=headers,
+        )
+        assert response.status_code == 202
 
     def test_generate_rubric_as_student_fails_in_enterprise(
         self,
@@ -380,21 +377,17 @@ class TestRubricAPI:
         )
         assert response.status_code == 403
 
-    def test_generate_rubric_with_invalid_model_output(self, test_client: TestClient, professor_user):
+    def test_generate_rubric_instruction_validation_still_applies(self, test_client: TestClient, professor_user):
         token = get_auth_token(test_client, professor_user.email)
         headers = {"Authorization": f"Bearer {token}"}
 
-        with patch(
-            "fair_platform.backend.services.rubric_service.RubricService.generate_rubric_from_instruction",
-            new=AsyncMock(side_effect=Exception("broken response")),
-        ):
-            response = test_client.post(
-                "/api/rubrics/generate",
-                json={"instruction": "Create a rubric"},
-                headers=headers,
-            )
+        response = test_client.post(
+            "/api/rubrics/generate",
+            json={"instruction": "   "},
+            headers=headers,
+        )
 
-        assert response.status_code == 500
+        assert response.status_code == 422
 
     def test_unauthenticated_request_fails(self, test_client: TestClient):
         response = test_client.get("/api/rubrics/")
