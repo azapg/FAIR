@@ -51,8 +51,8 @@ export function AssignmentsTable({
 
       <DataTableContent>
         <DataTableEmpty>
-          <Empty className="w-full items-start text-left lg:items-center lg:text-center">
-            <EmptyHeader className="items-start text-left lg:items-center lg:text-center">
+          <Empty className="w-full items-start text-center lg:items-center lg:text-center">
+            <EmptyHeader className="items-start text-start lg:items-center lg:text-center">
               <EmptyMedia variant="icon">
                 <TableProperties />
               </EmptyMedia>
@@ -61,27 +61,29 @@ export function AssignmentsTable({
                 {t("assignments.noAssignmentsDescription")}
               </EmptyDescription>
             </EmptyHeader>
-            <EmptyContent className="flex flex-row gap-2">
-              {onCreateAssignment && (
-                <Button onClick={onCreateAssignment}>
-                  {t("assignments.createAssignment")}
-                </Button>
-              )}
-              <Button
-                variant="link"
-                asChild
-                className="text-muted-foreground p-0 h-auto"
-                size="sm"
-              >
-                <a
-                  href={`${DOCS_BASE_URL}/en/platform/assignments/`}
-                  target="_blank"
-                  rel="noreferrer"
+            <EmptyContent className="items-start lg:items-center">
+              <div className="flex gap-2">
+                {onCreateAssignment && (
+                  <Button variant="outline" onClick={onCreateAssignment}>
+                    {t("assignments.createAssignment")}
+                  </Button>
+                )}
+                <Button
+                  variant="link"
+                  asChild
+                  className="text-muted-foreground p-0 h-auto"
+                  size="sm"
                 >
-                  {t("common.learnMore")}{" "}
-                  <ArrowUpRightIcon className="ml-1 h-4 w-4" />
-                </a>
-              </Button>
+                  <a
+                    href={`${DOCS_BASE_URL}/en/platform/assignments/`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t("common.learnMore")}{" "}
+                    <ArrowUpRightIcon className="ml-1 h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
             </EmptyContent>
           </Empty>
         </DataTableEmpty>
