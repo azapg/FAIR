@@ -56,6 +56,7 @@ import { ExecutionLogsView } from "@/app/assignment/components/sidebar/execution
 import { useSubmissions } from "@/hooks/use-submissions";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { DOCS_BASE_URL } from "@/lib/constants";
 
 export function WorkflowsSidebar({
   side,
