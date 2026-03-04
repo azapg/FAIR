@@ -27,6 +27,7 @@ import {
   useReturnSubmissions,
 } from "@/hooks/use-submissions";
 import { SubmissionSheet } from "@/app/assignment/components/submissions/submission-sheet";
+import { DOCS_BASE_URL } from "@/lib/constants";
 
 interface DataTableProps {
   columns: ColumnDef<Submission>[];
@@ -95,6 +96,20 @@ export function EmptyTableState({
               {t("submissions.addSubmissions")}
             </Button>
           )}
+          <Button
+            variant="link"
+            asChild
+            className="text-muted-foreground"
+            size="sm"
+          >
+            <a
+              href={`${DOCS_BASE_URL}/en/platform/assignments/`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("common.learnMore")} <ArrowUpRightIcon />
+            </a>
+          </Button>
         </div>
       </EmptyContent>
     </Empty>
