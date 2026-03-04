@@ -1,5 +1,5 @@
 import { ColumnDef } from "@tanstack/react-table"
-import { TableProperties } from "lucide-react"
+import { TableProperties, ArrowUpRightIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 
@@ -15,8 +15,11 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
+  EmptyContent,
 } from "@/components/ui/empty"
+import { Button } from "@/components/ui/button"
 import { Assignment } from "@/hooks/use-assignments"
+import { DOCS_BASE_URL } from "@/lib/constants"
 
 interface DataTableProps {
   columns: ColumnDef<Assignment>[]
@@ -52,6 +55,22 @@ export function AssignmentsTable({ columns, data }: DataTableProps) {
               <EmptyTitle>{t("assignments.title")}</EmptyTitle>
               <EmptyDescription>{t("common.noResults")}</EmptyDescription>
             </EmptyHeader>
+            <EmptyContent>
+              <Button
+                variant="link"
+                asChild
+                className="text-muted-foreground p-0 h-auto"
+                size="sm"
+              >
+                <a
+                  href={`${DOCS_BASE_URL}/en/platform/assignments/`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("common.learnMore")} <ArrowUpRightIcon className="ml-1 h-4 w-4" />
+                </a>
+              </Button>
+            </EmptyContent>
           </Empty>
         </DataTableEmpty>
       </DataTableContent>
