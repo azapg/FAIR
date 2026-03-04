@@ -29,6 +29,7 @@ export default function AssignmentsTab({
   const [assignments, setAssignments] = useState<Assignment[]>(() => initialAssignments);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
   const {t} = useTranslation();
   const deleteAssignment = useDeleteAssignment();
@@ -77,11 +78,19 @@ export default function AssignmentsTab({
           <CreateAssignmentDialog
             courseId={courseId}
             onAssignmentCreated={handleAssignmentCreated}
+            open={isCreateOpen}
+            onOpenChange={setIsCreateOpen}
           />
         )}
       </div>
 
-      <AssignmentsTable columns={columns} data={assignments}/>
+      <AssignmentsTable
+        columns={columns}
+        data={assignments}
+        onCreateAssignment={
+          canManageAssignments ? () => setIsCreateOpen(true) : undefined
+        }
+      />
       {canManageAssignments && (
         <EditAssignmentDialog
           assignment={editingAssignment}

@@ -26,7 +26,11 @@ interface DataTableProps {
   data: Assignment[]
 }
 
-export function AssignmentsTable({ columns, data }: DataTableProps) {
+export function AssignmentsTable({
+  columns,
+  data,
+  onCreateAssignment,
+}: DataTableProps & { onCreateAssignment?: () => void }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -52,10 +56,17 @@ export function AssignmentsTable({ columns, data }: DataTableProps) {
               <EmptyMedia variant="icon">
                 <TableProperties />
               </EmptyMedia>
-              <EmptyTitle>{t("assignments.title")}</EmptyTitle>
-              <EmptyDescription>{t("common.noResults")}</EmptyDescription>
+              <EmptyTitle>{t("assignments.noAssignments")}</EmptyTitle>
+              <EmptyDescription>
+                {t("assignments.noAssignmentsDescription")}
+              </EmptyDescription>
             </EmptyHeader>
-            <EmptyContent>
+            <EmptyContent className="flex flex-row gap-2">
+              {onCreateAssignment && (
+                <Button onClick={onCreateAssignment}>
+                  {t("assignments.createAssignment")}
+                </Button>
+              )}
               <Button
                 variant="link"
                 asChild
@@ -67,7 +78,8 @@ export function AssignmentsTable({ columns, data }: DataTableProps) {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  {t("common.learnMore")} <ArrowUpRightIcon className="ml-1 h-4 w-4" />
+                  {t("common.learnMore")}{" "}
+                  <ArrowUpRightIcon className="ml-1 h-4 w-4" />
                 </a>
               </Button>
             </EmptyContent>
