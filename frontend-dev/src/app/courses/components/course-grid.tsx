@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { DOCS_BASE_URL } from "@/lib/constants";
 
 export type CourseGridProps = {
   courses: Course[];
@@ -75,7 +76,7 @@ export default function CourseGrid({ courses, isPending = false, isError = false
                   size="sm"
                 >
                   <a
-                    href={`/docs/${currentLang}/courses/`}
+                    href={`${DOCS_BASE_URL}/en/platform/courses/`}
                     target="_blank"
                     rel="noreferrer"
                   >

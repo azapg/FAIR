@@ -1,5 +1,5 @@
 import { ColumnDef } from "@tanstack/react-table"
-import { TableProperties } from "lucide-react"
+import { TableProperties, ArrowUpRightIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 
@@ -15,15 +15,22 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
+  EmptyContent,
 } from "@/components/ui/empty"
+import { Button } from "@/components/ui/button"
 import { Assignment } from "@/hooks/use-assignments"
+import { DOCS_BASE_URL } from "@/lib/constants"
 
 interface DataTableProps {
   columns: ColumnDef<Assignment>[]
   data: Assignment[]
 }
 
-export function AssignmentsTable({ columns, data }: DataTableProps) {
+export function AssignmentsTable({
+  columns,
+  data,
+  onCreateAssignment,
+}: DataTableProps & { onCreateAssignment?: () => void }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -44,14 +51,40 @@ export function AssignmentsTable({ columns, data }: DataTableProps) {
 
       <DataTableContent>
         <DataTableEmpty>
-          <Empty className="w-full items-start text-left lg:items-center lg:text-center">
-            <EmptyHeader className="items-start text-left lg:items-center lg:text-center">
+          <Empty className="w-full items-start text-center lg:items-center lg:text-center">
+            <EmptyHeader className="items-start text-start lg:items-center lg:text-center">
               <EmptyMedia variant="icon">
                 <TableProperties />
               </EmptyMedia>
-              <EmptyTitle>{t("assignments.title")}</EmptyTitle>
-              <EmptyDescription>{t("common.noResults")}</EmptyDescription>
+              <EmptyTitle>{t("assignments.noAssignments")}</EmptyTitle>
+              <EmptyDescription>
+                {t("assignments.noAssignmentsDescription")}
+              </EmptyDescription>
             </EmptyHeader>
+            <EmptyContent className="items-start lg:items-center">
+              <div className="flex gap-2">
+                {onCreateAssignment && (
+                  <Button variant="outline" onClick={onCreateAssignment}>
+                    {t("assignments.createAssignment")}
+                  </Button>
+                )}
+                <Button
+                  variant="link"
+                  asChild
+                  className="text-muted-foreground p-0 h-auto"
+                  size="sm"
+                >
+                  <a
+                    href={`${DOCS_BASE_URL}/en/platform/assignments/`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t("common.learnMore")}{" "}
+                    <ArrowUpRightIcon className="ml-1 h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </EmptyContent>
           </Empty>
         </DataTableEmpty>
       </DataTableContent>
