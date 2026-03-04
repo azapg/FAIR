@@ -56,6 +56,7 @@ import { ExecutionLogsView } from "@/app/assignment/components/sidebar/execution
 import { useSubmissions } from "@/hooks/use-submissions";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { DOCS_BASE_URL } from "@/lib/constants";
 
 export function WorkflowsSidebar({
   side,
@@ -337,7 +338,7 @@ const WorkflowEmptyState = ({
         size="sm"
       >
         <a
-          href={`/docs/${currentLang}/getting-started/extensions/`}
+          href={`${DOCS_BASE_URL}/en/platform/workflows/`}
           target="_blank"
           rel="noreferrer"
         >
@@ -369,7 +370,7 @@ const WorkflowNotSelectedState = () => {
           size="sm"
         >
           <a
-            href={`/docs/${currentLang}/getting-started/extensions/`}
+            href={`${DOCS_BASE_URL}/en/platform/workflows/`}
             target="_blank"
             rel="noreferrer"
           >

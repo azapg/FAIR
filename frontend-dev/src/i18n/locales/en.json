@@ -357,7 +357,10 @@
     "na": "N/A",
     "noDescription": "No description provided.",
     "deleteConfirmTitle": "Delete assignment?",
-    "deleteConfirmDescription": "This will also delete all student submissions for this assignment. This action cannot be undone."
+    "deleteConfirmDescription": "This will also delete all student submissions for this assignment. This action cannot be undone.",
+    "noAssignments": "No assignments available",
+    "noAssignmentsDescription": "You haven't created any assignments for this course yet. Create your first one to start collecting submissions.",
+    "createAssignment": "Create assignment"
   },
   "submissions": {
     "title": "Submissions",

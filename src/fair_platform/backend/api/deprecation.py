@@ -5,7 +5,7 @@ LEGACY_SDK_DEPRECATION_MESSAGE = (
     "This endpoint belongs to the legacy FAIR SDK/API flow and is deprecated. "
     "Migrate to the new /api/jobs and extension registration flow."
 )
-LEGACY_SDK_DEPRECATION_DOCS_URL = "/docs/en/api-reference/overview"
+LEGACY_SDK_DEPRECATION_DOCS_URL = "https://docs.fairgradeproject.org/en/api-reference/overview"
 LEGACY_SDK_SUNSET_HTTP_DATE = "Mon, 01 Jun 2026 00:00:00 GMT"
 
 

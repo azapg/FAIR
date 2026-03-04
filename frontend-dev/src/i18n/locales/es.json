@@ -357,7 +357,10 @@
     "na": "N/A",
     "noDescription": "No se proporcionó descripción.",
     "deleteConfirmTitle": "¿Eliminar tarea?",
-    "deleteConfirmDescription": "Esto también eliminará todas las entregas de los estudiantes para esta tarea. Esta acción no se puede deshacer."
+    "deleteConfirmDescription": "Esto también eliminará todas las entregas de los estudiantes para esta tarea. Esta acción no se puede deshacer.",
+    "noAssignments": "No hay tareas disponibles",
+    "noAssignmentsDescription": "Aún no has creado ninguna tarea para este curso. Crea la primera para comenzar a recibir entregas.",
+    "createAssignment": "Crear tarea"
   },
   "submissions": {
     "title": "Entregas",
