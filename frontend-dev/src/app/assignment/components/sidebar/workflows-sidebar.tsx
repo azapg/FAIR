@@ -337,7 +337,7 @@ const WorkflowEmptyState = ({
         size="sm"
       >
         <a
-          href={`/docs/${currentLang}/getting-started/extensions/`}
+          href={`${DOCS_BASE_URL}/en/platform/workflows/`}
           target="_blank"
           rel="noreferrer"
         >
@@ -369,7 +369,7 @@ const WorkflowNotSelectedState = () => {
           size="sm"
         >
           <a
-            href={`/docs/${currentLang}/getting-started/extensions/`}
+            href={`${DOCS_BASE_URL}/en/platform/workflows/`}
             target="_blank"
             rel="noreferrer"
           >

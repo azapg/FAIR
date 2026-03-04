@@ -57,6 +57,8 @@
               {
                 "group": "Platform",
                 "pages": [
+                  "en/platform/courses",
+                  "en/platform/assignments",
                   "en/platform/workflows",
                   "en/platform/integrations",
                   "en/platform/settings"

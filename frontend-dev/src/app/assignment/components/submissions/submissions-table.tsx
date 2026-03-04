@@ -95,16 +95,6 @@ export function EmptyTableState({
               {t("submissions.addSubmissions")}
             </Button>
           )}
-          <Button
-            variant="link"
-            asChild
-            className="text-muted-foreground"
-            size="sm"
-          >
-            <a href="#">
-              {t("common.learnMore")} <ArrowUpRightIcon />
-            </a>
-          </Button>
         </div>
       </EmptyContent>
     </Empty>
