@@ -229,3 +229,39 @@ def test_publish_update_requires_jobs_write_scope(test_client, student_user, tes
     )
     assert updated.status_code == 403
     assert "jobs:write" in updated.json()["detail"]
+
+
+def test_stream_returns_end_event_for_terminal_job_state(
+    test_client,
+    extension_client_credentials,
+    student_user,
+):
+    user_headers = {"Authorization": f"Bearer {get_auth_token(test_client, student_user.email)}"}
+    extension_headers = extension_auth_headers(extension_client_credentials)
+
+    created = test_client.post(
+        "/api/jobs/",
+        json={
+            "target": extension_client_credentials["extension_id"],
+            "payload": {"action": "submission.grade", "params": {"submissionId": "sub-stream-1"}},
+            "jobId": "job-stream-terminal-1",
+        },
+        headers=user_headers,
+    )
+    assert created.status_code == 202
+
+    completed = test_client.post(
+        "/api/jobs/job-stream-terminal-1/updates",
+        json={
+            "update": {"event": "result", "payload": {"data": {"ok": True}}},
+            "status": JobStatus.COMPLETED,
+        },
+        headers=extension_headers,
+    )
+    assert completed.status_code == 200
+
+    stream_response = test_client.get("/api/jobs/job-stream-terminal-1/stream", headers=user_headers)
+    assert stream_response.status_code == 200
+    assert stream_response.headers["content-type"].startswith("text/event-stream")
+    assert "event: end" in stream_response.text
+    assert '"status": "completed"' in stream_response.text
