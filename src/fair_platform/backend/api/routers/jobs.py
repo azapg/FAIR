@@ -1,10 +1,12 @@
 import asyncio
 from collections.abc import AsyncIterable
 from dataclasses import asdict
+import json
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.sse import EventSourceResponse, ServerSentEvent
+from fastapi.encoders import jsonable_encoder
+from fastapi.sse import EventSourceResponse, format_sse_event
 from pydantic import ValidationError
 
 from fair_platform.backend.api.dependencies import get_job_queue
@@ -162,13 +164,17 @@ async def stream_job_updates(
             detail="Authenticated user cannot stream this job",
         )
 
-    async def event_stream() -> AsyncIterable[ServerSentEvent]:
+    def _sse(event: str, data: dict) -> bytes:
+        data_str = json.dumps(jsonable_encoder(data))
+        return format_sse_event(event=event, data_str=data_str)
+
+    async def event_stream() -> AsyncIterable[bytes]:
         subscription = await queue.subscribe_updates(job_id)
         async with subscription:
             try:
                 initial_state = await queue.get_state(job_id)
                 if initial_state is not None and initial_state.status in TERMINAL_JOB_STATUSES:
-                    yield ServerSentEvent(
+                    yield _sse(
                         event="end",
                         data={
                             "job_id": job_id,
@@ -182,7 +188,7 @@ async def stream_job_updates(
                     if update is None:
                         latest_state = await queue.get_state(job_id)
                         if latest_state is not None and latest_state.status in TERMINAL_JOB_STATUSES:
-                            yield ServerSentEvent(
+                            yield _sse(
                                 event="end",
                                 data={
                                     "job_id": job_id,
@@ -192,10 +198,10 @@ async def stream_job_updates(
                             )
                             return
                         continue
-                    yield ServerSentEvent(event=update.event, data=asdict(update))
+                    yield _sse(event=update.event, data=asdict(update))
                     latest_state = await queue.get_state(job_id)
                     if latest_state is not None and latest_state.status in TERMINAL_JOB_STATUSES:
-                        yield ServerSentEvent(
+                        yield _sse(
                             event="end",
                             data={
                                 "job_id": job_id,
