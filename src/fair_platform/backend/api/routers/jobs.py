@@ -1,10 +1,10 @@
 import asyncio
-import json
+from collections.abc import AsyncIterable
 from dataclasses import asdict
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import ValidationError
 
 from fair_platform.backend.api.dependencies import get_job_queue
@@ -162,62 +162,52 @@ async def stream_job_updates(
             detail="Authenticated user cannot stream this job",
         )
 
-    async def event_stream():
+    async def event_stream() -> AsyncIterable[ServerSentEvent]:
         subscription = await queue.subscribe_updates(job_id)
         async with subscription:
             try:
                 initial_state = await queue.get_state(job_id)
                 if initial_state is not None and initial_state.status in TERMINAL_JOB_STATUSES:
-                    end_data = json.dumps(
-                        {
+                    yield ServerSentEvent(
+                        event="end",
+                        data={
                             "job_id": job_id,
                             "status": initial_state.status,
                             "updated_at": initial_state.updated_at,
-                        }
+                        },
                     )
-                    yield f"event: end\ndata: {end_data}\n\n"
                     return
                 while True:
                     update = await subscription.get(timeout=15.0)
                     if update is None:
                         latest_state = await queue.get_state(job_id)
                         if latest_state is not None and latest_state.status in TERMINAL_JOB_STATUSES:
-                            end_data = json.dumps(
-                                {
+                            yield ServerSentEvent(
+                                event="end",
+                                data={
                                     "job_id": job_id,
                                     "status": latest_state.status,
                                     "updated_at": latest_state.updated_at,
-                                }
+                                },
                             )
-                            yield f"event: end\ndata: {end_data}\n\n"
                             return
-                        yield ": keep-alive\n\n"
                         continue
-                    data = json.dumps(asdict(update))
-                    yield f"event: {update.event}\ndata: {data}\n\n"
+                    yield ServerSentEvent(event=update.event, data=asdict(update))
                     latest_state = await queue.get_state(job_id)
                     if latest_state is not None and latest_state.status in TERMINAL_JOB_STATUSES:
-                        end_data = json.dumps(
-                            {
+                        yield ServerSentEvent(
+                            event="end",
+                            data={
                                 "job_id": job_id,
                                 "status": latest_state.status,
                                 "updated_at": latest_state.updated_at,
-                            }
+                            },
                         )
-                        yield f"event: end\ndata: {end_data}\n\n"
                         return
             except asyncio.CancelledError:
                 return
 
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
+    return EventSourceResponse(event_stream())
 
 
 __all__ = ["router"]
