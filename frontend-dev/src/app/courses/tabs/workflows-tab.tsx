@@ -67,9 +67,9 @@ export function WorkflowsTab({ courseId }: { courseId?: string }) {
         cell: ({ row }) => row.original.plugins?.grader?.name ?? t("assignments.na"),
       },
       {
-        id: "validator",
-        header: t("plugins.validator"),
-        cell: ({ row }) => row.original.plugins?.validator?.name ?? t("assignments.na"),
+        id: "reviewer",
+        header: t("plugins.reviewer"),
+        cell: ({ row }) => row.original.plugins?.reviewer?.name ?? t("assignments.na"),
       },
       {
         id: "actions",

@@ -1,105 +1,134 @@
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from fair_platform.backend.data.database import session_dependency
-from fair_platform.backend.data.models.workflow import Workflow
-from fair_platform.backend.data.models.course import Course
-from fair_platform.backend.data.models.user import User
-from fair_platform.backend.data.models.plugin import Plugin  # Needed for plugin name lookup
+from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.api.schema.plugin import RuntimePlugin
 from fair_platform.backend.api.schema.workflow import (
     WorkflowCreate,
     WorkflowRead,
+    WorkflowStep,
     WorkflowUpdate,
 )
-from fair_platform.backend.api.schema.plugin import RuntimePlugin
-from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.core.security.dependencies import require_capability
 from fair_platform.backend.core.security.permissions import (
     has_capability,
     has_capability_and_owner,
 )
-from fair_platform.backend.core.security.dependencies import require_capability
+from fair_platform.backend.data.database import session_dependency
+from fair_platform.backend.data.models.course import Course
+from fair_platform.backend.data.models.plugin import Plugin
+from fair_platform.backend.data.models.user import User
+from fair_platform.backend.data.models.workflow import Workflow
 
 router = APIRouter()
 
-_WORKFLOW_PLUGIN_ROLES = ("transcriber", "grader", "validator")
+
+def _runtime_plugin_from_legacy(plugin_obj: Plugin, role: str, settings: dict | None) -> RuntimePlugin:
+    return RuntimePlugin(
+        plugin_id=plugin_obj.id,
+        extension_id=plugin_obj.source,
+        name=plugin_obj.name,
+        plugin_type="reviewer" if role == "validator" else role,
+        action=f"legacy.{plugin_obj.id}",
+        description=plugin_obj.description,
+        version=plugin_obj.version,
+        settings_schema=plugin_obj.settings_schema or {},
+        metadata=plugin_obj.meta or {},
+        settings=settings or {},
+        id=plugin_obj.id,
+        type="reviewer" if role == "validator" else role,
+        hash=plugin_obj.hash,
+        source=plugin_obj.source,
+    )
 
 
-def _empty_workflow_plugin_fields() -> Dict[str, Optional[Any]]:
-    fields: Dict[str, Optional[Any]] = {}
-    for role in _WORKFLOW_PLUGIN_ROLES:
-        fields[f"{role}_plugin_hash"] = None
-        fields[f"{role}_settings"] = None
-    return fields
-
-
-def _extract_workflow_plugin_fields(
-    plugins: Optional[Dict[str, RuntimePlugin]],
-    *,
-    require_at_least_one: bool,
-):
+def _steps_from_plugins(plugins: Optional[dict[str, RuntimePlugin]]) -> list[WorkflowStep]:
     if not plugins:
-        if require_at_least_one:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="At least one plugin (transcriber, grader, validator) must be provided.",
-            )
-        return {}
-
-    unknown_roles = sorted(set(plugins.keys()) - set(_WORKFLOW_PLUGIN_ROLES))
-    if unknown_roles:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported workflow plugin roles: {', '.join(unknown_roles)}.",
-        )
-
-    matched_roles = 0
-    extracted: Dict[str, Optional[Any]] = {}
-
-    for role in _WORKFLOW_PLUGIN_ROLES:
+        return []
+    ordered_roles = ["transcriber", "grader", "reviewer", "validator"]
+    steps: list[WorkflowStep] = []
+    order = 0
+    for role in ordered_roles:
         plugin = plugins.get(role)
-        if not plugin:
+        if plugin is None:
             continue
-        matched_roles += 1
-        extracted[f"{role}_plugin_hash"] = plugin.hash
-        extracted[f"{role}_settings"] = plugin.settings
-
-    if require_at_least_one and matched_roles == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="At least one plugin (transcriber, grader, validator) must be provided.",
+        plugin_type = "reviewer" if role == "validator" else plugin.plugin_type or role
+        normalized = RuntimePlugin.model_validate(
+            {
+                **plugin.model_dump(mode="python"),
+                "plugin_type": plugin_type,
+                "type": plugin_type,
+            }
         )
+        steps.append(
+            WorkflowStep(
+                id=f"step-{order}-{normalized.plugin_id}",
+                order=order,
+                plugin_type=plugin_type,
+                plugin=normalized,
+                settings=normalized.settings,
+            )
+        )
+        order += 1
+    return steps
 
-    return extracted
+
+def _normalize_steps(
+    payload_steps: list[WorkflowStep] | None,
+    payload_plugins: dict[str, RuntimePlugin] | None,
+) -> list[WorkflowStep]:
+    if payload_steps is not None:
+        steps = [WorkflowStep.model_validate(step) for step in payload_steps]
+    else:
+        steps = _steps_from_plugins(payload_plugins)
+    if not steps:
+        return []
+    steps.sort(key=lambda step: step.order)
+    for index, step in enumerate(steps):
+        step.order = index
+        step.plugin_type = "reviewer" if step.plugin_type == "validator" else step.plugin_type
+        step.plugin.plugin_type = step.plugin_type
+        step.plugin.type = step.plugin_type
+        step.settings = step.settings or step.plugin.settings or {}
+        step.plugin.settings = step.settings
+    return steps
+
+
+def _plugins_from_steps(steps: list[WorkflowStep]) -> dict[str, RuntimePlugin]:
+    result: dict[str, RuntimePlugin] = {}
+    for step in steps:
+        result[step.plugin_type] = step.plugin
+    return result
 
 
 def _db_workflow_to_read(wf: Workflow, db: Session) -> WorkflowRead:
-    plugins: Dict[str, RuntimePlugin] = {}
-    for role in _WORKFLOW_PLUGIN_ROLES:
-        plugin_hash = getattr(wf, f"{role}_plugin_hash")
-        settings = getattr(wf, f"{role}_settings")
-        if plugin_hash:
+    if wf.steps:
+        steps = [WorkflowStep.model_validate(step) for step in wf.steps]
+    else:
+        steps = []
+        for role in ("transcriber", "grader", "validator"):
+            plugin_hash = getattr(wf, f"{role}_plugin_hash")
+            settings = getattr(wf, f"{role}_settings")
+            if not plugin_hash:
+                continue
             plugin_obj = db.query(Plugin).filter(Plugin.hash == plugin_hash).first()
-            if not plugin_obj:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Plugin not found for role '{role}' with hash {plugin_hash}",
+            if plugin_obj is None:
+                continue
+            runtime_plugin = _runtime_plugin_from_legacy(plugin_obj, role, settings)
+            steps.append(
+                WorkflowStep(
+                    id=f"legacy-{role}-{plugin_obj.hash}",
+                    order=len(steps),
+                    plugin_type=runtime_plugin.plugin_type,
+                    plugin=runtime_plugin,
+                    settings=runtime_plugin.settings,
                 )
-            plugins[role] = RuntimePlugin(
-                id=plugin_obj.id,
-                name=plugin_obj.name,
-                type=role,
-                settings=settings or {},
-                author=plugin_obj.author,
-                version=plugin_obj.version,
-                author_email=plugin_obj.author_email,
-                source=plugin_obj.source,
-                settings_schema=plugin_obj.settings_schema,
-                hash=plugin_obj.hash,
             )
+    steps.sort(key=lambda step: step.order)
     return WorkflowRead(
         id=wf.id,
         course_id=wf.course_id,
@@ -109,7 +138,8 @@ def _db_workflow_to_read(wf: Workflow, db: Session) -> WorkflowRead:
         created_at=wf.created_at,
         updated_at=wf.updated_at,
         archived=wf.archived,
-        plugins=plugins if plugins else None,
+        steps=steps,
+        plugins=_plugins_from_steps(steps) or None,
     )
 
 
@@ -125,30 +155,14 @@ def create_workflow(
     current_user: User = Depends(get_current_user),
 ):
     if not has_capability(current_user, "create_workflow"):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to create workflows"
-        )
-
+        raise HTTPException(status_code=403, detail="Not authorized to create workflows")
     course = db.get(Course, payload.course_id)
     if not course:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
-        )
-
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
     if not has_capability_and_owner(current_user, "create_workflow", course.instructor_id):
-        raise HTTPException(
-            status_code=403,
-            detail="Only the course instructor or admin can create workflows",
-        )
+        raise HTTPException(status_code=403, detail="Only the course instructor or admin can create workflows")
 
-    plugin_fields = _empty_workflow_plugin_fields()
-    plugin_fields.update(
-        _extract_workflow_plugin_fields(
-            payload.plugins,
-            require_at_least_one=False,
-        )
-    )
-
+    steps = _normalize_steps(payload.steps, payload.plugins)
     wf = Workflow(
         id=uuid4(),
         course_id=payload.course_id,
@@ -156,7 +170,7 @@ def create_workflow(
         description=payload.description,
         created_by=current_user.id,
         created_at=datetime.now(timezone.utc),
-        **plugin_fields,
+        steps=[step.model_dump(mode="json", by_alias=True) for step in steps],
     )
     db.add(wf)
     db.commit()
@@ -164,7 +178,7 @@ def create_workflow(
     return _db_workflow_to_read(wf, db)
 
 
-@router.get("/", response_model=List[WorkflowRead])
+@router.get("/", response_model=list[WorkflowRead])
 def list_workflows(
     course_id: UUID | None = None,
     db: Session = Depends(session_dependency),
@@ -175,10 +189,7 @@ def list_workflows(
         if not course:
             raise HTTPException(status_code=400, detail="Course not found")
         if not has_capability_and_owner(current_user, "read_workflow", course.instructor_id):
-            raise HTTPException(
-                status_code=403,
-                detail="Not authorized to list workflows for this course",
-            )
+            raise HTTPException(status_code=403, detail="Not authorized to list workflows for this course")
     elif not has_capability(current_user, "read_workflow"):
         raise HTTPException(status_code=403, detail="Not authorized to list workflows")
 
@@ -186,9 +197,7 @@ def list_workflows(
     if course_id:
         q = q.filter(Workflow.course_id == course_id)
     elif not has_capability(current_user, "update_any_course"):
-        q = q.join(Course, Workflow.course_id == Course.id).filter(
-            Course.instructor_id == current_user.id
-        )
+        q = q.join(Course, Workflow.course_id == Course.id).filter(Course.instructor_id == current_user.id)
     workflows = q.filter(Workflow.archived.is_(False)).all()
     return [_db_workflow_to_read(wf, db) for wf in workflows]
 
@@ -201,21 +210,12 @@ def get_workflow(
 ):
     wf = db.get(Workflow, workflow_id)
     if not wf or wf.archived:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
-        )
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
     course = db.get(Course, wf.course_id)
     if not course:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
-        )
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
     if not has_capability_and_owner(current_user, "read_workflow", course.instructor_id):
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to get this workflow",
-        )
+        raise HTTPException(status_code=403, detail="Not authorized to get this workflow")
     return _db_workflow_to_read(wf, db)
 
 
@@ -229,40 +229,20 @@ def update_workflow(
     wf = db.get(Workflow, workflow_id)
     if not wf or wf.archived:
         raise HTTPException(status_code=404, detail="Workflow not found")
-
     course = db.get(Course, wf.course_id)
     if not course:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot find course for this workflow. Data integrity issue?",
-        )
-
+        raise HTTPException(status_code=400, detail="Cannot find course for this workflow")
     if not has_capability_and_owner(current_user, "update_workflow", course.instructor_id):
-        raise HTTPException(
-            status_code=403,
-            detail="Only the course instructor or admin can update this workflow",
-        )
+        raise HTTPException(status_code=403, detail="Only the course instructor or admin can update this workflow")
 
     if payload.name is not None:
         wf.name = payload.name
     if payload.description is not None:
         wf.description = payload.description
-
-    plugin_updates = {}
-    if payload.plugins is not None:
-        plugin_updates = _empty_workflow_plugin_fields()
-        plugin_updates.update(
-            _extract_workflow_plugin_fields(
-                payload.plugins,
-                require_at_least_one=True,
-            )
-        )
-        for field, value in plugin_updates.items():
-            setattr(wf, field, value)
-
-    if payload.name is not None or payload.description is not None or plugin_updates:
-        wf.updated_at = datetime.now(timezone.utc)
-
+    if payload.steps is not None or payload.plugins is not None:
+        steps = _normalize_steps(payload.steps, payload.plugins)
+        wf.steps = [step.model_dump(mode="json", by_alias=True) for step in steps]
+    wf.updated_at = datetime.now(timezone.utc)
     db.add(wf)
     db.commit()
     db.refresh(wf)
@@ -277,24 +257,14 @@ def delete_workflow(
 ):
     wf = db.get(Workflow, workflow_id)
     if not wf:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
     if wf.archived:
         return None
-
     course = db.get(Course, wf.course_id)
     if not course:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
-        )
-
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found")
     if not has_capability_and_owner(current_user, "delete_workflow", course.instructor_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the course instructor or admin can delete this workflow",
-        )
-
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the course instructor or admin can delete this workflow")
     wf.archived = True
     wf.updated_at = datetime.now(timezone.utc)
     db.add(wf)

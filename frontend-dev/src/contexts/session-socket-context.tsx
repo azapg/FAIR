@@ -2,12 +2,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ReactNode, useEffect, useRef } from "react";
 import { useSessionStore } from "@/store/session-store";
 import { submissionsKeys } from "@/hooks/use-submissions";
-import { getWebSocketUrl } from "@/lib/api";
+import api from "@/lib/api";
 
 export function SessionSocketProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const {
-    socket,
     currentSession,
     setSocket,
     setCurrentSession,
@@ -18,75 +17,52 @@ export function SessionSocketProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!currentSession) {
-      if (socket) {
-        socket.close();
-        setSocket(null);
-      }
-      return;
-    }
-
-    if (socket && lastSessionId.current === currentSession.id) {
       return;
     }
 
     // New session: proactively clear any stale logs before connecting
     clearLogs();
+    const baseUrl = (api.defaults.baseURL || "").replace(/\/$/, "");
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const streamUrl = token
+      ? `${baseUrl}/workflow-runs/${currentSession.id}/stream?access_token=${encodeURIComponent(token)}`
+      : `${baseUrl}/workflow-runs/${currentSession.id}/stream`;
+    const source = new EventSource(streamUrl, { withCredentials: true });
+    setSocket((source as unknown) as WebSocket);
+    lastSessionId.current = currentSession.id;
 
-    const wsUrl = getWebSocketUrl(`/api/sessions/${currentSession.id}`);
-    const newSocket = new WebSocket(wsUrl);
-    setSocket(newSocket);
-
-    newSocket.onopen = () => {
-      lastSessionId.current = currentSession.id;
-      clearLogs();
-    };
-
-    newSocket.onmessage = (event) => {
+    const handleEvent = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
-      try {
-        addLog(data);
-      } catch (e) {
-        // noop
+      addLog(data);
+      if (data.type === "update" && data?.payload?.object === "submissions") {
+        queryClient.invalidateQueries({
+          queryKey: submissionsKeys.lists(),
+          refetchType: "active",
+        }).then();
       }
-
-      if (data.type == "close") {
-        newSocket.close();
+      if (data.type === "close") {
+        source.close();
         setSocket(null);
         setCurrentSession(null);
-        return;
-      }
-
-      if (data.type == "update") {
-        switch (data?.payload?.object) {
-          case "submissions":
-            queryClient
-              .invalidateQueries({
-                queryKey: submissionsKeys.lists(),
-                refetchType: "active",
-              })
-              .then();
-            break;
-          default:
-            break;
-        }
       }
     };
-
-    newSocket.onclose = () => {
+    ["log", "progress", "result", "error", "close", "update"].forEach((name) => {
+      source.addEventListener(name, handleEvent as EventListener);
+    });
+    source.addEventListener("end", () => {
+      source.close();
       setSocket(null);
-    };
-
-    newSocket.onerror = () => {
-      newSocket.close();
+      setCurrentSession(null);
+    });
+    source.onerror = () => {
+      source.close();
+      setSocket(null);
+      setCurrentSession(null);
     };
 
     return () => {
-      if (
-        newSocket.readyState === WebSocket.OPEN ||
-        newSocket.readyState === WebSocket.CONNECTING
-      ) {
-        newSocket.close();
-      }
+      source.close();
     };
   }, [currentSession?.id]);
 

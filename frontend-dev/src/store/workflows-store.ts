@@ -24,6 +24,7 @@ export type WorkflowCreate = {
   plugins: {
     transcriber?: RuntimePlugin;
     grader?: RuntimePlugin;
+    reviewer?: RuntimePlugin;
     validator?: RuntimePlugin;
   };
 };
@@ -98,12 +99,22 @@ export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
         const { drafts } = get();
 
         const existingDraft = drafts ? drafts[draft.workflowId] : undefined;
+        const normalizedIncomingPlugins = { ...(draft.plugins || {}) };
+        if (normalizedIncomingPlugins.validator && !normalizedIncomingPlugins.reviewer) {
+          normalizedIncomingPlugins.reviewer = normalizedIncomingPlugins.validator;
+          delete normalizedIncomingPlugins.validator;
+        }
+        const normalizedExistingPlugins = { ...(existingDraft?.plugins || {}) };
+        if (normalizedExistingPlugins.validator && !normalizedExistingPlugins.reviewer) {
+          normalizedExistingPlugins.reviewer = normalizedExistingPlugins.validator;
+          delete normalizedExistingPlugins.validator;
+        }
         const updatedDraft = {
           ...existingDraft,
           ...draft,
           plugins: {
-            ...existingDraft?.plugins,
-            ...draft.plugins,
+            ...normalizedExistingPlugins,
+            ...normalizedIncomingPlugins,
           },
         };
 

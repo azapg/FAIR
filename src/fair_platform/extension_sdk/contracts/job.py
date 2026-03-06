@@ -45,6 +45,13 @@ class ResultPayload(BaseModel):
     data: dict[str, Any]
 
 
+class SubmissionResultPayload(BaseModel):
+    model_config = contract_model_config
+
+    submission_id: str
+    data: dict[str, Any]
+
+
 class ErrorPayload(BaseModel):
     model_config = contract_model_config
 
@@ -80,6 +87,13 @@ class JobUpdateResult(BaseModel):
     payload: ResultPayload
 
 
+class JobUpdateSubmissionResult(BaseModel):
+    model_config = contract_model_config
+
+    event: Literal["submission_result"]
+    payload: SubmissionResultPayload
+
+
 class JobUpdateError(BaseModel):
     model_config = contract_model_config
 
@@ -92,6 +106,7 @@ JobUpdateEvent = Annotated[
     | JobUpdateLog
     | JobUpdateToken
     | JobUpdateResult
+    | JobUpdateSubmissionResult
     | JobUpdateError,
     Field(discriminator="event"),
 ]
@@ -111,11 +126,13 @@ __all__ = [
     "LogPayload",
     "TokenPayload",
     "ResultPayload",
+    "SubmissionResultPayload",
     "ErrorPayload",
     "JobUpdateProgress",
     "JobUpdateLog",
     "JobUpdateToken",
     "JobUpdateResult",
+    "JobUpdateSubmissionResult",
     "JobUpdateError",
     "JobUpdateEvent",
     "JobUpdateRequest",

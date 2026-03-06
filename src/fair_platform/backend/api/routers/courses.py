@@ -216,13 +216,15 @@ def get_course(
 
     include_code = can_manage_course
     if detailed and can_manage_course:
+        from fair_platform.backend.api.routers.workflows import _db_workflow_to_read
+
         return {
             "id": course.id,
             "name": course.name,
             "description": course.description,
             "instructor": course.instructor,
             "assignments": course.assignments or [],
-            "workflows": course.workflows or [],
+            "workflows": [_db_workflow_to_read(workflow, db) for workflow in (course.workflows or [])],
             "enrollment_code": course.enrollment_code if include_code else None,
             "is_enrollment_enabled": course.is_enrollment_enabled if include_code else None,
         }

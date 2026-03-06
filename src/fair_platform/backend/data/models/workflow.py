@@ -31,6 +31,9 @@ class Workflow(Base):
     archived: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
     )
+    steps: Mapped[Optional[list[dict]]] = mapped_column(
+        json_document_type(), nullable=True
+    )
     # TODO: What an ugly schema, needs refactoring.
     transcriber_plugin_hash: Mapped[Optional[str]] = mapped_column(
         Text, ForeignKey("plugins.hash"), nullable=True

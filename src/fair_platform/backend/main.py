@@ -33,6 +33,10 @@ from fair_platform.backend.api.routers.extensions import router as extensions_ro
 from fair_platform.backend.services.extension_registry import LocalExtensionRegistry
 from fair_platform.backend.services.job_dispatcher import JobDispatcher
 from fair_platform.backend.services.job_queue import create_job_queue
+from fair_platform.backend.services.workflow_runner import (
+    WorkflowRunEventBroker,
+    WorkflowRunner,
+)
 from fair_platform.backend.data.database import SessionLocal
 from fair_platform.backend.data.models import ExtensionClient
 from fair_platform.backend.services.extension_auth import hash_extension_secret
@@ -160,9 +164,14 @@ async def lifespan(_ignored: FastAPI):
     load_storage_plugins()
     app.state.job_queue = await create_job_queue()
     app.state.extension_registry = LocalExtensionRegistry()
+    app.state.workflow_run_event_broker = WorkflowRunEventBroker()
     app.state.job_dispatcher = JobDispatcher(
         queue=app.state.job_queue,
         registry=app.state.extension_registry,
+    )
+    app.state.workflow_runner = WorkflowRunner(
+        job_queue=app.state.job_queue,
+        event_broker=app.state.workflow_run_event_broker,
     )
     app.state.core_extension_process = None
     if _is_core_extension_enabled():

@@ -11,6 +11,18 @@ const keys = {
   workflows: (courseId: string) => ["workflows", courseId] as const,
 };
 
+function normalizeWorkflowPlugins<T extends { plugins?: Record<string, any> | undefined }>(workflow: T): T {
+  const plugins = { ...(workflow.plugins || {}) };
+  if (plugins.validator && !plugins.reviewer) {
+    plugins.reviewer = plugins.validator;
+    delete plugins.validator;
+  }
+  return {
+    ...workflow,
+    plugins,
+  };
+}
+
 export function useWorkflows(enabled = true) {
   const drafts = useWorkflowStore((s) => s.drafts);
   const saveDraft = useWorkflowStore((s) => s.saveDraft);
@@ -24,7 +36,7 @@ export function useWorkflows(enabled = true) {
     queryFn: async () => {
       if (!courseId) return [];
       const res = await api.get("/workflows", { params: { course_id: courseId } });
-      return res.data as Workflow[];
+      return (res.data as Workflow[]).map(normalizeWorkflowPlugins);
     },
   });
 
@@ -128,10 +140,11 @@ export function usePersistWorkflowDrafts() {
       await Promise.all(
         userDrafts.map(async ([workflowId, draft]) => {
           try {
+            const normalizedDraft = normalizeWorkflowPlugins(draft);
             const payload = {
               name: draft.name,
               description: draft.description ?? "",
-              plugins: draft.plugins ?? {},
+              plugins: normalizedDraft.plugins ?? {},
             };
             await api.put(`/workflows/${workflowId}`, payload);
             touchedCourses.add(draft.courseId);
