@@ -123,9 +123,21 @@ async def create_workflow_run(
     if not has_capability_and_owner(current_user, "run_workflow", course.instructor_id):
         raise HTTPException(status_code=403, detail="Not authorized to run this workflow")
 
-    submissions = db.query(Submission).filter(Submission.id.in_(payload.submission_ids)).all()
+    submissions = (
+        db.query(Submission)
+        .join(Submission.assignment)
+        .filter(Submission.id.in_(payload.submission_ids))
+        .all()
+    )
     if len(submissions) != len(payload.submission_ids):
         raise HTTPException(status_code=404, detail="One or more submissions were not found")
+
+    foreign_submissions = [s for s in submissions if s.assignment.course_id != course.id]
+    if foreign_submissions:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="One or more submissions do not belong to the course this workflow is part of",
+        )
 
     workflow_run = WorkflowRun(
         id=uuid4(),
