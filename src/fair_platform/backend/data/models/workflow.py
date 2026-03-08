@@ -9,7 +9,6 @@ from .types import json_document_type
 
 if TYPE_CHECKING:
     from .course import Course
-    from .plugin import Plugin
     from .user import User
     from .workflow_run import WorkflowRun
 
@@ -34,42 +33,11 @@ class Workflow(Base):
     steps: Mapped[Optional[list[dict]]] = mapped_column(
         json_document_type(), nullable=True
     )
-    # TODO: What an ugly schema, needs refactoring.
-    transcriber_plugin_hash: Mapped[Optional[str]] = mapped_column(
-        Text, ForeignKey("plugins.hash"), nullable=True
-    )
-    transcriber_settings: Mapped[Optional[dict]] = mapped_column(
-        json_document_type(), nullable=True
-    )
-    grader_plugin_hash: Mapped[Optional[str]] = mapped_column(
-        Text, ForeignKey("plugins.hash"), nullable=True
-    )
-    grader_settings: Mapped[Optional[dict]] = mapped_column(
-        json_document_type(), nullable=True
-    )
-    validator_plugin_hash: Mapped[Optional[str]] = mapped_column(
-        Text, ForeignKey("plugins.hash"), nullable=True
-    )
-    validator_settings: Mapped[Optional[dict]] = mapped_column(
-        json_document_type(), nullable=True
-    )
 
     course: Mapped["Course"] = relationship("Course", back_populates="workflows")
     creator: Mapped["User"] = relationship("User", back_populates="created_workflows")
     runs: Mapped[List["WorkflowRun"]] = relationship(
         "WorkflowRun", back_populates="workflow"
-    )
-    transcriber_plugin: Mapped[Optional["Plugin"]] = relationship(
-        "Plugin",
-        foreign_keys=[transcriber_plugin_hash],
-    )
-    grader_plugin: Mapped[Optional["Plugin"]] = relationship(
-        "Plugin",
-        foreign_keys=[grader_plugin_hash],
-    )
-    validator_plugin: Mapped[Optional["Plugin"]] = relationship(
-        "Plugin",
-        foreign_keys=[validator_plugin_hash],
     )
 
     def __repr__(self) -> str:

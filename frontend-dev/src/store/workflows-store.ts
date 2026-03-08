@@ -25,8 +25,15 @@ export type WorkflowCreate = {
     transcriber?: RuntimePlugin;
     grader?: RuntimePlugin;
     reviewer?: RuntimePlugin;
-    validator?: RuntimePlugin;
   };
+};
+
+export type WorkflowStep = {
+  id: string;
+  order: number;
+  pluginType: "transcriber" | "grader" | "reviewer";
+  plugin: RuntimePlugin;
+  settings: Record<string, any>;
 };
 
 export type Workflow = WorkflowCreate & {
@@ -34,6 +41,7 @@ export type Workflow = WorkflowCreate & {
   createdAt: string;
   creatorId: string;
   runs?: WorkflowRun[];
+  steps?: WorkflowStep[];
 };
 
 export type WorkflowDraft = WorkflowCreate & {
@@ -74,6 +82,44 @@ type Actions = {
   ) => void;
 };
 
+export function workflowPluginsFromSteps(steps?: WorkflowStep[]) {
+  const plugins: WorkflowCreate["plugins"] = {};
+  for (const step of steps || []) {
+    plugins[step.pluginType] = {
+      ...step.plugin,
+      settings: step.settings ?? step.plugin.settings ?? {},
+    };
+  }
+  return plugins;
+}
+
+export function workflowStepsFromPlugins(plugins?: WorkflowCreate["plugins"]): WorkflowStep[] {
+  const orderedTypes: Array<keyof WorkflowCreate["plugins"]> = [
+    "transcriber",
+    "grader",
+    "reviewer",
+  ];
+  return orderedTypes.flatMap((pluginType, order) => {
+    const plugin = plugins?.[pluginType];
+    if (!plugin) {
+      return [];
+    }
+    const settings = plugin.settings ?? {};
+    return [
+      {
+        id: `step-${order}-${plugin.id}`,
+        order,
+        pluginType,
+        plugin: {
+          ...plugin,
+          settings,
+        },
+        settings,
+      },
+    ];
+  });
+}
+
 export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
   persist(
     (set, get) => ({
@@ -99,22 +145,12 @@ export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
         const { drafts } = get();
 
         const existingDraft = drafts ? drafts[draft.workflowId] : undefined;
-        const normalizedIncomingPlugins = { ...(draft.plugins || {}) };
-        if (normalizedIncomingPlugins.validator && !normalizedIncomingPlugins.reviewer) {
-          normalizedIncomingPlugins.reviewer = normalizedIncomingPlugins.validator;
-          delete normalizedIncomingPlugins.validator;
-        }
-        const normalizedExistingPlugins = { ...(existingDraft?.plugins || {}) };
-        if (normalizedExistingPlugins.validator && !normalizedExistingPlugins.reviewer) {
-          normalizedExistingPlugins.reviewer = normalizedExistingPlugins.validator;
-          delete normalizedExistingPlugins.validator;
-        }
         const updatedDraft = {
           ...existingDraft,
           ...draft,
           plugins: {
-            ...normalizedExistingPlugins,
-            ...normalizedIncomingPlugins,
+            ...(existingDraft?.plugins || {}),
+            ...(draft.plugins || {}),
           },
         };
 

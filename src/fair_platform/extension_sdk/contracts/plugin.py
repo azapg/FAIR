@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from fair_platform.extension_sdk.contracts.common import contract_model_config
 
 
-PluginType = Literal["transcriber", "grader", "reviewer", "validator"]
+PluginType = Literal["transcriber", "grader", "reviewer"]
 
 
 class PluginDescriptor(BaseModel):

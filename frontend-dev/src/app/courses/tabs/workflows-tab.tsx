@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { RuntimePluginRead } from "@/hooks/use-plugins";
+import { workflowPluginsFromSteps, WorkflowStep } from "@/store/workflows-store";
 import {
   DataTable,
   DataTableContent,
@@ -20,6 +21,7 @@ type WorkflowRow = {
   createdAt: string;
   updatedAt?: string | null;
   plugins?: Record<string, RuntimePluginRead>;
+  steps?: WorkflowStep[];
 };
 
 export function WorkflowsTab({ courseId }: { courseId?: string }) {
@@ -31,7 +33,10 @@ export function WorkflowsTab({ courseId }: { courseId?: string }) {
     queryFn: async () => {
       if (!courseId) return [];
       const res = await api.get("/workflows", { params: { course_id: courseId } });
-      return res.data;
+      return (res.data as WorkflowRow[]).map((workflow) => ({
+        ...workflow,
+        plugins: workflowPluginsFromSteps(workflow.steps),
+      }));
     },
   });
 

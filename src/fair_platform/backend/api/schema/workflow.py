@@ -27,7 +27,6 @@ class WorkflowBase(BaseModel):
     course_id: UUID
     description: Optional[str] = None
     steps: list[WorkflowStep] = Field(default_factory=list)
-    plugins: Optional[dict[str, RuntimePlugin]] = None
 
 
 class WorkflowCreate(WorkflowBase):
@@ -40,7 +39,6 @@ class WorkflowUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     steps: Optional[list[WorkflowStep]] = None
-    plugins: Optional[dict[str, RuntimePlugin]] = None
 
 
 class WorkflowRead(WorkflowBase):
