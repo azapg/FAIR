@@ -224,7 +224,7 @@ def get_course(
             "description": course.description,
             "instructor": course.instructor,
             "assignments": course.assignments or [],
-            "workflows": [_db_workflow_to_read(workflow, db) for workflow in (course.workflows or [])],
+            "workflows": [_db_workflow_to_read(workflow) for workflow in (course.workflows or [])],
             "enrollment_code": course.enrollment_code if include_code else None,
             "is_enrollment_enabled": course.is_enrollment_enabled if include_code else None,
         }

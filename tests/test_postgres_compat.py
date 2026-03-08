@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 from fair_platform.backend.data.migrations import run_migrations_to_head
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.course import Course
-from fair_platform.backend.data.models.plugin import Plugin
 from fair_platform.backend.data.models.submission import Submission, SubmissionStatus
 from fair_platform.backend.data.models.submission_event import (
     SubmissionEvent,
@@ -103,12 +102,8 @@ def test_postgres_json_columns_are_jsonb(postgres_database_url: str) -> None:
     columns = [
         ("assignments", "max_grade"),
         ("artifacts", "meta"),
-        ("plugins", "meta"),
-        ("plugins", "settings_schema"),
         ("users", "settings"),
-        ("workflows", "transcriber_settings"),
-        ("workflows", "grader_settings"),
-        ("workflows", "validator_settings"),
+        ("workflows", "steps"),
         ("workflow_runs", "logs"),
         ("submission_events", "details"),
         ("submission_results", "grading_meta"),
@@ -133,28 +128,6 @@ def test_postgres_json_columns_are_jsonb(postgres_database_url: str) -> None:
             assert row[0] == "jsonb"
 
     engine.dispose()
-
-
-def test_plugins_primary_key_is_hash(postgres_database_url: str) -> None:
-    engine = create_engine(postgres_database_url, future=True)
-    with engine.connect() as conn:
-        rows = conn.execute(
-            text(
-                """
-                SELECT a.attname
-                FROM pg_index i
-                JOIN pg_class t ON t.oid = i.indrelid
-                JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(i.indkey)
-                WHERE t.relname = 'plugins'
-                  AND i.indisprimary
-                ORDER BY a.attnum
-                """
-            )
-        ).all()
-    engine.dispose()
-
-    assert [r[0] for r in rows] == ["hash"]
-
 
 def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
     engine = create_engine(postgres_database_url, future=True)
@@ -181,22 +154,6 @@ def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
         session.add(course)
         session.flush()
 
-        plugin = Plugin(
-            hash="plugin-hash-1",
-            id="plugin-id",
-            name="Plugin",
-            description=None,
-            author="FAIR",
-            author_email=None,
-            version="1.0.0",
-            source="local",
-            meta={"k": "v"},
-            type="grader",
-            settings_schema={"type": "object"},
-        )
-        session.add(plugin)
-        session.flush()
-
         workflow = Workflow(
             id=uuid.uuid4(),
             course_id=course.id,
@@ -206,12 +163,24 @@ def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
             created_at=datetime.utcnow(),
             updated_at=None,
             archived=False,
-            transcriber_plugin_hash=plugin.hash,
-            transcriber_settings={"a": 1},
-            grader_plugin_hash=plugin.hash,
-            grader_settings={"b": 2},
-            validator_plugin_hash=plugin.hash,
-            validator_settings={"c": 3},
+            steps=[
+                {
+                    "id": "step-0-review",
+                    "order": 0,
+                    "pluginType": "reviewer",
+                    "plugin": {
+                        "pluginId": "mock.reviewer",
+                        "extensionId": "mock.extension",
+                        "name": "Reviewer",
+                        "pluginType": "reviewer",
+                        "action": "plugin.review",
+                        "settingsSchema": {"type": "object"},
+                        "metadata": {},
+                        "settings": {"threshold": 0.8},
+                    },
+                    "settings": {"threshold": 0.8},
+                }
+            ],
         )
         session.add(workflow)
         session.flush()
