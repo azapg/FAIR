@@ -7,12 +7,17 @@ Create Date: 2026-03-07 12:00:00.000000
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 revision = "20260307_0015"
 down_revision = "20260305_0014"
 branch_labels = None
 depends_on = None
+
+
+def _json_document_type() -> sa.JSON:
+    return sa.JSON().with_variant(JSONB, "postgresql")
 
 
 def upgrade() -> None:
@@ -44,18 +49,24 @@ def downgrade() -> None:
         sa.Column("author_email", sa.String(), nullable=True),
         sa.Column("version", sa.String(), nullable=False),
         sa.Column("source", sa.Text(), nullable=False),
-        sa.Column("meta", sa.JSON(), nullable=True),
+        sa.Column("meta", _json_document_type(), nullable=True),
         sa.Column("type", sa.String(), nullable=False),
-        sa.Column("settings_schema", sa.JSON(), nullable=True),
+        sa.Column("settings_schema", _json_document_type(), nullable=True),
         sa.PrimaryKeyConstraint("hash"),
     )
 
     with op.batch_alter_table("workflows") as batch_op:
-        batch_op.add_column(sa.Column("validator_settings", sa.JSON(), nullable=True))
+        batch_op.add_column(
+            sa.Column("validator_settings", _json_document_type(), nullable=True)
+        )
         batch_op.add_column(sa.Column("validator_plugin_hash", sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column("grader_settings", sa.JSON(), nullable=True))
+        batch_op.add_column(
+            sa.Column("grader_settings", _json_document_type(), nullable=True)
+        )
         batch_op.add_column(sa.Column("grader_plugin_hash", sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column("transcriber_settings", sa.JSON(), nullable=True))
+        batch_op.add_column(
+            sa.Column("transcriber_settings", _json_document_type(), nullable=True)
+        )
         batch_op.add_column(sa.Column("transcriber_plugin_hash", sa.Text(), nullable=True))
         batch_op.create_foreign_key(
             "fk_workflows_transcriber_hash", "plugins", ["transcriber_plugin_hash"], ["hash"]
