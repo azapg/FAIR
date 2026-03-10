@@ -91,3 +91,45 @@ def test_register_extension_requires_extensions_connect_scope(test_client, test_
     )
     assert response.status_code == 403
     assert "extensions:connect" in response.json()["detail"]
+
+
+def test_registered_extension_plugins_are_listed_via_plugins_api(
+    test_client, professor_user, extension_client_credentials
+):
+    register = test_client.post(
+        "/api/extensions/connect",
+        json={
+            "extensionId": extension_client_credentials["extension_id"],
+            "webhookUrl": "http://localhost:9000/hooks/jobs",
+            "metadata": {
+                "plugins": [
+                    {
+                        "pluginId": "mock.echo.reviewer",
+                        "extensionId": extension_client_credentials["extension_id"],
+                        "pluginType": "reviewer",
+                        "name": "Echo Reviewer",
+                        "action": "plugin.review.echo",
+                        "settingsSchema": {
+                            "title": "Echo Reviewer",
+                            "type": "object",
+                            "properties": {},
+                        },
+                    }
+                ]
+            },
+        },
+        headers=extension_auth_headers(extension_client_credentials),
+    )
+    assert register.status_code == 201
+
+    token = get_auth_token(test_client, professor_user.email)
+    response = test_client.get(
+        "/api/plugins?type_filter=reviewer",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    plugins = response.json()
+    assert len(plugins) == 1
+    assert plugins[0]["id"] == "mock.echo.reviewer"
+    assert plugins[0]["type"] == "reviewer"
+    assert plugins[0]["settingsSchema"]["title"] == "Echo Reviewer"

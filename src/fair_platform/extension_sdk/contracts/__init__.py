@@ -45,3 +45,34 @@ __all__ = [
     "RubricJobRequest",
     "RubricGenerateResponse",
 ]
+from .plugin import (
+    GraderSubmissionResult,
+    PluginDescriptor,
+    PluginType,
+    ReviewerSubmissionResult,
+    SubmissionArtifactRef,
+    SubmissionExecutionInput,
+    SubmissionPipelineState,
+    TranscriberSubmissionResult,
+    WorkflowStepExecutionRequest,
+    WorkflowStepExecutionResult,
+)
+from .extension import ExtensionRead, ExtensionRegisterRequest
+from .job import ActionPayload, JobUpdateRequest
+
+__all__ = [
+    "ActionPayload",
+    "ExtensionRead",
+    "ExtensionRegisterRequest",
+    "GraderSubmissionResult",
+    "JobUpdateRequest",
+    "PluginDescriptor",
+    "PluginType",
+    "ReviewerSubmissionResult",
+    "SubmissionArtifactRef",
+    "SubmissionExecutionInput",
+    "SubmissionPipelineState",
+    "TranscriberSubmissionResult",
+    "WorkflowStepExecutionRequest",
+    "WorkflowStepExecutionResult",
+]

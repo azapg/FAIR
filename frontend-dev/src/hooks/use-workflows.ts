@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import api from "@/lib/api";
 import { useWorkflowStore } from "@/store/workflows-store";
 import type { Workflow } from "@/store/workflows-store";
+import { workflowPluginsFromSteps, workflowStepsFromPlugins } from "@/store/workflows-store";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { useTranslation } from "react-i18next";
@@ -24,7 +25,10 @@ export function useWorkflows(enabled = true) {
     queryFn: async () => {
       if (!courseId) return [];
       const res = await api.get("/workflows", { params: { course_id: courseId } });
-      return res.data as Workflow[];
+      return (res.data as Workflow[]).map((workflow) => ({
+        ...workflow,
+        plugins: workflowPluginsFromSteps(workflow.steps),
+      }));
     },
   });
 
@@ -88,10 +92,14 @@ export function useCreateWorkflow() {
         courseId,
         name: args.name,
         description: args.description ?? "",
-        plugins: args.plugins ?? {},
+        steps: workflowStepsFromPlugins(args.plugins ?? {}),
       };
       const res = await api.post("/workflows", payload);
-      return res.data as Workflow;
+      const workflow = res.data as Workflow;
+      return {
+        ...workflow,
+        plugins: workflowPluginsFromSteps(workflow.steps),
+      } as Workflow;
     },
     onSuccess: (created) => {
       if (!courseId) return;
@@ -131,7 +139,7 @@ export function usePersistWorkflowDrafts() {
             const payload = {
               name: draft.name,
               description: draft.description ?? "",
-              plugins: draft.plugins ?? {},
+              steps: workflowStepsFromPlugins(draft.plugins ?? {}),
             };
             await api.put(`/workflows/${workflowId}`, payload);
             touchedCourses.add(draft.courseId);

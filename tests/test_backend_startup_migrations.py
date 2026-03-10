@@ -71,14 +71,11 @@ async def test_lifespan_runs_migrations_when_enabled(monkeypatch):
         backend_main, "run_migrations_to_head", lambda: calls.append("migrate")
     )
     monkeypatch.setattr(backend_main, "init_db", lambda: calls.append("init_db"))
-    monkeypatch.setattr(
-        backend_main, "load_storage_plugins", lambda: calls.append("plugins")
-    )
 
     async with backend_main.lifespan(backend_main.app):
         pass
 
-    assert calls == ["migrate", "plugins"]
+    assert calls == ["migrate"]
 
 
 @pytest.mark.asyncio
@@ -91,14 +88,11 @@ async def test_lifespan_runs_init_db_when_explicitly_enabled(monkeypatch):
         backend_main, "run_migrations_to_head", lambda: calls.append("migrate")
     )
     monkeypatch.setattr(backend_main, "init_db", lambda: calls.append("init_db"))
-    monkeypatch.setattr(
-        backend_main, "load_storage_plugins", lambda: calls.append("plugins")
-    )
 
     async with backend_main.lifespan(backend_main.app):
         pass
 
-    assert calls == ["init_db", "plugins"]
+    assert calls == ["init_db"]
 
 
 @pytest.mark.asyncio
@@ -112,13 +106,10 @@ async def test_lifespan_warns_when_no_migration_and_no_fallback(monkeypatch):
     )
     monkeypatch.setattr(backend_main, "init_db", lambda: calls.append("init_db"))
     monkeypatch.setattr(
-        backend_main, "load_storage_plugins", lambda: calls.append("plugins")
-    )
-    monkeypatch.setattr(
         backend_main.logger, "warning", lambda *_args, **_kwargs: calls.append("warn")
     )
 
     async with backend_main.lifespan(backend_main.app):
         pass
 
-    assert calls == ["warn", "plugins"]
+    assert calls == ["warn"]

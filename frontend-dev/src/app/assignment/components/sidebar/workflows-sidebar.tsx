@@ -119,11 +119,11 @@ export function WorkflowsSidebar({
     setShowLogs(true);
     try {
       await persistDrafts();
-      const response = await api.post("/sessions", {
+      const response = await api.post("/workflow-runs", {
         workflow_id: activeWorkflowId,
         submission_ids: submissions?.map((s) => s.id) || [],
       });
-      setCurrentSession(response.data.session);
+      setCurrentSession(response.data);
     } catch (error) {
       const errorMessage = isAxiosError(error)
         ? error.response?.data?.detail
@@ -193,9 +193,9 @@ export function WorkflowsSidebar({
                 />
                 <Separator />
                 <PluginSection
-                  title={t("plugins.validator")}
-                  action={t("plugins.validateAll")}
-                  type={"validator"}
+                  title={t("plugins.reviewer")}
+                  action={t("plugins.reviewAll")}
+                  type={"reviewer"}
                 />
               </ScrollArea>
           </SidebarContent>

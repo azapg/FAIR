@@ -10,6 +10,9 @@ export function LogRow({ log }: { log: SessionLog }) {
   switch (log.type) {
     case "log":
     case "system":
+    case "error":
+    case "progress":
+    case "result":
       return <RenderLogMessage log={log} />;
     case "image":
       return <RenderLogImage log={log} />;
