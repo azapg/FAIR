@@ -33,6 +33,12 @@ class WorkflowRun(Base):
     finished_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     status: Mapped[WorkflowRunStatus] = mapped_column(String, nullable=False)
     logs: Mapped[Optional[dict]] = mapped_column(json_document_type(), nullable=True)
+    step_states: Mapped[Optional[list[dict]]] = mapped_column(
+        json_document_type(), nullable=True
+    )
+    request_payload: Mapped[Optional[dict]] = mapped_column(
+        json_document_type(), nullable=True
+    )
 
     # Relationships
     workflow = relationship("Workflow", back_populates="runs")

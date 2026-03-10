@@ -5,10 +5,11 @@ import { AuthUser } from "@/contexts/auth-context";
 
 type Session = {
   id: string;
+  workflowId?: string;
   runner: AuthUser; // user object
   status: 'pending' | 'running' | 'success' | 'failure' | 'cancelled';
-  started_at: string;
-  finished_at: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
   logs: SessionLog[];
   submissions: Submission[];
 }

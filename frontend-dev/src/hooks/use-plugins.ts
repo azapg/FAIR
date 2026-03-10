@@ -6,10 +6,10 @@ import { toCamelCase } from "@/lib/casing";
 export type Plugin = {
   id: string;
   name: string;
-  author: string;
+  author?: string;
   authorEmail?: string | null;
   description?: string | null;
-  version: string;
+  version?: string | null;
   hash: string;
   source: string;
   type: PluginType;
@@ -22,7 +22,7 @@ export type RuntimePlugin = Plugin & {
 
 export type RuntimePluginRead = Omit<RuntimePlugin, "settings">;
 
-export type PluginType = "transcriber" | "grader" | "validator";
+export type PluginType = "transcriber" | "grader" | "reviewer";
 
 export const pluginsKeys = {
   all: ["plugins"] as const,
@@ -37,21 +37,26 @@ const fetchPlugins = async (
 ): Promise<RuntimePluginRead[]> => {
   const params = type ? { type_filter: type } : {};
   const res = await api.get("/plugins", { params });
-
-  // convert snake_case to camelCase
-  const originalSettingsSchema = res.data.map(
-    (plugin: any) => plugin.settings_schema,
-  );
   const data = toCamelCase(res.data) as RuntimePluginRead[];
   data.forEach((plugin, index) => {
-    plugin.settingsSchema = originalSettingsSchema[index];
+    plugin.settingsSchema =
+      plugin.settingsSchema ||
+      res.data[index]?.settingsSchema ||
+      res.data[index]?.settings_schema ||
+      { title: "", type: "object", properties: {} };
   });
 
   return data;
 };
 const fetchPlugin = async (id: string): Promise<RuntimePluginRead> => {
   const res = await api.get(`/plugins/${id}`);
-  return res.data;
+  const plugin = toCamelCase(res.data) as RuntimePluginRead;
+  plugin.settingsSchema =
+    plugin.settingsSchema ||
+    res.data?.settingsSchema ||
+    res.data?.settings_schema ||
+    { title: "", type: "object", properties: {} };
+  return plugin;
 };
 
 export const usePlugins = (type?: PluginType) => {

@@ -24,7 +24,6 @@ from fair_platform.backend.api.routers.submission_results import (
 from fair_platform.backend.api.routers.workflows import router as workflows_router
 from fair_platform.backend.api.routers.workflow_runs import router as workflow_runs_router
 from fair_platform.backend.api.routers.auth import router as auth_router
-from fair_platform.backend.api.routers.sessions import router as sessions_router
 from fair_platform.backend.api.routers.version import router as version_router
 from fair_platform.backend.api.routers.rubrics import router as rubrics_router
 from fair_platform.backend.api.routers.enrollments import router as enrollments_router
@@ -33,11 +32,13 @@ from fair_platform.backend.api.routers.extensions import router as extensions_ro
 from fair_platform.backend.services.extension_registry import LocalExtensionRegistry
 from fair_platform.backend.services.job_dispatcher import JobDispatcher
 from fair_platform.backend.services.job_queue import create_job_queue
+from fair_platform.backend.services.workflow_runner import (
+    WorkflowRunEventBroker,
+    WorkflowRunner,
+)
 from fair_platform.backend.data.database import SessionLocal
 from fair_platform.backend.data.models import ExtensionClient
 from fair_platform.backend.services.extension_auth import hash_extension_secret
-
-from fair_platform.sdk import load_storage_plugins
 
 logger = logging.getLogger(__name__)
 
@@ -157,12 +158,16 @@ async def lifespan(_ignored: FastAPI):
             "Starting without schema migration/bootstrap; runtime DB failures are likely. "
             "Set FAIR_AUTO_MIGRATE=1 (recommended) or FAIR_ALLOW_CREATE_ALL=1 for local-only bootstrap."
         )
-    load_storage_plugins()
     app.state.job_queue = await create_job_queue()
     app.state.extension_registry = LocalExtensionRegistry()
+    app.state.workflow_run_event_broker = WorkflowRunEventBroker()
     app.state.job_dispatcher = JobDispatcher(
         queue=app.state.job_queue,
         registry=app.state.extension_registry,
+    )
+    app.state.workflow_runner = WorkflowRunner(
+        job_queue=app.state.job_queue,
+        event_broker=app.state.workflow_run_event_broker,
     )
     app.state.core_extension_process = None
     if _is_core_extension_enabled():
@@ -210,13 +215,12 @@ app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
 app.include_router(artifacts_router, prefix="/api/artifacts", tags=["artifacts"])
 app.include_router(assignments_router, prefix="/api/assignments", tags=["assignments"])
-app.include_router(plugins_router, prefix="/api/plugins", tags=["plugins", "workflows", "sessions"])
+app.include_router(plugins_router, prefix="/api/plugins", tags=["plugins", "workflows"])
 app.include_router(submissions_router, prefix="/api/submissions", tags=["submissions"])
 app.include_router(submission_results_router, prefix="/api/submission-results")
-app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows", "plugins", "sessions"])
+app.include_router(workflows_router, prefix="/api/workflows", tags=["workflows", "plugins"])
 app.include_router(workflow_runs_router, prefix="/api/workflow-runs", tags=["workflow-runs", "workflows"])
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
-app.include_router(sessions_router, prefix="/api/sessions", tags=["sessions", "workflows", "plugins"])
 app.include_router(version_router, prefix="/api", tags=["version"])
 app.include_router(rubrics_router, prefix="/api/rubrics", tags=["rubrics"])
 app.include_router(enrollments_router, prefix="/api/enrollments", tags=["enrollments"])

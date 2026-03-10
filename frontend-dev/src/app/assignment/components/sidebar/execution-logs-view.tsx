@@ -17,8 +17,8 @@ export function ExecutionLogsView({ onBack }: { onBack: () => void }) {
       if (!currentSession) return;
       if (sessionLogs.length > 0) return;
       try {
-        const res = await api.get(`/sessions/${currentSession.id}/logs`);
-        setLogs(res.data || []);
+        const res = await api.get(`/workflow-runs/${currentSession.id}`);
+        setLogs(res.data?.logs?.history || []);
       } catch (e) {
         // Silently ignore; live updates will still populate logs
       }

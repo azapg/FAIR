@@ -1,36 +1,47 @@
-from typing import Optional, List
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-from typing_extensions import deprecated
-
-from fair_platform.backend.api.deprecation import (
-    LEGACY_SDK_DEPRECATION_MESSAGE,
-    apply_legacy_sdk_deprecation_headers,
-)
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.api.schema.plugin import RuntimePlugin
 from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.models import User
-from fair_platform.sdk import (
-    list_plugins,
-    PluginMeta,
-    PluginType,
+from fair_platform.backend.services.extension_catalog import (
+    get_registered_plugin,
+    list_registered_plugins,
 )
+from fair_platform.backend.services.extension_registry import LocalExtensionRegistry
+from fair_platform.extension_sdk.contracts.plugin import PluginType
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[PluginMeta])
-@deprecated(LEGACY_SDK_DEPRECATION_MESSAGE)
-def list_all_plugins(
-        response: Response,
-        type_filter: Optional[PluginType] = None, user: User = Depends(get_current_user)
-):
-    apply_legacy_sdk_deprecation_headers(response)
+def get_extension_registry(request: Request) -> LocalExtensionRegistry:
+    return request.app.state.extension_registry
 
+
+@router.get("/", response_model=list[RuntimePlugin])
+async def list_all_plugins(
+    type_filter: Optional[PluginType] = None,
+    user: User = Depends(get_current_user),
+    registry: LocalExtensionRegistry = Depends(get_extension_registry),
+):
     if not has_capability(user, "list_plugins"):
         raise HTTPException(status_code=403, detail="Not authorized to list plugins")
-    plugins = list_plugins(plugin_type=type_filter)
-    return plugins
+    return await list_registered_plugins(registry, plugin_type=type_filter)
+
+
+@router.get("/{plugin_id}", response_model=RuntimePlugin)
+async def get_plugin(
+    plugin_id: str,
+    user: User = Depends(get_current_user),
+    registry: LocalExtensionRegistry = Depends(get_extension_registry),
+):
+    if not has_capability(user, "list_plugins"):
+        raise HTTPException(status_code=403, detail="Not authorized to get plugin")
+    plugin = await get_registered_plugin(registry, plugin_id)
+    if plugin is None:
+        raise HTTPException(status_code=404, detail="Plugin not found")
+    return plugin
 
 
 __all__ = ["router"]

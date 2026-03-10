@@ -499,12 +499,12 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
 
               {workflow &&
                 workflow?.plugins &&
-                workflow?.plugins?.validator && (
+                workflow?.plugins?.reviewer && (
                   <>
                     <DropdownMenuItem
-                      onClick={(_) => workflow.plugins.validator}
+                      onClick={(_) => runPlugin(workflow.plugins.reviewer)}
                     >
-                      {workflow.plugins.validator.settingsSchema.title}
+                      {workflow.plugins.reviewer.settingsSchema.title}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>

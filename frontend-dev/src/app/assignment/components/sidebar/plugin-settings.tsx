@@ -21,6 +21,7 @@ import { shallow } from "zustand/shallow";
 interface PydanticProperty {
   type: "string" | "number" | "boolean" | "object";
   title: string;
+  label?: string;
   description?: string;
   default?: any;
   minimum?: number;
@@ -382,6 +383,12 @@ function createInputComponent(
   onChange: (value: any) => void,
 ) {
   const componentType = getComponentType(property);
+  const label =
+    property.label ||
+    name
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/[_-]/g, " ")
+      .replace(/^\w/, (char) => char.toUpperCase());
 
   if (!componentType) {
     return <UnsupportedField key={name} property={property} name={name} />;
@@ -390,13 +397,17 @@ function createInputComponent(
   const Component = INPUT_COMPONENTS[componentType];
 
   return (
-    <Component
-      key={name}
-      property={property}
-      value={value}
-      onChange={onChange}
-      name={name}
-    />
+    <div key={name} className="space-y-2">
+      <Label htmlFor={name} className="text-sm font-medium">
+        {label}
+      </Label>
+      <Component
+        property={property}
+        value={value}
+        onChange={onChange}
+        name={name}
+      />
+    </div>
   );
 }
 

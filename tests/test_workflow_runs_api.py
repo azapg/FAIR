@@ -8,12 +8,16 @@ from fair_platform.backend.data.models import (
     Assignment,
     Course,
     Submission,
+    SubmissionResult,
     SubmissionStatus,
     Workflow,
     WorkflowRun,
     WorkflowRunStatus,
 )
 from fair_platform.backend.data.models.submitter import Submitter
+from fair_platform.backend.services.job_queue import LocalJobQueue
+from fair_platform.backend.services import workflow_runner as workflow_runner_module
+from fair_platform.backend.services.workflow_runner import WorkflowRunEventBroker, WorkflowRunner
 from tests.conftest import get_auth_token
 
 
@@ -88,6 +92,128 @@ def _create_workflow_run_fixture(test_db, *, instructor_id, runner_id):
 
 
 class TestWorkflowRunsAPI:
+    @pytest.mark.asyncio
+    async def test_workflow_runner_persists_grader_results_into_submission_state(
+        self, test_db, professor_user, monkeypatch
+    ):
+        monkeypatch.setattr(workflow_runner_module, "get_session", test_db)
+        data = _create_workflow_run_fixture(
+            test_db,
+            instructor_id=professor_user.id,
+            runner_id=professor_user.id,
+        )
+        runner = WorkflowRunner(LocalJobQueue(), WorkflowRunEventBroker())
+
+        await runner._persist_submission_results(
+            data["run"].id,
+            {
+                "plugin_type": "grader",
+                "results": [
+                    {
+                        "submission_id": str(data["submission"].id),
+                        "grade": 91,
+                        "feedback": "Strong work",
+                        "metadata": {"source": "test"},
+                    }
+                ],
+            },
+        )
+
+        with test_db() as session:
+            submission = session.get(Submission, data["submission"].id)
+            assert submission is not None
+            assert submission.draft_score == 91
+            assert submission.draft_feedback == "Strong work"
+            assert submission.status == SubmissionStatus.graded
+
+            result = (
+                session.query(SubmissionResult)
+                .filter(
+                    SubmissionResult.submission_id == data["submission"].id,
+                    SubmissionResult.workflow_run_id == data["run"].id,
+                )
+                .first()
+            )
+            assert result is not None
+            assert result.score == 91
+            assert result.feedback == "Strong work"
+
+    def test_create_workflow_run_returns_pending_run_for_step_workflow(
+        self, test_client: TestClient, test_db, professor_user
+    ):
+        with test_db() as session:
+            course = Course(
+                id=uuid4(),
+                name="Pipeline Course",
+                description="Course used for pipeline workflow runs",
+                instructor_id=professor_user.id,
+            )
+            workflow = Workflow(
+                id=uuid4(),
+                course_id=course.id,
+                name="Pipeline Workflow",
+                description="workflow with steps",
+                created_by=professor_user.id,
+                created_at=datetime.utcnow(),
+                steps=[
+                    {
+                        "id": "review-step",
+                        "order": 0,
+                        "pluginType": "reviewer",
+                        "plugin": {
+                            "pluginId": "local.reviewer",
+                            "extensionId": "missing.extension",
+                            "name": "Reviewer",
+                            "pluginType": "reviewer",
+                            "action": "plugin.review",
+                            "settingsSchema": {"title": "Reviewer", "type": "object", "properties": {}},
+                            "settings": {},
+                            "id": "local.reviewer",
+                            "type": "reviewer",
+                            "hash": "missing.extension:local.reviewer",
+                            "source": "missing.extension",
+                        },
+                        "settings": {},
+                    }
+                ],
+            )
+            assignment = Assignment(
+                id=uuid4(),
+                course_id=course.id,
+                title="Pipeline Assignment",
+                description="assignment under test",
+                deadline=None,
+                max_grade={"type": "points", "value": 100},
+            )
+            submitter = Submitter(
+                id=uuid4(),
+                name="Pipeline Student",
+                email="pipeline@example.com",
+                user_id=None,
+            )
+            submission = Submission(
+                id=uuid4(),
+                assignment_id=assignment.id,
+                submitter_id=submitter.id,
+                created_by_id=professor_user.id,
+                submitted_at=datetime.utcnow(),
+                status=SubmissionStatus.submitted,
+            )
+            session.add_all([course, workflow, assignment, submitter, submission])
+            session.commit()
+
+        token = get_auth_token(test_client, professor_user.email)
+        response = test_client.post(
+            "/api/workflow-runs",
+            json={"workflowId": str(workflow.id), "submissionIds": [str(submission.id)]},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 202
+        body = response.json()
+        assert body["workflowId"] == str(workflow.id)
+        assert body["status"] == "pending"
+        assert body["stepStates"] == []
+
     def test_professor_can_list_course_runs(self, test_client: TestClient, test_db, professor_user, admin_user):
         data = _create_workflow_run_fixture(
             test_db, instructor_id=professor_user.id, runner_id=admin_user.id

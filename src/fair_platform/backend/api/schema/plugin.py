@@ -1,30 +1,31 @@
-from typing import Optional, Any, Dict
+from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from fair_platform.sdk import PluginType
 from fair_platform.backend.api.schema.utils import schema_config
+from fair_platform.extension_sdk.contracts.plugin import PluginType
 
 
 class PluginBase(BaseModel):
     model_config = schema_config
-    
-    id: str
+
+    plugin_id: str
+    extension_id: str
     name: str
-    author: str
-    author_email: Optional[str] = None
-    version: str
-    hash: str
-    source: str
-    settings_schema: Optional[Dict[str, Any]] = None
-    type: PluginType
+    plugin_type: PluginType
+    action: str
+    description: str | None = None
+    version: str | None = None
+    settings_schema: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    id: str | None = None
+    type: PluginType | None = None
+    hash: str | None = None
+    source: str | None = None
 
 
 class RuntimePlugin(PluginBase):
-    settings: Optional[Dict[str, Any]] = None
+    settings: dict[str, Any] = Field(default_factory=dict)
 
 
-__all__ = [
-    "PluginBase",
-    "RuntimePlugin"
-]
+__all__ = ["PluginBase", "RuntimePlugin", "PluginType"]

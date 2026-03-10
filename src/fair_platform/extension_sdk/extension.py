@@ -14,6 +14,7 @@ from fair_platform.extension_sdk.auth import build_extension_auth_headers
 from fair_platform.extension_sdk.client import build_platform_client
 from fair_platform.extension_sdk.context import JobContext
 from fair_platform.extension_sdk.contracts.extension import ExtensionRead, ExtensionRegisterRequest
+from fair_platform.extension_sdk.contracts.plugin import PluginDescriptor
 
 
 class FairExtension:
@@ -30,6 +31,7 @@ class FairExtension:
         intents: list[str] | None = None,
         capabilities: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
+        plugins: list[PluginDescriptor] | None = None,
     ):
         self.extension_id = extension_id
         self.platform_url = platform_url.rstrip("/")
@@ -41,6 +43,7 @@ class FairExtension:
         self._intents = list(intents or [])
         self._capabilities = list(capabilities or [])
         self._metadata = dict(metadata or {})
+        self._plugins = list(plugins or [])
         self._actions: dict[str, tuple[Callable[..., Awaitable[Any]], type[BaseModel]]] = {}
 
         @asynccontextmanager
@@ -94,7 +97,7 @@ class FairExtension:
             requested_scopes=requested_scopes if requested_scopes is not None else self._requested_scopes,
             intents=intents if intents is not None else self._intents,
             capabilities=capabilities if capabilities is not None else self._capabilities,
-            metadata=metadata if metadata is not None else self._metadata,
+            metadata=self._build_metadata(metadata),
         )
 
         owns_client = client is None
@@ -110,6 +113,16 @@ class FairExtension:
         finally:
             if owns_client:
                 await http.aclose()
+
+    def _build_metadata(self, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+        resolved = dict(self._metadata)
+        if metadata:
+            resolved.update(metadata)
+        if self._plugins:
+            resolved["plugins"] = [
+                plugin.model_dump(by_alias=True, mode="json") for plugin in self._plugins
+            ]
+        return resolved
 
     async def _execute(self, job_id: str, action_name: str, raw_params: dict[str, Any]) -> None:
         async with JobContext(job_id=job_id, platform_url=self.platform_url, credentials=self.credentials) as ctx:

@@ -11,10 +11,12 @@ from fair_platform.extension_sdk.contracts.job import (
     JobUpdateProgress,
     JobUpdateRequest,
     JobUpdateResult,
+    JobUpdateSubmissionResult,
     JobUpdateToken,
     LogPayload,
     ProgressPayload,
     ResultPayload,
+    SubmissionResultPayload,
     TokenPayload,
 )
 
@@ -71,6 +73,22 @@ class JobContext:
         await self._post_update(
             JobUpdateRequest(
                 update=JobUpdateResult(event="result", payload=ResultPayload(data=data)),
+                status=status,
+            )
+        )
+
+    async def submission_result(
+        self,
+        submission_id: str,
+        data: dict[str, Any],
+        status: str | None = None,
+    ) -> None:
+        await self._post_update(
+            JobUpdateRequest(
+                update=JobUpdateSubmissionResult(
+                    event="submission_result",
+                    payload=SubmissionResultPayload(submission_id=submission_id, data=data),
+                ),
                 status=status,
             )
         )
