@@ -7,13 +7,13 @@ from sqlalchemy.orm import Session
 from fastapi.responses import FileResponse
 
 from fair_platform.backend.data.database import session_dependency
-from fair_platform.backend.data.models.artifact import AccessLevel, ArtifactStatus
+from fair_platform.backend.data.models.artifact import AccessLevel, ArtifactStatus, Artifact
 from fair_platform.backend.api.schema.artifact import (
     ArtifactRead,
     ArtifactUpdate,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.core.security.dependencies import require_capability
+from fair_platform.backend.core.security.dependencies import require_capability, require_extension_client
 from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
@@ -111,6 +111,45 @@ def download_artifact(
     manager = get_artifact_manager(db)
 
     artifact = manager.get_artifact(artifact_id, current_user)
+    if not artifact.storage_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artifact file not found",
+        )
+
+    file_path = Path(artifact.storage_path)
+    if not file_path.is_absolute():
+        file_path = manager.storage.uploads_dir / file_path
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artifact file not found",
+        )
+
+    return FileResponse(
+        file_path,
+        media_type=artifact.mime or "application/octet-stream",
+        filename=file_path.name,
+    )
+
+
+@router.get("/extensions/{artifact_id}/download")
+def download_artifact_for_extension(
+    artifact_id: UUID,
+    db: Session = Depends(session_dependency),
+    _extension_client: object = Depends(require_extension_client(("jobs:read",))),
+):
+    """
+    Allow extensions to download artifacts for processing.
+    
+    TODO: This endpoint bypasses user-level permission checks. This is just a temporary solution, https://github.com/azapg/FAIR/pull/178 should help us implement a more robust permissions system that can be enforced here. 
+    """
+    manager = get_artifact_manager(db)
+
+    artifact = db.get(Artifact, artifact_id)
+    if not artifact:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found")
     if not artifact.storage_path:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
