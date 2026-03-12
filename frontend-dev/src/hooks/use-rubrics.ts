@@ -106,7 +106,7 @@ const generateRubric = async (
 
     void streamSse(`/api/jobs/${jobId}/stream`, {
       signal: controller.signal,
-      timeoutMs: 60000,
+      timeoutMs: 180000,
       onEvent: ({ event, data: eventData }) => {
         try {
           const parsed = JSON.parse(eventData) as Record<string, unknown>;

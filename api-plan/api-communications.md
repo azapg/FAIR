@@ -68,9 +68,7 @@ To validate the communication layer end-to-end today:
    - `FAIR_ENABLE_JOB_DISPATCHER=true fair serve --headless`
 2. Start a mock extension:
    - `uv run python scripts/mock_extension.py --platform-url http://127.0.0.1:8000 --id mock.echo --port 9101 --auto-register`
-3. Open the frontend Jobs Lab page:
-   - `/jobs-lab`
-4. Create a job targeting `mock.echo`, then inspect:
+3. Create a job targeting `mock.echo` via the API, then inspect:
    - `/api/jobs/{job_id}` state transitions
    - `/api/jobs/{job_id}/stream` SSE updates
 
