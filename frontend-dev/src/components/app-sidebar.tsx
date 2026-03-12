@@ -35,7 +35,6 @@ import {
   SettingsIcon,
   MessageCircleQuestionMarkIcon,
   ClipboardList,
-  FlaskConical,
   Puzzle,
 } from "lucide-react";
 import {
@@ -169,16 +168,6 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
-      <IfSetting setting="ui.devMode" scope="local-first">
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild tooltip="Jobs Lab">
-            <Link to="/jobs-lab">
-              <FlaskConical />
-              <span>Jobs Lab</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </IfSetting>
       <SidebarMenuItem>
         <SidebarMenuButton tooltip={t("nav.settings")} onClick={onSettingsClick}>
           <SettingsIcon />
