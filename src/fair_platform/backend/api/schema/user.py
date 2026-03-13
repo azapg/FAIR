@@ -13,6 +13,7 @@ class UserBase(BaseModel):
     name: str
     email: EmailStr
     role: UserRole = UserRole.user
+    is_verified: bool = False
 
     @field_validator("role", mode="before")
     @classmethod

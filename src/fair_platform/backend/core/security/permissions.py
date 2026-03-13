@@ -151,4 +151,5 @@ def auth_user_payload(user: User) -> dict[str, Any]:
         "role": coerce_user_role(user.role),
         "capabilities": sorted(capabilities_for_role(user.role)),
         "settings": settings,
+        "is_verified": user.is_verified,
     }

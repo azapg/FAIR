@@ -39,3 +39,19 @@ def get_email_enabled() -> bool:
         default=EMAIL_ENABLED,
     )
 
+
+BASE_URL = (
+    os.getenv("FAIR_BASE_URL")
+    or os.getenv("BASE_URL")
+    or "http://localhost:3000"
+).strip().rstrip("/")
+
+
+def get_base_url() -> str:
+    raw = (
+        os.getenv("FAIR_BASE_URL")
+        or os.getenv("BASE_URL")
+        or BASE_URL
+    )
+    return raw.strip().rstrip("/")
+

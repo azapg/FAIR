@@ -36,22 +36,18 @@ class Mailer:
         self.provider = provider
         self.template_env = template_env
 
-    async def send_password_reset(self, user: Any, token: str) -> None:
+    async def send_password_reset(self, user: Any, reset_url: str) -> None:
         template = self.template_env.get_template("forgot_password.html")
-        html_content = template.render(user=user, token=token)
+        html_content = template.render(user=user, reset_url=reset_url)
         await self.provider.send_email(
             to=str(user.email),
             subject="Reset your FAIR password",
             html_content=html_content,
         )
 
-    async def send_verification(self, user: Any, token: str) -> None:
-        verification_url = f"https://example.invalid/verify?token={token}"
-        html_content = (
-            "<h1>Verify your email</h1>"
-            f"<p>Hello {user.name}, use this token to verify your account: <code>{token}</code>.</p>"
-            f"<p>Verification link: <a href=\"{verification_url}\">{verification_url}</a></p>"
-        )
+    async def send_verification(self, user: Any, verification_url: str) -> None:
+        template = self.template_env.get_template("verify_email.html")
+        html_content = template.render(user=user, verification_url=verification_url)
         await self.provider.send_email(
             to=str(user.email),
             subject="Verify your FAIR account",
