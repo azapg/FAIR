@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta, timezone
+from secrets import token_urlsafe
 from uuid import UUID, uuid4
 
 from fair_platform.backend.api.schema.user import AuthUserRead, UserCreate

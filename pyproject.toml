@@ -31,6 +31,7 @@ dependencies = [
     "bcrypt>=4.0.0",
     "alembic>=1.18.3",
     "openai>=1.0.0",
+    "zai-sdk>=0.2.2",
 ]
 
 [project.optional-dependencies]
