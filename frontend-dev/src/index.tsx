@@ -4,6 +4,8 @@ import CoursesPage from "@/app/courses/page";
 import LoginPage from "@/app/login/page";
 import RegisterPage from "@/app/register/page";
 import ForgotPasswordPage from "@/app/forgot-password/page";
+import ResetPasswordPage from "@/app/reset-password/page";
+import VerifyEmailPage from "@/app/verify-email/page";
 import CourseDetailPage from "@/app/courses/course/page";
 import AssignmentPage from "@/app/assignment/page";
 import RubricsPage from "@/app/rubrics/page";
@@ -28,6 +30,8 @@ export function App() {
       <Route path={"login"} element={<LoginPage/>}/>
       <Route path={"register"} element={<RegisterPage/>}/>
       <Route path={"forgot-password"} element={<ForgotPasswordPage/>}/>
+      <Route path={"reset-password"} element={<ResetPasswordPage/>}/>
+      <Route path={"verify-email"} element={<VerifyEmailPage/>}/>
 
       <Route path="*" element={<div>Not Found</div>}/>
     </Routes>

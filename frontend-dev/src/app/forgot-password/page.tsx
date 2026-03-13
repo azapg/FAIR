@@ -59,6 +59,16 @@ export default function ForgotPasswordPage() {
                 {t('auth.openOutlook')} <ExternalLink className="ml-2 h-4 w-4" />
               </a>
             </Button>
+            <Button asChild variant="outline" className="w-full">
+              <a href="https://mail.yahoo.com" target="_blank" rel="noopener noreferrer">
+                {t('auth.openYahoo')} <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <a href="https://mail.proton.me" target="_blank" rel="noopener noreferrer">
+                {t('auth.openProton')} <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
           </div>
 
           <p className="text-sm text-muted-foreground">

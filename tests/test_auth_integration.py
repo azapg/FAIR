@@ -1,8 +1,9 @@
 from uuid import uuid4
+from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
-from fair_platform.backend.api.routers.auth import hash_password
+from fair_platform.backend.api.routers.auth import _create_action_token, hash_password
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.user import UserRole
 from tests.conftest import create_sample_user_data
@@ -403,3 +404,77 @@ class TestAuthenticationFlow:
         )
         assert response.status_code == 400
         assert response.json()["detail"] == "Email services are disabled on this instance"
+
+    def test_verify_email_confirm_marks_user_verified(self, test_client: TestClient, test_db):
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="Verify Me",
+                email=f"verify-{uuid4()}@test.com",
+                role=UserRole.user.value,
+                password_hash=hash_password("test_password_123"),
+                is_verified=False,
+            )
+            session.add(user)
+            session.commit()
+            token = _create_action_token(
+                user=user,
+                purpose="verify_email",
+                expires_delta=timedelta(hours=1),
+            )
+
+        response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        assert response.status_code == 200
+        assert response.json()["detail"] == "Email verified successfully"
+
+        with test_db() as session:
+            refreshed = session.get(User, user.id)
+            assert refreshed is not None
+            assert refreshed.is_verified is True
+
+    def test_reset_password_confirm_updates_password_hash(self, test_client: TestClient, test_db):
+        email = f"reset-{uuid4()}@test.com"
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="Reset Me",
+                email=email,
+                role=UserRole.user.value,
+                password_hash=hash_password("old_password"),
+                is_verified=True,
+            )
+            session.add(user)
+            session.commit()
+            token = _create_action_token(
+                user=user,
+                purpose="password_reset",
+                expires_delta=timedelta(minutes=30),
+            )
+
+        reset_response = test_client.post(
+            "/api/auth/reset-password/confirm",
+            json={"token": token, "password": "new_password_123"},
+        )
+        assert reset_response.status_code == 200
+        assert reset_response.json()["detail"] == "Password reset successful"
+
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": email, "password": "new_password_123"},
+        )
+        assert login_response.status_code == 200
+
+    def test_verify_and_reset_confirm_reject_invalid_tokens(self, test_client: TestClient):
+        verify_response = test_client.post(
+            "/api/auth/verify-email/confirm",
+            json={"token": "invalid-token"},
+        )
+        assert verify_response.status_code == 400
+        assert verify_response.json()["detail"] == "Invalid or expired token"
+
+        reset_response = test_client.post(
+            "/api/auth/reset-password/confirm",
+            json={"token": "invalid-token", "password": "new_password_123"},
+        )
+        assert reset_response.status_code == 400
+        assert reset_response.json()["detail"] == "Invalid or expired token"
