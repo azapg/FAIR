@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
 from fair_platform.backend.data.models.user import UserRole
-from fair_platform.backend.core.config import get_email_enabled
+from fair_platform.backend.core.config import get_base_url, get_email_enabled
 from fair_platform.backend.core.security.permissions import auth_user_payload
 from fair_platform.backend.api.schema.casing import to_camel_keys
 from fair_platform.backend.services.mailer import Mailer, get_mailer
@@ -31,10 +31,22 @@ ALGORITHM = "HS256"
 DEFAULT_TOKEN_EXPIRE_HOURS = 24
 REMEMBER_ME_TOKEN_EXPIRE_DAYS = 31
 EMAIL_DISABLED_MESSAGE = "Email services are disabled on this instance"
+TOKEN_PURPOSE_PASSWORD_RESET = "password_reset"
+TOKEN_PURPOSE_VERIFY_EMAIL = "verify_email"
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60
+VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES = 30
 
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
+
+
+class TokenConfirmRequest(BaseModel):
+    token: str
+
+
+class ResetPasswordConfirmRequest(TokenConfirmRequest):
+    password: str
 
 
 def hash_password(password: str) -> str:
@@ -63,6 +75,51 @@ def create_access_token(data: dict, remember_me: bool = False):
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def _create_action_token(
+    *,
+    user: User,
+    purpose: str,
+    expires_delta: timedelta,
+) -> str:
+    payload = {
+        "sub": str(user.id),
+        "email": str(user.email),
+        "purpose": purpose,
+        "exp": datetime.now(timezone.utc) + expires_delta,
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def _decode_action_token(token: str, *, expected_purpose: str) -> dict:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        ) from exc
+
+    if payload.get("purpose") != expected_purpose:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+    if not payload.get("sub") or not payload.get("email"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+    return payload
+
+
+def _build_reset_url(token: str) -> str:
+    return f"{get_base_url()}/reset-password?token={token}"
+
+
+def _build_verify_url(token: str) -> str:
+    return f"{get_base_url()}/verify-email?token={token}"
 
 
 def get_current_user(
@@ -108,7 +165,15 @@ async def register(
     db.refresh(user)
 
     if get_email_enabled() and not user.is_verified:
-        await mailer.send_verification(user=user, token=token_urlsafe(32))
+        verification_token = _create_action_token(
+            user=user,
+            purpose=TOKEN_PURPOSE_VERIFY_EMAIL,
+            expires_delta=timedelta(minutes=VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES),
+        )
+        await mailer.send_verification(
+            user=user,
+            verification_url=_build_verify_url(verification_token),
+        )
 
     access_token = create_access_token(
         {"sub": str(user.id), "role": user.role},
@@ -169,7 +234,15 @@ async def forgot_password(
 
     user = db.query(User).filter(User.email == payload.email).first()
     if user:
-        await mailer.send_password_reset(user=user, token=token_urlsafe(32))
+        reset_token = _create_action_token(
+            user=user,
+            purpose=TOKEN_PURPOSE_PASSWORD_RESET,
+            expires_delta=timedelta(minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES),
+        )
+        await mailer.send_password_reset(
+            user=user,
+            reset_url=_build_reset_url(reset_token),
+        )
 
     return {"detail": "If an account exists for this email, a reset message has been sent"}
 
@@ -188,5 +261,76 @@ async def resend_verification_email(
     if current_user.is_verified:
         return {"detail": "Account is already verified"}
 
-    await mailer.send_verification(user=current_user, token=token_urlsafe(32))
+    verification_token = _create_action_token(
+        user=current_user,
+        purpose=TOKEN_PURPOSE_VERIFY_EMAIL,
+        expires_delta=timedelta(minutes=VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES),
+    )
+    await mailer.send_verification(
+        user=current_user,
+        verification_url=_build_verify_url(verification_token),
+    )
     return {"detail": "Verification email sent"}
+
+
+@router.post("/verify-email/confirm")
+async def verify_email_confirm(
+    payload: TokenConfirmRequest,
+    db: Session = Depends(session_dependency),
+):
+    token_data = _decode_action_token(
+        payload.token,
+        expected_purpose=TOKEN_PURPOSE_VERIFY_EMAIL,
+    )
+    user = db.get(User, UUID(token_data["sub"]))
+    if user is None or str(user.email) != token_data["email"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+
+    if user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Account is already verified or link has already been used.",
+        )
+
+    user.is_verified = True
+    db.add(user)
+    db.commit()
+
+    access_token = create_access_token(
+        {"sub": str(user.id), "role": user.role},
+        remember_me=False
+    )
+    auth_user = auth_user_payload(user)
+    auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
+
+    return {
+        "detail": "Email verified successfully",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": auth_user,
+    }
+
+
+@router.post("/reset-password/confirm")
+async def reset_password_confirm(
+    payload: ResetPasswordConfirmRequest,
+    db: Session = Depends(session_dependency),
+):
+    token_data = _decode_action_token(
+        payload.token,
+        expected_purpose=TOKEN_PURPOSE_PASSWORD_RESET,
+    )
+    user = db.get(User, UUID(token_data["sub"]))
+    if user is None or str(user.email) != token_data["email"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired token",
+        )
+
+    user.password_hash = hash_password(payload.password)
+    db.add(user)
+    db.commit()
+    return {"detail": "Password reset successful"}

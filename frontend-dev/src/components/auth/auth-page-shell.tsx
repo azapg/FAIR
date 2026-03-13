@@ -7,7 +7,7 @@ export function AuthPageShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <main className="flex min-h-[calc(100vh-64px)] items-center justify-center p-6">
-        <div className="w-full max-w-md rounded-xl p-6 shadow-sm">
+        <div className="w-full max-w-md rounded-xl p-6">
           {children}
         </div>
       </main>

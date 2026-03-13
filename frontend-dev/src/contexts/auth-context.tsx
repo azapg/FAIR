@@ -14,6 +14,7 @@ export type AuthUser = {
   role: AuthUserRole
   capabilities: string[]
   settings: Record<string, unknown>
+  isVerified: boolean
 }
 
 type LoginInput = { username: string; password: string; remember_me?: boolean }
@@ -28,6 +29,7 @@ type AuthContextValue = {
   register: (input: RegisterInput) => Promise<void>
   logout: () => void
   hasCapability: (action: string) => boolean
+  setSession: (token: string, user: Partial<AuthUser> & { role?: string, isVerified?: boolean }) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -40,7 +42,7 @@ const normalizeRole = (role: string): AuthUserRole => {
   return AuthUserRole.USER
 }
 
-const normalizeUser = (raw: Partial<AuthUser> & { role?: string }): AuthUser => ({
+const normalizeUser = (raw: Partial<AuthUser> & { role?: string, isVerified?: boolean }): AuthUser => ({
   id: raw.id ?? '',
   name: raw.name ?? '',
   email: raw.email ?? '',
@@ -50,6 +52,7 @@ const normalizeUser = (raw: Partial<AuthUser> & { role?: string }): AuthUser => 
     raw.settings && typeof raw.settings === 'object' && !Array.isArray(raw.settings)
       ? raw.settings
       : {},
+  isVerified: raw.isVerified ?? false,
 })
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -185,6 +188,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     persist(null, null)
   }, [persist])
 
+  const setSession = useCallback((newToken: string, rawUser: Partial<AuthUser> & { role?: string, isVerified?: boolean }) => {
+    const newUser = normalizeUser(rawUser)
+    setToken(newToken)
+    setUser(newUser)
+    persist(newToken, newUser)
+  }, [persist])
+
   const hasCapability = useCallback((action: string) => {
     return !!user?.capabilities?.includes(action)
   }, [user])
@@ -198,7 +208,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     register,
     logout,
     hasCapability,
-  }), [user, token, loading, login, register, logout, hasCapability])
+    setSession,
+  }), [user, token, loading, login, register, logout, hasCapability, setSession])
 
   return (
     <AuthContext.Provider value={value}>
