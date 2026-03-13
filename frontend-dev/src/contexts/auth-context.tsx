@@ -29,6 +29,7 @@ type AuthContextValue = {
   register: (input: RegisterInput) => Promise<void>
   logout: () => void
   hasCapability: (action: string) => boolean
+  setSession: (token: string, user: Partial<AuthUser> & { role?: string, isVerified?: boolean }) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -187,6 +188,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     persist(null, null)
   }, [persist])
 
+  const setSession = useCallback((newToken: string, rawUser: Partial<AuthUser> & { role?: string, isVerified?: boolean }) => {
+    const newUser = normalizeUser(rawUser)
+    setToken(newToken)
+    setUser(newUser)
+    persist(newToken, newUser)
+  }, [persist])
+
   const hasCapability = useCallback((action: string) => {
     return !!user?.capabilities?.includes(action)
   }, [user])
@@ -200,7 +208,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     register,
     logout,
     hasCapability,
-  }), [user, token, loading, login, register, logout, hasCapability])
+    setSession,
+  }), [user, token, loading, login, register, logout, hasCapability, setSession])
 
   return (
     <AuthContext.Provider value={value}>

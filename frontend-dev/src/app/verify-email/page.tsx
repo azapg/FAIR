@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 import { AuthPageShell } from '@/components/auth/auth-page-shell'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/auth-context'
 
 type VerifyStatus = 'loading' | 'success' | 'error'
 
@@ -14,6 +15,7 @@ export default function VerifyEmailPage() {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') ?? ''
+  const { setSession } = useAuth()
 
   const [status, setStatus] = React.useState<VerifyStatus>('loading')
   const [error, setError] = React.useState<string | null>(null)
@@ -28,8 +30,11 @@ export default function VerifyEmailPage() {
     let active = true
     const verify = async () => {
       try {
-        await api.post('/auth/verify-email/confirm', { token })
+        const response = await api.post('/auth/verify-email/confirm', { token })
         if (!active) return
+        if (response.data?.access_token && response.data?.user) {
+          setSession(response.data.access_token, response.data.user)
+        }
         setStatus('success')
       } catch (err) {
         if (!active) return
@@ -65,7 +70,7 @@ export default function VerifyEmailPage() {
           <h1 className="text-2xl font-bold">{t('auth.verifyEmailSuccessTitle')}</h1>
           <p className="text-sm text-muted-foreground">{t('auth.verifyEmailSuccessDescription')}</p>
           <Button asChild className="w-full">
-            <Link to="/login">{t('auth.backToLogin')}</Link>
+            <Link to="/">Continue</Link>
           </Button>
         </div>
       </AuthPageShell>
