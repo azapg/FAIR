@@ -31,13 +31,34 @@ EMAIL_ENABLED = _parse_bool_env(
     os.getenv("FAIR_EMAIL_ENABLED", os.getenv("EMAIL_ENABLED")),
     default=False,
 )
+RESEND_API_KEY = (
+    os.getenv("FAIR_RESEND_API_KEY")
+    or os.getenv("RESEND_API_KEY")
+    or None
+)
+if RESEND_API_KEY:
+    EMAIL_ENABLED = True
 
 
 def get_email_enabled() -> bool:
+    if get_resend_api_key():
+        return True
     return _parse_bool_env(
         os.getenv("FAIR_EMAIL_ENABLED", os.getenv("EMAIL_ENABLED")),
         default=EMAIL_ENABLED,
     )
+
+
+def get_resend_api_key() -> str | None:
+    raw = (
+        os.getenv("FAIR_RESEND_API_KEY")
+        or os.getenv("RESEND_API_KEY")
+        or RESEND_API_KEY
+    )
+    if raw is None:
+        return None
+    normalized = raw.strip()
+    return normalized or None
 
 
 BASE_URL = (

@@ -1,10 +1,111 @@
 <!doctype html>
 <html lang="en">
-  <body>
-    <h1>Verify your email</h1>
-    <p>Hello {{ user.name }},</p>
-    <p>Thanks for registering on FAIR. Verify your account by opening this link:</p>
-    <p><a href="{{ verification_url }}">{{ verification_url }}</a></p>
-    <p>If you did not create this account, you can ignore this email.</p>
-  </body>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    </head>
+    <body style="margin: 0; padding: 0; background: oklch(93.6% 0.032 17.717)">
+        <table
+            role="presentation"
+            width="100%"
+            border="0"
+            cellspacing="0"
+            cellpadding="0"
+            style="
+                font-family:
+                    -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;,
+                    Roboto, Helvetica, Arial, sans-serif;
+                -webkit-font-smoothing: antialiased;
+                line-height: 1.6;
+            "
+        >
+            <tr>
+                <td align="center" style="padding: 40px 24px">
+                    <table
+                        role="presentation"
+                        width="100%"
+                        max-width="500"
+                        border="0"
+                        cellspacing="0"
+                        cellpadding="0"
+                        style="
+                            max-width: 500px;
+                            padding: 40px;
+                            border-radius: 8px;
+                            text-align: center;
+                            margin: 0 auto;
+                        "
+                    >
+                        <tr>
+                            <td>
+                                <h1
+                                    style="
+                                        font-size: 28px;
+                                        font-weight: 500;
+                                        margin-top: 0;
+                                        margin-bottom: 24px;
+                                        color: #111827;
+                                    "
+                                >
+                                    Verify your email
+                                </h1>
+
+                                <p
+                                    style="
+                                        font-size: 16px;
+                                        color: #4b5563;
+                                        margin-top: 0;
+                                        margin-bottom: 16px;
+                                    "
+                                >
+                                    Hello {{ user.name }},
+                                </p>
+
+                                <p
+                                    style="
+                                        font-size: 16px;
+                                        color: #4b5563;
+                                        margin-top: 0;
+                                        margin-bottom: 24px;
+                                    "
+                                >
+                                    Thanks for registering on FAIR. Please
+                                    verify your account by clicking the button
+                                    below.
+                                </p>
+
+                                <a
+                                    href="{{ verification_url }}"
+                                    style="
+                                        display: inline-block;
+                                        padding: 12px 28px;
+                                        background-color: #111827;
+                                        color: #ffffff;
+                                        text-decoration: none;
+                                        border-radius: 6px;
+                                        font-weight: 500;
+                                        font-size: 15px;
+                                        margin-bottom: 32px;
+                                    "
+                                    >Verify Account</a
+                                >
+
+                                <p
+                                    style="
+                                        font-size: 13px;
+                                        color: #9ca3af;
+                                        margin-top: 0;
+                                        margin-bottom: 0;
+                                    "
+                                >
+                                    If you did not create this account, you can
+                                    safely ignore this email.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
 </html>
