@@ -11,6 +11,7 @@ import { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
 import { IfSetting } from '@/components/if-setting'
 import { AuthPageShell } from '@/components/auth/auth-page-shell'
+import api from '@/lib/api'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -19,6 +20,9 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [rememberMe, setRememberMe] = React.useState(false)
+  const [showResendVerification, setShowResendVerification] = React.useState(false)
+  const [resendingVerification, setResendingVerification] = React.useState(false)
+  const [resendVerificationSent, setResendVerificationSent] = React.useState(false)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,7 +32,37 @@ export default function LoginPage() {
     } catch (err) {
       const axiosError = err as AxiosError<{ detail?: string }>
       const message = axiosError.response?.data?.detail || t('auth.unableToLogin')
+      const isVerificationRequired =
+        axiosError.response?.status === 403 &&
+        typeof message === 'string' &&
+        message.toLowerCase().includes('verify your email')
+      if (isVerificationRequired) {
+        setShowResendVerification(true)
+        setResendVerificationSent(false)
+      } else {
+        setShowResendVerification(false)
+      }
       toast.error(t('auth.loginFailed'), { description: message })
+    }
+  }
+
+  async function onResendVerification() {
+    if (!email.trim()) {
+      toast.error(t('auth.loginFailed'), { description: t('auth.enterEmailForResend') })
+      return
+    }
+    setResendingVerification(true)
+    try {
+      await api.post('/auth/resend-verification-request', { email })
+      setResendVerificationSent(true)
+      toast.success(t('auth.resendVerificationSent'))
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail?: string }>
+      toast.error(t('auth.unableToResendVerification'), {
+        description: axiosError.response?.data?.detail || t('auth.tryAgainLater'),
+      })
+    } finally {
+      setResendingVerification(false)
     }
   }
 
@@ -96,6 +130,25 @@ export default function LoginPage() {
               {loading ? t('common.wait') : t('auth.signIn')}
             </Button>
           </Field>
+          {showResendVerification && (
+            <Field>
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+                <p className="mb-3 text-foreground">{t('auth.verifyRequiredLoginHint')}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={resendingVerification}
+                  onClick={onResendVerification}
+                >
+                  {resendingVerification ? t('common.wait') : t('auth.resendVerificationAction')}
+                </Button>
+                {resendVerificationSent && (
+                  <p className="mt-2 text-muted-foreground">{t('auth.resendVerificationSentHint')}</p>
+                )}
+              </div>
+            </Field>
+          )}
           <Field>
             <FieldDescription className="text-center">
               {t('auth.noAccount')}{' '}
