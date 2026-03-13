@@ -29,6 +29,7 @@ from fair_platform.backend.api.routers.rubrics import router as rubrics_router
 from fair_platform.backend.api.routers.enrollments import router as enrollments_router
 from fair_platform.backend.api.routers.jobs import router as jobs_router
 from fair_platform.backend.api.routers.extensions import router as extensions_router
+from fair_platform.backend.api.routers.system import router as system_router
 from fair_platform.backend.services.extension_registry import LocalExtensionRegistry
 from fair_platform.backend.services.job_dispatcher import JobDispatcher
 from fair_platform.backend.services.job_queue import create_job_queue
@@ -226,6 +227,7 @@ app.include_router(rubrics_router, prefix="/api/rubrics", tags=["rubrics"])
 app.include_router(enrollments_router, prefix="/api/enrollments", tags=["enrollments"])
 app.include_router(jobs_router, prefix="/api/jobs", tags=["jobs"])
 app.include_router(extensions_router, prefix="/api/extensions", tags=["extensions"])
+app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
 
 
 @app.get("/health")
