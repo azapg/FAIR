@@ -2,12 +2,15 @@ import * as React from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
+import { IfSetting } from '@/components/if-setting'
+import { AuthPageShell } from '@/components/auth/auth-page-shell'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -30,67 +33,79 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-full flex items-center justify-center p-6">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl">{t('auth.welcomeBack')}</CardTitle>
-          <CardDescription className="font-sans">{t('auth.loginToFair')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">{t('auth.email')}</Label>
-              <Input
-                id="email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder={t('auth.emailPlaceholder')}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-              />
+    <AuthPageShell>
+      <form onSubmit={onSubmit} className="flex flex-col gap-6">
+        <FieldGroup>
+          <div className="flex flex-col items-center gap-1 text-center">
+            <h1 className="text-2xl font-bold">{t('auth.welcomeBack')}</h1>
+            <p className="text-sm text-balance text-muted-foreground">
+              {t('auth.loginToFair')}
+            </p>
+          </div>
+          <Field>
+            <FieldLabel htmlFor="email">{t('auth.email')}</FieldLabel>
+            <Input
+              id="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder={t('auth.emailPlaceholder')}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </Field>
+          <Field>
+            <div className="flex items-center">
+              <FieldLabel htmlFor="password">{t('auth.password')}</FieldLabel>
+              <IfSetting setting="features.emailEnabled" scope="local">
+                <Link
+                  to="/forgot-password"
+                  className="ml-auto text-sm underline-offset-4 hover:underline"
+                >
+                  {t('auth.forgotPassword')}
+                </Link>
+              </IfSetting>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">{t('auth.password')}</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </Field>
+          <Field>
             <div className="flex items-center gap-2">
-              <input
+              <Checkbox
                 id="remember-me"
-                type="checkbox"
                 checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
+                onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
                 disabled={loading}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer">
                 {t('auth.rememberMe')}
               </Label>
             </div>
-            <Button type="submit" disabled={loading}>
+          </Field>
+          <Field>
+            <Button type="submit" disabled={loading} className="w-full">
               {loading ? t('common.wait') : t('auth.signIn')}
             </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="justify-center">
-          <p className="text-sm text-muted-foreground">
-            {t('auth.noAccount')}{' '}
-            <Link to="/register" className="underline underline-offset-4">
-              {t('auth.createOne')}
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
-    </div>
+          </Field>
+          <Field>
+            <FieldDescription className="text-center">
+              {t('auth.noAccount')}{' '}
+              <Link to="/register" className="underline underline-offset-4">
+                {t('auth.createOne')}
+              </Link>
+            </FieldDescription>
+          </Field>
+        </FieldGroup>
+      </form>
+    </AuthPageShell>
   )
 }

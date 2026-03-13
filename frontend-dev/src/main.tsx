@@ -12,7 +12,7 @@ import "@/i18n";
 
 function MainLayout() {
   const location = useLocation();
-  const isAuthPage = ["/login", "/register"].includes(location.pathname);
+  const isAuthPage = ["/login", "/register", "/forgot-password"].includes(location.pathname);
 
   if (isAuthPage) {
     return (

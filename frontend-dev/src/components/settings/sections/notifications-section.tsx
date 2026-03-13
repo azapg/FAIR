@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { SettingsSectionCard } from "@/components/settings/sections/settings-section-card";
+import { IfSetting } from "@/components/if-setting";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -63,8 +64,7 @@ export function NotificationsSection() {
             {group.items.map((item) => {
               const path = `notifications.${item.key}`;
               const enabled = Boolean(getValueAtPath(settings, path) ?? false);
-
-              return (
+              const row = (
                 <div key={item.key} className="flex items-center justify-between py-1">
                   <Label htmlFor={`settings-${item.key}`}>{t(item.labelKey)}</Label>
                   <Switch
@@ -79,6 +79,20 @@ export function NotificationsSection() {
                   />
                 </div>
               );
+
+              if (item.key === "dailyDigest") {
+                return (
+                  <IfSetting
+                    key={item.key}
+                    setting="features.emailEnabled"
+                    scope="local"
+                  >
+                    {row}
+                  </IfSetting>
+                );
+              }
+
+              return row;
             })}
           </div>
         </div>

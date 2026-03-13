@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta, timezone
+from secrets import token_urlsafe
 from uuid import UUID, uuid4
 
 from fair_platform.backend.api.schema.user import AuthUserRead, UserCreate
@@ -7,13 +8,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 import bcrypt
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
 from fair_platform.backend.data.models.user import UserRole
+from fair_platform.backend.core.config import get_email_enabled
 from fair_platform.backend.core.security.permissions import auth_user_payload
 from fair_platform.backend.api.schema.casing import to_camel_keys
+from fair_platform.backend.services.mailer import Mailer, get_mailer
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -26,6 +30,11 @@ if SECRET_KEY == "fair-insecure-default-key":
 ALGORITHM = "HS256"
 DEFAULT_TOKEN_EXPIRE_HOURS = 24
 REMEMBER_ME_TOKEN_EXPIRE_DAYS = 31
+EMAIL_DISABLED_MESSAGE = "Email services are disabled on this instance"
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
 
 
 def hash_password(password: str) -> str:
@@ -74,7 +83,11 @@ def get_current_user(
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
+async def register(
+    user_in: UserCreate,
+    db: Session = Depends(session_dependency),
+    mailer: Mailer = Depends(get_mailer),
+):
     """Register a new user with password hashing"""
     existing = db.query(User).filter(User.email == user_in.email).first()
     if existing:
@@ -87,11 +100,15 @@ def register(user_in: UserCreate, db: Session = Depends(session_dependency)):
         name=user_in.name,
         email=user_in.email,
         role=UserRole.user.value,
-        password_hash=password_hash
+        password_hash=password_hash,
+        is_verified=not get_email_enabled(),
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    if get_email_enabled() and not user.is_verified:
+        await mailer.send_verification(user=user, token=token_urlsafe(32))
 
     access_token = create_access_token(
         {"sub": str(user.id), "role": user.role},
@@ -136,3 +153,40 @@ def read_me(current_user: User = Depends(get_current_user)):
     auth_user = auth_user_payload(current_user)
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
     return auth_user
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    db: Session = Depends(session_dependency),
+    mailer: Mailer = Depends(get_mailer),
+):
+    if not get_email_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=EMAIL_DISABLED_MESSAGE,
+        )
+
+    user = db.query(User).filter(User.email == payload.email).first()
+    if user:
+        await mailer.send_password_reset(user=user, token=token_urlsafe(32))
+
+    return {"detail": "If an account exists for this email, a reset message has been sent"}
+
+
+@router.post("/resend-verification")
+async def resend_verification_email(
+    current_user: User = Depends(get_current_user),
+    mailer: Mailer = Depends(get_mailer),
+):
+    if not get_email_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=EMAIL_DISABLED_MESSAGE,
+        )
+
+    if current_user.is_verified:
+        return {"detail": "Account is already verified"}
+
+    await mailer.send_verification(user=current_user, token=token_urlsafe(32))
+    return {"detail": "Verification email sent"}

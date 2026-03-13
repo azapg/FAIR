@@ -10,6 +10,9 @@ from pathlib import Path
 import typer
 from typing_extensions import Annotated
 from fair_platform.backend.data.migrations import build_alembic_config
+from fair_platform.backend.api.routers.auth import hash_password
+from fair_platform.backend.data.database import SessionLocal
+from fair_platform.backend.data.models.user import User
 
 
 def _get_version() -> str:
@@ -127,7 +130,9 @@ def version_callback(value: bool):
 
 app = typer.Typer()
 db_app = typer.Typer(help="Manage database migrations")
+users_app = typer.Typer(help="Manage users")
 app.add_typer(db_app, name="db")
+app.add_typer(users_app, name="users")
 
 
 @app.callback()
@@ -427,6 +432,33 @@ def dev(
         _stop_backend(backend_process)
 
     raise typer.Exit(code=_determine_exit_code(backend_process, frontend_process))
+
+
+@users_app.command("reset-password")
+def reset_user_password(
+    email: Annotated[str, typer.Argument(help="Email of the user account to update")],
+    password: Annotated[
+        str,
+        typer.Option(
+            "--password",
+            help="New password for the account",
+            prompt=True,
+            hide_input=True,
+            confirmation_prompt=True,
+        ),
+    ],
+):
+    with SessionLocal() as session:
+        user = session.query(User).filter(User.email == email).first()
+        if user is None:
+            typer.echo(f"User not found: {email}")
+            raise typer.Exit(code=1)
+
+        user.password_hash = hash_password(password)
+        session.add(user)
+        session.commit()
+
+    typer.echo(f"Password reset for {email}")
 
 
 if __name__ == "__main__":

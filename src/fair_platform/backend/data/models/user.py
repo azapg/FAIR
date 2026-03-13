@@ -4,7 +4,7 @@ from typing import Optional
 from typing import Any
 
 from pydantic import EmailStr
-from sqlalchemy import String, UUID as SAUUID
+from sqlalchemy import Boolean, String, UUID as SAUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, TYPE_CHECKING
 
@@ -39,6 +39,7 @@ class User(Base):
     email: Mapped[EmailStr] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     settings: Mapped[dict[str, Any]] = mapped_column(
         json_document_type(),
         nullable=False,

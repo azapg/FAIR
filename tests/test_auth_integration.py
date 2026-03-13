@@ -342,3 +342,64 @@ class TestAuthenticationFlow:
         )
         assert update_response.status_code == 422
         assert "Conflicting keys normalize to 'interface_mode'" in update_response.json()["detail"]
+
+    def test_system_config_exposes_email_capability(self, test_client: TestClient, monkeypatch):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+        response = test_client.get("/api/v1/system/config")
+        assert response.status_code == 200
+        assert response.json() == {"features": {"email_enabled": True}}
+
+    def test_register_auto_verifies_when_email_disabled(
+        self, test_client: TestClient, test_db, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "0")
+        user_data = create_sample_user_data(role=UserRole.user)
+        response = test_client.post("/api/auth/register", json=user_data)
+        assert response.status_code == 201
+
+        with test_db() as session:
+            created = session.query(User).filter(User.email == user_data["email"]).first()
+            assert created is not None
+            assert created.is_verified is True
+
+    def test_register_requires_verification_when_email_enabled(
+        self, test_client: TestClient, test_db, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+        user_data = create_sample_user_data(role=UserRole.user)
+        response = test_client.post("/api/auth/register", json=user_data)
+        assert response.status_code == 201
+
+        with test_db() as session:
+            created = session.query(User).filter(User.email == user_data["email"]).first()
+            assert created is not None
+            assert created.is_verified is False
+
+    def test_forgot_password_returns_400_when_email_disabled(
+        self, test_client: TestClient, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "0")
+        response = test_client.post(
+            "/api/auth/forgot-password",
+            json={"email": "student@test.com"},
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Email services are disabled on this instance"
+
+    def test_resend_verification_returns_400_when_email_disabled(
+        self, test_client: TestClient, student_user, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "0")
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+        token = login_response.json()["access_token"]
+
+        response = test_client.post(
+            "/api/auth/resend-verification",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Email services are disabled on this instance"
