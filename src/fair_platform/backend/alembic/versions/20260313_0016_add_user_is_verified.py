@@ -25,7 +25,12 @@ def upgrade() -> None:
         return
 
     op.add_column("users", sa.Column("is_verified", sa.Boolean(), nullable=True))
-    op.execute(sa.text("UPDATE users SET is_verified = 1 WHERE is_verified IS NULL"))
+    users = sa.table("users", sa.column("is_verified", sa.Boolean()))
+    op.execute(
+        sa.update(users)
+        .where(users.c.is_verified.is_(None))
+        .values(is_verified=sa.true())
+    )
 
     if bind.dialect.name == "sqlite":
         with op.batch_alter_table("users") as batch_op:
