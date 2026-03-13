@@ -5,9 +5,11 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from fair_platform.backend.core.config import get_resend_api_key
 from fair_platform.backend.services.email_provider import (
     ConsoleEmailProvider,
     EmailProvider,
+    ResendEmailProvider,
 )
 
 
@@ -56,7 +58,14 @@ class Mailer:
 
 
 def get_mailer() -> Mailer:
+    resend_api_key = get_resend_api_key()
+    provider: EmailProvider
+    if resend_api_key:
+        provider = ResendEmailProvider(api_key=resend_api_key)
+    else:
+        provider = ConsoleEmailProvider()
+
     return Mailer(
-        provider=ConsoleEmailProvider(),
+        provider=provider,
         template_env=create_email_template_environment(),
     )

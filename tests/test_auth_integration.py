@@ -350,6 +350,17 @@ class TestAuthenticationFlow:
         assert response.status_code == 200
         assert response.json() == {"features": {"email_enabled": True}}
 
+    def test_system_config_enables_email_when_resend_key_present(
+        self,
+        test_client: TestClient,
+        monkeypatch,
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "0")
+        monkeypatch.setenv("RESEND_API_KEY", "re_live_example")
+        response = test_client.get("/api/v1/system/config")
+        assert response.status_code == 200
+        assert response.json() == {"features": {"email_enabled": True}}
+
     def test_register_auto_verifies_when_email_disabled(
         self, test_client: TestClient, test_db, monkeypatch
     ):
