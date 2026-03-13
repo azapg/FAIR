@@ -14,6 +14,7 @@ export type AuthUser = {
   role: AuthUserRole
   capabilities: string[]
   settings: Record<string, unknown>
+  isVerified: boolean
 }
 
 type LoginInput = { username: string; password: string; remember_me?: boolean }
@@ -40,7 +41,7 @@ const normalizeRole = (role: string): AuthUserRole => {
   return AuthUserRole.USER
 }
 
-const normalizeUser = (raw: Partial<AuthUser> & { role?: string }): AuthUser => ({
+const normalizeUser = (raw: Partial<AuthUser> & { role?: string, isVerified?: boolean }): AuthUser => ({
   id: raw.id ?? '',
   name: raw.name ?? '',
   email: raw.email ?? '',
@@ -50,6 +51,7 @@ const normalizeUser = (raw: Partial<AuthUser> & { role?: string }): AuthUser => 
     raw.settings && typeof raw.settings === 'object' && !Array.isArray(raw.settings)
       ? raw.settings
       : {},
+  isVerified: raw.isVerified ?? false,
 })
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
