@@ -30,12 +30,12 @@ export default function LoginPage() {
       await login({ username: email, password, remember_me: rememberMe })
       navigate('/')
     } catch (err) {
-      const axiosError = err as AxiosError<{ detail?: string }>
-      const message = axiosError.response?.data?.detail || t('auth.unableToLogin')
+      const axiosError = err as AxiosError<{ detail?: string; code?: string }>
+      const errorData = axiosError.response?.data
+      const message = errorData?.detail || t('auth.unableToLogin')
+      const errorCode = errorData?.code
       const isVerificationRequired =
-        axiosError.response?.status === 403 &&
-        typeof message === 'string' &&
-        message.toLowerCase().includes('verify your email')
+        axiosError.response?.status === 403 && errorCode === 'email_verification_required'
       if (isVerificationRequired) {
         setShowResendVerification(true)
         setResendVerificationSent(false)

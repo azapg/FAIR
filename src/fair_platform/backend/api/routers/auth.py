@@ -339,18 +339,18 @@ async def verify_email_confirm(
         )
 
     if user.is_verified:
-        access_token = create_access_token(
-            {"sub": str(user.id), "role": user.role},
-            remember_me=False
-        )
-        auth_user = auth_user_payload(user)
-        auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
         return {
             "detail": "Email already verified",
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": auth_user,
         }
+
+    user.is_verified = True
+    db.add(user)
+    db.commit()
+
+    access_token = create_access_token(
+        {"sub": str(user.id), "role": user.role},
+        remember_me=False
+    )
 
     user.is_verified = True
     db.add(user)
