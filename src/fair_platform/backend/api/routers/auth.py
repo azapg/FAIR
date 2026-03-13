@@ -33,7 +33,7 @@ EMAIL_DISABLED_MESSAGE = "Email services are disabled on this instance"
 TOKEN_PURPOSE_PASSWORD_RESET = "password_reset"
 TOKEN_PURPOSE_VERIFY_EMAIL = "verify_email"
 PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60
-VERIFY_EMAIL_TOKEN_EXPIRE_HOURS = 24
+VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES = 30
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -167,7 +167,7 @@ async def register(
         verification_token = _create_action_token(
             user=user,
             purpose=TOKEN_PURPOSE_VERIFY_EMAIL,
-            expires_delta=timedelta(hours=VERIFY_EMAIL_TOKEN_EXPIRE_HOURS),
+            expires_delta=timedelta(minutes=VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES),
         )
         await mailer.send_verification(
             user=user,
@@ -263,7 +263,7 @@ async def resend_verification_email(
     verification_token = _create_action_token(
         user=current_user,
         purpose=TOKEN_PURPOSE_VERIFY_EMAIL,
-        expires_delta=timedelta(hours=VERIFY_EMAIL_TOKEN_EXPIRE_HOURS),
+        expires_delta=timedelta(minutes=VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES),
     )
     await mailer.send_verification(
         user=current_user,
@@ -288,10 +288,15 @@ async def verify_email_confirm(
             detail="Invalid or expired token",
         )
 
-    if not user.is_verified:
-        user.is_verified = True
-        db.add(user)
-        db.commit()
+    if user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Account is already verified or link has already been used.",
+        )
+
+    user.is_verified = True
+    db.add(user)
+    db.commit()
 
     access_token = create_access_token(
         {"sub": str(user.id), "role": user.role},
