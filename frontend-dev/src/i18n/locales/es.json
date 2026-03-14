@@ -214,6 +214,8 @@
     "tryAgainLater": "Intenta de nuevo más tarde.",
     "checkYourEmail": "Revisa tu correo electrónico",
     "resetLinkSent": "Enviamos un enlace para restablecer la contraseña a",
+    "verifyRegistrationDescription": "Enviamos un enlace de verificación a",
+    "verifyRegistrationHint": "Después de verificar tu correo, vuelve para iniciar sesión.",
     "openGmail": "Abrir Gmail",
     "openOutlook": "Abrir Outlook",
     "openYahoo": "Abrir Yahoo Mail",
@@ -241,7 +243,13 @@
     "verifyEmailSuccessDescription": "Tu cuenta ya está verificada. Puedes iniciar sesión.",
     "verifyEmailFailed": "No se pudo verificar el correo.",
     "invalidVerifyTokenTitle": "Enlace de verificación inválido",
-    "invalidVerifyTokenDescription": "Este enlace de verificación es inválido o ha expirado."
+    "invalidVerifyTokenDescription": "Este enlace de verificación es inválido o ha expirado.",
+    "verifyRequiredLoginHint": "Tu cuenta todavía necesita verificación por correo. Solicita un nuevo correo de verificación para continuar.",
+    "resendVerificationAction": "Reenviar correo de verificación",
+    "resendVerificationSent": "Correo de verificación enviado",
+    "resendVerificationSentHint": "Si tu cuenta existe y aún requiere verificación, revisa tu bandeja de entrada para un nuevo enlace.",
+    "unableToResendVerification": "No se pudo reenviar el correo de verificación",
+    "enterEmailForResend": "Primero ingresa tu correo para reenviar la verificación."
   },
   "courses": {
     "title": "Cursos",

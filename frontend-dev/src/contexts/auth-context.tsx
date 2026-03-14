@@ -19,6 +19,10 @@ export type AuthUser = {
 
 type LoginInput = { username: string; password: string; remember_me?: boolean }
 type RegisterInput = { name: string; email: string; password: string }
+export type RegisterResult = {
+  verificationRequired: boolean
+  detail?: string
+}
 
 type AuthContextValue = {
   user: AuthUser | null
@@ -26,10 +30,10 @@ type AuthContextValue = {
   isAuthenticated: boolean
   loading: boolean
   login: (input: LoginInput) => Promise<void>
-  register: (input: RegisterInput) => Promise<void>
+  register: (input: RegisterInput) => Promise<RegisterResult>
   logout: () => void
   hasCapability: (action: string) => boolean
-  setSession: (token: string, user: Partial<AuthUser> & { role?: string, isVerified?: boolean }) => void
+  setSession: (token: string, user: Partial<AuthUser> & { role?: string, isVerified?: boolean, is_verified?: boolean }) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -42,7 +46,7 @@ const normalizeRole = (role: string): AuthUserRole => {
   return AuthUserRole.USER
 }
 
-const normalizeUser = (raw: Partial<AuthUser> & { role?: string, isVerified?: boolean }): AuthUser => ({
+const normalizeUser = (raw: Partial<AuthUser> & { role?: string, isVerified?: boolean, is_verified?: boolean }): AuthUser => ({
   id: raw.id ?? '',
   name: raw.name ?? '',
   email: raw.email ?? '',
@@ -52,7 +56,7 @@ const normalizeUser = (raw: Partial<AuthUser> & { role?: string, isVerified?: bo
     raw.settings && typeof raw.settings === 'object' && !Array.isArray(raw.settings)
       ? raw.settings
       : {},
-  isVerified: raw.isVerified ?? false,
+  isVerified: raw.isVerified ?? raw.is_verified ?? false,
 })
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -169,14 +173,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(true)
     try {
       const res = await api.post('/auth/register', input)
+      const verificationRequired = Boolean(res.data?.verification_required)
       const accessToken: string | undefined = res.data?.access_token
       const user = res.data?.user ? normalizeUser(res.data.user) : undefined
       if (accessToken && user) {
         setToken(accessToken)
         setUser(user)
         persist(accessToken, user)
+        return { verificationRequired: false, detail: res.data?.detail }
       }
-      // TODO: error handling that is also shown in the component
+      return { verificationRequired, detail: res.data?.detail }
     } finally {
       setLoading(false)
     }
@@ -188,11 +194,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     persist(null, null)
   }, [persist])
 
-  const setSession = useCallback((newToken: string, rawUser: Partial<AuthUser> & { role?: string, isVerified?: boolean }) => {
+  const setSession = useCallback((newToken: string, rawUser: Partial<AuthUser> & { role?: string, isVerified?: boolean, is_verified?: boolean }) => {
     const newUser = normalizeUser(rawUser)
     setToken(newToken)
     setUser(newUser)
     persist(newToken, newUser)
+    setLoading(false)
   }, [persist])
 
   const hasCapability = useCallback((action: string) => {
