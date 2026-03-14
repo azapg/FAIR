@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
 import { AuthPageShell } from '@/components/auth/auth-page-shell'
+import { ArrowLeft, ExternalLink, Mail } from 'lucide-react'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -16,17 +17,76 @@ export default function RegisterPage() {
   const [name, setName] = React.useState('')
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
+  const [verificationRequired, setVerificationRequired] = React.useState(false)
+  const [verificationMessage, setVerificationMessage] = React.useState('')
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     try {
-      await register({ name, email, password })
+      const result = await register({ name, email, password })
+      if (result.verificationRequired) {
+        setVerificationRequired(true)
+        setVerificationMessage(result.detail ?? t('auth.verifyRegistrationDescription'))
+        return
+      }
       navigate('/')
     } catch (err) {
       const axiosError = err as AxiosError<{ detail?: string }>
       const message = axiosError.response?.data?.detail || t('auth.unableToRegister')
       toast.error(t('auth.registrationFailed'), { description: message })
     }
+  }
+
+  if (verificationRequired) {
+    return (
+      <AuthPageShell>
+        <div className="flex flex-col items-center gap-6 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Mail className="h-6 w-6" />
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">{t('auth.checkYourEmail')}</h1>
+            <p className="text-sm text-muted-foreground">
+              {verificationMessage} <br />
+              <span className="font-medium text-foreground">{email}</span>
+            </p>
+          </div>
+
+          <div className="flex w-full flex-col gap-2">
+            <Button asChild variant="outline" className="w-full">
+              <a href="https://mail.google.com" target="_blank" rel="noopener noreferrer">
+                {t('auth.openGmail')} <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <a href="https://outlook.live.com" target="_blank" rel="noopener noreferrer">
+                {t('auth.openOutlook')} <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <a href="https://mail.yahoo.com" target="_blank" rel="noopener noreferrer">
+                {t('auth.openYahoo')} <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <a href="https://mail.proton.me" target="_blank" rel="noopener noreferrer">
+                {t('auth.openProton')} <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+
+          <p className="text-sm text-muted-foreground">{t('auth.verifyRegistrationHint')}</p>
+
+          <Button asChild variant="ghost" className="w-full">
+            <Link to="/login">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              {t('auth.backToLogin')}
+            </Link>
+          </Button>
+        </div>
+      </AuthPageShell>
+    )
   }
 
   return (

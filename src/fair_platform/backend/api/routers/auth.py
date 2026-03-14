@@ -14,7 +14,11 @@ from sqlalchemy.orm import Session
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
 from fair_platform.backend.data.models.user import UserRole
-from fair_platform.backend.core.config import get_base_url, get_email_enabled
+from fair_platform.backend.core.config import (
+    get_base_url,
+    get_email_enabled,
+    get_enforce_email_verification,
+)
 from fair_platform.backend.core.security.permissions import auth_user_payload
 from fair_platform.backend.api.schema.casing import to_camel_keys
 from fair_platform.backend.services.mailer import Mailer, get_mailer
@@ -31,6 +35,10 @@ ALGORITHM = "HS256"
 DEFAULT_TOKEN_EXPIRE_HOURS = 24
 REMEMBER_ME_TOKEN_EXPIRE_DAYS = 31
 EMAIL_DISABLED_MESSAGE = "Email services are disabled on this instance"
+EMAIL_VERIFICATION_REQUIRED_MESSAGE = "Please verify your email before signing in"
+RESEND_VERIFICATION_REQUEST_SENT_MESSAGE = (
+    "If an account exists and requires verification, a verification email has been sent"
+)
 TOKEN_PURPOSE_PASSWORD_RESET = "password_reset"
 TOKEN_PURPOSE_VERIFY_EMAIL = "verify_email"
 PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60
@@ -38,6 +46,10 @@ VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES = 30
 
 
 class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
 
@@ -174,6 +186,11 @@ async def register(
             user=user,
             verification_url=_build_verify_url(verification_token),
         )
+        if get_enforce_email_verification():
+            return {
+                "detail": "Verification email sent. Please verify your email before continuing.",
+                "verification_required": True,
+            }
 
     access_token = create_access_token(
         {"sub": str(user.id), "role": user.role},
@@ -200,6 +217,12 @@ def login(
 
     if not user.password_hash or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if get_enforce_email_verification() and not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+        )
 
     remember_me = "remember_me" in form_data.scopes
 
@@ -273,6 +296,32 @@ async def resend_verification_email(
     return {"detail": "Verification email sent"}
 
 
+@router.post("/resend-verification-request")
+async def resend_verification_request(
+    payload: ResendVerificationRequest,
+    db: Session = Depends(session_dependency),
+    mailer: Mailer = Depends(get_mailer),
+):
+    if not get_email_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=EMAIL_DISABLED_MESSAGE,
+        )
+
+    user = db.query(User).filter(User.email == payload.email).first()
+    if user and not user.is_verified:
+        verification_token = _create_action_token(
+            user=user,
+            purpose=TOKEN_PURPOSE_VERIFY_EMAIL,
+            expires_delta=timedelta(minutes=VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES),
+        )
+        await mailer.send_verification(
+            user=user,
+            verification_url=_build_verify_url(verification_token),
+        )
+    return {"detail": RESEND_VERIFICATION_REQUEST_SENT_MESSAGE}
+
+
 @router.post("/verify-email/confirm")
 async def verify_email_confirm(
     payload: TokenConfirmRequest,
@@ -290,14 +339,12 @@ async def verify_email_confirm(
         )
 
     if user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Account is already verified or link has already been used.",
-        )
-
-    user.is_verified = True
-    db.add(user)
-    db.commit()
+        detail = "Email already verified"
+    else:
+        user.is_verified = True
+        db.add(user)
+        db.commit()
+        detail = "Email verified successfully"
 
     access_token = create_access_token(
         {"sub": str(user.id), "role": user.role},
@@ -307,7 +354,7 @@ async def verify_email_confirm(
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
 
     return {
-        "detail": "Email verified successfully",
+        "detail": detail,
         "access_token": access_token,
         "token_type": "bearer",
         "user": auth_user,

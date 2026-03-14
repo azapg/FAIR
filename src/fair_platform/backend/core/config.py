@@ -31,6 +31,13 @@ EMAIL_ENABLED = _parse_bool_env(
     os.getenv("FAIR_EMAIL_ENABLED", os.getenv("EMAIL_ENABLED")),
     default=False,
 )
+ENFORCE_EMAIL_VERIFICATION = _parse_bool_env(
+    os.getenv(
+        "FAIR_ENFORCE_EMAIL_VERIFICATION",
+        os.getenv("ENFORCE_EMAIL_VERIFICATION"),
+    ),
+    default=False,
+)
 RESEND_API_KEY = (
     os.getenv("FAIR_RESEND_API_KEY")
     or os.getenv("RESEND_API_KEY")
@@ -46,6 +53,18 @@ def get_email_enabled() -> bool:
     return _parse_bool_env(
         os.getenv("FAIR_EMAIL_ENABLED", os.getenv("EMAIL_ENABLED")),
         default=EMAIL_ENABLED,
+    )
+
+
+def get_enforce_email_verification() -> bool:
+    if not get_email_enabled():
+        return False
+    return _parse_bool_env(
+        os.getenv(
+            "FAIR_ENFORCE_EMAIL_VERIFICATION",
+            os.getenv("ENFORCE_EMAIL_VERIFICATION"),
+        ),
+        default=ENFORCE_EMAIL_VERIFICATION,
     )
 
 

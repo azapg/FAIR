@@ -214,6 +214,8 @@
     "tryAgainLater": "Try again later.",
     "checkYourEmail": "Check your email",
     "resetLinkSent": "We sent a password reset link to",
+    "verifyRegistrationDescription": "We sent a verification link to",
+    "verifyRegistrationHint": "After you verify your email, return to sign in.",
     "openGmail": "Open Gmail",
     "openOutlook": "Open Outlook",
     "openYahoo": "Open Yahoo Mail",
@@ -241,7 +243,13 @@
     "verifyEmailSuccessDescription": "Your account is now verified. You can sign in.",
     "verifyEmailFailed": "Unable to verify email.",
     "invalidVerifyTokenTitle": "Invalid verification link",
-    "invalidVerifyTokenDescription": "This verification link is invalid or has expired."
+    "invalidVerifyTokenDescription": "This verification link is invalid or has expired.",
+    "verifyRequiredLoginHint": "Your account still needs email verification. Request a new verification email to continue.",
+    "resendVerificationAction": "Resend verification email",
+    "resendVerificationSent": "Verification email sent",
+    "resendVerificationSentHint": "If your account exists and still needs verification, check your inbox for a new link.",
+    "unableToResendVerification": "Unable to resend verification email",
+    "enterEmailForResend": "Enter your email first to resend verification."
   },
   "courses": {
     "title": "Courses",

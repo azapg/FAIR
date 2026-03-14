@@ -6,7 +6,7 @@ import logging
 import resend
 
 logger = logging.getLogger(__name__)
-DEFAULT_EMAIL_SENDER = "FairGrade Platform <noreply@fairgradeproject.org>"
+DEFAULT_EMAIL_SENDER = "FairGrade Platform <platform@fairgradeproject.org>"
 RESEND_API_ERROR = getattr(
     resend.exceptions,
     "APIError",

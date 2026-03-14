@@ -39,7 +39,12 @@ export default function VerifyEmailPage() {
       } catch (err) {
         if (!active) return
         const axiosError = err as AxiosError<{ detail?: string }>
-        setError(axiosError.response?.data?.detail ?? t('auth.verifyEmailFailed'))
+        const detail = axiosError.response?.data?.detail
+        if (typeof detail === 'string' && detail.toLowerCase().includes('already verified')) {
+          setStatus('success')
+          return
+        }
+        setError(detail ?? t('auth.verifyEmailFailed'))
         setStatus('error')
       }
     }
@@ -70,7 +75,7 @@ export default function VerifyEmailPage() {
           <h1 className="text-2xl font-bold">{t('auth.verifyEmailSuccessTitle')}</h1>
           <p className="text-sm text-muted-foreground">{t('auth.verifyEmailSuccessDescription')}</p>
           <Button asChild className="w-full">
-            <Link to="/">Continue</Link>
+            <Link to="/courses">Continue</Link>
           </Button>
         </div>
       </AuthPageShell>
