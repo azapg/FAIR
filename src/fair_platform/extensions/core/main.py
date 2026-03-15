@@ -367,7 +367,6 @@ core_extension = FairExtension(
                 .add(
                     "useOpenAI",
                     SwitchField(
-                        fieldType="switch",
                         label="Use OpenAI",
                         description="Use OpenAI responses API for file transcription.",
                         required=False,
@@ -377,43 +376,39 @@ core_extension = FairExtension(
                 .add(
                     "openaiModel",
                     TextField(
-                        fieldType="text",
                         label="OpenAI Model",
                         description="OpenAI model to use for file transcription.",
                         required=False,
                         default="gpt-5.4-2026-03-05",
-                        minLength=1,
-                        maxLength=100,
+                        min_length=1,
+                        max_length=100,
                     ),
                 )
                 .add(
                     "openaiBaseUrl",
                     TextField(
-                        fieldType="text",
                         label="OpenAI Base URL",
                         description="OpenAI API base URL override.",
                         required=False,
                         default="https://api.openai.com/v1",
-                        minLength=1,
-                        maxLength=300,
+                        min_length=1,
+                        max_length=300,
                     ),
                 )
                 .add(
                     "openaiApiKey",
                     SecretField(
-                        fieldType="secret",
                         label="OpenAI API Key",
                         description="Override OpenAI API key (optional, otherwise env).",
                         required=False,
                         default="",
-                        minLength=0,
-                        maxLength=400,
+                        min_length=0,
+                        max_length=400,
                     ),
                 )
                 .add(
                     "openaiTemperature",
                     NumberField(
-                        fieldType="number",
                         label="OpenAI Temperature",
                         description="Sampling temperature for OpenAI responses.",
                         required=False,
@@ -426,7 +421,6 @@ core_extension = FairExtension(
                 .add(
                     "openaiMaxTokens",
                     NumberField(
-                        fieldType="number",
                         label="OpenAI Max Tokens",
                         description="Maximum output tokens for OpenAI responses.",
                         required=False,
@@ -439,43 +433,39 @@ core_extension = FairExtension(
                 .add(
                     "openaiPrompt",
                     TextField(
-                        fieldType="text",
                         label="OpenAI Prompt",
                         description="Prompt to apply to uploaded files.",
                         required=False,
                         default="Extract a clear markdown transcription of the provided file.",
-                        minLength=1,
-                        maxLength=500,
+                        min_length=1,
+                        max_length=500,
                     ),
                 )
                 .add(
                     "zaiApiKey",
                     SecretField(
-                        fieldType="secret",
                         label="Z.ai API Key",
                         description="Z.ai API key (required if OpenAI is disabled).",
                         required=False,
                         default="",
-                        minLength=0,
-                        maxLength=400,
+                        min_length=0,
+                        max_length=400,
                     ),
                 )
                 .add(
                     "zaiModel",
                     TextField(
-                        fieldType="text",
                         label="Z.ai Model",
                         description="Z.ai model for OCR layout parsing.",
                         required=False,
                         default="GLM-OCR",
-                        minLength=1,
-                        maxLength=100,
+                        min_length=1,
+                        max_length=100,
                     ),
                 )
                 .add(
                     "zaiShowVisualization",
                     SwitchField(
-                        fieldType="switch",
                         label="Show Z.ai Visualization",
                         description="Whether to request layout visualization from Z.ai.",
                         required=False,
@@ -497,7 +487,6 @@ core_extension = FairExtension(
                 .add(
                     "score",
                     NumberField(
-                        fieldType="number",
                         label="Score",
                         description="Default score to assign.",
                         required=False,
@@ -510,43 +499,39 @@ core_extension = FairExtension(
                 .add(
                     "model",
                     TextField(
-                        fieldType="text",
                         label="LLM Model",
                         description="Override model for grading.",
                         required=False,
                         default="gpt-5.4-2026-03-05",
-                        minLength=1,
-                        maxLength=100,
+                        min_length=1,
+                        max_length=100,
                     ),
                 )
                 .add(
                     "baseUrl",
                     TextField(
-                        fieldType="text",
                         label="LLM Base URL",
                         description="Override API base URL.",
                         required=False,
                         default="https://api.openai.com/v1",
-                        minLength=1,
-                        maxLength=300,
+                        min_length=1,
+                        max_length=300,
                     ),
                 )
                 .add(
                     "apiKey",
                     SecretField(
-                        fieldType="secret",
                         label="LLM API Key",
                         description="Override API key (optional, otherwise env).",
                         required=False,
                         default="",
-                        minLength=0,
-                        maxLength=400,
+                        min_length=0,
+                        max_length=400,
                     ),
                 )
                 .add(
                     "temperature",
                     NumberField(
-                        fieldType="number",
                         label="Temperature",
                         description="Sampling temperature.",
                         required=False,
@@ -559,7 +544,6 @@ core_extension = FairExtension(
                 .add(
                     "maxTokens",
                     NumberField(
-                        fieldType="number",
                         label="Max Tokens",
                         description="Maximum output tokens.",
                         required=False,
@@ -584,55 +568,50 @@ core_extension = FairExtension(
                 .add(
                     "reviewTone",
                     TextField(
-                        fieldType="text",
                         label="Review Tone",
                         description="Tone to use in generated comments.",
                         required=False,
                         default="concise",
-                        minLength=1,
-                        maxLength=100,
+                        min_length=1,
+                        max_length=100,
                     ),
                 )
                 .add(
                     "model",
                     TextField(
-                        fieldType="text",
                         label="LLM Model",
                         description="Override model for reviewing.",
                         required=False,
                         default="gpt-5.4-2026-03-05",
-                        minLength=1,
-                        maxLength=100,
+                        min_length=1,
+                        max_length=100,
                     ),
                 )
                 .add(
                     "baseUrl",
                     TextField(
-                        fieldType="text",
                         label="LLM Base URL",
                         description="Override API base URL.",
                         required=False,
                         default="https://api.openai.com/v1",
-                        minLength=1,
-                        maxLength=300,
+                        min_length=1,
+                        max_length=300,
                     ),
                 )
                 .add(
                     "apiKey",
                     SecretField(
-                        fieldType="secret",
                         label="LLM API Key",
                         description="Override API key (optional, otherwise env).",
                         required=False,
                         default="",
-                        minLength=0,
-                        maxLength=400,
+                        min_length=0,
+                        max_length=400,
                     ),
                 )
                 .add(
                     "temperature",
                     NumberField(
-                        fieldType="number",
                         label="Temperature",
                         description="Sampling temperature.",
                         required=False,
@@ -645,7 +624,6 @@ core_extension = FairExtension(
                 .add(
                     "maxTokens",
                     NumberField(
-                        fieldType="number",
                         label="Max Tokens",
                         description="Maximum output tokens.",
                         required=False,

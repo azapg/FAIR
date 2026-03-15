@@ -51,7 +51,7 @@ class SettingsField(BaseModel):
 
 
 class TextField(SettingsField):
-    field_type: Literal["text"]
+    field_type: Literal["text"] = "text"
     default: str | None = None
     min_length: int | None = Field(default=None, ge=0)
     max_length: int | None = Field(default=None, ge=1)
@@ -72,7 +72,7 @@ class TextField(SettingsField):
 
 
 class SecretField(SettingsField):
-    field_type: Literal["secret"]
+    field_type: Literal["secret"] = "secret"
     default: str | None = None
     min_length: int | None = Field(default=None, ge=0)
     max_length: int | None = Field(default=None, ge=1)
@@ -93,7 +93,7 @@ class SecretField(SettingsField):
 
 
 class NumberField(SettingsField):
-    field_type: Literal["number"]
+    field_type: Literal["number"] = "number"
     default: float | None = None
     minimum: float
     maximum: float
@@ -118,7 +118,7 @@ class NumberField(SettingsField):
 
 
 class SliderField(SettingsField):
-    field_type: Literal["slider"]
+    field_type: Literal["slider"] = "slider"
     default: float | None = None
     minimum: float
     maximum: float
@@ -152,17 +152,17 @@ class SliderField(SettingsField):
 
 
 class SwitchField(SettingsField):
-    field_type: Literal["switch"]
+    field_type: Literal["switch"] = "switch"
     default: bool | None = None
 
 
 class CheckboxField(SettingsField):
-    field_type: Literal["checkbox"]
+    field_type: Literal["checkbox"] = "checkbox"
     default: bool | None = None
 
 
 class FileField(SettingsField):
-    field_type: Literal["file"]
+    field_type: Literal["file"] = "file"
     allowed_types: list[str] = Field(min_length=1)
 
     @model_validator(mode="after")
@@ -177,7 +177,7 @@ class FileField(SettingsField):
 
 
 class ArtifactRefField(SettingsField):
-    field_type: Literal["artifact-ref"]
+    field_type: Literal["artifact-ref"] = "artifact-ref"
     allowed_types: list[str] = Field(min_length=1)
     default: str | None = None
 
@@ -194,7 +194,7 @@ class ArtifactRefField(SettingsField):
 
 
 class RubricRefField(SettingsField):
-    field_type: Literal["rubric-ref"]
+    field_type: Literal["rubric-ref"] = "rubric-ref"
     default: str | None = None
 
     @model_validator(mode="after")

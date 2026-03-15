@@ -73,13 +73,12 @@ def test_settings_schema_serializes_through_plugin_descriptor():
     settings = SettingsSchema().add(
         "model",
         TextField(
-            fieldType="text",
             label="Model",
             description="Model name",
             required=False,
             default="gpt-4.1",
-            minLength=1,
-            maxLength=100,
+            min_length=1,
+            max_length=100,
         ),
     )
     plugin = PluginDescriptor(
