@@ -18,22 +18,23 @@ import { useCallback, useRef } from "react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import { shallow } from "zustand/shallow";
 import { useTranslation } from "react-i18next";
-import { PluginSettingsField, PluginSettingsSchema } from "@/types/plugin-settings";
+import { ArtifactRefSettingsField, BooleanSettingsField, FileSettingsField, NumberSettingsField, PluginSettingsField, PluginSettingsSchema, RubricRefSettingsField, SliderSettingsField, TextSettingsField } from "@/types/plugin-settings";
 
 interface PluginSettingsProps {
   plugin: RuntimePluginRead;
-  values?: Record<string, any>;
-  onChange?: (values: Record<string, any>) => void;
+  values?: Record<string, unknown>;
+  onChange?: (values: Record<string, unknown>) => void;
 }
 
-interface BaseInputProps {
-  property: PluginSettingsField;
-  value: any;
-  onChange: (value: any) => void;
+interface BaseInputProps<T extends PluginSettingsField = PluginSettingsField> {
+  property: T;
+  value: unknown;
+  onChange: (value: unknown) => void;
   name: string;
 }
 
-function TextField({ property, value, onChange, name }: BaseInputProps) {
+function TextField({ property, value, onChange, name }: BaseInputProps<TextSettingsField>) {
+  const textValue = typeof value === "string" ? value : "";
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">{property.description}</p>
@@ -41,16 +42,17 @@ function TextField({ property, value, onChange, name }: BaseInputProps) {
         id={name}
         className="min-h-[80px] resize-y"
         placeholder={property.default?.toString() || ""}
-        value={value || ""}
+        value={textValue}
         onChange={(e) => onChange(e.target.value)}
-        minLength={property.fieldType === "text" || property.fieldType === "secret" ? property.minLength : undefined}
-        maxLength={property.fieldType === "text" || property.fieldType === "secret" ? property.maxLength : undefined}
+        minLength={property.minLength}
+        maxLength={property.maxLength}
       />
     </div>
   );
 }
 
-function SensitiveTextField({ property, value, onChange, name }: BaseInputProps) {
+function SensitiveTextField({ property, value, onChange, name }: BaseInputProps<TextSettingsField>) {
+  const textValue = typeof value === "string" ? value : "";
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">{property.description}</p>
@@ -58,19 +60,18 @@ function SensitiveTextField({ property, value, onChange, name }: BaseInputProps)
         id={name}
         type="password"
         placeholder={property.default?.toString() || ""}
-        value={value || ""}
+        value={textValue}
         onChange={(e) => onChange(e.target.value)}
-        minLength={property.fieldType === "text" || property.fieldType === "secret" ? property.minLength : undefined}
-        maxLength={property.fieldType === "text" || property.fieldType === "secret" ? property.maxLength : undefined}
+        minLength={property.minLength}
+        maxLength={property.maxLength}
       />
     </div>
   );
 }
 
-function NumberField({ property, value, onChange, name }: BaseInputProps) {
-  const min = property.fieldType === "number" || property.fieldType === "slider" ? property.minimum : undefined;
-  const max = property.fieldType === "number" || property.fieldType === "slider" ? property.maximum : undefined;
-  const step = property.fieldType === "number" || property.fieldType === "slider" ? property.step : undefined;
+function NumberField({ property, value, onChange, name }: BaseInputProps<NumberSettingsField>) {
+  const { minimum: min, maximum: max, step } = property;
+  const numberValue = typeof value === "number" ? value : "";
 
   return (
     <div className="space-y-2">
@@ -79,7 +80,7 @@ function NumberField({ property, value, onChange, name }: BaseInputProps) {
         id={name}
         type="number"
         placeholder={property.default?.toString() || ""}
-        value={value || ""}
+        value={numberValue}
         onChange={(e) => onChange(Number(e.target.value))}
         min={min}
         max={max}
@@ -89,7 +90,14 @@ function NumberField({ property, value, onChange, name }: BaseInputProps) {
   );
 }
 
-function SwitchField({ property, value, onChange, name }: BaseInputProps) {
+function SwitchField({ property, value, onChange, name }: BaseInputProps<BooleanSettingsField>) {
+  const checked =
+    typeof value === "boolean"
+      ? value
+      : typeof property.default === "boolean"
+        ? property.default
+        : false;
+
   return (
     <div className="flex items-center justify-between space-y-2">
       <div className="space-y-0.5">
@@ -97,14 +105,21 @@ function SwitchField({ property, value, onChange, name }: BaseInputProps) {
       </div>
       <Switch
         id={name}
-        checked={value ?? property.default ?? false}
+        checked={checked}
         onCheckedChange={onChange}
       />
     </div>
   );
 }
 
-function CheckboxField({ property, value, onChange, name }: BaseInputProps) {
+function CheckboxField({ property, value, onChange, name }: BaseInputProps<BooleanSettingsField>) {
+  const checked =
+    typeof value === "boolean"
+      ? value
+      : typeof property.default === "boolean"
+        ? property.default
+        : false;
+
   return (
     <div className="flex items-center justify-between space-y-2">
       <div className="space-y-0.5">
@@ -112,14 +127,14 @@ function CheckboxField({ property, value, onChange, name }: BaseInputProps) {
       </div>
       <Checkbox
         id={name}
-        checked={value ?? property.default ?? false}
+        checked={checked}
         onCheckedChange={(checked) => onChange(checked === true)}
       />
     </div>
   );
 }
 
-function FileField({ property }: BaseInputProps) {
+function FileField({ property }: BaseInputProps<FileSettingsField>) {
   const { t } = useTranslation();
   return (
     <div className="space-y-2">
@@ -133,10 +148,8 @@ function FileField({ property }: BaseInputProps) {
   );
 }
 
-function SliderField({ property, value, onChange, name }: BaseInputProps) {
-  const min = property.fieldType === "slider" ? property.minimum : 0;
-  const max = property.fieldType === "slider" ? property.maximum : 100;
-  const step = property.fieldType === "slider" ? property.step : 1;
+function SliderField({ property, value, onChange, name }: BaseInputProps<SliderSettingsField>) {
+  const { minimum: min, maximum: max, step } = property;
   const currentValue =
     typeof value === "number"
       ? value
@@ -144,7 +157,7 @@ function SliderField({ property, value, onChange, name }: BaseInputProps) {
         ? property.default
         : min;
 
-  const marks = property.fieldType === "slider" && property.marks
+  const marks = property.marks
     ? Object.entries(property.marks).sort(
         ([a], [b]) => Number(a) - Number(b),
       )
@@ -189,7 +202,7 @@ function CourseArtifactsSelectorField({
   value,
   onChange,
   name,
-}: BaseInputProps) {
+}: BaseInputProps<ArtifactRefSettingsField>) {
   const { t } = useTranslation();
   const activeCourseId = useWorkflowStore((state) => state.activeCourseId);
   const { data: artifacts = [], isLoading } = useArtifacts(
@@ -197,8 +210,7 @@ function CourseArtifactsSelectorField({
     !!activeCourseId,
   );
 
-  const allowedTypes =
-    property.fieldType === "artifact-ref" ? property.allowedTypes : [];
+  const allowedTypes = property.allowedTypes;
   const hasTypeFilter = Array.isArray(allowedTypes) && allowedTypes.length > 0;
 
   const normalized: SDKArtifact[] = artifacts
@@ -250,7 +262,7 @@ function RubricField({
   value,
   onChange,
   name,
-}: BaseInputProps) {
+}: BaseInputProps<RubricRefSettingsField>) {
   const { t } = useTranslation();
   const { data: rubrics = [], isLoading } = useRubrics();
   const selectedId = typeof value === "string" ? value : "";
@@ -339,8 +351,8 @@ function toTitleCaseFromKey(name: string): string {
 function createInputComponent(
   property: PluginSettingsField,
   name: string,
-  value: any,
-  onChange: (value: any) => void,
+  value: unknown,
+  onChange: (value: unknown) => void,
 ) {
   const componentType = getComponentType(property);
   const label = property.label || toTitleCaseFromKey(name);
@@ -400,18 +412,18 @@ export function PluginSettings({
   const settings = pluginDraft?.settings ?? values ?? {};
 
   const handleFieldChange = useCallback(
-    (key: string, value: any) => {
+    (key: string, value: unknown) => {
       const next = { ...(pluginDraft?.settings ?? values ?? {}), [key]: value };
       onChange?.(next);
       patchActivePluginSetting(plugin, key, value, values);
     },
     [plugin, pluginDraft?.settings, values, onChange, patchActivePluginSetting],
   );
-  const handlersRef = useRef<Record<string, (v: any) => void>>({});
+  const handlersRef = useRef<Record<string, (v: unknown) => void>>({});
   const getHandler = useCallback(
     (key: string) => {
       if (!handlersRef.current[key]) {
-        handlersRef.current[key] = (value: any) =>
+        handlersRef.current[key] = (value: unknown) =>
           handleFieldChange(key, value);
       }
       return handlersRef.current[key];
