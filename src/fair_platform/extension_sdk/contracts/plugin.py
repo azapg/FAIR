@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from fair_platform.extension_sdk.contracts.common import contract_model_config
+from fair_platform.extension_sdk.settings import SettingsSchema
 
 
 PluginType = Literal["transcriber", "grader", "reviewer"]
@@ -20,8 +21,27 @@ class PluginDescriptor(BaseModel):
     description: str | None = None
     version: str | None = None
     action: str = Field(min_length=1)
-    settings_schema: dict[str, Any] = Field(default_factory=dict)
+    settings_schema: dict[str, Any] | SettingsSchema = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("settings_schema", mode="before")
+    @classmethod
+    def _normalize_settings_schema(
+        cls,
+        value: dict[str, Any] | SettingsSchema,
+    ) -> dict[str, Any]:
+        if isinstance(value, SettingsSchema):
+            return value.to_flat_dict()
+        return value
+
+    @field_serializer("settings_schema")
+    def _serialize_settings_schema(
+        self,
+        value: dict[str, Any] | SettingsSchema,
+    ) -> dict[str, Any]:
+        if isinstance(value, SettingsSchema):
+            return value.to_flat_dict()
+        return value
 
 
 class SubmissionArtifactRef(BaseModel):

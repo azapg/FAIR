@@ -1,7 +1,7 @@
 import api from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { PydanticSchema } from "@/app/assignment/components/sidebar/plugin-settings";
 import { toCamelCase } from "@/lib/casing";
+import { PluginSettingsSchema } from "@/types/plugin-settings";
 
 export type Plugin = {
   id: string;
@@ -10,17 +10,16 @@ export type Plugin = {
   authorEmail?: string | null;
   description?: string | null;
   version?: string | null;
-  hash: string;
   source: string;
   type: PluginType;
 };
 
-export type RuntimePlugin = Plugin & {
-  settingsSchema: PydanticSchema;
+export type ExtensionPlugin = Plugin & {
+  settingsSchema: PluginSettingsSchema;
   settings: Record<string, any>;
 };
 
-export type RuntimePluginRead = Omit<RuntimePlugin, "settings">;
+export type ExtensionPluginRead = Omit<ExtensionPlugin, "settings">;
 
 export type PluginType = "transcriber" | "grader" | "reviewer";
 
@@ -34,28 +33,20 @@ export const pluginsKeys = {
 
 const fetchPlugins = async (
   type?: PluginType,
-): Promise<RuntimePluginRead[]> => {
+): Promise<ExtensionPluginRead[]> => {
   const params = type ? { type_filter: type } : {};
   const res = await api.get("/plugins", { params });
-  const data = toCamelCase(res.data) as RuntimePluginRead[];
-  data.forEach((plugin, index) => {
-    plugin.settingsSchema =
-      plugin.settingsSchema ||
-      res.data[index]?.settingsSchema ||
-      res.data[index]?.settings_schema ||
-      { title: "", type: "object", properties: {} };
+  const data = toCamelCase(res.data) as ExtensionPluginRead[];
+  data.forEach((plugin) => {
+    plugin.settingsSchema = plugin.settingsSchema ?? {};
   });
 
   return data;
 };
-const fetchPlugin = async (id: string): Promise<RuntimePluginRead> => {
+const fetchPlugin = async (id: string): Promise<ExtensionPluginRead> => {
   const res = await api.get(`/plugins/${id}`);
-  const plugin = toCamelCase(res.data) as RuntimePluginRead;
-  plugin.settingsSchema =
-    plugin.settingsSchema ||
-    res.data?.settingsSchema ||
-    res.data?.settings_schema ||
-    { title: "", type: "object", properties: {} };
+  const plugin = toCamelCase(res.data) as ExtensionPluginRead;
+  plugin.settingsSchema = plugin.settingsSchema ?? {};
   return plugin;
 };
 

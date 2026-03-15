@@ -509,7 +509,21 @@
     "selectFromDropdown": "Select one from the dropdown above.",
     "workflowDetails": "Workflow details go here.",
     "notFound": "Can't find workflow '{{name}}'. It may have been deleted.",
-    "noPermission": "You don't have permission to update workflow '{{name}}'."
+    "noPermission": "You don't have permission to update workflow '{{name}}'.",
+    "pluginSettings": {
+      "noSettings": "No settings available",
+      "invalidSchema": "Plugin settings schema is invalid.",
+      "unsupportedField": "Unsupported field type: {{fieldType}}",
+      "unknownFieldType": "unknown",
+      "fileUploadNotImplemented": "File upload is not implemented yet.",
+      "selectCourseFirst": "Select a course first",
+      "loadingArtifacts": "Loading artifacts...",
+      "noArtifacts": "No course artifacts available",
+      "selectArtifact": "Select an artifact",
+      "loadingRubrics": "Loading rubrics...",
+      "noRubrics": "No rubrics available",
+      "selectRubric": "Select a rubric"
+    }
   },
   "plugins": {
     "transcriber": "Transcriber",

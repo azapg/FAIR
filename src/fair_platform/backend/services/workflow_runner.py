@@ -21,6 +21,11 @@ from fair_platform.backend.data.models import (
     WorkflowRunStatus,
 )
 from fair_platform.backend.services.job_queue import JobMessage, JobQueue, JobStatus
+from fair_platform.backend.services.settings_validator import (
+    CorruptedSettingsSchemaError,
+    RuntimeSettingsValidationError,
+    validate_and_hydrate_runtime_settings,
+)
 from fair_platform.backend.services.submission_manager import SubmissionManager
 
 
@@ -267,7 +272,14 @@ class WorkflowRunner:
                     JobMessage(
                         job_id=step_ctx.job_id,
                         target=step.plugin.extension_id,
-                        payload={"action": step.plugin.action, "params": request_payload},
+                        payload={
+                            "action": step.plugin.action,
+                            "params": request_payload,
+                            "meta": {
+                                "plugin_id": step.plugin.plugin_id,
+                                "plugin_type": step.plugin.plugin_type,
+                            },
+                        },
                         metadata={
                             "workflow_run_id": str(workflow_run_id),
                             "step_id": step.id,
@@ -388,6 +400,21 @@ class WorkflowRunner:
         submissions: list[Submission],
         state_by_submission: dict[str, dict[str, Any]],
     ) -> dict[str, Any]:
+        try:
+            hydrated_settings = validate_and_hydrate_runtime_settings(
+                plugin_id=step_ctx.step.plugin.plugin_id,
+                settings_schema=step_ctx.step.plugin.settings_schema,
+                incoming_settings=step_ctx.step.settings,
+            )
+        except RuntimeSettingsValidationError as exc:
+            raise ValueError(
+                f"Settings validation failed for plugin '{exc.plugin_id}': field '{exc.field}' {exc.reason}"
+            ) from exc
+        except CorruptedSettingsSchemaError as exc:
+            raise ValueError(
+                f"Cannot execute workflow: plugin '{exc.plugin_id}' has corrupted settings_schema"
+            ) from exc
+
         items = []
         for submission in submissions:
             items.append(
@@ -413,7 +440,7 @@ class WorkflowRunner:
             "step_id": step_ctx.step.id,
             "step_index": step_ctx.index,
             "plugin": step_ctx.step.plugin.model_dump(by_alias=True, mode="json"),
-            "settings": step_ctx.step.settings,
+            "settings": hydrated_settings,
             "submissions": items,
             "metadata": {},
         }

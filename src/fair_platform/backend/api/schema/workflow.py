@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from fair_platform.backend.api.schema.plugin import RuntimePlugin
+from fair_platform.backend.api.schema.plugin import ExtensionPlugin
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunBase
 from fair_platform.backend.api.schema.utils import schema_config
 from fair_platform.extension_sdk.contracts.plugin import PluginType
@@ -16,7 +16,7 @@ class WorkflowStep(BaseModel):
     id: str
     order: int = Field(ge=0)
     plugin_type: PluginType
-    plugin: RuntimePlugin
+    plugin: ExtensionPlugin
     settings: dict = Field(default_factory=dict)
 
 
