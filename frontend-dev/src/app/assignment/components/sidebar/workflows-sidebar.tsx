@@ -174,43 +174,15 @@ export function WorkflowsSidebar({
         </SidebarHeader>
       )}
       <Separator />
-      {showLogs ? (
-        <ExecutionLogsView onBack={() => setShowLogs(false)} />
-      ) : workflow && draft ? (
-        <>
-            <SidebarContent>
-              <ScrollArea className=" h-full">
-                <PluginSection
-                  title={t("plugins.transcriber")}
-                  action={t("plugins.transcribeAll")}
-                  type={"transcriber"}
-                />
-                <Separator />
-                <PluginSection
-                  title={t("plugins.grader")}
-                  action={t("plugins.gradeAll")}
-                  type={"grader"}
-                />
-                <Separator />
-                <PluginSection
-                  title={t("plugins.reviewer")}
-                  action={t("plugins.reviewAll")}
-                  type={"reviewer"}
-                />
-              </ScrollArea>
-          </SidebarContent>
-        </>
-      ) : (
-        <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
-          {workflows.length === 0 ? (
-            <WorkflowEmptyState onCreate={onCreateWorkflow} />
-          ) : !activeWorkflowId ? (
-            <WorkflowNotSelectedState />
-          ) : (
-            <div>{t("workflow.workflowDetails")}</div>
-          )}
-        </div>
-      )}
+      <WorkflowSidebarContent
+        showLogs={showLogs}
+        workflow={workflow}
+        draft={draft}
+        workflows={workflows}
+        activeWorkflowId={activeWorkflowId}
+        onCreateWorkflow={onCreateWorkflow}
+        onBackFromLogs={() => setShowLogs(false)}
+      />
       {/* Footer is always visible */}
       <SidebarFooter className={"px-2.5"}>
         <Separator />
@@ -279,6 +251,97 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface WorkflowSidebarContentProps {
+  showLogs: boolean;
+  workflow?: any;
+  draft?: any;
+  workflows: any[];
+  activeWorkflowId?: string;
+  onCreateWorkflow: () => void;
+  onBackFromLogs?: () => void;
+}
+
+const WorkflowSidebarContent = ({
+  showLogs,
+  workflow,
+  draft,
+  workflows,
+  activeWorkflowId,
+  onCreateWorkflow,
+  onBackFromLogs,
+}: WorkflowSidebarContentProps) => {
+  const { t } = useTranslation();
+
+  if (showLogs) {
+    return <ExecutionLogsView onBack={onBackFromLogs || (() => {})} />;
+  }
+
+  if (workflow && draft) {
+    return (
+      <SidebarContent>
+        <ScrollArea className="h-full">
+          <PluginSection
+            title={t("plugins.transcriber")}
+            action={t("plugins.transcribeAll")}
+            type={"transcriber"}
+          />
+          <Separator />
+          <PluginSection
+            title={t("plugins.grader")}
+            action={t("plugins.gradeAll")}
+            type={"grader"}
+          />
+          <Separator />
+          <PluginSection
+            title={t("plugins.reviewer")}
+            action={t("plugins.reviewAll")}
+            type={"reviewer"}
+          />
+        </ScrollArea>
+      </SidebarContent>
+    );
+  }
+
+  return (
+    <WorkflowSidebarEmptyState
+      workflows={workflows}
+      activeWorkflowId={activeWorkflowId}
+      onCreateWorkflow={onCreateWorkflow}
+    />
+  );
+};
+
+interface WorkflowSidebarEmptyStateProps {
+  workflows: any[];
+  activeWorkflowId?: string;
+  onCreateWorkflow: () => void;
+}
+
+const WorkflowSidebarEmptyState = ({
+  workflows,
+  activeWorkflowId,
+  onCreateWorkflow,
+}: WorkflowSidebarEmptyStateProps) => {
+  const { t } = useTranslation();
+
+  if (workflows.length === 0) {
+    return <WorkflowEmptyState onCreate={onCreateWorkflow} />;
+  }
+
+  if (!activeWorkflowId) {
+    return <WorkflowNotSelectedState />;
+  }
+
+  // Fallback: workflow exists but draft may not be loaded. 
+  // This shouldn't really happen and if it does it indicates a problem with the workflow loading logic, 
+  // but at least we can show something instead of crashing.
+  return (
+    <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
+      {t("workflow.workflowDetails")}
+    </div>
+  );
+};
 
 const WorkflowEmptyState = ({
   onCreate,
