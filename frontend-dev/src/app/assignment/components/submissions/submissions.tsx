@@ -480,7 +480,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
                     <DropdownMenuItem
                       onClick={(_) => runPlugin(workflow.plugins.transcriber)}
                     >
-                      {workflow.plugins.transcriber.settingsSchema.title}
+                      {workflow.plugins.transcriber.name}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
@@ -491,7 +491,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
                   <DropdownMenuItem
                     onClick={(_) => runPlugin(workflow.plugins.grader)}
                   >
-                    {workflow.plugins.grader.settingsSchema.title}
+                    {workflow.plugins.grader.name}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
@@ -504,7 +504,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
                     <DropdownMenuItem
                       onClick={(_) => runPlugin(workflow.plugins.reviewer)}
                     >
-                      {workflow.plugins.reviewer.settingsSchema.title}
+                      {workflow.plugins.reviewer.name}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>

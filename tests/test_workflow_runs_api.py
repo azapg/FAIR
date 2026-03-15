@@ -166,7 +166,17 @@ class TestWorkflowRunsAPI:
                             "name": "Reviewer",
                             "pluginType": "reviewer",
                             "action": "plugin.review",
-                            "settingsSchema": {"title": "Reviewer", "type": "object", "properties": {}},
+                            "settingsSchema": {
+                                "reviewTone": {
+                                    "fieldType": "text",
+                                    "label": "Review Tone",
+                                    "description": "Tone for generated comments.",
+                                    "required": False,
+                                    "default": "concise",
+                                    "minLength": 1,
+                                    "maxLength": 100,
+                                }
+                            },
                             "settings": {},
                             "id": "local.reviewer",
                             "type": "reviewer",

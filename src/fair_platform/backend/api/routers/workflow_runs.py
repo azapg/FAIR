@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from fair_platform.backend.api.routers.auth import ALGORITHM, SECRET_KEY, get_current_user
 from fair_platform.backend.api.schema.submission import SubmissionBase
+from fair_platform.backend.api.schema.workflow import WorkflowStep
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunCreateRequest, WorkflowRunRead, WorkflowRunStepState
 from fair_platform.backend.core.security.permissions import (
     has_capability,
@@ -27,6 +28,11 @@ from fair_platform.backend.data.models import (
 )
 from fair_platform.backend.services.workflow_runner import WorkflowRunEventBroker, WorkflowRunner
 from fair_platform.backend.services.job_queue import LocalJobQueue
+from fair_platform.backend.services.settings_validator import (
+    CorruptedSettingsSchemaError,
+    RuntimeSettingsValidationError,
+    validate_and_hydrate_runtime_settings,
+)
 
 router = APIRouter()
 
@@ -138,6 +144,30 @@ async def create_workflow_run(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="One or more submissions do not belong to the course this workflow is part of",
         )
+
+    for index, raw_step in enumerate(workflow.steps or []):
+        step = WorkflowStep.model_validate(raw_step)
+        try:
+            validate_and_hydrate_runtime_settings(
+                plugin_id=step.plugin.plugin_id,
+                settings_schema=step.plugin.settings_schema,
+                incoming_settings=step.settings,
+            )
+        except RuntimeSettingsValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Settings validation failed for plugin '{exc.plugin_id}': field '{exc.field}' {exc.reason}",
+            ) from exc
+        except CorruptedSettingsSchemaError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Cannot execute workflow: plugin '{exc.plugin_id}' has corrupted settings_schema",
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Cannot execute workflow: plugin settings at step index {index} are invalid",
+            ) from exc
 
     workflow_run = WorkflowRun(
         id=uuid4(),

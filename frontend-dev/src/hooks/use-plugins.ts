@@ -1,7 +1,7 @@
 import api from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { PydanticSchema } from "@/app/assignment/components/sidebar/plugin-settings";
 import { toCamelCase } from "@/lib/casing";
+import { PluginSettingsSchema } from "@/types/plugin-settings";
 
 export type Plugin = {
   id: string;
@@ -16,7 +16,7 @@ export type Plugin = {
 };
 
 export type RuntimePlugin = Plugin & {
-  settingsSchema: PydanticSchema;
+  settingsSchema: PluginSettingsSchema;
   settings: Record<string, any>;
 };
 
@@ -38,12 +38,8 @@ const fetchPlugins = async (
   const params = type ? { type_filter: type } : {};
   const res = await api.get("/plugins", { params });
   const data = toCamelCase(res.data) as RuntimePluginRead[];
-  data.forEach((plugin, index) => {
-    plugin.settingsSchema =
-      plugin.settingsSchema ||
-      res.data[index]?.settingsSchema ||
-      res.data[index]?.settings_schema ||
-      { title: "", type: "object", properties: {} };
+  data.forEach((plugin) => {
+    plugin.settingsSchema = plugin.settingsSchema ?? {};
   });
 
   return data;
@@ -51,11 +47,7 @@ const fetchPlugins = async (
 const fetchPlugin = async (id: string): Promise<RuntimePluginRead> => {
   const res = await api.get(`/plugins/${id}`);
   const plugin = toCamelCase(res.data) as RuntimePluginRead;
-  plugin.settingsSchema =
-    plugin.settingsSchema ||
-    res.data?.settingsSchema ||
-    res.data?.settings_schema ||
-    { title: "", type: "object", properties: {} };
+  plugin.settingsSchema = plugin.settingsSchema ?? {};
   return plugin;
 };
 

@@ -4,6 +4,7 @@ from typing import Iterable
 
 from fair_platform.backend.api.schema.plugin import RuntimePlugin
 from fair_platform.backend.services.extension_registry import LocalExtensionRegistry
+from fair_platform.backend.services.settings_validator import validate_settings_schema
 from fair_platform.extension_sdk.contracts.plugin import PluginDescriptor, PluginType
 
 
@@ -19,6 +20,10 @@ def _normalize_plugin(
         }
     )
     payload = descriptor.model_dump(mode="python")
+    payload["settings_schema"] = validate_settings_schema(
+        plugin_id=descriptor.plugin_id,
+        settings_schema=payload.get("settings_schema", {}),
+    )
     payload["id"] = descriptor.plugin_id
     payload["type"] = descriptor.plugin_type
     payload["hash"] = f"{descriptor.extension_id}:{descriptor.plugin_id}"

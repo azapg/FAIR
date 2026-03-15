@@ -17,29 +17,8 @@ import { Rubric, useRubrics } from "@/hooks/use-rubrics";
 import { useCallback, useRef } from "react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import { shallow } from "zustand/shallow";
-
-interface PydanticProperty {
-  type: "string" | "number" | "boolean" | "object";
-  title: string;
-  label?: string;
-  description?: string;
-  default?: any;
-  minimum?: number;
-  maximum?: number;
-  minLength?: number;
-  maxLength?: number;
-  allowed_mime_types?: string[];
-  allowedMimeTypes?: string[];
-  $ref?: string;
-  [key: string]: unknown;
-}
-
-interface PydanticSchema {
-  properties: Record<string, PydanticProperty>;
-  $defs?: Record<string, any>;
-  title: string;
-  type: "object";
-}
+import { useTranslation } from "react-i18next";
+import { PluginSettingsField, PluginSettingsSchema } from "@/types/plugin-settings";
 
 interface PluginSettingsProps {
   plugin: RuntimePluginRead;
@@ -48,7 +27,7 @@ interface PluginSettingsProps {
 }
 
 interface BaseInputProps {
-  property: PydanticProperty;
+  property: PluginSettingsField;
   value: any;
   onChange: (value: any) => void;
   name: string;
@@ -57,17 +36,15 @@ interface BaseInputProps {
 function TextField({ property, value, onChange, name }: BaseInputProps) {
   return (
     <div className="space-y-2">
-      {property.description && (
-        <p className="text-xs text-muted-foreground">{property.description}</p>
-      )}
+      <p className="text-xs text-muted-foreground">{property.description}</p>
       <Textarea
         id={name}
         className="min-h-[80px] resize-y"
         placeholder={property.default?.toString() || ""}
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
-        minLength={property.minLength}
-        maxLength={property.maxLength}
+        minLength={property.fieldType === "text" || property.fieldType === "secret" ? property.minLength : undefined}
+        maxLength={property.fieldType === "text" || property.fieldType === "secret" ? property.maxLength : undefined}
       />
     </div>
   );
@@ -76,37 +53,37 @@ function TextField({ property, value, onChange, name }: BaseInputProps) {
 function SensitiveTextField({ property, value, onChange, name }: BaseInputProps) {
   return (
     <div className="space-y-2">
-      {property.description && (
-        <p className="text-xs text-muted-foreground">{property.description}</p>
-      )}
+      <p className="text-xs text-muted-foreground">{property.description}</p>
       <Input
         id={name}
         type="password"
         placeholder={property.default?.toString() || ""}
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
-        minLength={property.minLength}
-        maxLength={property.maxLength}
+        minLength={property.fieldType === "text" || property.fieldType === "secret" ? property.minLength : undefined}
+        maxLength={property.fieldType === "text" || property.fieldType === "secret" ? property.maxLength : undefined}
       />
     </div>
   );
 }
 
 function NumberField({ property, value, onChange, name }: BaseInputProps) {
+  const min = property.fieldType === "number" || property.fieldType === "slider" ? property.minimum : undefined;
+  const max = property.fieldType === "number" || property.fieldType === "slider" ? property.maximum : undefined;
+  const step = property.fieldType === "number" || property.fieldType === "slider" ? property.step : undefined;
+
   return (
     <div className="space-y-2">
-      {property.description && (
-        <p className="text-xs text-muted-foreground">{property.description}</p>
-      )}
+      <p className="text-xs text-muted-foreground">{property.description}</p>
       <Input
         id={name}
         type="number"
         placeholder={property.default?.toString() || ""}
         value={value || ""}
         onChange={(e) => onChange(Number(e.target.value))}
-        min={property.minimum}
-        max={property.maximum}
-        step={property.type === "number" ? "any" : "1"}
+        min={min}
+        max={max}
+        step={step}
       />
     </div>
   );
@@ -116,11 +93,7 @@ function SwitchField({ property, value, onChange, name }: BaseInputProps) {
   return (
     <div className="flex items-center justify-between space-y-2">
       <div className="space-y-0.5">
-        {property.description && (
-          <p className="text-xs text-muted-foreground">
-            {property.description}
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">{property.description}</p>
       </div>
       <Switch
         id={name}
@@ -135,11 +108,7 @@ function CheckboxField({ property, value, onChange, name }: BaseInputProps) {
   return (
     <div className="flex items-center justify-between space-y-2">
       <div className="space-y-0.5">
-        {property.description && (
-          <p className="text-xs text-muted-foreground">
-            {property.description}
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">{property.description}</p>
       </div>
       <Checkbox
         id={name}
@@ -151,14 +120,13 @@ function CheckboxField({ property, value, onChange, name }: BaseInputProps) {
 }
 
 function FileField({ property }: BaseInputProps) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2">
-      {property.description && (
-        <p className="text-xs text-muted-foreground">{property.description}</p>
-      )}
+      <p className="text-xs text-muted-foreground">{property.description}</p>
       <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
         <p className="text-sm text-muted-foreground">
-          File upload not implemented
+          {t("workflow.pluginSettings.fileUploadNotImplemented")}
         </p>
       </div>
     </div>
@@ -166,9 +134,9 @@ function FileField({ property }: BaseInputProps) {
 }
 
 function SliderField({ property, value, onChange, name }: BaseInputProps) {
-  const min = property.minimum ?? 0;
-  const max = property.maximum ?? 100;
-  const step = typeof property.step === "number" ? property.step : 1;
+  const min = property.fieldType === "slider" ? property.minimum : 0;
+  const max = property.fieldType === "slider" ? property.maximum : 100;
+  const step = property.fieldType === "slider" ? property.step : 1;
   const currentValue =
     typeof value === "number"
       ? value
@@ -176,7 +144,7 @@ function SliderField({ property, value, onChange, name }: BaseInputProps) {
         ? property.default
         : min;
 
-  const marks = property.marks
+  const marks = property.fieldType === "slider" && property.marks
     ? Object.entries(property.marks).sort(
         ([a], [b]) => Number(a) - Number(b),
       )
@@ -185,13 +153,9 @@ function SliderField({ property, value, onChange, name }: BaseInputProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        {property.description ? (
-          <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-            {property.description}
-          </p>
-        ) : (
-          <span />
-        )}
+        <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+          {property.description}
+        </p>
         <span className="text-xs tabular-nums text-muted-foreground">
           {currentValue}
         </span>
@@ -226,47 +190,43 @@ function CourseArtifactsSelectorField({
   onChange,
   name,
 }: BaseInputProps) {
+  const { t } = useTranslation();
   const activeCourseId = useWorkflowStore((state) => state.activeCourseId);
   const { data: artifacts = [], isLoading } = useArtifacts(
     activeCourseId ? { courseId: activeCourseId } : undefined,
     !!activeCourseId,
   );
 
-  const allowedMimeTypes =
-    property.allowed_mime_types ?? property.allowedMimeTypes ?? [];
-  const hasMimeFilter = Array.isArray(allowedMimeTypes) && allowedMimeTypes.length > 0;
+  const allowedTypes =
+    property.fieldType === "artifact-ref" ? property.allowedTypes : [];
+  const hasTypeFilter = Array.isArray(allowedTypes) && allowedTypes.length > 0;
 
   const normalized: SDKArtifact[] = artifacts
     .filter((artifact) => artifact.accessLevel === "assignment")
     .filter((artifact) =>
-      hasMimeFilter ? allowedMimeTypes.includes(artifact.mime) : true,
+      hasTypeFilter ? allowedTypes.includes(artifact.mime) : true,
     )
     .map(toSDKArtifact);
-  const selectedId = typeof value?.id === "string" ? value.id : "";
+  const selectedId = typeof value === "string" ? value : "";
 
   return (
     <div className="space-y-2">
-      {property.description && (
-        <p className="text-xs text-muted-foreground">{property.description}</p>
-      )}
+      <p className="text-xs text-muted-foreground">{property.description}</p>
       <Select
         value={selectedId}
-        onValueChange={(artifactId) => {
-          const selected = normalized.find((item) => item.id === artifactId);
-          if (selected) onChange(selected);
-        }}
+        onValueChange={(artifactId) => onChange(artifactId)}
         disabled={!activeCourseId || isLoading || normalized.length === 0}
       >
         <SelectTrigger id={name} className="w-full" size="sm">
           <SelectValue
             placeholder={
               !activeCourseId
-                ? "Select a course first"
+                ? t("workflow.pluginSettings.selectCourseFirst")
                 : isLoading
-                  ? "Loading artifacts..."
+                  ? t("workflow.pluginSettings.loadingArtifacts")
                   : normalized.length === 0
-                    ? "No course artifacts available"
-                    : "Select an artifact"
+                    ? t("workflow.pluginSettings.noArtifacts")
+                    : t("workflow.pluginSettings.selectArtifact")
             }
           />
         </SelectTrigger>
@@ -291,30 +251,26 @@ function RubricField({
   onChange,
   name,
 }: BaseInputProps) {
+  const { t } = useTranslation();
   const { data: rubrics = [], isLoading } = useRubrics();
-  const selectedId = typeof value?.id === "string" ? value.id : "";
+  const selectedId = typeof value === "string" ? value : "";
 
   return (
     <div className="space-y-2">
-      {property.description && (
-        <p className="text-xs text-muted-foreground">{property.description}</p>
-      )}
+      <p className="text-xs text-muted-foreground">{property.description}</p>
       <Select
         value={selectedId}
-        onValueChange={(rubricId) => {
-          const selected = rubrics.find((item: Rubric) => item.id === rubricId);
-          if (selected) onChange(selected);
-        }}
+        onValueChange={(rubricId) => onChange(rubricId)}
         disabled={isLoading || rubrics.length === 0}
       >
         <SelectTrigger id={name} className="w-full" size="sm">
           <SelectValue
             placeholder={
               isLoading
-                ? "Loading rubrics..."
+                ? t("workflow.pluginSettings.loadingRubrics")
                 : rubrics.length === 0
-                  ? "No rubrics available"
-                  : "Select a rubric"
+                  ? t("workflow.pluginSettings.noRubrics")
+                  : t("workflow.pluginSettings.selectRubric")
             }
           />
         </SelectTrigger>
@@ -322,7 +278,7 @@ function RubricField({
           position="popper"
           className="w-[--radix-select-trigger-width]"
         >
-          {rubrics.map((rubric) => (
+          {rubrics.map((rubric: Rubric) => (
             <SelectItem key={rubric.id} value={rubric.id}>
               {rubric.name}
             </SelectItem>
@@ -336,59 +292,58 @@ function RubricField({
 function UnsupportedField({
   property,
 }: {
-  property: PydanticProperty;
+  property: Partial<PluginSettingsField> & { fieldType?: string };
   name: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium text-destructive">
-        Unsupported field: {property.title}
+        {t("workflow.pluginSettings.unsupportedField", {
+          fieldType: property.fieldType || t("workflow.pluginSettings.unknownFieldType"),
+        })}
       </Label>
-      <p className="text-xs text-muted-foreground">
-        Type: {property.type} | Title: {property.title}
-      </p>
     </div>
   );
 }
 
-// Component factory
 const INPUT_COMPONENTS = {
-  TextField,
-  SensitiveTextField,
-  NumberField,
-  SliderField,
-  CourseArtifactsSelectorField,
-  RubricField,
-  SwitchField,
-  CheckboxField,
-  FileField,
+  text: TextField,
+  secret: SensitiveTextField,
+  number: NumberField,
+  slider: SliderField,
+  "artifact-ref": CourseArtifactsSelectorField,
+  "rubric-ref": RubricField,
+  switch: SwitchField,
+  checkbox: CheckboxField,
+  file: FileField,
 } as const;
 
 type InputComponentKey = keyof typeof INPUT_COMPONENTS;
 
 function getComponentType(
-  property: PydanticProperty,
+  property: PluginSettingsField,
 ): InputComponentKey | null {
-  if (property.title in INPUT_COMPONENTS) {
-    return property.title as InputComponentKey;
-  }
+  return property.fieldType in INPUT_COMPONENTS
+    ? (property.fieldType as InputComponentKey)
+    : null;
+}
 
-  return null;
+function toTitleCaseFromKey(name: string): string {
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]/g, " ")
+    .replace(/^\w/, (char) => char.toUpperCase());
 }
 
 function createInputComponent(
-  property: PydanticProperty,
+  property: PluginSettingsField,
   name: string,
   value: any,
   onChange: (value: any) => void,
 ) {
   const componentType = getComponentType(property);
-  const label =
-    property.label ||
-    name
-      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-      .replace(/[_-]/g, " ")
-      .replace(/^\w/, (char) => char.toUpperCase());
+  const label = property.label || toTitleCaseFromKey(name);
 
   if (!componentType) {
     return <UnsupportedField key={name} property={property} name={name} />;
@@ -411,12 +366,24 @@ function createInputComponent(
   );
 }
 
+function isValidFieldShape(value: unknown): value is PluginSettingsField {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "fieldType" in value &&
+    "label" in value &&
+    "description" in value &&
+    "required" in value
+  );
+}
+
 export function PluginSettings({
   plugin,
   values = {},
   onChange,
 }: PluginSettingsProps) {
-  const schema = plugin.settingsSchema;
+  const { t } = useTranslation();
+  const schema = plugin.settingsSchema as PluginSettingsSchema | undefined;
   const patchActivePluginSetting = useWorkflowStore(
     (state) => state.patchActivePluginSetting,
   );
@@ -432,9 +399,6 @@ export function PluginSettings({
 
   const settings = pluginDraft?.settings ?? values ?? {};
 
-  // TODO: All this mess to avoid re-creating handlers on every render,
-  //  but I am not sure if it's worth it. For now, I even't haven't seen results
-  //  we will see if it stays after fixing parent re-renders.
   const handleFieldChange = useCallback(
     (key: string, value: any) => {
       const next = { ...(pluginDraft?.settings ?? values ?? {}), [key]: value };
@@ -455,10 +419,24 @@ export function PluginSettings({
     [handleFieldChange],
   );
 
-  if (!schema?.properties) {
+  if (!schema || Object.keys(schema).length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-sm text-muted-foreground">No settings available</p>
+        <p className="text-sm text-muted-foreground">
+          {t("workflow.pluginSettings.noSettings")}
+        </p>
+      </div>
+    );
+  }
+
+  const entries = Object.entries(schema);
+  const invalidSchema = entries.some(([, property]) => !isValidFieldShape(property));
+  if (invalidSchema) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-sm text-destructive">
+          {t("workflow.pluginSettings.invalidSchema")}
+        </p>
       </div>
     );
   }
@@ -466,12 +444,17 @@ export function PluginSettings({
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        {Object.entries(schema.properties).map(([key, property]) =>
-          createInputComponent(property, key, settings[key], getHandler(key)),
+        {entries.map(([key, property]) =>
+          createInputComponent(
+            property as PluginSettingsField,
+            key,
+            settings[key],
+            getHandler(key),
+          ),
         )}
       </div>
     </div>
   );
 }
 
-export type { PydanticSchema, PydanticProperty, PluginSettingsProps };
+export type { PluginSettingsProps };

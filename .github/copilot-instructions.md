@@ -15,8 +15,7 @@ Five co-located components sharing one repository:
 - **CLI** (`src/fair_platform/cli/`): Typer-based entry point. `fair dev` for development (launches backend + bun dev server), `fair serve` for production. Headless mode via `--headless`.
 - **Backend** (`src/fair_platform/backend/`): FastAPI server — SQLAlchemy models, Alembic migrations, API routers, and background services (dispatcher, job queue).
 - **Frontend** (`frontend-dev/`): Vite + React 19 SPA. Built to `frontend-dev/dist/`, then `build.sh` copies it to `src/fair_platform/frontend/dist/` for single-binary embedding.
-- **Extension SDK** (`src/fair_platform/extension_sdk/`): The **current** external extension system. Extensions are standalone HTTP services that register with the platform and receive jobs via webhooks.
-- **Deprecated SDK** (`src/fair_platform/sdk/`): In-process plugin system (transcribers, graders, validators). **Deprecated — will be removed once the Extension SDK is stable.** Do not add new code here. The Extension SDK itself is also planned to move to a standalone package.
+- **Extension SDK** (`src/fair_platform/extension_sdk/`): The current external extension system. Extensions are standalone HTTP services that register with the platform and receive jobs via webhooks.
 
 **Key architectural decision**: Extensions communicate asynchronously — the platform creates a Job, returns `202` immediately, a background Dispatcher forwards the job to the extension's webhook URL, and the client subscribes via SSE (`/api/jobs/{id}/stream`) for results.
 
