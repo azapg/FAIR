@@ -25,8 +25,6 @@ For this document, SHOULD and MAY are not used for behavior that affects interop
 - each key is a setting identifier
 - each value is a field definition object
 
-`settings_schema` MUST NOT contain wrapper keys like `title`, `type`, `description`, or `properties`.
-
 Example:
 
 ```json

@@ -9,7 +9,6 @@ from pydantic import ValidationError
 from fair_platform.extension_sdk.settings import parse_settings_field
 
 _SETTING_KEY_PATTERN = re.compile(r"^[a-z][a-zA-Z0-9]*$")
-_ROOT_WRAPPER_KEYS = {"title", "type", "description", "properties"}
 _ALIGN_TOLERANCE = 1e-9
 
 
@@ -43,15 +42,6 @@ def validate_settings_schema(
         issues.append(_schema_issue(plugin_id, "settings_schema", "settings_schema must be an object"))
         raise SettingsSchemaValidationError(plugin_id=plugin_id, issues=issues)
 
-    for root_key in _ROOT_WRAPPER_KEYS:
-        if root_key in settings_schema:
-            issues.append(
-                _schema_issue(
-                    plugin_id,
-                    root_key,
-                    "settings_schema must be a flat object and must not contain wrapper keys",
-                )
-            )
 
     normalized: dict[str, dict[str, Any]] = {}
     for key, raw_field in settings_schema.items():
