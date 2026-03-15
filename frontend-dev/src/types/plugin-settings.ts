@@ -72,20 +72,3 @@ export type PluginSettingsField =
   | RubricRefSettingsField;
 
 export type PluginSettingsSchema = Record<string, PluginSettingsField>;
-
-export function normalizePluginSettingsSchema(input: unknown): PluginSettingsSchema {
-  if (!input || typeof input !== "object") {
-    return {};
-  }
-
-  const candidate = input as Record<string, unknown>;
-  if (
-    "properties" in candidate &&
-    candidate.properties &&
-    typeof candidate.properties === "object"
-  ) {
-    return candidate.properties as PluginSettingsSchema;
-  }
-
-  return candidate as PluginSettingsSchema;
-}
