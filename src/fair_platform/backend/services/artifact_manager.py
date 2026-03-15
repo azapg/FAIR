@@ -1,17 +1,27 @@
 from typing import List, Optional, Dict, Any
 from uuid import UUID, uuid4
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from sqlalchemy.orm import Session
 from fastapi import UploadFile, HTTPException
 
-from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus, AccessLevel
+from fair_platform.backend.data.models.artifact import (
+    Artifact,
+    ArtifactDerivative,
+    ArtifactStatus,
+    AccessLevel,
+)
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.submission import Submission
 from fair_platform.backend.data.models.enrollment import Enrollment
-from fair_platform.backend.data.storage import storage
+from fair_platform.backend.storage.provider import (
+    StorageProvider,
+    get_storage_provider,
+    parse_storage_uri,
+)
 from fair_platform.backend.core.security.permissions import (
     has_capability,
     has_capability_and_owner,
@@ -27,16 +37,16 @@ class ArtifactManager:
     consistency and proper error handling.
     """
     
-    def __init__(self, db: Session, storage_backend=None):
+    def __init__(self, db: Session, storage_provider: StorageProvider):
         """
         Initialize ArtifactManager.
         
         Args:
             db: SQLAlchemy database session
-            storage_backend: Optional storage backend for testing (defaults to platform storage)
+            storage_provider: Storage provider implementation
         """
         self.db = db
-        self.storage = storage_backend or storage
+        self.storage_provider = storage_provider
     
     # ============================================================================
     # CORE CRUD OPERATIONS
@@ -83,18 +93,20 @@ class ArtifactManager:
                 detail="File must have a filename"
             )
 
-        storage_path = None
+        storage_uri = None
         try:
             artifact_id = uuid4()
-            storage_path = self._store_file(artifact_id, file)
+            key = self._build_storage_key(artifact_id, "original", file.filename)
+            storage_uri = self.storage_provider.put_object(
+                key,
+                file.file,
+                file.content_type or "application/octet-stream",
+            )
             
             artifact = Artifact(
                 id=artifact_id,
                 title=title or file.filename,
                 artifact_type=artifact_type,
-                mime=file.content_type or "application/octet-stream",
-                storage_path=storage_path,
-                storage_type="local",
                 creator_id=creator.id,
                 status=status,
                 access_level=access_level,
@@ -105,15 +117,57 @@ class ArtifactManager:
             
             self.db.add(artifact)
             self.db.flush()
+            self.db.add(
+                ArtifactDerivative(
+                    id=uuid4(),
+                    artifact_id=artifact.id,
+                    derivative_type="original",
+                    storage_uri=storage_uri,
+                    mime_type=file.content_type or "application/octet-stream",
+                )
+            )
+            self.db.flush()
 
             return artifact
         except Exception as e:
-            if storage_path:
-                self._delete_file(storage_path)
+            if storage_uri:
+                self._delete_derivative_object(storage_uri)
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to create artifact: {str(e)}"
             )
+
+    def add_derivative(
+        self,
+        artifact_id: UUID,
+        file: UploadFile,
+        derivative_type: str,
+        user: User,
+    ) -> ArtifactDerivative:
+        artifact = self.db.get(Artifact, artifact_id)
+        if not artifact:
+            raise HTTPException(status_code=404, detail="Artifact not found")
+        if not self.can_edit(user, artifact):
+            raise HTTPException(status_code=403, detail="Permission denied")
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="File must have a filename")
+
+        key = self._build_storage_key(artifact_id, derivative_type, file.filename)
+        storage_uri = self.storage_provider.put_object(
+            key,
+            file.file,
+            file.content_type or "application/octet-stream",
+        )
+        derivative = ArtifactDerivative(
+            id=uuid4(),
+            artifact_id=artifact_id,
+            derivative_type=derivative_type,
+            storage_uri=storage_uri,
+            mime_type=file.content_type or "application/octet-stream",
+        )
+        self.db.add(derivative)
+        self.db.flush()
+        return derivative
     
     def get_artifact(self, artifact_id: UUID, user: User) -> Artifact:
         """
@@ -266,8 +320,8 @@ class ArtifactManager:
                     detail="Hard delete requires admin privileges"
                 )
             
-            # Delete physical file
-            self._delete_file(artifact.storage_path)
+            for derivative in list(artifact.derivatives):
+                self._delete_derivative_object(derivative.storage_uri)
             
             # Delete from database
             self.db.delete(artifact)
@@ -559,7 +613,8 @@ class ArtifactManager:
         count = 0
         for artifact in orphaned_artifacts:
             if hard_delete:
-                self._delete_file(artifact.storage_path)
+                for derivative in list(artifact.derivatives):
+                    self._delete_derivative_object(derivative.storage_uri)
                 self.db.delete(artifact)
             else:
                 artifact.status = ArtifactStatus.archived
@@ -697,44 +752,13 @@ class ArtifactManager:
     # STORAGE OPERATIONS (Private)
     # ============================================================================
     
-    def _store_file(self, artifact_id: UUID, file: UploadFile) -> str:
-        """
-        Store file physically and return storage path.
-        
-        Args:
-            artifact_id: UUID for the artifact
-            file: Uploaded file
-            
-        Returns:
-            Storage path string
-        """
-        if not file.filename:
-            raise ValueError("File must have a filename")
-        
-        artifact_folder = self.storage.uploads_dir / str(artifact_id)
-        artifact_folder.mkdir(parents=True, exist_ok=True)
-        file_location = artifact_folder / file.filename
-        
-        with open(file_location, "wb+") as buffer:
-            buffer.write(file.file.read())
-        
-        return f"{artifact_id}/{file.filename}"
-    
-    def _delete_file(self, storage_path: str) -> None:
-        """
-        Delete file from physical storage.
-        
-        Args:
-            storage_path: Path to the file in storage
-        """
-        file_path = self.storage.uploads_dir / storage_path
-        if file_path.exists():
-            file_path.unlink()
-            
-            # Remove parent directory if empty
-            parent = file_path.parent
-            if parent.exists() and not list(parent.iterdir()):
-                parent.rmdir()
+    def _build_storage_key(self, artifact_id: UUID, derivative_type: str, filename: str) -> str:
+        safe_name = Path(filename).name
+        return f"artifacts/{artifact_id}/{derivative_type}_{safe_name}"
+
+    def _delete_derivative_object(self, storage_uri: str) -> None:
+        _, key = parse_storage_uri(storage_uri)
+        self.storage_provider.delete_object(key)
     
     def _validate_status_transition(self, current: ArtifactStatus, new: ArtifactStatus) -> None:
         """
@@ -777,7 +801,7 @@ def get_artifact_manager(db: Session) -> ArtifactManager:
     Returns:
         ArtifactManager instance
     """
-    return ArtifactManager(db)
+    return ArtifactManager(db, storage_provider=get_storage_provider())
 
 
 __all__ = ["ArtifactManager", "get_artifact_manager"]

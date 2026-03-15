@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Query
 from sqlalchemy.orm import Session
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.artifact import AccessLevel, ArtifactStatus, Artifact
@@ -17,6 +17,8 @@ from fair_platform.backend.core.security.dependencies import require_capability,
 from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
+from fair_platform.backend.storage.provider import LocalStorageProvider, parse_storage_uri
+from fair_platform.backend.data.storage import storage
 
 router = APIRouter()
 
@@ -107,31 +109,55 @@ def download_artifact(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    """Return artifact file content with permission enforcement."""
+    """Redirect to the original derivative download URL with permission enforcement."""
     manager = get_artifact_manager(db)
 
     artifact = manager.get_artifact(artifact_id, current_user)
-    if not artifact.storage_path:
+    derivative = artifact.original_derivative
+    if not derivative:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Artifact file not found",
         )
 
-    file_path = Path(artifact.storage_path)
-    if not file_path.is_absolute():
-        file_path = manager.storage.uploads_dir / file_path
-
-    if not file_path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Artifact file not found",
-        )
-
-    return FileResponse(
-        file_path,
-        media_type=artifact.mime or "application/octet-stream",
-        filename=file_path.name,
+    _, key = parse_storage_uri(derivative.storage_uri)
+    return RedirectResponse(
+        url=manager.storage_provider.get_presigned_url(key),
+        status_code=status.HTTP_307_TEMPORARY_REDIRECT,
     )
+
+
+@router.get("/{artifact_id}/derivatives/{derivative_id}/download")
+def download_artifact_derivative(
+    artifact_id: UUID,
+    derivative_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    manager = get_artifact_manager(db)
+    artifact = manager.get_artifact(artifact_id, current_user)
+    derivative = next((d for d in artifact.derivatives if d.id == derivative_id), None)
+    if not derivative:
+        raise HTTPException(status_code=404, detail="Artifact derivative not found")
+
+    _, key = parse_storage_uri(derivative.storage_uri)
+    return RedirectResponse(
+        url=manager.storage_provider.get_presigned_url(key),
+        status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+    )
+
+
+@router.get("/storage/local/{key:path}")
+def download_local_storage_object(
+    key: str,
+    current_user: User = Depends(get_current_user),
+):
+    del current_user
+    provider = LocalStorageProvider(uploads_dir=storage.uploads_dir, api_prefix="/api/artifacts/storage/local")
+    file_path = provider.uploads_dir / Path(key)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Stored file not found")
+    return FileResponse(file_path)
 
 
 @router.get("/extensions/{artifact_id}/download")
