@@ -110,9 +110,15 @@ def test_registered_extension_plugins_are_listed_via_plugins_api(
                         "name": "Echo Reviewer",
                         "action": "plugin.review.echo",
                         "settingsSchema": {
-                            "title": "Echo Reviewer",
-                            "type": "object",
-                            "properties": {},
+                            "reviewTone": {
+                                "fieldType": "text",
+                                "label": "Review Tone",
+                                "description": "Tone for generated feedback.",
+                                "required": False,
+                                "default": "concise",
+                                "minLength": 1,
+                                "maxLength": 100,
+                            }
                         },
                     }
                 ]
@@ -132,4 +138,4 @@ def test_registered_extension_plugins_are_listed_via_plugins_api(
     assert len(plugins) == 1
     assert plugins[0]["id"] == "mock.echo.reviewer"
     assert plugins[0]["type"] == "reviewer"
-    assert plugins[0]["settingsSchema"]["title"] == "Echo Reviewer"
+    assert "reviewTone" in plugins[0]["settingsSchema"]

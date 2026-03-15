@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { RuntimePluginRead } from "@/hooks/use-plugins";
+import { ExtensionPluginRead } from "@/hooks/use-plugins";
 import { workflowPluginsFromSteps, WorkflowStep } from "@/store/workflows-store";
 import {
   DataTable,
@@ -20,7 +20,7 @@ type WorkflowRow = {
   description?: string | null;
   createdAt: string;
   updatedAt?: string | null;
-  plugins?: Record<string, RuntimePluginRead>;
+  plugins?: Record<string, ExtensionPluginRead>;
   steps?: WorkflowStep[];
 };
 

@@ -1,6 +1,6 @@
 import { createWithEqualityFn } from "zustand/traditional";
 import { persist } from "zustand/middleware";
-import { RuntimePlugin, RuntimePluginRead } from "@/hooks/use-plugins";
+import { ExtensionPlugin, ExtensionPluginRead } from "@/hooks/use-plugins";
 import { Submission } from "@/hooks/use-submissions";
 import { AuthUser } from "@/contexts/auth-context";
 
@@ -22,9 +22,9 @@ export type WorkflowCreate = {
   courseId: string;
   description?: string;
   plugins: {
-    transcriber?: RuntimePlugin;
-    grader?: RuntimePlugin;
-    reviewer?: RuntimePlugin;
+    transcriber?: ExtensionPlugin;
+    grader?: ExtensionPlugin;
+    reviewer?: ExtensionPlugin;
   };
 };
 
@@ -32,7 +32,7 @@ export type WorkflowStep = {
   id: string;
   order: number;
   pluginType: "transcriber" | "grader" | "reviewer";
-  plugin: RuntimePlugin;
+  plugin: ExtensionPlugin;
   settings: Record<string, any>;
 };
 
@@ -75,7 +75,7 @@ type Actions = {
    * Avoids reading drafts from components and updates only the necessary slice.
    */
   patchActivePluginSetting: (
-    plugin: RuntimePluginRead,
+    plugin: ExtensionPluginRead,
     key: string,
     value: any,
     fallback?: Record<string, any>,
@@ -177,7 +177,7 @@ export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
           const prevPlugin = currentDraft.plugins?.[plugin.type];
           const prevSettings = prevPlugin?.settings ?? fallback ?? {};
           const newSettings = { ...prevSettings, [key]: value };
-          const summary: RuntimePlugin = { ...plugin, settings: newSettings };
+          const summary: ExtensionPlugin = { ...plugin, settings: newSettings };
 
           return {
             drafts: {

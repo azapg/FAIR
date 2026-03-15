@@ -1,4 +1,4 @@
-import { PluginType, usePlugins, RuntimePluginRead } from "@/hooks/use-plugins";
+import { PluginType, usePlugins, ExtensionPluginRead } from "@/hooks/use-plugins";
 import { PropsWithChildren, useEffect, useState } from "react";
 import {
   Select,
@@ -37,7 +37,7 @@ export default function PluginSection({
 }: PluginSectionProps) {
   const { data: plugins = [], isLoading, isError } = usePlugins(type);
   const [selectedPlugin, setSelectedPlugin] =
-    useState<RuntimePluginRead | null>(null);
+    useState<ExtensionPluginRead | null>(null);
   const saveDraft = useWorkflowStore((state) => state.saveDraft);
   const activeCourseId = useWorkflowStore((state) => state.activeCourseId);
   const currentDraft = useWorkflowStore((s) =>
@@ -50,8 +50,7 @@ export default function PluginSection({
     const pluginInDraft = currentDraft?.plugins[type];
     if (pluginInDraft) {
       const plugin = plugins.find(
-        // TODO: We should also check the hash, but I haven't implemented a good way to let the user know the difference yet.
-        (p) => p.id === pluginInDraft.id /*&& p.hash === pluginInDraft.hash*/,
+        (p) => p.id === pluginInDraft.id,
       );
 
       if (plugin) {
@@ -122,7 +121,7 @@ export default function PluginSection({
 
       {selectedPlugin && currentDraft && (
         <PluginSettings
-          key={`${type}-settings-${selectedPlugin.id}-${selectedPlugin.hash}`}
+          key={`${type}-settings-${selectedPlugin.id}`}
           plugin={selectedPlugin}
           values={currentDraft.plugins[type]?.settings}
         />

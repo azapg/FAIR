@@ -10,6 +10,19 @@ from fair_platform.extension_sdk.contracts.plugin import (
     WorkflowStepExecutionResult,
 )
 from fair_platform.extension_sdk.extension import FairExtension
+from fair_platform.extension_sdk.settings import (
+    ArtifactRefField,
+    CheckboxField,
+    FileField,
+    NumberField,
+    RubricRefField,
+    SecretField,
+    SettingsField,
+    SettingsSchema,
+    SliderField,
+    SwitchField,
+    TextField,
+)
 
 __all__ = [
     "ExtensionCredentials",
@@ -20,4 +33,15 @@ __all__ = [
     "WorkflowStepExecutionRequest",
     "WorkflowStepExecutionResult",
     "FairExtension",
+    "SettingsField",
+    "TextField",
+    "SecretField",
+    "NumberField",
+    "SliderField",
+    "SwitchField",
+    "CheckboxField",
+    "FileField",
+    "ArtifactRefField",
+    "RubricRefField",
+    "SettingsSchema",
 ]

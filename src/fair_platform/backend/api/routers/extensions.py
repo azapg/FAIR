@@ -21,6 +21,10 @@ from fair_platform.backend.services.extension_registry import (
     ExtensionRegistration,
     LocalExtensionRegistry,
 )
+from fair_platform.backend.services.settings_validator import (
+    SettingsSchemaValidationError,
+    validate_settings_schema,
+)
 
 router = APIRouter()
 
@@ -55,6 +59,59 @@ async def register_extension(
     approved_scopes = sorted(set(extension_client.scopes or []))
     effective_scopes = [scope for scope in requested_scopes if scope in approved_scopes]
     metadata = dict(payload.metadata)
+    raw_plugins = metadata.get("plugins")
+    if raw_plugins is not None:
+        if not isinstance(raw_plugins, list):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=[
+                    {
+                        "type": "invalid_settings_schema",
+                        "plugin_id": payload.extension_id,
+                        "message": "metadata.plugins must be a list",
+                        "field_path": "plugins",
+                    }
+                ],
+            )
+        normalized_plugins: list[dict] = []
+        for index, raw_plugin in enumerate(raw_plugins):
+            if not isinstance(raw_plugin, dict):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=[
+                        {
+                            "type": "invalid_settings_schema",
+                            "plugin_id": payload.extension_id,
+                            "message": "plugin metadata entry must be an object",
+                            "field_path": f"plugins[{index}]",
+                        }
+                    ],
+                )
+            plugin_id = (
+                raw_plugin.get("pluginId")
+                or raw_plugin.get("plugin_id")
+                or f"plugins[{index}]"
+            )
+            raw_settings_schema = (
+                raw_plugin.get("settingsSchema")
+                if "settingsSchema" in raw_plugin
+                else raw_plugin.get("settings_schema")
+            )
+            try:
+                normalized_schema = validate_settings_schema(
+                    plugin_id=plugin_id,
+                    settings_schema=raw_settings_schema if raw_settings_schema is not None else {},
+                )
+            except SettingsSchemaValidationError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=exc.issues,
+                ) from exc
+            normalized_plugin = dict(raw_plugin)
+            normalized_plugin["settingsSchema"] = normalized_schema
+            normalized_plugins.append(normalized_plugin)
+        metadata["plugins"] = normalized_plugins
+
     metadata["approved_scopes"] = approved_scopes
     metadata["effective_scopes"] = effective_scopes
 

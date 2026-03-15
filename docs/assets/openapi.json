@@ -4,17 +4,77 @@
     "title": "Fair Platform Backend",
     "version": "0.1.0"
   },
-  "servers": [
-    {
-      "url": "https://fair.alam.systems",
-      "description": "Production server"
-    },
-    {
-      "url": "http://localhost:8000",
-      "description": "Local development server"
-    }
-  ],
   "paths": {
+    "/api/users/me/settings": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get My Settings",
+        "operationId": "get_my_settings_api_users_me_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSettingsRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update My Settings",
+        "operationId": "update_my_settings_api_users_me_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserSettingsRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/users/": {
       "get": {
         "tags": [
@@ -452,6 +512,112 @@
         }
       }
     },
+    "/api/courses/{course_id}/reset-code": {
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Reset Enrollment Code",
+        "operationId": "reset_enrollment_code_api_courses__course_id__reset_code_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/settings": {
+      "patch": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Update Course Settings",
+        "operationId": "update_course_settings_api_courses__course_id__settings_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseSettingsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/artifacts/": {
       "post": {
         "tags": [
@@ -771,6 +937,116 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/artifacts/{artifact_id}/download": {
+      "get": {
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "Download Artifact",
+        "description": "Return artifact file content with permission enforcement.",
+        "operationId": "download_artifact_api_artifacts__artifact_id__download_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/artifacts/extensions/{artifact_id}/download": {
+      "get": {
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "Download Artifact For Extension",
+        "description": "Allow extensions to download artifacts for processing.\n\nTODO: This endpoint bypasses user-level permission checks. This is just a temporary solution, https://github.com/azapg/FAIR/pull/178 should help us implement a more robust permissions system that can be enforced here.",
+        "operationId": "download_artifact_for_extension_api_artifacts_extensions__artifact_id__download_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Artifact Id"
+            }
+          },
+          {
+            "name": "X-FAIR-Extension-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fair-Extension-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -1335,8 +1611,7 @@
       "get": {
         "tags": [
           "plugins",
-          "workflows",
-          "sessions"
+          "workflows"
         ],
         "summary": "List All Plugins",
         "operationId": "list_all_plugins_api_plugins__get",
@@ -1353,7 +1628,12 @@
             "schema": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/PluginType"
+                  "enum": [
+                    "transcriber",
+                    "grader",
+                    "reviewer"
+                  ],
+                  "type": "string"
                 },
                 {
                   "type": "null"
@@ -1371,9 +1651,57 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/PluginMeta"
+                    "$ref": "#/components/schemas/ExtensionPlugin-Output"
                   },
                   "title": "Response List All Plugins Api Plugins  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plugins/{plugin_id}": {
+      "get": {
+        "tags": [
+          "plugins",
+          "workflows"
+        ],
+        "summary": "Get Plugin",
+        "operationId": "get_plugin_api_plugins__plugin_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plugin_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plugin Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionPlugin-Output"
                 }
               }
             }
@@ -1665,6 +1993,164 @@
         }
       }
     },
+    "/api/submissions/{submission_id}/draft": {
+      "patch": {
+        "tags": [
+          "submissions"
+        ],
+        "summary": "Update Submission Draft",
+        "operationId": "update_submission_draft_api_submissions__submission_id__draft_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "submission_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Submission Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionDraftUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/submissions/{submission_id}/return": {
+      "post": {
+        "tags": [
+          "submissions"
+        ],
+        "summary": "Return Submission",
+        "operationId": "return_submission_api_submissions__submission_id__return_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "submission_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Submission Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/submissions/{submission_id}/timeline": {
+      "get": {
+        "tags": [
+          "submissions"
+        ],
+        "summary": "Get Submission Timeline",
+        "operationId": "get_submission_timeline_api_submissions__submission_id__timeline_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "submission_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Submission Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubmissionTimelineEventRead"
+                  },
+                  "title": "Response Get Submission Timeline Api Submissions  Submission Id  Timeline Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/submission-results/{result_id}": {
       "get": {
         "summary": "Get Result",
@@ -1863,8 +2349,7 @@
       "post": {
         "tags": [
           "workflows",
-          "plugins",
-          "sessions"
+          "plugins"
         ],
         "summary": "Create Workflow",
         "operationId": "create_workflow_api_workflows__post",
@@ -1909,8 +2394,7 @@
       "get": {
         "tags": [
           "workflows",
-          "plugins",
-          "sessions"
+          "plugins"
         ],
         "summary": "List Workflows",
         "operationId": "list_workflows_api_workflows__get",
@@ -1970,8 +2454,7 @@
       "get": {
         "tags": [
           "workflows",
-          "plugins",
-          "sessions"
+          "plugins"
         ],
         "summary": "Get Workflow",
         "operationId": "get_workflow_api_workflows__workflow_id__get",
@@ -2018,8 +2501,7 @@
       "put": {
         "tags": [
           "workflows",
-          "plugins",
-          "sessions"
+          "plugins"
         ],
         "summary": "Update Workflow",
         "operationId": "update_workflow_api_workflows__workflow_id__put",
@@ -2076,8 +2558,7 @@
       "delete": {
         "tags": [
           "workflows",
-          "plugins",
-          "sessions"
+          "plugins"
         ],
         "summary": "Delete Workflow",
         "operationId": "delete_workflow_api_workflows__workflow_id__delete",
@@ -2101,6 +2582,263 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow-runs/": {
+      "post": {
+        "tags": [
+          "workflow-runs",
+          "workflows"
+        ],
+        "summary": "Create Workflow Run",
+        "operationId": "create_workflow_run_api_workflow_runs__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowRunCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRunRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "workflow-runs",
+          "workflows"
+        ],
+        "summary": "List Workflow Runs",
+        "operationId": "list_workflow_runs_api_workflow_runs__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "assignment_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs by assignment",
+              "title": "Assignment Id"
+            },
+            "description": "Filter runs by assignment"
+          },
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter runs by workflow",
+              "title": "Workflow Id"
+            },
+            "description": "Filter runs by workflow"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowRunRead"
+                  },
+                  "title": "Response List Workflow Runs Api Workflow Runs  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow-runs/{workflow_run_id}": {
+      "get": {
+        "tags": [
+          "workflow-runs",
+          "workflows"
+        ],
+        "summary": "Get Workflow Run",
+        "operationId": "get_workflow_run_api_workflow_runs__workflow_run_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Workflow Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRunRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow-runs/{workflow_run_id}/stream": {
+      "get": {
+        "tags": [
+          "workflow-runs",
+          "workflows"
+        ],
+        "summary": "Stream Workflow Run",
+        "operationId": "stream_workflow_run_api_workflow_runs__workflow_run_id__stream_get",
+        "parameters": [
+          {
+            "name": "workflow_run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Workflow Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -2209,7 +2947,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserRead"
+                  "$ref": "#/components/schemas/AuthUserRead"
                 }
               }
             }
@@ -2222,20 +2960,18 @@
         ]
       }
     },
-    "/api/sessions/": {
+    "/api/auth/forgot-password": {
       "post": {
         "tags": [
-          "sessions",
-          "workflows",
-          "plugins"
+          "auth"
         ],
-        "summary": "Create Session",
-        "operationId": "create_session_api_sessions__post",
+        "summary": "Forgot Password",
+        "operationId": "forgot_password_api_auth_forgot_password_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SessionCreateRequest"
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
               }
             }
           },
@@ -2246,9 +2982,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SessionResponse"
-                }
+                "schema": {}
               }
             }
           },
@@ -2262,6 +2996,25 @@
               }
             }
           }
+        }
+      }
+    },
+    "/api/auth/resend-verification": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Resend Verification Email",
+        "operationId": "resend_verification_email_api_auth_resend_verification_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
         },
         "security": [
           {
@@ -2270,57 +3023,107 @@
         ]
       }
     },
-    "/api/sessions/{session_id}/logs": {
-      "get": {
+    "/api/auth/resend-verification-request": {
+      "post": {
         "tags": [
-          "sessions",
-          "workflows",
-          "plugins"
+          "auth"
         ],
-        "summary": "Get Session Logs",
-        "operationId": "get_session_logs_api_sessions__session_id__logs_get",
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Session Id"
+        "summary": "Resend Verification Request",
+        "operationId": "resend_verification_request_api_auth_resend_verification_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendVerificationRequest"
+              }
             }
           },
-          {
-            "name": "after",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Return logs with index greater than this value",
-              "title": "After"
-            },
-            "description": "Return logs with index greater than this value"
-          }
-        ],
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SessionLogItem"
-                  },
-                  "title": "Response Get Session Logs Api Sessions  Session Id  Logs Get"
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify-email/confirm": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify Email Confirm",
+        "operationId": "verify_email_confirm_api_auth_verify_email_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/reset-password/confirm": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Reset Password Confirm",
+        "operationId": "reset_password_confirm_api_auth_reset_password_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -2357,6 +3160,1139 @@
         }
       }
     },
+    "/api/rubrics/": {
+      "get": {
+        "tags": [
+          "rubrics"
+        ],
+        "summary": "List Rubrics",
+        "operationId": "list_rubrics_api_rubrics__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RubricRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Rubrics Api Rubrics  Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "rubrics"
+        ],
+        "summary": "Create Rubric",
+        "operationId": "create_rubric_api_rubrics__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RubricCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RubricRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/rubrics/generate": {
+      "post": {
+        "tags": [
+          "rubrics"
+        ],
+        "summary": "Generate Rubric",
+        "operationId": "generate_rubric_api_rubrics_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RubricGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/rubrics/{rubric_id}": {
+      "get": {
+        "tags": [
+          "rubrics"
+        ],
+        "summary": "Get Rubric",
+        "operationId": "get_rubric_api_rubrics__rubric_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "rubric_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Rubric Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RubricRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "rubrics"
+        ],
+        "summary": "Update Rubric",
+        "operationId": "update_rubric_api_rubrics__rubric_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "rubric_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Rubric Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RubricUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RubricRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "rubrics"
+        ],
+        "summary": "Delete Rubric",
+        "operationId": "delete_rubric_api_rubrics__rubric_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "rubric_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Rubric Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/enrollments/": {
+      "post": {
+        "tags": [
+          "enrollments"
+        ],
+        "summary": "Create Enrollment",
+        "description": "Enroll a user in a course. Only the course instructor or admin can enroll users.",
+        "operationId": "create_enrollment_api_enrollments__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "enrollments"
+        ],
+        "summary": "List Enrollments",
+        "description": "List enrollments. Students can only see their own enrollments.",
+        "operationId": "list_enrollments_api_enrollments__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by course ID",
+              "title": "Course Id"
+            },
+            "description": "Filter by course ID"
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by user ID",
+              "title": "User Id"
+            },
+            "description": "Filter by user ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnrollmentRead"
+                  },
+                  "title": "Response List Enrollments Api Enrollments  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/enrollments/bulk": {
+      "post": {
+        "tags": [
+          "enrollments"
+        ],
+        "summary": "Bulk Create Enrollments",
+        "description": "Bulk enroll multiple users in a course. Only the course instructor or admin can enroll users.",
+        "operationId": "bulk_create_enrollments_api_enrollments_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentBulkCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EnrollmentRead"
+                  },
+                  "type": "array",
+                  "title": "Response Bulk Create Enrollments Api Enrollments Bulk Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/enrollments/join": {
+      "post": {
+        "tags": [
+          "enrollments"
+        ],
+        "summary": "Join Course By Code",
+        "description": "Allow a student to self-enroll using a class code.",
+        "operationId": "join_course_by_code_api_enrollments_join_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentJoin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/enrollments/{enrollment_id}": {
+      "delete": {
+        "tags": [
+          "enrollments"
+        ],
+        "summary": "Delete Enrollment",
+        "description": "Remove an enrollment. Only the course instructor or admin can remove enrollments.",
+        "operationId": "delete_enrollment_api_enrollments__enrollment_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "enrollment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Enrollment Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Create Job",
+        "operationId": "create_job_api_jobs__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Job State",
+        "operationId": "get_job_state_api_jobs__job_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStateRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/updates": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Publish Job Update",
+        "operationId": "publish_job_update_api_jobs__job_id__updates_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "X-FAIR-Extension-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fair-Extension-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobUpdateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/stream": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Stream Job Updates",
+        "operationId": "stream_job_updates_api_jobs__job_id__stream_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/extensions/connect": {
+      "post": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "Register Extension",
+        "operationId": "register_extension_api_extensions_connect_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-FAIR-Extension-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fair-Extension-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/extensions/": {
+      "post": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "Register Extension",
+        "operationId": "register_extension_api_extensions__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-FAIR-Extension-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fair-Extension-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "List Extensions",
+        "operationId": "list_extensions_api_extensions__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExtensionRead"
+                  },
+                  "title": "Response List Extensions Api Extensions  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/extensions/admin/clients": {
+      "get": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "List Extension Clients",
+        "operationId": "list_extension_clients_api_extensions_admin_clients_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExtensionClientRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Extension Clients Api Extensions Admin Clients Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "Issue Extension Client Secret",
+        "operationId": "issue_extension_client_secret_api_extensions_admin_clients_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionClientIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionClientSecretRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/extensions/admin/clients/{extension_id}": {
+      "get": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "Get Extension Client",
+        "operationId": "get_extension_client_api_extensions_admin_clients__extension_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "extension_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Extension Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionClientRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "Update Extension Client",
+        "operationId": "update_extension_client_api_extensions_admin_clients__extension_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "extension_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Extension Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionClientUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionClientRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/extensions/admin/clients/{extension_id}/rotate": {
+      "post": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "Rotate Extension Client Secret",
+        "operationId": "rotate_extension_client_secret_api_extensions_admin_clients__extension_id__rotate_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "extension_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Extension Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionClientSecretRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/config": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get System Config",
+        "operationId": "get_system_config_api_v1_system_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -2376,6 +4312,25 @@
   },
   "components": {
     "schemas": {
+      "ActionPayload": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Action"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "ActionPayload"
+      },
       "ArtifactRead": {
         "properties": {
           "title": {
@@ -2399,13 +4354,13 @@
             "format": "uuid",
             "title": "Id"
           },
-          "storagePath": {
+          "artifactType": {
             "type": "string",
-            "title": "Storagepath"
+            "title": "Artifacttype"
           },
-          "storageType": {
+          "mime": {
             "type": "string",
-            "title": "Storagetype"
+            "title": "Mime"
           },
           "creatorId": {
             "type": "string",
@@ -2459,8 +4414,8 @@
         "required": [
           "title",
           "id",
-          "storagePath",
-          "storageType",
+          "artifactType",
+          "mime",
           "creatorId",
           "createdAt",
           "updatedAt",
@@ -2468,6 +4423,54 @@
           "accessLevel"
         ],
         "title": "ArtifactRead"
+      },
+      "ArtifactRefField": {
+        "properties": {
+          "fieldType": {
+            "type": "string",
+            "const": "artifact-ref",
+            "title": "Fieldtype"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "default": {
+            "type": "string",
+            "title": "Default"
+          },
+          "allowedTypes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Allowedtypes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fieldType",
+          "label",
+          "description",
+          "required",
+          "default",
+          "allowedTypes"
+        ],
+        "title": "ArtifactRefField"
       },
       "ArtifactUpdate": {
         "properties": {
@@ -2671,12 +4674,58 @@
         "type": "object",
         "title": "AssignmentUpdate"
       },
+      "AuthUserRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole",
+            "default": "user"
+          },
+          "isVerified": {
+            "type": "boolean",
+            "title": "Isverified",
+            "default": false
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Settings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "id"
+        ],
+        "title": "AuthUserRead"
+      },
       "Body_create_artifact_api_artifacts__post": {
         "properties": {
           "files": {
             "items": {
               "type": "string",
-              "format": "binary"
+              "contentMediaType": "application/octet-stream"
             },
             "type": "array",
             "title": "Files"
@@ -2718,7 +4767,7 @@
           "files": {
             "items": {
               "type": "string",
-              "format": "binary"
+              "contentMediaType": "application/octet-stream"
             },
             "type": "array",
             "title": "Files"
@@ -2749,7 +4798,7 @@
           "files": {
             "items": {
               "type": "string",
-              "format": "binary"
+              "contentMediaType": "application/octet-stream"
             },
             "type": "array",
             "title": "Files"
@@ -2821,6 +4870,45 @@
         ],
         "title": "Body_login_api_auth_login_post"
       },
+      "CheckboxField": {
+        "properties": {
+          "fieldType": {
+            "type": "string",
+            "const": "checkbox",
+            "title": "Fieldtype"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "default": {
+            "type": "boolean",
+            "title": "Default"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fieldType",
+          "label",
+          "description",
+          "required",
+          "default"
+        ],
+        "title": "CheckboxField"
+      },
       "CourseCreate": {
         "properties": {
           "name": {
@@ -2891,6 +4979,28 @@
             "type": "array",
             "title": "Workflows",
             "default": []
+          },
+          "enrollmentCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enrollmentcode"
+          },
+          "isEnrollmentEnabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isenrollmentenabled"
           }
         },
         "type": "object",
@@ -2935,6 +5045,28 @@
           "assignmentsCount": {
             "type": "integer",
             "title": "Assignmentscount"
+          },
+          "enrollmentCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enrollmentcode"
+          },
+          "isEnrollmentEnabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isenrollmentenabled"
           }
         },
         "type": "object",
@@ -2946,6 +5078,23 @@
           "assignmentsCount"
         ],
         "title": "CourseRead"
+      },
+      "CourseSettingsUpdate": {
+        "properties": {
+          "isEnrollmentEnabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isenrollmentenabled"
+          }
+        },
+        "type": "object",
+        "title": "CourseSettingsUpdate"
       },
       "CourseUpdate": {
         "properties": {
@@ -2987,34 +5136,85 @@
         "type": "object",
         "title": "CourseUpdate"
       },
-      "HTTPValidationError": {
+      "EnrollmentBulkCreate": {
         "properties": {
-          "detail": {
+          "userIds": {
             "items": {
-              "$ref": "#/components/schemas/ValidationError"
+              "type": "string",
+              "format": "uuid"
             },
             "type": "array",
-            "title": "Detail"
+            "title": "Userids"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
           }
         },
         "type": "object",
-        "title": "HTTPValidationError"
+        "required": [
+          "userIds",
+          "courseId"
+        ],
+        "title": "EnrollmentBulkCreate"
       },
-      "PluginMeta": {
+      "EnrollmentCreate": {
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId",
+          "courseId"
+        ],
+        "title": "EnrollmentCreate"
+      },
+      "EnrollmentJoin": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "EnrollmentJoin"
+      },
+      "EnrollmentRead": {
         "properties": {
           "id": {
             "type": "string",
+            "format": "uuid",
             "title": "Id"
           },
-          "name": {
+          "userId": {
             "type": "string",
-            "title": "Name"
+            "format": "uuid",
+            "title": "Userid"
           },
-          "author": {
+          "courseId": {
             "type": "string",
-            "title": "Author"
+            "format": "uuid",
+            "title": "Courseid"
           },
-          "author_email": {
+          "enrolledAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Enrolledat"
+          },
+          "userName": {
             "anyOf": [
               {
                 "type": "string"
@@ -3023,7 +5223,192 @@
                 "type": "null"
               }
             ],
-            "title": "Author Email"
+            "title": "Username"
+          },
+          "courseName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coursename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "userId",
+          "courseId",
+          "enrolledAt"
+        ],
+        "title": "EnrollmentRead"
+      },
+      "ErrorPayload": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "traceback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traceback"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorPayload"
+      },
+      "ExtensionClientIssueRequest": {
+        "properties": {
+          "extensionId": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Extensionid"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "extensionId"
+        ],
+        "title": "ExtensionClientIssueRequest"
+      },
+      "ExtensionClientRead": {
+        "properties": {
+          "extensionId": {
+            "type": "string",
+            "title": "Extensionid"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "extensionId",
+          "enabled",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "ExtensionClientRead"
+      },
+      "ExtensionClientSecretRead": {
+        "properties": {
+          "extensionId": {
+            "type": "string",
+            "title": "Extensionid"
+          },
+          "extensionSecret": {
+            "type": "string",
+            "title": "Extensionsecret"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "extensionId",
+          "extensionSecret",
+          "enabled"
+        ],
+        "title": "ExtensionClientSecretRead"
+      },
+      "ExtensionClientUpdateRequest": {
+        "properties": {
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "ExtensionClientUpdateRequest"
+      },
+      "ExtensionPlugin-Input": {
+        "properties": {
+          "pluginId": {
+            "type": "string",
+            "title": "Pluginid"
+          },
+          "extensionId": {
+            "type": "string",
+            "title": "Extensionid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "pluginType": {
+            "type": "string",
+            "enum": [
+              "transcriber",
+              "grader",
+              "reviewer"
+            ],
+            "title": "Plugintype"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
           },
           "description": {
             "anyOf": [
@@ -3037,63 +5422,6 @@
             "title": "Description"
           },
           "version": {
-            "type": "string",
-            "title": "Version"
-          },
-          "hash": {
-            "type": "string",
-            "title": "Hash"
-          },
-          "source": {
-            "type": "string",
-            "title": "Source"
-          },
-          "settings_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Settings Schema"
-          },
-          "type": {
-            "$ref": "#/components/schemas/PluginType"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "author",
-          "version",
-          "hash",
-          "source",
-          "settings_schema",
-          "type"
-        ],
-        "title": "PluginMeta"
-      },
-      "PluginType": {
-        "type": "string",
-        "enum": [
-          "transcriber",
-          "grader",
-          "validator"
-        ],
-        "title": "PluginType"
-      },
-      "RuntimePlugin": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "author": {
-            "type": "string",
-            "title": "Author"
-          },
-          "authorEmail": {
             "anyOf": [
               {
                 "type": "string"
@@ -3102,19 +5430,7 @@
                 "type": "null"
               }
             ],
-            "title": "Authoremail"
-          },
-          "version": {
-            "type": "string",
             "title": "Version"
-          },
-          "hash": {
-            "type": "string",
-            "title": "Hash"
-          },
-          "source": {
-            "type": "string",
-            "title": "Source"
           },
           "settingsSchema": {
             "anyOf": [
@@ -3123,73 +5439,371 @@
                 "type": "object"
               },
               {
-                "type": "null"
+                "$ref": "#/components/schemas/SettingsSchema"
               }
             ],
             "title": "Settingsschema"
           },
-          "type": {
-            "$ref": "#/components/schemas/PluginType"
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
           },
-          "settings": {
+          "id": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
+            "title": "Id"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "transcriber",
+                  "grader",
+                  "reviewer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "type": "object",
             "title": "Settings"
           }
         },
         "type": "object",
         "required": [
-          "id",
+          "pluginId",
+          "extensionId",
           "name",
-          "author",
-          "version",
-          "hash",
-          "source",
-          "type"
+          "pluginType",
+          "action"
         ],
-        "title": "RuntimePlugin"
+        "title": "ExtensionPlugin"
       },
-      "SessionCreateRequest": {
+      "ExtensionPlugin-Output": {
         "properties": {
-          "workflow_id": {
+          "pluginId": {
             "type": "string",
-            "format": "uuid",
-            "title": "Workflow Id"
+            "title": "Pluginid"
           },
-          "submission_ids": {
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "type": "array",
-            "title": "Submission Ids"
+          "extensionId": {
+            "type": "string",
+            "title": "Extensionid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "pluginType": {
+            "type": "string",
+            "enum": [
+              "transcriber",
+              "grader",
+              "reviewer"
+            ],
+            "title": "Plugintype"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "settingsSchema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Settingsschema"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "transcriber",
+                  "grader",
+                  "reviewer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Settings"
           }
         },
         "type": "object",
         "required": [
-          "workflow_id",
-          "submission_ids"
+          "pluginId",
+          "extensionId",
+          "name",
+          "pluginType",
+          "action"
         ],
-        "title": "SessionCreateRequest"
+        "title": "ExtensionPlugin"
       },
-      "SessionLogItem": {
+      "ExtensionRead": {
         "properties": {
-          "index": {
-            "type": "integer",
-            "title": "Index"
-          },
-          "type": {
+          "extensionId": {
             "type": "string",
-            "title": "Type"
+            "title": "Extensionid"
           },
-          "ts": {
+          "webhookUrl": {
+            "type": "string",
+            "title": "Webhookurl"
+          },
+          "intents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Intents"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          },
+          "requestedScopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Requestedscopes"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "extensionId",
+          "webhookUrl",
+          "intents",
+          "capabilities",
+          "metadata",
+          "enabled"
+        ],
+        "title": "ExtensionRead"
+      },
+      "ExtensionRegisterRequest": {
+        "properties": {
+          "extensionId": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Extensionid"
+          },
+          "webhookUrl": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Webhookurl"
+          },
+          "intents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Intents"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          },
+          "requestedScopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Requestedscopes"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "extensionId",
+          "webhookUrl"
+        ],
+        "title": "ExtensionRegisterRequest"
+      },
+      "FileField": {
+        "properties": {
+          "fieldType": {
+            "type": "string",
+            "const": "file",
+            "title": "Fieldtype"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "default": {
+            "title": "Default"
+          },
+          "allowedTypes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Allowedtypes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fieldType",
+          "label",
+          "description",
+          "required",
+          "default",
+          "allowedTypes"
+        ],
+        "title": "FileField"
+      },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JobCreateRequest": {
+        "properties": {
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Target"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ActionPayload"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          },
+          "jobId": {
             "anyOf": [
               {
                 "type": "string"
@@ -3198,29 +5812,358 @@
                 "type": "null"
               }
             ],
-            "title": "Ts"
+            "title": "Jobid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target",
+          "payload"
+        ],
+        "title": "JobCreateRequest"
+      },
+      "JobCreateResponse": {
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "title": "Jobid"
           },
-          "level": {
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobId",
+          "status"
+        ],
+        "title": "JobCreateResponse"
+      },
+      "JobStateRead": {
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "title": "Jobid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "updatedAt": {
+            "type": "string",
+            "title": "Updatedat"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobId",
+          "status",
+          "updatedAt"
+        ],
+        "title": "JobStateRead"
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "dispatched",
+          "running",
+          "completed",
+          "failed",
+          "cancelled"
+        ],
+        "title": "JobStatus",
+        "description": "Canonical lifecycle states for a job.\n\nThese values are intentionally transport-friendly strings so they can be\nserialized directly to JSON and consumed by any SDK language."
+      },
+      "JobUpdateError": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "const": "error",
+            "title": "Event"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ErrorPayload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "payload"
+        ],
+        "title": "JobUpdateError"
+      },
+      "JobUpdateLog": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "const": "log",
+            "title": "Event"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/LogPayload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "payload"
+        ],
+        "title": "JobUpdateLog"
+      },
+      "JobUpdateProgress": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "const": "progress",
+            "title": "Event"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ProgressPayload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "payload"
+        ],
+        "title": "JobUpdateProgress"
+      },
+      "JobUpdateRequest": {
+        "properties": {
+          "update": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JobUpdateProgress"
+              },
+              {
+                "$ref": "#/components/schemas/JobUpdateLog"
+              },
+              {
+                "$ref": "#/components/schemas/JobUpdateToken"
+              },
+              {
+                "$ref": "#/components/schemas/JobUpdateResult"
+              },
+              {
+                "$ref": "#/components/schemas/JobUpdateSubmissionResult"
+              },
+              {
+                "$ref": "#/components/schemas/JobUpdateError"
+              }
+            ],
+            "title": "Update",
+            "discriminator": {
+              "propertyName": "event",
+              "mapping": {
+                "error": "#/components/schemas/JobUpdateError",
+                "log": "#/components/schemas/JobUpdateLog",
+                "progress": "#/components/schemas/JobUpdateProgress",
+                "result": "#/components/schemas/JobUpdateResult",
+                "submission_result": "#/components/schemas/JobUpdateSubmissionResult",
+                "token": "#/components/schemas/JobUpdateToken"
+              }
+            }
+          },
+          "status": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/JobStatus"
               },
               {
                 "type": "null"
               }
+            ]
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "update"
+        ],
+        "title": "JobUpdateRequest"
+      },
+      "JobUpdateResponse": {
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "title": "Jobid"
+          },
+          "accepted": {
+            "type": "boolean",
+            "title": "Accepted"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobId",
+          "accepted"
+        ],
+        "title": "JobUpdateResponse"
+      },
+      "JobUpdateResult": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "const": "result",
+            "title": "Event"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ResultPayload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "payload"
+        ],
+        "title": "JobUpdateResult"
+      },
+      "JobUpdateSubmissionResult": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "const": "submission_result",
+            "title": "Event"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SubmissionResultPayload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "payload"
+        ],
+        "title": "JobUpdateSubmissionResult"
+      },
+      "JobUpdateToken": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "const": "token",
+            "title": "Event"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/TokenPayload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "payload"
+        ],
+        "title": "JobUpdateToken"
+      },
+      "LogPayload": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "error"
             ],
             "title": "Level"
           },
-          "plugin": {
+          "output": {
+            "type": "string",
+            "title": "Output"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "output"
+        ],
+        "title": "LogPayload"
+      },
+      "NumberField": {
+        "properties": {
+          "fieldType": {
+            "type": "string",
+            "const": "number",
+            "title": "Fieldtype"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "default": {
+            "type": "number",
+            "title": "Default"
+          },
+          "minimum": {
+            "type": "number",
+            "title": "Minimum"
+          },
+          "maximum": {
+            "type": "number",
+            "title": "Maximum"
+          },
+          "step": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "number"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Plugin"
+            "title": "Step"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fieldType",
+          "label",
+          "description",
+          "required",
+          "default",
+          "minimum",
+          "maximum"
+        ],
+        "title": "NumberField"
+      },
+      "ProgressPayload": {
+        "properties": {
+          "percent": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Percent"
           },
           "message": {
             "anyOf": [
@@ -3232,8 +6175,218 @@
               }
             ],
             "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "percent"
+        ],
+        "title": "ProgressPayload"
+      },
+      "ResendVerificationRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "ResendVerificationRequest"
+      },
+      "ResetPasswordConfirmRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
           },
-          "object": {
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "ResetPasswordConfirmRequest"
+      },
+      "ResultPayload": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ResultPayload"
+      },
+      "RubricContent": {
+        "properties": {
+          "levels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Levels"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/RubricCriterion"
+            },
+            "type": "array",
+            "title": "Criteria"
+          }
+        },
+        "type": "object",
+        "required": [
+          "levels",
+          "criteria"
+        ],
+        "title": "RubricContent"
+      },
+      "RubricCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "content": {
+            "$ref": "#/components/schemas/RubricContent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "content"
+        ],
+        "title": "RubricCreate"
+      },
+      "RubricCriterion": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "levels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Levels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "weight",
+          "levels"
+        ],
+        "title": "RubricCriterion"
+      },
+      "RubricGenerateRequest": {
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Instruction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instruction"
+        ],
+        "title": "RubricGenerateRequest"
+      },
+      "RubricRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "createdById": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Createdbyid"
+          },
+          "content": {
+            "$ref": "#/components/schemas/RubricContent"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "createdById",
+          "content",
+          "createdAt"
+        ],
+        "title": "RubricRead"
+      },
+      "RubricRefField": {
+        "properties": {
+          "fieldType": {
+            "type": "string",
+            "const": "rubric-ref",
+            "title": "Fieldtype"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "default": {
+            "type": "string",
+            "title": "Default"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fieldType",
+          "label",
+          "description",
+          "required",
+          "default"
+        ],
+        "title": "RubricRefField"
+      },
+      "RubricUpdate": {
+        "properties": {
+          "name": {
             "anyOf": [
               {
                 "type": "string"
@@ -3242,49 +6395,203 @@
                 "type": "null"
               }
             ],
-            "title": "Object"
+            "title": "Name"
           },
-          "payload": {
+          "content": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/RubricContent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "RubricUpdate"
+      },
+      "SecretField": {
+        "properties": {
+          "fieldType": {
+            "type": "string",
+            "const": "secret",
+            "title": "Fieldtype"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "default": {
+            "type": "string",
+            "title": "Default"
+          },
+          "minLength": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Payload"
+            "title": "Minlength"
+          },
+          "maxLength": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxlength"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "index",
-          "type"
+          "fieldType",
+          "label",
+          "description",
+          "required",
+          "default"
         ],
-        "title": "SessionLogItem"
+        "title": "SecretField"
       },
-      "SessionResponse": {
+      "SettingsSchema": {
         "properties": {
-          "session": {
-            "$ref": "#/components/schemas/WorkflowRunRead"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "ws_url": {
-            "type": "string",
-            "title": "Ws Url"
+          "properties": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/TextField"
+                },
+                {
+                  "$ref": "#/components/schemas/SecretField"
+                },
+                {
+                  "$ref": "#/components/schemas/NumberField"
+                },
+                {
+                  "$ref": "#/components/schemas/SliderField"
+                },
+                {
+                  "$ref": "#/components/schemas/SwitchField"
+                },
+                {
+                  "$ref": "#/components/schemas/CheckboxField"
+                },
+                {
+                  "$ref": "#/components/schemas/FileField"
+                },
+                {
+                  "$ref": "#/components/schemas/ArtifactRefField"
+                },
+                {
+                  "$ref": "#/components/schemas/RubricRefField"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "fieldType",
+                "mapping": {
+                  "artifact-ref": "#/components/schemas/ArtifactRefField",
+                  "checkbox": "#/components/schemas/CheckboxField",
+                  "file": "#/components/schemas/FileField",
+                  "number": "#/components/schemas/NumberField",
+                  "rubric-ref": "#/components/schemas/RubricRefField",
+                  "secret": "#/components/schemas/SecretField",
+                  "slider": "#/components/schemas/SliderField",
+                  "switch": "#/components/schemas/SwitchField",
+                  "text": "#/components/schemas/TextField"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Properties"
           }
         },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SettingsSchema"
+      },
+      "SliderField": {
+        "properties": {
+          "fieldType": {
+            "type": "string",
+            "const": "slider",
+            "title": "Fieldtype"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "default": {
+            "type": "number",
+            "title": "Default"
+          },
+          "minimum": {
+            "type": "number",
+            "title": "Minimum"
+          },
+          "maximum": {
+            "type": "number",
+            "title": "Maximum"
+          },
+          "step": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Step"
+          },
+          "marks": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Marks"
+          }
+        },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "session",
-          "status",
-          "ws_url"
+          "fieldType",
+          "label",
+          "description",
+          "required",
+          "default",
+          "minimum",
+          "maximum",
+          "step",
+          "marks"
         ],
-        "title": "SessionResponse"
+        "title": "SliderField"
       },
       "SubmissionBase": {
         "properties": {
@@ -3317,7 +6624,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/SubmissionStatus",
-            "default": "pending"
+            "default": "submitted"
           },
           "officialRunId": {
             "anyOf": [
@@ -3339,6 +6646,46 @@
           "createdById"
         ],
         "title": "SubmissionBase"
+      },
+      "SubmissionDraftUpdate": {
+        "properties": {
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          }
+        },
+        "type": "object",
+        "title": "SubmissionDraftUpdate"
+      },
+      "SubmissionEventType": {
+        "type": "string",
+        "enum": [
+          "submission_submitted",
+          "status_transitioned",
+          "ai_initial_result_recorded",
+          "ai_regrade_result_recorded",
+          "draft_manually_edited",
+          "returned_to_student"
+        ],
+        "title": "SubmissionEventType"
       },
       "SubmissionRead": {
         "properties": {
@@ -3371,7 +6718,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/SubmissionStatus",
-            "default": "pending"
+            "default": "submitted"
           },
           "officialRunId": {
             "anyOf": [
@@ -3417,6 +6764,62 @@
                 "type": "null"
               }
             ]
+          },
+          "draftScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftscore"
+          },
+          "draftFeedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draftfeedback"
+          },
+          "publishedScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedscore"
+          },
+          "publishedFeedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedfeedback"
+          },
+          "returnedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returnedat"
           }
         },
         "type": "object",
@@ -3427,6 +6830,25 @@
           "id"
         ],
         "title": "SubmissionRead"
+      },
+      "SubmissionResultPayload": {
+        "properties": {
+          "submissionId": {
+            "type": "string",
+            "title": "Submissionid"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "submissionId",
+          "data"
+        ],
+        "title": "SubmissionResultPayload"
       },
       "SubmissionResultRead": {
         "properties": {
@@ -3579,6 +7001,68 @@
         ],
         "title": "SubmissionStatus"
       },
+      "SubmissionTimelineEventRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "submissionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Submissionid"
+          },
+          "eventType": {
+            "$ref": "#/components/schemas/SubmissionEventType"
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimelineActorRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "workflowRun": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimelineWorkflowRunRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "submissionId",
+          "eventType",
+          "createdAt"
+        ],
+        "title": "SubmissionTimelineEventRead"
+      },
       "SubmissionUpdate": {
         "properties": {
           "officialRunId": {
@@ -3665,6 +7149,211 @@
         ],
         "title": "SubmitterRead"
       },
+      "SwitchField": {
+        "properties": {
+          "fieldType": {
+            "type": "string",
+            "const": "switch",
+            "title": "Fieldtype"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "default": {
+            "type": "boolean",
+            "title": "Default"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fieldType",
+          "label",
+          "description",
+          "required",
+          "default"
+        ],
+        "title": "SwitchField"
+      },
+      "TextField": {
+        "properties": {
+          "fieldType": {
+            "type": "string",
+            "const": "text",
+            "title": "Fieldtype"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "default": {
+            "type": "string",
+            "title": "Default"
+          },
+          "minLength": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minlength"
+          },
+          "maxLength": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxlength"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fieldType",
+          "label",
+          "description",
+          "required",
+          "default"
+        ],
+        "title": "TextField"
+      },
+      "TimelineActorRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "TimelineActorRead"
+      },
+      "TimelineRunnerRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "TimelineRunnerRead"
+      },
+      "TimelineWorkflowRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "TimelineWorkflowRead"
+      },
+      "TimelineWorkflowRunRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkflowRunStatus"
+          },
+          "workflow": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimelineWorkflowRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimelineRunnerRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "TimelineWorkflowRunRead"
+      },
+      "TokenConfirmRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "TokenConfirmRequest"
+      },
+      "TokenPayload": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "TokenPayload"
+      },
       "UserCreate": {
         "properties": {
           "name": {
@@ -3678,7 +7367,12 @@
           },
           "role": {
             "$ref": "#/components/schemas/UserRole",
-            "default": "professor"
+            "default": "user"
+          },
+          "isVerified": {
+            "type": "boolean",
+            "title": "Isverified",
+            "default": false
           },
           "password": {
             "type": "string",
@@ -3706,7 +7400,12 @@
           },
           "role": {
             "$ref": "#/components/schemas/UserRole",
-            "default": "professor"
+            "default": "user"
+          },
+          "isVerified": {
+            "type": "boolean",
+            "title": "Isverified",
+            "default": false
           },
           "id": {
             "type": "string",
@@ -3725,11 +7424,38 @@
       "UserRole": {
         "type": "string",
         "enum": [
-          "professor",
-          "student",
-          "admin"
+          "user",
+          "instructor",
+          "admin",
+          "instructor",
+          "user"
         ],
         "title": "UserRole"
+      },
+      "UserSettingsRead": {
+        "properties": {
+          "settings": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Settings"
+          }
+        },
+        "type": "object",
+        "title": "UserSettingsRead"
+      },
+      "UserSettingsUpdate": {
+        "properties": {
+          "settings": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Settings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "settings"
+        ],
+        "title": "UserSettingsUpdate"
       },
       "UserUpdate": {
         "properties": {
@@ -3793,6 +7519,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",
@@ -3825,19 +7558,12 @@
             ],
             "title": "Description"
           },
-          "plugins": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "$ref": "#/components/schemas/RuntimePlugin"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Plugins"
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowStep-Input"
+            },
+            "type": "array",
+            "title": "Steps"
           }
         },
         "type": "object",
@@ -3869,19 +7595,12 @@
             ],
             "title": "Description"
           },
-          "plugins": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "$ref": "#/components/schemas/RuntimePlugin"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Plugins"
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowStep-Output"
+            },
+            "type": "array",
+            "title": "Steps"
           },
           "id": {
             "type": "string",
@@ -3909,6 +7628,11 @@
               }
             ],
             "title": "Updatedat"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived",
+            "default": false
           },
           "runs": {
             "anyOf": [
@@ -3965,6 +7689,13 @@
               }
             ],
             "title": "Submissions"
+          },
+          "stepStates": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowRunStepState"
+            },
+            "type": "array",
+            "title": "Stepstates"
           }
         },
         "type": "object",
@@ -3972,6 +7703,33 @@
           "status"
         ],
         "title": "WorkflowRunBase"
+      },
+      "WorkflowRunCreateRequest": {
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workflowid"
+          },
+          "submissionIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Submissionids"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflowId"
+        ],
+        "title": "WorkflowRunCreateRequest"
       },
       "WorkflowRunRead": {
         "properties": {
@@ -4004,15 +7762,25 @@
             ],
             "title": "Submissions"
           },
+          "stepStates": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowRunStepState"
+            },
+            "type": "array",
+            "title": "Stepstates"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
             "title": "Id"
           },
-          "runBy": {
+          "workflowId": {
             "type": "string",
             "format": "uuid",
-            "title": "Runby"
+            "title": "Workflowid"
+          },
+          "runner": {
+            "$ref": "#/components/schemas/UserRead"
           },
           "startedAt": {
             "anyOf": [
@@ -4037,13 +7805,26 @@
               }
             ],
             "title": "Finishedat"
+          },
+          "requestPayload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requestpayload"
           }
         },
         "type": "object",
         "required": [
           "status",
           "id",
-          "runBy",
+          "workflowId",
+          "runner",
           "startedAt"
         ],
         "title": "WorkflowRunRead"
@@ -4058,6 +7839,155 @@
           "cancelled"
         ],
         "title": "WorkflowRunStatus"
+      },
+      "WorkflowRunStepState": {
+        "properties": {
+          "stepId": {
+            "type": "string",
+            "title": "Stepid"
+          },
+          "stepIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Stepindex"
+          },
+          "pluginId": {
+            "type": "string",
+            "title": "Pluginid"
+          },
+          "pluginType": {
+            "type": "string",
+            "title": "Plugintype"
+          },
+          "extensionId": {
+            "type": "string",
+            "title": "Extensionid"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "jobId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobid"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stepId",
+          "stepIndex",
+          "pluginId",
+          "pluginType",
+          "extensionId",
+          "status"
+        ],
+        "title": "WorkflowRunStepState"
+      },
+      "WorkflowStep-Input": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Order"
+          },
+          "pluginType": {
+            "type": "string",
+            "enum": [
+              "transcriber",
+              "grader",
+              "reviewer"
+            ],
+            "title": "Plugintype"
+          },
+          "plugin": {
+            "$ref": "#/components/schemas/ExtensionPlugin-Input"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Settings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "order",
+          "pluginType",
+          "plugin"
+        ],
+        "title": "WorkflowStep"
+      },
+      "WorkflowStep-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Order"
+          },
+          "pluginType": {
+            "type": "string",
+            "enum": [
+              "transcriber",
+              "grader",
+              "reviewer"
+            ],
+            "title": "Plugintype"
+          },
+          "plugin": {
+            "$ref": "#/components/schemas/ExtensionPlugin-Output"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Settings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "order",
+          "pluginType",
+          "plugin"
+        ],
+        "title": "WorkflowStep"
       },
       "WorkflowUpdate": {
         "properties": {
@@ -4083,19 +8013,19 @@
             ],
             "title": "Description"
           },
-          "plugins": {
+          "steps": {
             "anyOf": [
               {
-                "additionalProperties": {
-                  "$ref": "#/components/schemas/RuntimePlugin"
+                "items": {
+                  "$ref": "#/components/schemas/WorkflowStep-Input"
                 },
-                "type": "object"
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Plugins"
+            "title": "Steps"
           }
         },
         "type": "object",
@@ -4111,6 +8041,10 @@
             "tokenUrl": "api/auth/login"
           }
         }
+      },
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   }

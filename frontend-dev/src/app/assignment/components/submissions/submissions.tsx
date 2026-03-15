@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useWorkflowStore, Workflow } from "@/store/workflows-store";
-import { RuntimePlugin } from "@/hooks/use-plugins";
+import { ExtensionPlugin } from "@/hooks/use-plugins";
 import { useWorkflows } from "@/hooks/use-workflows";
 import {
   SubmissionStatus,
@@ -438,10 +438,10 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
   const canReturn =
     hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
 
-  function runPlugin(plugin?: RuntimePlugin) {
+  function runPlugin(plugin?: ExtensionPlugin) {
     if (!plugin) return;
     console.log(
-      `Running plugin ${plugin.id}-${plugin.hash}-${plugin.version} on submission ${submission.id} with workflow ${workflow?.id} and settings`,
+      `Running plugin ${plugin.id}-${plugin.version} on submission ${submission.id} with workflow ${workflow?.id} and settings`,
       plugin.settings,
     );
   }
@@ -480,7 +480,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
                     <DropdownMenuItem
                       onClick={(_) => runPlugin(workflow.plugins.transcriber)}
                     >
-                      {workflow.plugins.transcriber.settingsSchema.title}
+                      {workflow.plugins.transcriber.name}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
@@ -491,7 +491,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
                   <DropdownMenuItem
                     onClick={(_) => runPlugin(workflow.plugins.grader)}
                   >
-                    {workflow.plugins.grader.settingsSchema.title}
+                    {workflow.plugins.grader.name}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
@@ -504,7 +504,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
                     <DropdownMenuItem
                       onClick={(_) => runPlugin(workflow.plugins.reviewer)}
                     >
-                      {workflow.plugins.reviewer.settingsSchema.title}
+                      {workflow.plugins.reviewer.name}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>

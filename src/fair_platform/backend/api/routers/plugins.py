@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.api.schema.plugin import RuntimePlugin
+from fair_platform.backend.api.schema.plugin import ExtensionPlugin
 from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.models import User
 from fair_platform.backend.services.extension_catalog import (
@@ -19,7 +19,7 @@ def get_extension_registry(request: Request) -> LocalExtensionRegistry:
     return request.app.state.extension_registry
 
 
-@router.get("/", response_model=list[RuntimePlugin])
+@router.get("/", response_model=list[ExtensionPlugin])
 async def list_all_plugins(
     type_filter: Optional[PluginType] = None,
     user: User = Depends(get_current_user),
@@ -30,7 +30,7 @@ async def list_all_plugins(
     return await list_registered_plugins(registry, plugin_type=type_filter)
 
 
-@router.get("/{plugin_id}", response_model=RuntimePlugin)
+@router.get("/{plugin_id}", response_model=ExtensionPlugin)
 async def get_plugin(
     plugin_id: str,
     user: User = Depends(get_current_user),

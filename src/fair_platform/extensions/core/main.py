@@ -11,9 +11,14 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI, OpenAI
 
 from fair_platform.extension_sdk import (
+    NumberField,
     FairExtension,
     JobContext,
     PluginDescriptor,
+    SecretField,
+    SettingsSchema,
+    SwitchField,
+    TextField,
     WorkflowStepExecutionRequest,
 )
 from fair_platform.extension_sdk.client import build_platform_client
@@ -357,82 +362,117 @@ core_extension = FairExtension(
             description="Transcribes submissions using OpenAI or Z.ai, depending on settings.",
             version="1.0.0",
             action="plugin.transcribe.simple",
-            settings_schema={
-                "title": "Simple Transcriber",
-                "type": "object",
-                "properties": {
-                    "useOpenAI": {
-                        "title": "SwitchField",
-                        "label": "Use OpenAI",
-                        "type": "boolean",
-                        "description": "Use OpenAI responses API for file transcription.",
-                        "default": True,
-                    },
-                    "openaiModel": {
-                        "title": "TextField",
-                        "label": "OpenAI Model",
-                        "type": "string",
-                        "description": "OpenAI model to use for file transcription.",
-                        "default": "gpt-5.4-2026-03-05",
-                    },
-                    "openaiBaseUrl": {
-                        "title": "TextField",
-                        "label": "OpenAI Base URL",
-                        "type": "string",
-                        "description": "OpenAI API base URL override.",
-                        "default": "https://api.openai.com/v1",
-                    },
-                    "openaiApiKey": {
-                        "title": "TextField",
-                        "label": "OpenAI API Key",
-                        "type": "string",
-                        "description": "Override OpenAI API key (optional, otherwise env).",
-                        "default": "",
-                    },
-                    "openaiTemperature": {
-                        "title": "NumberField",
-                        "label": "OpenAI Temperature",
-                        "type": "number",
-                        "description": "Sampling temperature for OpenAI responses.",
-                        "default": 0.7,
-                    },
-                    "openaiMaxTokens": {
-                        "title": "NumberField",
-                        "label": "OpenAI Max Tokens",
-                        "type": "number",
-                        "description": "Maximum output tokens for OpenAI responses.",
-                        "default": 800,
-                    },
-                    "openaiPrompt": {
-                        "title": "TextField",
-                        "label": "OpenAI Prompt",
-                        "type": "string",
-                        "description": "Prompt to apply to uploaded files.",
-                        "default": "Extract a clear markdown transcription of the provided file.",
-                    },
-                    "zaiApiKey": {
-                        "title": "TextField",
-                        "label": "Z.ai API Key",
-                        "type": "string",
-                        "description": "Z.ai API key (required if OpenAI is disabled).",
-                        "default": "",
-                    },
-                    "zaiModel": {
-                        "title": "TextField",
-                        "label": "Z.ai Model",
-                        "type": "string",
-                        "description": "Z.ai model for OCR layout parsing.",
-                        "default": "GLM-OCR",
-                    },
-                    "zaiShowVisualization": {
-                        "title": "SwitchField",
-                        "label": "Show Z.ai Visualization",
-                        "type": "boolean",
-                        "description": "Whether to request layout visualization from Z.ai.",
-                        "default": False,
-                    },
-                },
-            },
+            settings_schema=(
+                SettingsSchema()
+                .add(
+                    "useOpenAI",
+                    SwitchField(
+                        label="Use OpenAI",
+                        description="Use OpenAI responses API for file transcription.",
+                        required=False,
+                        default=True,
+                    ),
+                )
+                .add(
+                    "openaiModel",
+                    TextField(
+                        label="OpenAI Model",
+                        description="OpenAI model to use for file transcription.",
+                        required=False,
+                        default="gpt-5.4-2026-03-05",
+                        min_length=1,
+                        max_length=100,
+                    ),
+                )
+                .add(
+                    "openaiBaseUrl",
+                    TextField(
+                        label="OpenAI Base URL",
+                        description="OpenAI API base URL override.",
+                        required=False,
+                        default="https://api.openai.com/v1",
+                        min_length=1,
+                        max_length=300,
+                    ),
+                )
+                .add(
+                    "openaiApiKey",
+                    SecretField(
+                        label="OpenAI API Key",
+                        description="Override OpenAI API key (optional, otherwise env).",
+                        required=False,
+                        default="",
+                        min_length=0,
+                        max_length=400,
+                    ),
+                )
+                .add(
+                    "openaiTemperature",
+                    NumberField(
+                        label="OpenAI Temperature",
+                        description="Sampling temperature for OpenAI responses.",
+                        required=False,
+                        default=0.7,
+                        minimum=0,
+                        maximum=2,
+                        step=0.1,
+                    ),
+                )
+                .add(
+                    "openaiMaxTokens",
+                    NumberField(
+                        label="OpenAI Max Tokens",
+                        description="Maximum output tokens for OpenAI responses.",
+                        required=False,
+                        default=800,
+                        minimum=1,
+                        maximum=8000,
+                        step=1,
+                    ),
+                )
+                .add(
+                    "openaiPrompt",
+                    TextField(
+                        label="OpenAI Prompt",
+                        description="Prompt to apply to uploaded files.",
+                        required=False,
+                        default="Extract a clear markdown transcription of the provided file.",
+                        min_length=1,
+                        max_length=500,
+                    ),
+                )
+                .add(
+                    "zaiApiKey",
+                    SecretField(
+                        label="Z.ai API Key",
+                        description="Z.ai API key (required if OpenAI is disabled).",
+                        required=False,
+                        default="",
+                        min_length=0,
+                        max_length=400,
+                    ),
+                )
+                .add(
+                    "zaiModel",
+                    TextField(
+                        label="Z.ai Model",
+                        description="Z.ai model for OCR layout parsing.",
+                        required=False,
+                        default="GLM-OCR",
+                        min_length=1,
+                        max_length=100,
+                    ),
+                )
+                .add(
+                    "zaiShowVisualization",
+                    SwitchField(
+                        label="Show Z.ai Visualization",
+                        description="Whether to request layout visualization from Z.ai.",
+                        required=False,
+                        default=False,
+                    ),
+                )
+            ),
         ),
         PluginDescriptor(
             plugin_id="fair.core.grader.simple",
@@ -442,54 +482,78 @@ core_extension = FairExtension(
             description="Assigns a basic score and feedback using the available transcription.",
             version="1.0.0",
             action="plugin.grade.simple",
-            settings_schema={
-                "title": "Simple Grader",
-                "type": "object",
-                "properties": {
-                    "score": {
-                        "title": "NumberField",
-                        "label": "Score",
-                        "type": "number",
-                        "description": "Default score to assign.",
-                        "default": 85,
-                    },
-                    "model": {
-                        "title": "TextField",
-                        "label": "LLM Model",
-                        "type": "string",
-                        "description": "Override model for grading.",
-                        "default": "gpt-5.4-2026-03-05",
-                    },
-                    "baseUrl": {
-                        "title": "TextField",
-                        "label": "LLM Base URL",
-                        "type": "string",
-                        "description": "Override API base URL.",
-                        "default": "https://api.openai.com/v1",
-                    },
-                    "apiKey": {
-                        "title": "SensitiveTextField",
-                        "label": "LLM API Key",
-                        "type": "string",
-                        "description": "Override API key (optional, otherwise env).",
-                        "default": "",
-                    },
-                    "temperature": {
-                        "title": "NumberField",
-                        "label": "Temperature",
-                        "type": "number",
-                        "description": "Sampling temperature.",
-                        "default": 0.7,
-                    },
-                    "maxTokens": {
-                        "title": "NumberField",
-                        "label": "Max Tokens",
-                        "type": "number",
-                        "description": "Maximum output tokens.",
-                        "default": 600,
-                    },
-                },
-            },
+            settings_schema=(
+                SettingsSchema()
+                .add(
+                    "score",
+                    NumberField(
+                        label="Score",
+                        description="Default score to assign.",
+                        required=False,
+                        default=85,
+                        minimum=0,
+                        maximum=100,
+                        step=1,
+                    ),
+                )
+                .add(
+                    "model",
+                    TextField(
+                        label="LLM Model",
+                        description="Override model for grading.",
+                        required=False,
+                        default="gpt-5.4-2026-03-05",
+                        min_length=1,
+                        max_length=100,
+                    ),
+                )
+                .add(
+                    "baseUrl",
+                    TextField(
+                        label="LLM Base URL",
+                        description="Override API base URL.",
+                        required=False,
+                        default="https://api.openai.com/v1",
+                        min_length=1,
+                        max_length=300,
+                    ),
+                )
+                .add(
+                    "apiKey",
+                    SecretField(
+                        label="LLM API Key",
+                        description="Override API key (optional, otherwise env).",
+                        required=False,
+                        default="",
+                        min_length=0,
+                        max_length=400,
+                    ),
+                )
+                .add(
+                    "temperature",
+                    NumberField(
+                        label="Temperature",
+                        description="Sampling temperature.",
+                        required=False,
+                        default=0.7,
+                        minimum=0,
+                        maximum=2,
+                        step=0.1,
+                    ),
+                )
+                .add(
+                    "maxTokens",
+                    NumberField(
+                        label="Max Tokens",
+                        description="Maximum output tokens.",
+                        required=False,
+                        default=600,
+                        minimum=1,
+                        maximum=8000,
+                        step=1,
+                    ),
+                )
+            ),
         ),
         PluginDescriptor(
             plugin_id="fair.core.reviewer.simple",
@@ -499,54 +563,77 @@ core_extension = FairExtension(
             description="Adds a lightweight review comment for each submission.",
             version="1.0.0",
             action="plugin.review.simple",
-            settings_schema={
-                "title": "Simple Reviewer",
-                "type": "object",
-                "properties": {
-                    "reviewTone": {
-                        "title": "TextField",
-                        "label": "Review Tone",
-                        "type": "string",
-                        "description": "Tone to use in generated comments.",
-                        "default": "concise",
-                    },
-                    "model": {
-                        "title": "TextField",
-                        "label": "LLM Model",
-                        "type": "string",
-                        "description": "Override model for reviewing.",
-                        "default": "gpt-5.4-2026-03-05",
-                    },
-                    "baseUrl": {
-                        "title": "TextField",
-                        "label": "LLM Base URL",
-                        "type": "string",
-                        "description": "Override API base URL.",
-                        "default": "https://api.openai.com/v1",
-                    },
-                    "apiKey": {
-                        "title": "SensitiveTextField",
-                        "label": "LLM API Key",
-                        "type": "string",
-                        "description": "Override API key (optional, otherwise env).",
-                        "default": "",
-                    },
-                    "temperature": {
-                        "title": "NumberField",
-                        "label": "Temperature",
-                        "type": "number",
-                        "description": "Sampling temperature.",
-                        "default": 0.7,
-                    },
-                    "maxTokens": {
-                        "title": "NumberField",
-                        "label": "Max Tokens",
-                        "type": "number",
-                        "description": "Maximum output tokens.",
-                        "default": 400,
-                    },
-                },
-            },
+            settings_schema=(
+                SettingsSchema()
+                .add(
+                    "reviewTone",
+                    TextField(
+                        label="Review Tone",
+                        description="Tone to use in generated comments.",
+                        required=False,
+                        default="concise",
+                        min_length=1,
+                        max_length=100,
+                    ),
+                )
+                .add(
+                    "model",
+                    TextField(
+                        label="LLM Model",
+                        description="Override model for reviewing.",
+                        required=False,
+                        default="gpt-5.4-2026-03-05",
+                        min_length=1,
+                        max_length=100,
+                    ),
+                )
+                .add(
+                    "baseUrl",
+                    TextField(
+                        label="LLM Base URL",
+                        description="Override API base URL.",
+                        required=False,
+                        default="https://api.openai.com/v1",
+                        min_length=1,
+                        max_length=300,
+                    ),
+                )
+                .add(
+                    "apiKey",
+                    SecretField(
+                        label="LLM API Key",
+                        description="Override API key (optional, otherwise env).",
+                        required=False,
+                        default="",
+                        min_length=0,
+                        max_length=400,
+                    ),
+                )
+                .add(
+                    "temperature",
+                    NumberField(
+                        label="Temperature",
+                        description="Sampling temperature.",
+                        required=False,
+                        default=0.7,
+                        minimum=0,
+                        maximum=2,
+                        step=0.1,
+                    ),
+                )
+                .add(
+                    "maxTokens",
+                    NumberField(
+                        label="Max Tokens",
+                        description="Maximum output tokens.",
+                        required=False,
+                        default=400,
+                        minimum=1,
+                        maximum=8000,
+                        step=1,
+                    ),
+                )
+            ),
         )
     ],
 )

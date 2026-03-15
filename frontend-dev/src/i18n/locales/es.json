@@ -509,7 +509,21 @@
     "selectFromDropdown": "Selecciona uno del menú desplegable.",
     "workflowDetails": "Los detalles del flujo de trabajo van aquí.",
     "notFound": "No se encuentra el flujo de trabajo '{{name}}'. Puede haber sido eliminado.",
-    "noPermission": "No tienes permiso para actualizar el flujo de trabajo '{{name}}'."
+    "noPermission": "No tienes permiso para actualizar el flujo de trabajo '{{name}}'.",
+    "pluginSettings": {
+      "noSettings": "No hay configuraciones disponibles",
+      "invalidSchema": "El esquema de configuración del plugin es inválido.",
+      "unsupportedField": "Tipo de campo no compatible: {{fieldType}}",
+      "unknownFieldType": "desconocido",
+      "fileUploadNotImplemented": "La carga de archivos aún no está implementada.",
+      "selectCourseFirst": "Selecciona un curso primero",
+      "loadingArtifacts": "Cargando artefactos...",
+      "noArtifacts": "No hay artefactos del curso disponibles",
+      "selectArtifact": "Selecciona un artefacto",
+      "loadingRubrics": "Cargando rúbricas...",
+      "noRubrics": "No hay rúbricas disponibles",
+      "selectRubric": "Selecciona una rúbrica"
+    }
   },
   "plugins": {
     "transcriber": "Transcriptor",
