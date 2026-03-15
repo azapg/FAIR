@@ -69,8 +69,8 @@ Common rules:
 
 - additional unknown properties MUST be rejected
 - if `required` is `true`, `default` MUST NOT be present
-- if `required` is `false`, `default` MUST be present
-- `default` type MUST match the field type
+- if `required` is `false` and `fieldType` is not `file`, `default` MUST be present
+- for non-`file` fields, `default` type MUST match the field type
 - `null` values are not valid for any setting value or default
 
 ## 4. Supported Field Types
