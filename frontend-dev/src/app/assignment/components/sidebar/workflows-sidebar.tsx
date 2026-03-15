@@ -56,6 +56,8 @@ import { ExecutionLogsView } from "@/app/assignment/components/sidebar/execution
 import { useSubmissions } from "@/hooks/use-submissions";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { DOCS_BASE_URL } from "@/lib/constants";
+import { useAuth } from "@/contexts/auth-context";
 
 export function WorkflowsSidebar({
   side,
@@ -73,7 +75,9 @@ export function WorkflowsSidebar({
   const setActiveWorkflowId = useWorkflowStore(
     (state) => state.setActiveWorkflowId,
   );
+  const saveDraft = useWorkflowStore((state) => state.saveDraft);
   const draft = activeWorkflowId ? drafts[activeWorkflowId] : undefined;
+  const { user } = useAuth();
   const workflow = useMemo(() => {
     if (activeWorkflowId)
       return workflows.find((w) => w.id === activeWorkflowId);
@@ -101,6 +105,18 @@ export function WorkflowsSidebar({
     //  So I will just make the user create one manually, though I would like a better UX for this.
   }, [activeWorkflowId, workflows]);
 
+  useEffect(() => {
+    if (!workflow || !activeWorkflowId || draft) return;
+    saveDraft({
+      workflowId: workflow.id,
+      name: workflow.name,
+      description: workflow.description ?? "",
+      courseId: workflow.courseId,
+      plugins: workflow.plugins ?? {},
+      creatorId: user?.id,
+    });
+  }, [workflow, activeWorkflowId, draft, saveDraft, user?.id]);
+
   // Remove early return so footer is always visible even while loading
 
   const onCreateWorkflow = async () => {
@@ -118,11 +134,11 @@ export function WorkflowsSidebar({
     setShowLogs(true);
     try {
       await persistDrafts();
-      const response = await api.post("/sessions", {
+      const response = await api.post("/workflow-runs", {
         workflow_id: activeWorkflowId,
         submission_ids: submissions?.map((s) => s.id) || [],
       });
-      setCurrentSession(response.data.session);
+      setCurrentSession(response.data);
     } catch (error) {
       const errorMessage = isAxiosError(error)
         ? error.response?.data?.detail
@@ -173,43 +189,15 @@ export function WorkflowsSidebar({
         </SidebarHeader>
       )}
       <Separator />
-      {showLogs ? (
-        <ExecutionLogsView onBack={() => setShowLogs(false)} />
-      ) : workflow && draft ? (
-        <>
-            <SidebarContent>
-              <ScrollArea className=" h-full">
-                <PluginSection
-                  title={t("plugins.transcriber")}
-                  action={t("plugins.transcribeAll")}
-                  type={"transcriber"}
-                />
-                <Separator />
-                <PluginSection
-                  title={t("plugins.grader")}
-                  action={t("plugins.gradeAll")}
-                  type={"grader"}
-                />
-                <Separator />
-                <PluginSection
-                  title={t("plugins.validator")}
-                  action={t("plugins.validateAll")}
-                  type={"validator"}
-                />
-              </ScrollArea>
-          </SidebarContent>
-        </>
-      ) : (
-        <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
-          {workflows.length === 0 ? (
-            <WorkflowEmptyState onCreate={onCreateWorkflow} />
-          ) : !activeWorkflowId ? (
-            <WorkflowNotSelectedState />
-          ) : (
-            <div>{t("workflow.workflowDetails")}</div>
-          )}
-        </div>
-      )}
+      <WorkflowSidebarContent
+        showLogs={showLogs}
+        workflow={workflow}
+        draft={draft}
+        workflows={workflows}
+        activeWorkflowId={activeWorkflowId}
+        onCreateWorkflow={onCreateWorkflow}
+        onBackFromLogs={() => setShowLogs(false)}
+      />
       {/* Footer is always visible */}
       <SidebarFooter className={"px-2.5"}>
         <Separator />
@@ -279,6 +267,111 @@ import {
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+interface WorkflowSidebarContentProps {
+  showLogs: boolean;
+  workflow?: any;
+  draft?: any;
+  workflows: any[];
+  activeWorkflowId?: string;
+  onCreateWorkflow: () => void;
+  onBackFromLogs?: () => void;
+}
+
+const WorkflowSidebarContent = ({
+  showLogs,
+  workflow,
+  draft,
+  workflows,
+  activeWorkflowId,
+  onCreateWorkflow,
+  onBackFromLogs,
+}: WorkflowSidebarContentProps) => {
+  const { t } = useTranslation();
+
+  if (showLogs) {
+    return <ExecutionLogsView onBack={onBackFromLogs || (() => {})} />;
+  }
+
+  if (workflow && draft) {
+    return (
+      <SidebarContent>
+        <ScrollArea className="h-full">
+          <PluginSection
+            title={t("plugins.transcriber")}
+            action={t("plugins.transcribeAll")}
+            type={"transcriber"}
+          />
+          <Separator />
+          <PluginSection
+            title={t("plugins.grader")}
+            action={t("plugins.gradeAll")}
+            type={"grader"}
+          />
+          <Separator />
+          <PluginSection
+            title={t("plugins.reviewer")}
+            action={t("plugins.reviewAll")}
+            type={"reviewer"}
+          />
+        </ScrollArea>
+      </SidebarContent>
+    );
+  }
+
+  return (
+    <WorkflowSidebarEmptyState
+      workflows={workflows}
+      activeWorkflowId={activeWorkflowId}
+      workflow={workflow}
+      draft={draft}
+      onCreateWorkflow={onCreateWorkflow}
+    />
+  );
+};
+
+interface WorkflowSidebarEmptyStateProps {
+  workflows: any[];
+  activeWorkflowId?: string;
+  workflow?: any;
+  draft?: any;
+  onCreateWorkflow: () => void;
+}
+
+const WorkflowSidebarEmptyState = ({
+  workflows,
+  activeWorkflowId,
+  workflow,
+  draft,
+  onCreateWorkflow,
+}: WorkflowSidebarEmptyStateProps) => {
+  const { t } = useTranslation();
+
+  if (workflows.length === 0) {
+    return <WorkflowEmptyState onCreate={onCreateWorkflow} />;
+  }
+
+  if (!activeWorkflowId) {
+    return <WorkflowNotSelectedState />;
+  }
+
+  // Loading state: workflow exists but draft hasn't loaded yet
+  if (workflow && !draft) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
+        <LoaderIcon className="animate-spin" />
+        {t("common.loading")}
+      </div>
+    );
+  }
+
+  // This shouldn't really happen - all conditions above should have returned
+  return (
+    <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
+      <span>{t("workflow.workflowDetails")}</span>
+    </div>
+  );
+};
+
 const WorkflowEmptyState = ({
   onCreate,
   onImport,
@@ -337,7 +430,7 @@ const WorkflowEmptyState = ({
         size="sm"
       >
         <a
-          href={`/docs/${currentLang}/getting-started/extensions/`}
+          href={`${DOCS_BASE_URL}/${currentLang}/platform/workflows/`}
           target="_blank"
           rel="noreferrer"
         >
@@ -369,7 +462,7 @@ const WorkflowNotSelectedState = () => {
           size="sm"
         >
           <a
-            href={`/docs/${currentLang}/getting-started/extensions/`}
+            href={`${DOCS_BASE_URL}/${currentLang}/platform/workflows/`}
             target="_blank"
             rel="noreferrer"
           >

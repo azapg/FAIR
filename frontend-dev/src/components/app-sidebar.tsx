@@ -35,6 +35,7 @@ import {
   SettingsIcon,
   MessageCircleQuestionMarkIcon,
   ClipboardList,
+  Puzzle,
 } from "lucide-react";
 import {
   Collapsible,
@@ -62,6 +63,7 @@ import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { usePreferenceSettings } from "@/hooks/use-preference-settings";
+import { IfSetting } from "@/components/if-setting";
 import {
   Command,
   CommandDialog,
@@ -80,6 +82,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
+import { Can } from "@/components/can";
 
 const languages = [
   { code: "en", name: "English" },
@@ -180,6 +183,16 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
           </a>
         </SidebarMenuButton>
       </SidebarMenuItem>
+      <Can I="admin">
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild tooltip={t("nav.extensions")}>
+            <Link to="/extensions">
+              <Puzzle />
+              <span>{t("nav.extensions")}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </Can>
     </SidebarMenu>
   );
 }

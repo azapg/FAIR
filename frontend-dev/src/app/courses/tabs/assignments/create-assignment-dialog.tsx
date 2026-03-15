@@ -16,6 +16,7 @@ import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import { Assignment, useCreateAssignment, type CreateAssignmentInput } from "@/hooks/use-assignments";
 import {CreateAssignmentForm, Grade} from "@/app/courses/tabs/assignments/assignments";
 import {useTranslation} from "react-i18next";
+import { DOCS_BASE_URL } from "@/lib/constants";
 
 interface CreateAssignmentDialogProps {
   courseId?: string;
@@ -40,7 +41,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
   const [files, setFiles] = useState<FileItem[]>([]);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const {t} = useTranslation();
+  const {t, i18n} = useTranslation();
 
   const { mutateAsync: createAssignment, isPending } = useCreateAssignment();
 

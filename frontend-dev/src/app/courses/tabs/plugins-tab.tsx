@@ -8,13 +8,13 @@ import {
   DataTableEmpty,
   DataTableSearch,
 } from "@/components/data-table";
-import { RuntimePluginRead, usePlugins } from "@/hooks/use-plugins";
+import { ExtensionPluginRead, usePlugins } from "@/hooks/use-plugins";
 
 export function PluginsTab() {
   const { t } = useTranslation();
   const { data: plugins, isLoading, isError } = usePlugins();
 
-  const columns = useMemo<ColumnDef<RuntimePluginRead>[]>(
+  const columns = useMemo<ColumnDef<ExtensionPluginRead>[]>(
     () => [
       {
         accessorKey: "name",

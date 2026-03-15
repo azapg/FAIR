@@ -15,13 +15,16 @@ license-files = ["LICENSE"]
 dependencies = [
     "appdirs>=1.4.4",
     "dotenv>=0.9.9",
-    "fastapi>=0.122.0",
+    "fastapi>=0.135.0",
     "httpx>=0.25.0",
     "packaging>=23.0",
     "pydantic[email]>=2.12.5",
     "python-jose>=3.5.0",
+    "jinja2>=3.1.6",
     "python-multipart>=0.0.20",
+    "resend>=2.13.1",
     "sqlalchemy>=2.0.43",
+    "redis>=5.0.0",
     "psycopg[binary]>=3.2.0",
     "typer>=0.17.4",
     "uvicorn>=0.35.0",
@@ -30,6 +33,7 @@ dependencies = [
     "alembic>=1.18.3",
     "boto3>=1.40.0",
     "openai>=1.0.0",
+    "zai-sdk>=0.2.2",
 ]
 
 [project.optional-dependencies]

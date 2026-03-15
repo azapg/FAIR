@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useLocalPreference } from "@/hooks/use-local-preference";
 import { useUserSetting } from "@/hooks/use-user-settings";
 import type { LanguageCode, ThemeMode } from "@/hooks/use-preference-settings";
+import api from "@/lib/api";
 
 
 function VersionChecker() {
@@ -27,14 +28,20 @@ function SettingsRuntime() {
     useLocalPreference<LanguageCode | undefined>("ui.language");
   const { value: localSimpleView, setValue: setLocalSimpleView } =
     useLocalPreference<boolean | undefined>("ui.simpleView");
+  const { value: localDevMode, setValue: setLocalDevMode } =
+    useLocalPreference<boolean | undefined>("ui.devMode");
+  const { setValue: setLocalEmailEnabled } =
+    useLocalPreference<boolean>("features.emailEnabled");
 
   const themeServer = useUserSetting<ThemeMode>("preferences.theme", "system").value;
   const languageServer = useUserSetting<LanguageCode>("preferences.language", "en").value;
   const simpleViewServer = useUserSetting<boolean>("preferences.simpleView", false).value;
+  const devModeServer = useUserSetting<boolean>("preferences.devMode", false).value;
 
   const resolvedTheme = localTheme ?? themeServer;
   const resolvedLanguage = localLanguage ?? languageServer;
   const resolvedSimpleView = localSimpleView ?? simpleViewServer;
+  const resolvedDevMode = localDevMode ?? devModeServer;
 
   useEffect(() => {
     if (localTheme === undefined) {
@@ -55,6 +62,12 @@ function SettingsRuntime() {
   }, [localSimpleView, setLocalSimpleView, simpleViewServer]);
 
   useEffect(() => {
+    if (localDevMode === undefined) {
+      setLocalDevMode(devModeServer);
+    }
+  }, [devModeServer, localDevMode, setLocalDevMode]);
+
+  useEffect(() => {
     if (theme !== resolvedTheme) {
       setTheme(resolvedTheme);
     }
@@ -69,6 +82,29 @@ function SettingsRuntime() {
   useEffect(() => {
     document.documentElement.classList.toggle("simple-view", Boolean(resolvedSimpleView));
   }, [resolvedSimpleView]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dev-mode", Boolean(resolvedDevMode));
+  }, [resolvedDevMode]);
+
+  useEffect(() => {
+    let active = true;
+    const loadSystemConfig = async () => {
+      try {
+        const response = await api.get("/v1/system/config");
+        if (!active) return;
+        setLocalEmailEnabled(Boolean(response.data?.features?.email_enabled));
+      } catch {
+        if (!active) return;
+        setLocalEmailEnabled(false);
+      }
+    };
+
+    void loadSystemConfig();
+    return () => {
+      active = false;
+    };
+  }, [setLocalEmailEnabled]);
 
   return null;
 }

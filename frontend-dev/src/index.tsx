@@ -1,11 +1,17 @@
-import {Routes, Route} from 'react-router-dom';
+import { Route, Routes } from "react-router-dom";
 import Home from "@/home";
 import CoursesPage from "@/app/courses/page";
 import LoginPage from "@/app/login/page";
 import RegisterPage from "@/app/register/page";
+import ForgotPasswordPage from "@/app/forgot-password/page";
+import ResetPasswordPage from "@/app/reset-password/page";
+import VerifyEmailPage from "@/app/verify-email/page";
 import CourseDetailPage from "@/app/courses/course/page";
 import AssignmentPage from "@/app/assignment/page";
 import RubricsPage from "@/app/rubrics/page";
+import { IfSetting } from "@/components/if-setting";
+import ExtensionsPage from "@/app/extensions/page";
+import ExtensionDetailPage from "@/app/extensions/extension/page";
 
 export function App() {
   return (
@@ -18,9 +24,13 @@ export function App() {
       <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage/>}/>
       <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage/>}/>
       <Route path={"rubrics"} element={<RubricsPage/>}/>
-
+      <Route path={"extensions"} element={<ExtensionsPage/>}/>
+      <Route path={"extensions/:id"} element={<ExtensionDetailPage/>}/>
       <Route path={"login"} element={<LoginPage/>}/>
       <Route path={"register"} element={<RegisterPage/>}/>
+      <Route path={"forgot-password"} element={<ForgotPasswordPage/>}/>
+      <Route path={"reset-password"} element={<ResetPasswordPage/>}/>
+      <Route path={"verify-email"} element={<VerifyEmailPage/>}/>
 
       <Route path="*" element={<div>Not Found</div>}/>
     </Routes>

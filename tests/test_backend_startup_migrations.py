@@ -8,6 +8,36 @@ def test_auto_migrate_enabled_by_default(monkeypatch):
     assert backend_main._is_auto_migrate_enabled() is True
 
 
+def test_configured_cors_origins_default(monkeypatch):
+    monkeypatch.delenv("FAIR_CORS_ORIGINS", raising=False)
+    origins = backend_main._configured_cors_origins()
+    assert "http://localhost:3000" in origins
+    assert "http://localhost:5173" in origins
+
+
+def test_configured_cors_origins_from_env(monkeypatch):
+    monkeypatch.setenv("FAIR_CORS_ORIGINS", "https://a.example, https://b.example ")
+    origins = backend_main._configured_cors_origins()
+    assert origins == ["https://a.example", "https://b.example"]
+
+
+def test_job_dispatcher_enabled_by_default(monkeypatch):
+    monkeypatch.delenv("FAIR_ENABLE_JOB_DISPATCHER", raising=False)
+    assert backend_main._is_job_dispatcher_enabled() is True
+
+
+@pytest.mark.parametrize("value", ["1", "true", "yes", "on", " TRUE "])
+def test_job_dispatcher_enabled_truthy_values(monkeypatch, value: str):
+    monkeypatch.setenv("FAIR_ENABLE_JOB_DISPATCHER", value)
+    assert backend_main._is_job_dispatcher_enabled() is True
+
+
+@pytest.mark.parametrize("value", ["0", "false", "no", "off", " FALSE ", ""])
+def test_job_dispatcher_disabled_values(monkeypatch, value: str):
+    monkeypatch.setenv("FAIR_ENABLE_JOB_DISPATCHER", value)
+    assert backend_main._is_job_dispatcher_enabled() is False
+
+
 @pytest.mark.parametrize("value", ["1", "true", "yes", "on", "TRUE", " Yes "])
 def test_auto_migrate_enabled_truthy_values(monkeypatch, value: str):
     monkeypatch.setenv("FAIR_AUTO_MIGRATE", value)
@@ -41,14 +71,11 @@ async def test_lifespan_runs_migrations_when_enabled(monkeypatch):
         backend_main, "run_migrations_to_head", lambda: calls.append("migrate")
     )
     monkeypatch.setattr(backend_main, "init_db", lambda: calls.append("init_db"))
-    monkeypatch.setattr(
-        backend_main, "load_storage_plugins", lambda: calls.append("plugins")
-    )
 
     async with backend_main.lifespan(backend_main.app):
         pass
 
-    assert calls == ["migrate", "plugins"]
+    assert calls == ["migrate"]
 
 
 @pytest.mark.asyncio
@@ -61,14 +88,11 @@ async def test_lifespan_runs_init_db_when_explicitly_enabled(monkeypatch):
         backend_main, "run_migrations_to_head", lambda: calls.append("migrate")
     )
     monkeypatch.setattr(backend_main, "init_db", lambda: calls.append("init_db"))
-    monkeypatch.setattr(
-        backend_main, "load_storage_plugins", lambda: calls.append("plugins")
-    )
 
     async with backend_main.lifespan(backend_main.app):
         pass
 
-    assert calls == ["init_db", "plugins"]
+    assert calls == ["init_db"]
 
 
 @pytest.mark.asyncio
@@ -82,13 +106,10 @@ async def test_lifespan_warns_when_no_migration_and_no_fallback(monkeypatch):
     )
     monkeypatch.setattr(backend_main, "init_db", lambda: calls.append("init_db"))
     monkeypatch.setattr(
-        backend_main, "load_storage_plugins", lambda: calls.append("plugins")
-    )
-    monkeypatch.setattr(
         backend_main.logger, "warning", lambda *_args, **_kwargs: calls.append("warn")
     )
 
     async with backend_main.lifespan(backend_main.app):
         pass
 
-    assert calls == ["warn", "plugins"]
+    assert calls == ["warn"]

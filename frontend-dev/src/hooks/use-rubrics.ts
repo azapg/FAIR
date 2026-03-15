@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import api from "@/lib/api";
+import { streamSse } from "@/lib/sse-stream";
 
 export type RubricCriterion = {
   name: string;
@@ -40,6 +41,17 @@ export type GenerateRubricOutput = {
   content: RubricContent;
 };
 
+type JobCreateResponse = {
+  jobId: string;
+  status: string;
+};
+
+type JobStreamUpdate = {
+  payload?: {
+    data?: GenerateRubricOutput;
+  };
+};
+
 export const rubricsKeys = {
   all: ["rubrics"] as const,
   lists: () => [...rubricsKeys.all, "list"] as const,
@@ -75,8 +87,81 @@ const deleteRubric = async (id: string): Promise<void> => {
 const generateRubric = async (
   data: GenerateRubricInput,
 ): Promise<GenerateRubricOutput> => {
-  const response = await api.post("/rubrics/generate", data, { timeout: 60000 });
-  return response.data;
+  const response = await api.post<JobCreateResponse>("/rubrics/generate", data);
+  const jobId = response.data?.jobId;
+  if (!jobId) {
+    throw new Error("Rubric generation job id is missing");
+  }
+
+  return await new Promise<GenerateRubricOutput>((resolve, reject) => {
+    const controller = new AbortController();
+    let settled = false;
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      controller.abort();
+      fn();
+    };
+
+    void streamSse(`/api/jobs/${jobId}/stream`, {
+      signal: controller.signal,
+      timeoutMs: 180000,
+      onEvent: ({ event, data: eventData }) => {
+        try {
+          const parsed = JSON.parse(eventData) as Record<string, unknown>;
+          if (event === "result") {
+            const update = parsed as JobStreamUpdate;
+            const rubric = update.payload?.data;
+            if (!rubric?.content) {
+              finish(() =>
+                reject(new Error("Rubric result payload missing content")),
+              );
+              return;
+            }
+            finish(() => resolve(rubric));
+            return;
+          }
+          if (event === "error") {
+            const message =
+              typeof parsed?.payload === "object" &&
+              parsed?.payload &&
+              "error" in parsed.payload
+                ? String((parsed.payload as Record<string, unknown>).error)
+                : "Rubric generation failed";
+            finish(() => reject(new Error(message)));
+            return;
+          }
+          if (event === "end") {
+            const status = String(parsed.status ?? "");
+            if (status !== "completed") {
+              finish(() =>
+                reject(
+                  new Error(
+                    `Rubric generation ended with status: ${status || "unknown"}`,
+                  ),
+                ),
+              );
+            }
+          }
+        } catch (error) {
+          finish(() => reject(error as Error));
+        }
+      },
+    })
+      .then(() => {
+        if (!settled) {
+          finish(() =>
+            reject(new Error("Rubric generation stream ended without result")),
+          );
+        }
+      })
+      .catch((error: unknown) => {
+        if (!settled) {
+          finish(() => reject(error as Error));
+        }
+      });
+  });
 };
 
 export function useRubrics(enabled = true) {

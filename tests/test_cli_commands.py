@@ -216,3 +216,75 @@ def test_db_migrate_sqlite_to_postgres_rejects_invalid_conflict_mode():
     )
     assert result.exit_code != 0
     assert "on-conflict must be one of: error, skip" in result.output
+
+
+class _FakeQuery:
+    def __init__(self, user):
+        self.user = user
+
+    def filter(self, *_args, **_kwargs):
+        return self
+
+    def first(self):
+        return self.user
+
+
+class _FakeSession:
+    def __init__(self, user):
+        self.user = user
+        self.committed = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False
+
+    def query(self, _model):
+        return _FakeQuery(self.user)
+
+    def add(self, _item):
+        return None
+
+    def commit(self):
+        self.committed = True
+
+
+class _FakeUser:
+    def __init__(self, email: str, password_hash: str = "old"):
+        self.email = email
+        self.password_hash = password_hash
+
+
+def test_users_reset_password_updates_hash(monkeypatch):
+    runner = CliRunner()
+    fake_user = _FakeUser(email="student@test.com")
+    fake_session = _FakeSession(fake_user)
+
+    monkeypatch.setattr(cli_main, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(cli_main, "hash_password", lambda password: f"hashed::{password}")
+
+    result = runner.invoke(
+        cli_main.app,
+        ["users", "reset-password", "student@test.com", "--password", "new-secret"],
+    )
+
+    assert result.exit_code == 0
+    assert fake_user.password_hash == "hashed::new-secret"
+    assert fake_session.committed is True
+    assert "Password reset for student@test.com" in result.output
+
+
+def test_users_reset_password_returns_error_for_unknown_email(monkeypatch):
+    runner = CliRunner()
+    fake_session = _FakeSession(None)
+
+    monkeypatch.setattr(cli_main, "SessionLocal", lambda: fake_session)
+
+    result = runner.invoke(
+        cli_main.app,
+        ["users", "reset-password", "missing@test.com", "--password", "new-secret"],
+    )
+
+    assert result.exit_code == 1
+    assert "User not found: missing@test.com" in result.output

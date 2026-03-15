@@ -1,0 +1,219 @@
+import asyncio
+from collections.abc import AsyncIterable
+from dataclasses import asdict
+import json
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.sse import EventSourceResponse, format_sse_event
+from pydantic import ValidationError
+
+from fair_platform.backend.api.dependencies import get_job_queue
+from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.api.schema.job import (
+    JobCreateRequest,
+    JobCreateResponse,
+    JobStateRead,
+    JobUpdateRequest,
+    JobUpdateResponse,
+)
+from fair_platform.backend.api.schema.rubric import RubricGenerateResponse
+from fair_platform.backend.services.job_queue import (
+    JobMessage,
+    JobQueue,
+    JobStatus,
+    JobUpdate,
+)
+from fair_platform.backend.core.security.dependencies import require_extension_client
+from fair_platform.backend.data.models import ExtensionClient, User
+
+router = APIRouter()
+TERMINAL_JOB_STATUSES = {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED}
+
+
+@router.post("/", status_code=status.HTTP_202_ACCEPTED, response_model=JobCreateResponse)
+async def create_job(
+    payload: JobCreateRequest,
+    current_user: User = Depends(get_current_user),
+    queue: JobQueue = Depends(get_job_queue),
+):
+    job_id = payload.job_id or str(uuid4())
+    existing = await queue.get_state(job_id)
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Job with id {job_id!r} already exists",
+        )
+
+    job = JobMessage(
+        job_id=job_id,
+        target=payload.target,
+        payload=payload.payload.model_dump(),
+        metadata=payload.metadata,
+    )
+    await queue.enqueue(job)
+    await queue.set_state(
+        job_id=job_id,
+        status=JobStatus.QUEUED,
+        details={
+            "target": payload.target,
+            "action": payload.payload.action,
+            "owner_user_id": str(current_user.id),
+            "owner_extension_id": payload.target,
+        },
+    )
+    return JobCreateResponse(job_id=job_id, status=JobStatus.QUEUED)
+
+
+@router.get("/{job_id}", response_model=JobStateRead)
+async def get_job_state(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    queue: JobQueue = Depends(get_job_queue),
+):
+    state = await queue.get_state(job_id)
+    if state is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found",
+        )
+    owner_user_id = state.details.get("owner_user_id")
+    if owner_user_id and owner_user_id != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authenticated user cannot access this job",
+        )
+    return JobStateRead(
+        job_id=state.job_id,
+        status=state.status,
+        updated_at=state.updated_at,
+        details=state.details,
+    )
+
+
+@router.post("/{job_id}/updates", response_model=JobUpdateResponse)
+async def publish_job_update(
+    job_id: str,
+    payload: JobUpdateRequest,
+    _extension_client: ExtensionClient = Depends(require_extension_client(("jobs:write",))),
+    queue: JobQueue = Depends(get_job_queue),
+):
+    state = await queue.get_state(job_id)
+    if state is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found",
+        )
+    owner_extension_id = state.details.get("owner_extension_id")
+    if owner_extension_id and owner_extension_id != _extension_client.extension_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authenticated extension cannot update this job",
+        )
+
+    normalized_update_payload = payload.update.payload.model_dump()
+    job_action = state.details.get("action")
+    if job_action == "rubric.create" and payload.update.event == "result":
+        try:
+            rubric_result = RubricGenerateResponse.model_validate(normalized_update_payload["data"])
+        except (KeyError, ValidationError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Rubric result payload must match RubricGenerateResponse schema",
+            ) from exc
+        normalized_update_payload = {"data": rubric_result.model_dump()}
+
+    update = JobUpdate(
+        job_id=job_id,
+        event=payload.update.event,
+        payload=normalized_update_payload,
+    )
+    await queue.publish_update(update)
+
+    next_status = None
+    if payload.status is not None:
+        merged_details = dict(state.details)
+        merged_details.update(payload.details)
+        next_state = await queue.set_state(
+            job_id=job_id,
+            status=payload.status,
+            details=merged_details,
+        )
+        next_status = next_state.status
+
+    return JobUpdateResponse(job_id=job_id, accepted=True, status=next_status)
+
+
+@router.get("/{job_id}/stream")
+async def stream_job_updates(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    queue: JobQueue = Depends(get_job_queue),
+):
+    state = await queue.get_state(job_id)
+    if state is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found",
+        )
+    owner_user_id = state.details.get("owner_user_id")
+    if owner_user_id and owner_user_id != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authenticated user cannot stream this job",
+        )
+
+    def _sse(event: str, data: dict) -> bytes:
+        data_str = json.dumps(jsonable_encoder(data))
+        return format_sse_event(event=event, data_str=data_str)
+
+    async def event_stream() -> AsyncIterable[bytes]:
+        subscription = await queue.subscribe_updates(job_id)
+        async with subscription:
+            try:
+                initial_state = await queue.get_state(job_id)
+                if initial_state is not None and initial_state.status in TERMINAL_JOB_STATUSES:
+                    yield _sse(
+                        event="end",
+                        data={
+                            "job_id": job_id,
+                            "status": initial_state.status,
+                            "updated_at": initial_state.updated_at,
+                        },
+                    )
+                    return
+                while True:
+                    update = await subscription.get(timeout=15.0)
+                    if update is None:
+                        latest_state = await queue.get_state(job_id)
+                        if latest_state is not None and latest_state.status in TERMINAL_JOB_STATUSES:
+                            yield _sse(
+                                event="end",
+                                data={
+                                    "job_id": job_id,
+                                    "status": latest_state.status,
+                                    "updated_at": latest_state.updated_at,
+                                },
+                            )
+                            return
+                        continue
+                    yield _sse(event=update.event, data=asdict(update))
+                    latest_state = await queue.get_state(job_id)
+                    if latest_state is not None and latest_state.status in TERMINAL_JOB_STATUSES:
+                        yield _sse(
+                            event="end",
+                            data={
+                                "job_id": job_id,
+                                "status": latest_state.status,
+                                "updated_at": latest_state.updated_at,
+                            },
+                        )
+                        return
+            except asyncio.CancelledError:
+                return
+
+    return EventSourceResponse(event_stream())
+
+
+__all__ = ["router"]

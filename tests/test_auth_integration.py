@@ -1,10 +1,12 @@
 from uuid import uuid4
+from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
-from fair_platform.backend.api.routers.auth import hash_password
+from fair_platform.backend.api.routers.auth import _create_action_token, hash_password
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.user import UserRole
+from fair_platform.backend.services.mailer import Mailer
 from tests.conftest import create_sample_user_data
 
 
@@ -342,3 +344,374 @@ class TestAuthenticationFlow:
         )
         assert update_response.status_code == 422
         assert "Conflicting keys normalize to 'interface_mode'" in update_response.json()["detail"]
+
+    def test_system_config_exposes_email_capability(self, test_client: TestClient, monkeypatch):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+        response = test_client.get("/api/v1/system/config")
+        assert response.status_code == 200
+        assert response.json() == {"features": {"email_enabled": True}}
+
+    def test_system_config_enables_email_when_resend_key_present(
+        self,
+        test_client: TestClient,
+        monkeypatch,
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "0")
+        monkeypatch.setenv("RESEND_API_KEY", "re_live_example")
+        response = test_client.get("/api/v1/system/config")
+        assert response.status_code == 200
+        assert response.json() == {"features": {"email_enabled": True}}
+
+    def test_register_auto_verifies_when_email_disabled(
+        self, test_client: TestClient, test_db, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "0")
+        user_data = create_sample_user_data(role=UserRole.user)
+        response = test_client.post("/api/auth/register", json=user_data)
+        assert response.status_code == 201
+
+        with test_db() as session:
+            created = session.query(User).filter(User.email == user_data["email"]).first()
+            assert created is not None
+            assert created.is_verified is True
+
+    def test_register_requires_verification_when_email_enabled(
+        self, test_client: TestClient, test_db, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+        user_data = create_sample_user_data(role=UserRole.user)
+        response = test_client.post("/api/auth/register", json=user_data)
+        assert response.status_code == 201
+
+        with test_db() as session:
+            created = session.query(User).filter(User.email == user_data["email"]).first()
+            assert created is not None
+            assert created.is_verified is False
+
+    def test_register_returns_verification_required_payload_when_enforced(
+        self, test_client: TestClient, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+        monkeypatch.setenv("FAIR_ENFORCE_EMAIL_VERIFICATION", "1")
+        user_data = create_sample_user_data(role=UserRole.user)
+        response = test_client.post("/api/auth/register", json=user_data)
+
+        assert response.status_code == 201
+        payload = response.json()
+        assert payload["verification_required"] is True
+        assert "verify your email" in payload["detail"].lower()
+        assert "access_token" not in payload
+
+    def test_login_blocks_unverified_user_when_enforced(
+        self, test_client: TestClient, test_db, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+        monkeypatch.setenv("FAIR_ENFORCE_EMAIL_VERIFICATION", "1")
+        email = f"enforced-{uuid4()}@test.com"
+        password = "test_password_123"
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="Pending Verify",
+                email=email,
+                role=UserRole.user.value,
+                password_hash=hash_password(password),
+                is_verified=False,
+            )
+            session.add(user)
+            session.commit()
+
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": email, "password": password},
+        )
+        assert login_response.status_code == 403
+        assert login_response.json()["detail"] == "Please verify your email before signing in"
+
+    def test_login_allows_unverified_user_when_enforcement_disabled(
+        self, test_client: TestClient, test_db, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+        monkeypatch.setenv("FAIR_ENFORCE_EMAIL_VERIFICATION", "0")
+        email = f"unenforced-{uuid4()}@test.com"
+        password = "test_password_123"
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="No Enforce",
+                email=email,
+                role=UserRole.user.value,
+                password_hash=hash_password(password),
+                is_verified=False,
+            )
+            session.add(user)
+            session.commit()
+
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": email, "password": password},
+        )
+        assert login_response.status_code == 200
+
+    def test_login_succeeds_after_verify_when_enforced(
+        self, test_client: TestClient, test_db, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+        monkeypatch.setenv("FAIR_ENFORCE_EMAIL_VERIFICATION", "1")
+        email = f"verify-then-login-{uuid4()}@test.com"
+        password = "test_password_123"
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="Verify Then Login",
+                email=email,
+                role=UserRole.user.value,
+                password_hash=hash_password(password),
+                is_verified=False,
+            )
+            session.add(user)
+            session.commit()
+            token = _create_action_token(
+                user=user,
+                purpose="verify_email",
+                expires_delta=timedelta(hours=1),
+            )
+
+        verify_response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        assert verify_response.status_code == 200
+
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": email, "password": password},
+        )
+        assert login_response.status_code == 200
+
+    def test_forgot_password_returns_400_when_email_disabled(
+        self, test_client: TestClient, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "0")
+        response = test_client.post(
+            "/api/auth/forgot-password",
+            json={"email": "student@test.com"},
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Email services are disabled on this instance"
+
+    def test_resend_verification_returns_400_when_email_disabled(
+        self, test_client: TestClient, student_user, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "0")
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+        token = login_response.json()["access_token"]
+
+        response = test_client.post(
+            "/api/auth/resend-verification",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Email services are disabled on this instance"
+
+    def test_public_resend_verification_request_returns_400_when_email_disabled(
+        self,
+        test_client: TestClient,
+        monkeypatch,
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "0")
+        response = test_client.post(
+            "/api/auth/resend-verification-request",
+            json={"email": "student@test.com"},
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Email services are disabled on this instance"
+
+    def test_public_resend_verification_request_uses_generic_response_and_only_sends_for_unverified(
+        self,
+        test_client: TestClient,
+        test_db,
+        monkeypatch,
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+        sent: list[tuple[str, str]] = []
+
+        async def fake_send_verification(self, user, verification_url: str) -> None:
+            sent.append((str(user.email), verification_url))
+
+        monkeypatch.setattr(Mailer, "send_verification", fake_send_verification)
+
+        verified_email = f"verified-{uuid4()}@test.com"
+        unverified_email = f"unverified-{uuid4()}@test.com"
+        with test_db() as session:
+            session.add(
+                User(
+                    id=uuid4(),
+                    name="Verified User",
+                    email=verified_email,
+                    role=UserRole.user.value,
+                    password_hash=hash_password("test_password_123"),
+                    is_verified=True,
+                )
+            )
+            session.add(
+                User(
+                    id=uuid4(),
+                    name="Unverified User",
+                    email=unverified_email,
+                    role=UserRole.user.value,
+                    password_hash=hash_password("test_password_123"),
+                    is_verified=False,
+                )
+            )
+            session.commit()
+
+        generic_message = (
+            "If an account exists and requires verification, a verification email has been sent"
+        )
+        for email in ("missing@test.com", verified_email, unverified_email):
+            response = test_client.post(
+                "/api/auth/resend-verification-request",
+                json={"email": email},
+            )
+            assert response.status_code == 200
+            assert response.json()["detail"] == generic_message
+
+        assert len(sent) == 1
+        assert sent[0][0] == unverified_email
+        assert "verify-email?token=" in sent[0][1]
+
+    def test_verify_email_confirm_marks_user_verified(self, test_client: TestClient, test_db):
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="Verify Me",
+                email=f"verify-{uuid4()}@test.com",
+                role=UserRole.user.value,
+                password_hash=hash_password("test_password_123"),
+                is_verified=False,
+            )
+            session.add(user)
+            session.commit()
+            token = _create_action_token(
+                user=user,
+                purpose="verify_email",
+                expires_delta=timedelta(hours=1),
+            )
+
+        response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        assert response.status_code == 200
+        assert response.json()["detail"] == "Email verified successfully"
+
+        with test_db() as session:
+            refreshed = session.get(User, user.id)
+            assert refreshed is not None
+            assert refreshed.is_verified is True
+
+    def test_verify_email_confirm_is_idempotent(self, test_client: TestClient, test_db):
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="Verify Twice",
+                email=f"verify-twice-{uuid4()}@test.com",
+                role=UserRole.user.value,
+                password_hash=hash_password("test_password_123"),
+                is_verified=False,
+            )
+            session.add(user)
+            session.commit()
+            token = _create_action_token(
+                user=user,
+                purpose="verify_email",
+                expires_delta=timedelta(hours=1),
+            )
+
+        first_response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        assert first_response.status_code == 200
+        assert first_response.json()["detail"] == "Email verified successfully"
+
+        second_response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        assert second_response.status_code == 200
+        assert second_response.json()["detail"] == "Email already verified"
+        assert "access_token" in second_response.json()
+
+    def test_verify_email_confirm_returns_access_token_that_can_access_me(
+        self,
+        test_client: TestClient,
+        test_db,
+    ):
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="Verify Token Works",
+                email=f"verify-token-{uuid4()}@test.com",
+                role=UserRole.user.value,
+                password_hash=hash_password("test_password_123"),
+                is_verified=False,
+            )
+            session.add(user)
+            session.commit()
+            token = _create_action_token(
+                user=user,
+                purpose="verify_email",
+                expires_delta=timedelta(hours=1),
+            )
+
+        verify_response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        assert verify_response.status_code == 200
+        access_token = verify_response.json()["access_token"]
+
+        me_response = test_client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert me_response.status_code == 200
+        assert me_response.json()["email"] == user.email
+
+    def test_reset_password_confirm_updates_password_hash(self, test_client: TestClient, test_db):
+        email = f"reset-{uuid4()}@test.com"
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="Reset Me",
+                email=email,
+                role=UserRole.user.value,
+                password_hash=hash_password("old_password"),
+                is_verified=True,
+            )
+            session.add(user)
+            session.commit()
+            token = _create_action_token(
+                user=user,
+                purpose="password_reset",
+                expires_delta=timedelta(minutes=30),
+            )
+
+        reset_response = test_client.post(
+            "/api/auth/reset-password/confirm",
+            json={"token": token, "password": "new_password_123"},
+        )
+        assert reset_response.status_code == 200
+        assert reset_response.json()["detail"] == "Password reset successful"
+
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": email, "password": "new_password_123"},
+        )
+        assert login_response.status_code == 200
+
+    def test_verify_and_reset_confirm_reject_invalid_tokens(self, test_client: TestClient):
+        verify_response = test_client.post(
+            "/api/auth/verify-email/confirm",
+            json={"token": "invalid-token"},
+        )
+        assert verify_response.status_code == 400
+        assert verify_response.json()["detail"] == "Invalid or expired token"
+
+        reset_response = test_client.post(
+            "/api/auth/reset-password/confirm",
+            json={"token": "invalid-token", "password": "new_password_123"},
+        )
+        assert reset_response.status_code == 400
+        assert reset_response.json()["detail"] == "Invalid or expired token"

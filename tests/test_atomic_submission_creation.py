@@ -538,7 +538,7 @@ class TestAtomicSubmissionCreation:
         files = [("files", ("test.txt", BytesIO(b"content"), "text/plain"))]
         form_data = {
             "assignment_id": str(data["assignment_id"]),
-            "submitter_name": ""  # Empty name - currently accepted (creates submitter with empty name)
+            "submitter_name": ""  # Empty multipart form field is treated as missing by validation
         }
         
         response = test_client.post(
@@ -548,8 +548,8 @@ class TestAtomicSubmissionCreation:
             headers=headers
         )
         
-        # Currently accepts empty names (could add validation in the future)
-        assert response.status_code == 201
+        # FastAPI form validation treats empty string in this multipart field as missing.
+        assert response.status_code == 422
 
     def test_submission_artifact_ownership_and_permissions(self, test_client, test_db):
         """Test that submission artifacts have correct ownership and permissions"""

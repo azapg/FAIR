@@ -1,9 +1,13 @@
+import os
+from uuid import uuid4
 from uuid import UUID
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from fair_platform.backend.api.dependencies import get_job_queue
+from fair_platform.backend.api.schema.job import JobCreateResponse
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.rubric import Rubric
 from fair_platform.backend.data.models.user import User
@@ -12,16 +16,24 @@ from fair_platform.backend.api.schema.rubric import (
     RubricUpdate,
     RubricRead,
     RubricGenerateRequest,
-    RubricGenerateResponse,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.core.security.permissions import (
     has_capability,
     has_capability_and_owner,
 )
+from fair_platform.backend.services.job_queue import (
+    JobMessage,
+    JobQueue,
+    JobStatus,
+)
 from fair_platform.backend.services.rubric_service import get_rubric_service
 
 router = APIRouter()
+
+
+def _rubric_extension_target() -> str:
+    return os.getenv("FAIR_RUBRIC_EXTENSION_ID", "fair.core").strip() or "fair.core"
 
 
 @router.post("/", response_model=RubricRead, status_code=status.HTTP_201_CREATED)
@@ -40,7 +52,7 @@ def create_rubric(
         service = get_rubric_service(db)
         rubric = service.create_rubric(
             name=payload.name,
-            content=payload.content,
+            content=payload.content.model_dump(),
             creator=current_user,
         )
         db.commit()
@@ -69,10 +81,14 @@ def list_rubrics(
     return rubrics
 
 
-@router.post("/generate", response_model=RubricGenerateResponse)
+@router.post(
+    "/generate",
+    response_model=JobCreateResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def generate_rubric(
     payload: RubricGenerateRequest,
-    db: Session = Depends(session_dependency),
+    queue: JobQueue = Depends(get_job_queue),
     current_user: User = Depends(get_current_user),
 ):
     if not has_capability(current_user, "generate_rubric"):
@@ -81,24 +97,36 @@ async def generate_rubric(
             detail="Not authorized to generate rubrics",
         )
 
-    instruction = payload.instruction.strip()
-    if not instruction:
+    job_id = str(uuid4())
+    target = _rubric_extension_target()
+    existing = await queue.get_state(job_id)
+    if existing is not None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Instruction cannot be empty",
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Job with id {job_id!r} already exists",
         )
 
-    try:
-        service = get_rubric_service(db)
-        content = await service.generate_rubric_from_instruction(instruction)
-        return {"content": content}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate rubric: {str(e)}",
-        ) from e
+    job = JobMessage(
+        job_id=job_id,
+        target=target,
+        payload={
+            "action": "rubric.create",
+            "params": payload.model_dump(),
+        },
+        metadata={"source": "rubrics.generate"},
+    )
+    await queue.enqueue(job)
+    await queue.set_state(
+        job_id=job_id,
+        status=JobStatus.QUEUED,
+        details={
+            "target": target,
+            "action": "rubric.create",
+            "owner_user_id": str(current_user.id),
+            "owner_extension_id": target,
+        },
+    )
+    return JobCreateResponse(job_id=job_id, status=JobStatus.QUEUED)
 
 
 
@@ -155,7 +183,7 @@ def update_rubric(
         updated = service.update_rubric(
             rubric_id=rubric_id,
             name=payload.name,
-            content=payload.content,
+            content=payload.content.model_dump() if payload.content is not None else None,
         )
         if not updated:
             raise HTTPException(

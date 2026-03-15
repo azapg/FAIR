@@ -1,6 +1,6 @@
 import { createWithEqualityFn } from "zustand/traditional";
 import { persist } from "zustand/middleware";
-import { RuntimePlugin, RuntimePluginRead } from "@/hooks/use-plugins";
+import { ExtensionPlugin, ExtensionPluginRead } from "@/hooks/use-plugins";
 import { Submission } from "@/hooks/use-submissions";
 import { AuthUser } from "@/contexts/auth-context";
 
@@ -22,10 +22,18 @@ export type WorkflowCreate = {
   courseId: string;
   description?: string;
   plugins: {
-    transcriber?: RuntimePlugin;
-    grader?: RuntimePlugin;
-    validator?: RuntimePlugin;
+    transcriber?: ExtensionPlugin;
+    grader?: ExtensionPlugin;
+    reviewer?: ExtensionPlugin;
   };
+};
+
+export type WorkflowStep = {
+  id: string;
+  order: number;
+  pluginType: "transcriber" | "grader" | "reviewer";
+  plugin: ExtensionPlugin;
+  settings: Record<string, any>;
 };
 
 export type Workflow = WorkflowCreate & {
@@ -33,6 +41,7 @@ export type Workflow = WorkflowCreate & {
   createdAt: string;
   creatorId: string;
   runs?: WorkflowRun[];
+  steps?: WorkflowStep[];
 };
 
 export type WorkflowDraft = WorkflowCreate & {
@@ -66,12 +75,50 @@ type Actions = {
    * Avoids reading drafts from components and updates only the necessary slice.
    */
   patchActivePluginSetting: (
-    plugin: RuntimePluginRead,
+    plugin: ExtensionPluginRead,
     key: string,
     value: any,
     fallback?: Record<string, any>,
   ) => void;
 };
+
+export function workflowPluginsFromSteps(steps?: WorkflowStep[]) {
+  const plugins: WorkflowCreate["plugins"] = {};
+  for (const step of steps || []) {
+    plugins[step.pluginType] = {
+      ...step.plugin,
+      settings: step.settings ?? step.plugin.settings ?? {},
+    };
+  }
+  return plugins;
+}
+
+export function workflowStepsFromPlugins(plugins?: WorkflowCreate["plugins"]): WorkflowStep[] {
+  const orderedTypes: Array<keyof WorkflowCreate["plugins"]> = [
+    "transcriber",
+    "grader",
+    "reviewer",
+  ];
+  return orderedTypes.flatMap((pluginType, order) => {
+    const plugin = plugins?.[pluginType];
+    if (!plugin) {
+      return [];
+    }
+    const settings = plugin.settings ?? {};
+    return [
+      {
+        id: `step-${order}-${plugin.id}`,
+        order,
+        pluginType,
+        plugin: {
+          ...plugin,
+          settings,
+        },
+        settings,
+      },
+    ];
+  });
+}
 
 export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
   persist(
@@ -102,8 +149,8 @@ export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
           ...existingDraft,
           ...draft,
           plugins: {
-            ...existingDraft?.plugins,
-            ...draft.plugins,
+            ...(existingDraft?.plugins || {}),
+            ...(draft.plugins || {}),
           },
         };
 
@@ -130,7 +177,7 @@ export const useWorkflowStore = createWithEqualityFn<State & Actions>()(
           const prevPlugin = currentDraft.plugins?.[plugin.type];
           const prevSettings = prevPlugin?.settings ?? fallback ?? {};
           const newSettings = { ...prevSettings, [key]: value };
-          const summary: RuntimePlugin = { ...plugin, settings: newSettings };
+          const summary: ExtensionPlugin = { ...plugin, settings: newSettings };
 
           return {
             drafts: {

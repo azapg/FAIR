@@ -5,7 +5,8 @@ import { useTranslation } from "react-i18next";
 
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { RuntimePluginRead } from "@/hooks/use-plugins";
+import { ExtensionPluginRead } from "@/hooks/use-plugins";
+import { workflowPluginsFromSteps, WorkflowStep } from "@/store/workflows-store";
 import {
   DataTable,
   DataTableContent,
@@ -19,7 +20,8 @@ type WorkflowRow = {
   description?: string | null;
   createdAt: string;
   updatedAt?: string | null;
-  plugins?: Record<string, RuntimePluginRead>;
+  plugins?: Record<string, ExtensionPluginRead>;
+  steps?: WorkflowStep[];
 };
 
 export function WorkflowsTab({ courseId }: { courseId?: string }) {
@@ -31,7 +33,10 @@ export function WorkflowsTab({ courseId }: { courseId?: string }) {
     queryFn: async () => {
       if (!courseId) return [];
       const res = await api.get("/workflows", { params: { course_id: courseId } });
-      return res.data;
+      return (res.data as WorkflowRow[]).map((workflow) => ({
+        ...workflow,
+        plugins: workflowPluginsFromSteps(workflow.steps),
+      }));
     },
   });
 
@@ -67,9 +72,9 @@ export function WorkflowsTab({ courseId }: { courseId?: string }) {
         cell: ({ row }) => row.original.plugins?.grader?.name ?? t("assignments.na"),
       },
       {
-        id: "validator",
-        header: t("plugins.validator"),
-        cell: ({ row }) => row.original.plugins?.validator?.name ?? t("assignments.na"),
+        id: "reviewer",
+        header: t("plugins.reviewer"),
+        cell: ({ row }) => row.original.plugins?.reviewer?.name ?? t("assignments.na"),
       },
       {
         id: "actions",
