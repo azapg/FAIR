@@ -180,7 +180,6 @@ class TestWorkflowRunsAPI:
                             "settings": {},
                             "id": "local.reviewer",
                             "type": "reviewer",
-                            "hash": "missing.extension:local.reviewer",
                             "source": "missing.extension",
                         },
                         "settings": {},

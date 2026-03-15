@@ -26,7 +26,6 @@ def _normalize_plugin(
     )
     payload["id"] = descriptor.plugin_id
     payload["type"] = descriptor.plugin_type
-    payload["hash"] = f"{descriptor.extension_id}:{descriptor.plugin_id}"
     payload["source"] = descriptor.extension_id
     return ExtensionPlugin.model_validate(payload)
 

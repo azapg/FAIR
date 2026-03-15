@@ -21,7 +21,6 @@ class ExtensionPlugin(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     id: str | None = None
     type: PluginType | None = None
-    hash: str | None = None
     source: str | None = None
     settings: dict[str, Any] = Field(default_factory=dict)
 

@@ -10,7 +10,6 @@ export type Plugin = {
   authorEmail?: string | null;
   description?: string | null;
   version?: string | null;
-  hash: string;
   source: string;
   type: PluginType;
 };

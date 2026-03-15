@@ -441,7 +441,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
   function runPlugin(plugin?: ExtensionPlugin) {
     if (!plugin) return;
     console.log(
-      `Running plugin ${plugin.id}-${plugin.hash}-${plugin.version} on submission ${submission.id} with workflow ${workflow?.id} and settings`,
+      `Running plugin ${plugin.id}-${plugin.version} on submission ${submission.id} with workflow ${workflow?.id} and settings`,
       plugin.settings,
     );
   }

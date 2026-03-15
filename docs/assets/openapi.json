@@ -5476,17 +5476,6 @@
             ],
             "title": "Type"
           },
-          "hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hash"
-          },
           "source": {
             "anyOf": [
               {
@@ -5599,17 +5588,6 @@
               }
             ],
             "title": "Type"
-          },
-          "hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hash"
           },
           "source": {
             "anyOf": [

@@ -50,8 +50,7 @@ export default function PluginSection({
     const pluginInDraft = currentDraft?.plugins[type];
     if (pluginInDraft) {
       const plugin = plugins.find(
-        // TODO: We should also check the hash, but I haven't implemented a good way to let the user know the difference yet.
-        (p) => p.id === pluginInDraft.id /*&& p.hash === pluginInDraft.hash*/,
+        (p) => p.id === pluginInDraft.id,
       );
 
       if (plugin) {
@@ -122,7 +121,7 @@ export default function PluginSection({
 
       {selectedPlugin && currentDraft && (
         <PluginSettings
-          key={`${type}-settings-${selectedPlugin.id}-${selectedPlugin.hash}`}
+          key={`${type}-settings-${selectedPlugin.id}`}
           plugin={selectedPlugin}
           values={currentDraft.plugins[type]?.settings}
         />
