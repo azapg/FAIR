@@ -1,7 +1,7 @@
 """Split artifact storage metadata into derivative records.
 
 Revision ID: 20260307_0013
-Revises: 20260224_0012
+Revises: 20260313_0016
 Create Date: 2026-03-07
 """
 
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 
 revision = "20260307_0013"
-down_revision = "20260224_0012"
+down_revision = "20260313_0016"
 branch_labels = None
 depends_on = None
 
