@@ -57,6 +57,7 @@ import { useSubmissions } from "@/hooks/use-submissions";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { DOCS_BASE_URL } from "@/lib/constants";
+import { useAuth } from "@/contexts/auth-context";
 
 export function WorkflowsSidebar({
   side,
@@ -74,7 +75,9 @@ export function WorkflowsSidebar({
   const setActiveWorkflowId = useWorkflowStore(
     (state) => state.setActiveWorkflowId,
   );
+  const saveDraft = useWorkflowStore((state) => state.saveDraft);
   const draft = activeWorkflowId ? drafts[activeWorkflowId] : undefined;
+  const { user } = useAuth();
   const workflow = useMemo(() => {
     if (activeWorkflowId)
       return workflows.find((w) => w.id === activeWorkflowId);
@@ -101,6 +104,18 @@ export function WorkflowsSidebar({
     // TODO: Workflows state is so awful that creating a default workflow if none exist is too complicated for now.
     //  So I will just make the user create one manually, though I would like a better UX for this.
   }, [activeWorkflowId, workflows]);
+
+  useEffect(() => {
+    if (!workflow || !activeWorkflowId || draft) return;
+    saveDraft({
+      workflowId: workflow.id,
+      name: workflow.name,
+      description: workflow.description ?? "",
+      courseId: workflow.courseId,
+      plugins: workflow.plugins ?? {},
+      creatorId: user?.id,
+    });
+  }, [workflow, activeWorkflowId, draft, saveDraft, user?.id]);
 
   // Remove early return so footer is always visible even while loading
 
@@ -307,6 +322,8 @@ const WorkflowSidebarContent = ({
     <WorkflowSidebarEmptyState
       workflows={workflows}
       activeWorkflowId={activeWorkflowId}
+      workflow={workflow}
+      draft={draft}
       onCreateWorkflow={onCreateWorkflow}
     />
   );
@@ -315,12 +332,16 @@ const WorkflowSidebarContent = ({
 interface WorkflowSidebarEmptyStateProps {
   workflows: any[];
   activeWorkflowId?: string;
+  workflow?: any;
+  draft?: any;
   onCreateWorkflow: () => void;
 }
 
 const WorkflowSidebarEmptyState = ({
   workflows,
   activeWorkflowId,
+  workflow,
+  draft,
   onCreateWorkflow,
 }: WorkflowSidebarEmptyStateProps) => {
   const { t } = useTranslation();
@@ -333,12 +354,20 @@ const WorkflowSidebarEmptyState = ({
     return <WorkflowNotSelectedState />;
   }
 
-  // Fallback: workflow exists but draft may not be loaded. 
-  // This shouldn't really happen and if it does it indicates a problem with the workflow loading logic, 
-  // but at least we can show something instead of crashing.
+  // Loading state: workflow exists but draft hasn't loaded yet
+  if (workflow && !draft) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
+        <LoaderIcon className="animate-spin" />
+        {t("common.loading")}
+      </div>
+    );
+  }
+
+  // This shouldn't really happen - all conditions above should have returned
   return (
     <div className="p-4 text-sm text-muted-foreground h-full flex flex-col items-center justify-center text-center gap-2">
-      {t("workflow.workflowDetails")}
+      <span>{t("workflow.workflowDetails")}</span>
     </div>
   );
 };
@@ -401,7 +430,7 @@ const WorkflowEmptyState = ({
         size="sm"
       >
         <a
-          href={`${DOCS_BASE_URL}/en/platform/workflows/`}
+          href={`${DOCS_BASE_URL}/${currentLang}/platform/workflows/`}
           target="_blank"
           rel="noreferrer"
         >
@@ -433,7 +462,7 @@ const WorkflowNotSelectedState = () => {
           size="sm"
         >
           <a
-            href={`${DOCS_BASE_URL}/en/platform/workflows/`}
+            href={`${DOCS_BASE_URL}/${currentLang}/platform/workflows/`}
             target="_blank"
             rel="noreferrer"
           >
