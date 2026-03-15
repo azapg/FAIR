@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RuntimePluginRead } from "@/hooks/use-plugins";
+import { ExtensionPluginRead } from "@/hooks/use-plugins";
 import { SDKArtifact, toSDKArtifact, useArtifacts } from "@/hooks/use-artifacts";
 import { Rubric, useRubrics } from "@/hooks/use-rubrics";
 import { useCallback, useRef } from "react";
@@ -21,7 +21,7 @@ import { useTranslation } from "react-i18next";
 import { ArtifactRefSettingsField, BooleanSettingsField, FileSettingsField, NumberSettingsField, PluginSettingsField, PluginSettingsSchema, RubricRefSettingsField, SliderSettingsField, TextSettingsField } from "@/types/plugin-settings";
 
 interface PluginSettingsProps {
-  plugin: RuntimePluginRead;
+  plugin: ExtensionPluginRead;
   values?: Record<string, unknown>;
   onChange?: (values: Record<string, unknown>) => void;
 }

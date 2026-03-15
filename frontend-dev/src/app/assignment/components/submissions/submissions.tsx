@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useWorkflowStore, Workflow } from "@/store/workflows-store";
-import { RuntimePlugin } from "@/hooks/use-plugins";
+import { ExtensionPlugin } from "@/hooks/use-plugins";
 import { useWorkflows } from "@/hooks/use-workflows";
 import {
   SubmissionStatus,
@@ -438,7 +438,7 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
   const canReturn =
     hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
 
-  function runPlugin(plugin?: RuntimePlugin) {
+  function runPlugin(plugin?: ExtensionPlugin) {
     if (!plugin) return;
     console.log(
       `Running plugin ${plugin.id}-${plugin.hash}-${plugin.version} on submission ${submission.id} with workflow ${workflow?.id} and settings`,

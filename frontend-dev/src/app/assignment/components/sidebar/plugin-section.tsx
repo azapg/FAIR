@@ -1,4 +1,4 @@
-import { PluginType, usePlugins, RuntimePluginRead } from "@/hooks/use-plugins";
+import { PluginType, usePlugins, ExtensionPluginRead } from "@/hooks/use-plugins";
 import { PropsWithChildren, useEffect, useState } from "react";
 import {
   Select,
@@ -37,7 +37,7 @@ export default function PluginSection({
 }: PluginSectionProps) {
   const { data: plugins = [], isLoading, isError } = usePlugins(type);
   const [selectedPlugin, setSelectedPlugin] =
-    useState<RuntimePluginRead | null>(null);
+    useState<ExtensionPluginRead | null>(null);
   const saveDraft = useWorkflowStore((state) => state.saveDraft);
   const activeCourseId = useWorkflowStore((state) => state.activeCourseId);
   const currentDraft = useWorkflowStore((s) =>
