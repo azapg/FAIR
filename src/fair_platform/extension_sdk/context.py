@@ -14,6 +14,7 @@ from fair_platform.extension_sdk.contracts.job import (
     JobUpdateResult,
     JobUpdateSubmissionResult,
     JobUpdateToken,
+    LogLevel,
     LogPayload,
     ProgressPayload,
     ResultPayload,
@@ -99,7 +100,7 @@ class JobContext:
             )
         )
 
-    async def log(self, level: str, output: str, status: str | None = None) -> None:
+    async def log(self, level: LogLevel, output: str, status: str | None = None) -> None:
         await self._post_update(
             JobUpdateRequest(
                 update=JobUpdateLog(event="log", payload=LogPayload(level=level, output=output)),

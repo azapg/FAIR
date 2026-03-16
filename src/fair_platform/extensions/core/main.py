@@ -706,7 +706,7 @@ async def simple_transcriber(ctx: JobContext, params: WorkflowStepExecutionReque
                 data, filename, mime = await ctx.download_artifact(artifact.artifact_id)
             except Exception as exc:
                 await ctx.log(
-                    "warning",
+                    "warn",
                     f"Failed to download artifact {artifact.artifact_id}: {str(exc)}",
                 )
                 continue
