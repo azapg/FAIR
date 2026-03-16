@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 
 export function RenderLogMessage({ log }: { log: SessionLog }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,23 +25,31 @@ export function RenderLogMessage({ log }: { log: SessionLog }) {
 
   const traceback = log.payload?.traceback;
 
+  const isError =
+    log.level === "error" ||
+    log.type === "error" ||
+    !!log.payload?.error ||
+    !!traceback;
+
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (traceback) {
-      await navigator.clipboard.writeText(traceback);
+    const textToCopy = traceback || (typeof message === "string" ? message : JSON.stringify(message));
+    if (textToCopy) {
+      await navigator.clipboard.writeText(textToCopy);
+      toast.success("Copied to clipboard");
     }
   };
 
-  if (traceback) {
+  if (isError) {
     return (
       <LogCardShell log={log}>
         <Collapsible
           open={isOpen}
           onOpenChange={setIsOpen}
-          className="mt-2 overflow-hidden rounded-md border border-border bg-muted/50 font-mono text-sm shadow-sm"
+          className="mt-2 overflow-hidden rounded-md border border-destructive/20 bg-destructive/5 font-mono text-sm shadow-sm"
         >
           <div
-            className="flex items-start justify-between border-b border-transparent px-3 py-2.5 transition-colors data-[state=open]:border-border"
+            className="flex items-start justify-between border-b border-transparent px-3 py-2.5 transition-colors data-[state=open]:border-destructive/20"
             data-state={isOpen ? "open" : "closed"}
           >
             <div className="flex min-w-0 flex-1 items-start gap-2.5">
@@ -53,7 +62,7 @@ export function RenderLogMessage({ log }: { log: SessionLog }) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="h-6 w-6 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
                 onClick={handleCopy}
                 title="Copy traceback"
               >
@@ -63,7 +72,7 @@ export function RenderLogMessage({ log }: { log: SessionLog }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="h-6 w-6 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
                 >
                   {isOpen ? (
                     <ChevronUp className="h-3.5 w-3.5" />
@@ -76,8 +85,8 @@ export function RenderLogMessage({ log }: { log: SessionLog }) {
           </div>
           <CollapsibleContent>
             <ScrollArea className="max-h-[400px] w-full">
-              <div className="min-w-full w-max p-3 leading-relaxed text-muted-foreground">
-                <pre className="font-mono">{traceback}</pre>
+              <div className="min-w-full w-max p-3 leading-relaxed text-destructive/90">
+                <pre className="font-mono text-xs">{traceback || "No traceback available"}</pre>
               </div>
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
