@@ -2,9 +2,9 @@ from uuid import UUID
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Query, Request
 from sqlalchemy.orm import Session
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.artifact import AccessLevel, ArtifactStatus
@@ -106,6 +106,7 @@ def get_artifact(
 @router.get("/{artifact_id}/download")
 def download_artifact(
     artifact_id: UUID,
+    request: Request,
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_artifact_download_user),
 ):
@@ -121,8 +122,12 @@ def download_artifact(
         )
 
     _, key = parse_storage_uri(derivative.storage_uri)
+    url = manager.storage_provider.get_presigned_url(key)
+    accept = request.headers.get("accept", "")
+    if "application/json" in accept:
+        return JSONResponse({"url": url})
     return RedirectResponse(
-        url=manager.storage_provider.get_presigned_url(key),
+        url=url,
         status_code=status.HTTP_307_TEMPORARY_REDIRECT,
     )
 
@@ -131,6 +136,7 @@ def download_artifact(
 def download_artifact_derivative(
     artifact_id: UUID,
     derivative_id: UUID,
+    request: Request,
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
@@ -141,8 +147,12 @@ def download_artifact_derivative(
         raise HTTPException(status_code=404, detail="Artifact derivative not found")
 
     _, key = parse_storage_uri(derivative.storage_uri)
+    url = manager.storage_provider.get_presigned_url(key)
+    accept = request.headers.get("accept", "")
+    if "application/json" in accept:
+        return JSONResponse({"url": url})
     return RedirectResponse(
-        url=manager.storage_provider.get_presigned_url(key),
+        url=url,
         status_code=status.HTTP_307_TEMPORARY_REDIRECT,
     )
 

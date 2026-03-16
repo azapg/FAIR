@@ -75,16 +75,22 @@ class S3StorageProvider:
     ):
         try:
             import boto3
+            from botocore.config import Config
         except ImportError as exc:
             raise RuntimeError("boto3 is required for S3 storage support") from exc
 
         self.bucket_name = bucket_name
         self.client = boto3.client(
             "s3",
-            endpoint_url=endpoint_url,
+            endpoint_url=endpoint_url or None,
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
             region_name=region_name,
+            config=Config(
+                signature_version="s3v4",
+                region_name=region_name,
+                s3={"addressing_style": "virtual"}
+            )
         )
 
     def put_object(self, key: str, data: BinaryIO, content_type: str) -> str:

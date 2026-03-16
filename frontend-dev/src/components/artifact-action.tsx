@@ -34,10 +34,12 @@ const isMarkdown = (mime?: string) => Boolean(mime && mime.includes("markdown"))
 const shouldOpenInNewTab = (mime?: string) =>
   Boolean(mime && (mime.startsWith("image/") || mime === "application/pdf"));
 
-const parseFilename = (disposition?: string, fallback?: string) => {
-  if (!disposition) return fallback;
-  const match = disposition.match(/filename="?([^\";]+)"?/i);
-  return match?.[1] ?? fallback;
+const isSameOrigin = (url: string) => {
+  try {
+    return new URL(url, window.location.href).origin === window.location.origin;
+  } catch (error) {
+    return false;
+  }
 };
 
 export function ArtifactAction({
@@ -60,44 +62,44 @@ export function ArtifactAction({
   );
 
   const handleAction = async () => {
-    const revokeUrl = (url: string) =>
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-
     setIsLoading(true);
     try {
       const response = await api.get(`/artifacts/${artifact.id}/download`, {
-        responseType: "blob",
+        responseType: "json",
+        headers: {
+          Accept: "application/json",
+        },
       });
 
-      const blob = response.data as Blob;
-      const filename = parseFilename(
-        response.headers?.["content-disposition"],
-        artifact.title || "artifact",
-      );
+      const url = (response.data as { url?: string })?.url;
+      if (!url) {
+        throw new Error("Missing download URL");
+      }
 
       if (isPreviewable) {
-        const text = await blob.text();
-        setPreviewContent(text);
-        setOpen(true);
+        if (isSameOrigin(url)) {
+          const textResponse = await api.get(url, { responseType: "text" });
+          setPreviewContent(textResponse.data);
+          setOpen(true);
+        } else {
+          window.open(url, "_blank", "noopener,noreferrer");
+        }
         return;
       }
 
-      const objectUrl = URL.createObjectURL(blob);
       if (shouldOpenInNewTab(artifact.mime)) {
-        window.open(objectUrl, "_blank", "noopener,noreferrer");
-        revokeUrl(objectUrl);
+        window.open(url, "_blank", "noopener,noreferrer");
         return;
       }
 
       const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = filename || "artifact";
+      link.href = url;
+      link.download = artifact.title || "artifact";
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       document.body.appendChild(link);
       link.click();
       link.remove();
-      revokeUrl(objectUrl);
     } catch (error) {
       const description = error instanceof Error ? error.message : undefined;
       toast.error("Unable to open artifact", { description });
