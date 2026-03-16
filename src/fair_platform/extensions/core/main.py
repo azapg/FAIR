@@ -5,7 +5,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 from dotenv import load_dotenv
 from openai import AsyncOpenAI, OpenAI
@@ -21,7 +21,6 @@ from fair_platform.extension_sdk import (
     TextField,
     WorkflowStepExecutionRequest,
 )
-from fair_platform.extension_sdk.client import build_platform_client
 from fair_platform.extension_sdk.contracts.rubric import RubricJobRequest
 
 load_dotenv()
@@ -170,34 +169,6 @@ def _format_submission_context(submission: Any) -> str:
         },
     }
     return json.dumps(payload, ensure_ascii=True, indent=2)
-
-
-def _filename_from_disposition(disposition: str | None) -> Optional[str]:
-    if not disposition:
-        return None
-    match = re.search(r'filename="([^"]+)"', disposition)
-    if match:
-        return match.group(1)
-    match = re.search(r"filename=([^;]+)", disposition)
-    if match:
-        return match.group(1).strip().strip('"')
-    return None
-
-
-async def _download_artifact_bytes(
-    artifact_id: str,
-    *,
-    platform_url: str,
-    credentials: Any,
-) -> Tuple[bytes, str, str]:
-    async with build_platform_client(platform_url=platform_url, credentials=credentials) as http:
-        response = await http.get(f"/api/artifacts/extensions/{artifact_id}/download")
-        response.raise_for_status()
-        content_type = response.headers.get("content-type") or "application/octet-stream"
-        filename = _filename_from_disposition(response.headers.get("content-disposition"))
-        if not filename:
-            filename = f"{artifact_id}"
-        return response.content, filename, content_type
 
 
 def _bytes_to_base64(data: bytes, mime: str, include_prefix: bool = True) -> str:
@@ -732,11 +703,7 @@ async def simple_transcriber(ctx: JobContext, params: WorkflowStepExecutionReque
         transcriptions: list[dict[str, Any]] = []
         for artifact in submission.artifacts or []:
             try:
-                data, filename, mime = await _download_artifact_bytes(
-                    artifact.artifact_id,
-                    platform_url=core_extension.platform_url,
-                    credentials=core_extension.credentials,
-                )
+                data, filename, mime = await ctx.download_artifact(artifact.artifact_id)
             except Exception as exc:
                 await ctx.log(
                     "warning",
