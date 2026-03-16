@@ -6,12 +6,13 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from fair_platform.backend.api.schema.workflow import WorkflowStep
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead, WorkflowRunStepState
 from fair_platform.backend.data.database import get_session
 from fair_platform.backend.data.models import (
+    Artifact,
     Submission,
     SubmissionResult,
     SubmissionStatus,
@@ -223,7 +224,7 @@ class WorkflowRunner:
             user = db.get(User, user_id)
             submissions = (
                 db.query(Submission)
-                .options(joinedload(Submission.artifacts))
+                .options(selectinload(Submission.artifacts).selectinload(Artifact.derivatives))
                 .filter(Submission.id.in_(submission_ids))
                 .all()
             )
