@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -13,6 +14,8 @@ import api, { getApiBaseUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { PdfPreview } from "@/components/pdf-preview";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ArtifactActionProps = Omit<ComponentProps<typeof Button>, "onClick"> & {
   artifact: Artifact;
@@ -31,8 +34,10 @@ const isTextLike = (mime?: string) => {
 
 const isMarkdown = (mime?: string) => Boolean(mime && mime.includes("markdown"));
 
+const isPdf = (mime?: string) => mime === "application/pdf";
+
 const shouldOpenInNewTab = (mime?: string) =>
-  Boolean(mime && (mime.startsWith("image/") || mime === "application/pdf"));
+  Boolean(mime && mime.startsWith("image/"));
 
 const isSameOrigin = (url: string) => {
   try {
@@ -68,6 +73,8 @@ export function ArtifactAction({
   const [open, setOpen] = useState(false);
   const [previewContent, setPreviewContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const previewMode = useMemo(
     () => (isMarkdown(artifact.mime) ? "markdown" : "text"),
@@ -77,6 +84,24 @@ export function ArtifactAction({
     () => isTextLike(artifact.mime),
     [artifact.mime],
   );
+
+  const isPdfArtifact = useMemo(() => isPdf(artifact.mime), [artifact.mime]);
+
+  useEffect(() => {
+    return () => {
+      if (pdfUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
+
+  const handlePdfClose = (nextOpen: boolean) => {
+    setPdfOpen(nextOpen);
+    if (!nextOpen && pdfUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(null);
+    }
+  };
 
   const handleAction = async () => {
     setIsLoading(true);
@@ -108,6 +133,17 @@ export function ArtifactAction({
           return;
         }
         window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      if (isPdfArtifact) {
+        let resolvedUrl = url;
+        if (isApiOrigin(url) || isSameOrigin(url)) {
+          const fileResponse = await api.get(url, { responseType: "blob" });
+          resolvedUrl = URL.createObjectURL(fileResponse.data);
+        }
+        setPdfUrl(resolvedUrl);
+        setPdfOpen(true);
         return;
       }
 
@@ -167,11 +203,11 @@ export function ArtifactAction({
 
       {isPreviewable ? (
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent showCloseButton className="max-h-[90vh] max-w-[90vw] p-3">
+          <DialogContent showCloseButton className="flex h-[95vh] w-[95vw] max-w-7xl flex-col p-3 sm:max-w-7xl">
             <DialogTitle className="text-sm font-semibold">
               {artifact.title}
             </DialogTitle>
-            <div className="max-h-[75vh] overflow-auto rounded border p-3">
+            <div className="flex-1 overflow-auto rounded border p-3">
               {previewMode === "markdown" ? (
                 <MarkdownRenderer className="text-sm">
                   {previewContent}
@@ -182,6 +218,32 @@ export function ArtifactAction({
                 </pre>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      {isPdfArtifact ? (
+        <Dialog open={pdfOpen} onOpenChange={handlePdfClose}>
+          <DialogContent showCloseButton className="flex h-[95vh] w-[95vw] max-w-7xl flex-col p-3 sm:max-w-7xl">
+            <DialogTitle className="text-sm font-semibold">
+              {artifact.title}
+            </DialogTitle>
+            <div className="mb-2 flex items-center justify-end">
+              {pdfUrl ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => window.open(pdfUrl, "_blank", "noopener,noreferrer")}
+                >
+                  Open in new tab
+                </Button>
+              ) : null}
+            </div>
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="p-4">
+                {pdfUrl ? <PdfPreview url={pdfUrl} /> : null}
+              </div>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       ) : null}
