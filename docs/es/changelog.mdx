@@ -3,7 +3,78 @@ title: "Registro de Cambios"
 description: "Actualizaciones de la plataforma y anuncios"
 mode: wide
 ---
-<Update label="21 de febrero de 2026" description="v0.7.0">
+<Update label="17 de marzo de 2026" description="v0.8.0" tags={["Producción", "Infraestructura", "Extensiones", "Base de Datos", "Trabajos", "Autenticación", "Almacenamiento"]}>
+
+Esta versión se enfoca en la preparación para producción con un poderoso nuevo sistema de cola de trabajos, soporte de base de datos de nivel empresarial y una renovación completa del ecosistema de extensiones. Hemos puesto en producción PostgreSQL, introducido procesamiento asincrónico moderno y refactorizado las extensiones para que sean ciudadanos de primera clase con autenticación robusta y capacidades de IA.
+
+### **⚡ Cola de Trabajos y Procesamiento Asincrónico**
+
+Los nuevos cimientos para trabajo de fondo escalable y de nivel empresarial.
+
+* **Cola de Trabajos y API de Trabajos:** Introduciendo una abstracción unificada de cola de trabajos que admite tanto backends locales de asyncio como Redis para escalado sin problemas desde desarrollo a producción.
+* **Fundación de Dispatcher:** Un nuevo servicio de fondo que enruta inteligentemente los trabajos a las extensiones, habilitando procesamiento confiable de trabajos asincrónico y manejo de reintentos.
+* **Transmisiones de Trabajos en Tiempo Real:** FastAPI actualizado con EventSourceResponse para transmisión estable de eventos del servidor (SSE) del progreso y resultados de trabajos.
+* **Protocolo de Acciones de Trabajos Tipadas:** Las acciones y actualizaciones de trabajos ahora aplican tipado estricto para seguridad y claridad en toda la plataforma.
+
+### **🔧 Rediseño del Sistema de Extensiones**
+
+Las extensiones ahora son de primera clase, seguras y poderosas.
+
+* **SDK de Extensiones Centrado en Autenticación:** El SDK de `FairExtension` completamente reescrito prioriza la autenticación y seguridad desde el inicio. Las extensiones ahora se registran con la plataforma usando credenciales seguras.
+* **Interfaz de Administración de Extensiones:** Una página de administrador completamente nueva te permite gestionar todas las extensiones registradas, ver su estado y configurar ajustes.
+* **Nuevo Esquema de API de Extensiones:** Esquema de API mejorado con soporte completo del SDK de Python para desarrollo sin problemas de extensiones.
+* **Extensión Core Integrada:** La nueva extensión de subproceso fair-core viene con funciones impulsadas por IA, facilitando la exploración del futuro de la educación.
+* **Flujos de Trabajo → Extensiones:** Hemos migrado todo el sistema de flujos de trabajo a la tubería de extensiones, proporcionando mejor separación de preocupaciones y extensibilidad.
+
+### **📊 Base de Datos e Infraestructura**
+
+Soporte de base de datos de nivel empresarial y seguridad de migración.
+
+* **Productivización de PostgreSQL:** Soporte completo de PostgreSQL v18+ con manejo robusto de conexiones y optimizaciones de rendimiento. Incluye una herramienta automatizada de copia SQLite → PostgreSQL para facilitar la migración.
+* **Auto-Migraciones de Alembic:** Los cambios de esquema de base de datos ahora se aplican automáticamente al iniciar, con guardias de seguridad y la opción de deshabilitar auto-migración en producción a través de `FAIR_AUTO_MIGRATE=0`.
+* **Seguridad de Migración:** Manejo mejorado de errores y validación para garantizar una evolución segura del esquema.
+* **Build Seguro para Clonación Fresca:** El `build.sh` actualizado ahora maneja instalaciones de requisitos previos e incluye soporte de respaldo de `uv` para despliegues más limpios.
+
+### **💌 Email y Autenticación**
+
+Mejor comunicación con usuarios y gestión de cuentas.
+
+* **Servicio de Email y Proveedores:** Nueva infraestructura de servicio de email con soporte para múltiples proveedores.
+* **Integración del Proveedor Resend:** Se añadió el proveedor Resend para emails transaccionales confiables.
+* **Verificación de Email:** Los usuarios ahora pueden verificar sus direcciones de email como parte del flujo de registro.
+* **Restablecimiento de Contraseña:** Funcionalidad completa de restablecimiento de contraseña con flujos de trabajo seguros basados en email.
+* **Control de Despliegue:** Nueva bandera `FAIR_ENFORCE_EMAIL_VERIFICATION` para aplicar despliegues solo con correos verificados en entornos empresariales.
+
+### **💾 Artefactos y Almacenamiento**
+
+Manejo de archivos de nivel empresarial con soporte multi-nube.
+
+* **Almacenamiento Multi-Proveedor:** La abstracción de almacenamiento flexible te permite elegir entre sistema de archivos local, servicios compatibles con S3 o cambiar sin problemas entre ellos. Configura a través de `FAIR_STORAGE_BACKEND` (por defecto es local).
+* **Integración S3:** Soporte completo de AWS S3 con URLs prefirmadas, endpoints personalizados opcionales para servicios compatibles con S3 (MinIO, DigitalOcean Spaces, etc.) y regiones y credenciales configurables.
+* **Configuración Multi-Backend Conveniente:** Usando la variable de entorno `FAIR_STORAGE_BACKENDS`, puedes configurar múltiples proveedores de almacenamiento simultáneamente y cambiar entre ellos sin cambios de código. Perfecto para despliegues híbridos o migración gradual a la nube.
+* **Derivados de Artefactos:** Genera y administra formatos derivados de artefactos para diferentes casos de uso (miniaturas, vistas previas, etc.).
+* **URLs Prefirmadas:** Acceso seguro y limitado en tiempo a artefactos con expiración automática (configurable, por defecto 1 hora) para descargas seguras del lado del cliente.
+
+### **🚀 Migración de Rúbricas**
+
+La generación de rúbricas ahora utiliza el sistema moderno de trabajos.
+
+* **Flujo de Generación Basado en Trabajos:** La generación de rúbricas migró al nuevo sistema de cola de trabajos con transmisión SSE en tiempo real para responsividad y escalabilidad mejoradas.
+
+### **🐛 Correcciones de Errores y Mejoras**
+
+* **Mejoras en la Barra Lateral:** Se añadió funcionalidad faltante de búsqueda, bandeja de entrada y ayuda a la barra lateral para una mejor navegación.
+* **Codificación de Transmisión SSE:** Se corrigió la codificación de transmisión de eventos del servidor para actualizaciones de trabajos confiables.
+
+### **📚 Documentación**
+
+* **Documentación en Inglés Actualizada:** Actualizaciones completas de la documentación en idioma inglés.
+* **Documentación Mejorada y Enlaces Corregidos:** Se corrigieron los enlaces de documentación y mejoró la claridad general.
+* **Documentación para Hispanohablantes:** Se añadió documentación que faltaba para hablantes de español.
+
+</Update>
+
+<Update label="21 de febrero de 2026" description="v0.7.0" tags={["Calificación", "Entregas", "Inscripción", "Rúbricas", "IA", "UI/UX", "Documentación"]}>
 
 Esta es una versión masiva cargada de funciones muy solicitadas para facilitar la gestión de cursos, la calificación de entregas y el análisis de registros. Hemos renovado por completo el flujo de trabajo de entregas, introducido un sistema de inscripción completamente nuevo y añadido potentes rúbricas respaldadas por IA.
 

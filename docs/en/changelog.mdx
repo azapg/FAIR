@@ -3,7 +3,77 @@ title: "Changelog"
 description: "Platform updates and announcements"
 mode: wide
 ---
-<Update label="February 21, 2026" description="v0.7.0">
+<Update label="March 17, 2026" description="v0.8.0" tags={["Production", "Infrastructure", "Extensions", "Database", "Jobs", "Authentication", "Storage"]}>
+
+This release focuses on production readiness with a powerful new job queue system, enterprise-grade database support, and a complete extension ecosystem overhaul. We've productionized PostgreSQL, introduced modern async job processing, and refactored extensions to be first-class citizens with robust authentication and AI capabilities.
+
+### **⚡ Job Queue & Async Processing**
+
+The new foundation for scalable, production-grade background work.
+
+* **Job Queue & Jobs API:** Introducing a unified job queue abstraction supporting both local asyncio and Redis backends for seamless scaling from development to production.
+* **Dispatcher Foundation:** A new background service that intelligently routes jobs to extensions, enabling reliable async job processing and retry handling.
+* **Real-Time Job Streams:** Updated FastAPI with EventSourceResponse for stable Server-Sent Events (SSE) streaming of job progress and results.
+* **Typed Job Actions Protocol:** Job actions and updates now enforce strict typing for safety and clarity across the platform.
+
+### **🔧 Extension System Redesign**
+
+Extensions are now first-class, secure, and powerful.
+
+* **Auth-First Extension SDK:** The completely rewritten `FairExtension` SDK prioritizes authentication and security from the ground up. Extensions now register with the platform using secure credentials.
+* **Extension Management UI:** A brand new admin page lets you manage all registered extensions, view their status, and configure settings.
+* **New Extensions API Schema:** Improved API schema with full Python SDK support for seamless extension development.
+* **Built-in Core Extension:** The new fair-core subprocess extension ships with AI-powered features, making it easier to start exploring the future of education. Our goal with this core extension is to keep it up to date with the SOTA of the field.
+
+### **📊 Database & Infrastructure**
+
+Production-grade database support and migration safety.
+
+* **PostgreSQL Productionization:** Full PostgreSQL v18+ support with robust connection handling and performance optimizations. Includes an automated SQLite → PostgreSQL copy tool for easy migration.
+* **Alembic Auto-Migrations:** Database schema changes are now automatically applied on startup, with safety guards and the option to disable auto-migration in production via `FAIR_AUTO_MIGRATE=0`.
+* **Migration Safety:** Improved error handling and validation to ensure safe schema evolution.
+* **Fresh-Clone Safe Build:** Updated `build.sh` now handles prerequisite installs and includes `uv` fallback support for cleaner deployments.
+
+### **💌 Email & Authentication**
+
+Better user communication and account management.
+
+* **Email Service & Providers:** New email service infrastructure with support for multiple providers.
+* **Resend Provider Integration:** Added Resend provider for reliable transactional emails.
+* **Email Verification:** Users can now verify their email addresses as part of the registration flow.
+* **Password Reset:** Full password reset functionality with secure email-based workflows.
+* **Deployment Control:** New `FAIR_ENFORCE_EMAIL_VERIFICATION` flag to enforce verified-only deployments in enterprise environments.
+
+### **💾 Artifacts & Storage**
+
+Enterprise-grade file handling with multi-cloud support.
+
+* **Multi-Provider Storage:** Flexible storage abstraction lets you choose between local filesystem, S3-compatible services, or seamlessly switch between them. Configure via `FAIR_STORAGE_BACKEND` (defaults to local).
+* **S3 Integration:** Full AWS S3 support with presigned URLs, optional custom endpoints for S3-compatible services (MinIO, DigitalOcean Spaces, etc.), and configurable regions and credentials.
+* **Convenient Multi-Backend Setup:** Using `FAIR_STORAGE_BACKENDS` environment variable, you can configure multiple storage providers simultaneously and switch between them without code changes. Perfect for hybrid deployments or gradual cloud migration.
+* **Artifact Derivatives:** Generate and manage derivative formats of artifacts for different use cases (thumbnails, previews, etc.).
+* **Presigned URLs:** Secure, time-limited access to artifacts with automatic expiration (configurable, default 1 hour) for safe client-side downloads.
+
+### **🚀 Rubrics Migration**
+
+Rubric generation now uses the modern job system.
+
+* **Jobs-Based Generation Flow:** Rubric generation migrated to the new job queue system with real-time SSE streaming for improved responsiveness and scalability.
+
+### **🐛 Bug Fixes & Improvements**
+
+* **Sidebar Enhancements:** Added missing search, inbox, and help functionality to the sidebar for better navigation.
+* **SSE Stream Encoding:** Fixed Server-Sent Events stream encoding for reliable job updates.
+
+### **📚 Documentation**
+
+* **Updated English Docs:** Comprehensive updates to English language documentation.
+* **Improved Documentation & Links:** Fixed documentation links and improved overall clarity.
+* **Docs for Spanish Speakers:** Added missing Spanish language documentation.
+
+</Update>
+
+<Update label="February 21, 2026" description="v0.7.0" tags={["Grading", "Submissions", "Enrollment", "Rubrics", "AI", "UI/UX", "Documentation"]}>
 
 This is a massive release packed with highly requested features to make managing courses, grading submissions, and analyzing logs significantly easier. We've completely revamped the submission workflow, introduced a brand new enrollment system, and added powerful AI-backed rubrics.
 
