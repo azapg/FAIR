@@ -9,7 +9,7 @@ import { ArrowUpRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Artifact } from "@/hooks/use-artifacts";
-import api from "@/lib/api";
+import api, { getApiBaseUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
@@ -37,6 +37,23 @@ const shouldOpenInNewTab = (mime?: string) =>
 const isSameOrigin = (url: string) => {
   try {
     return new URL(url, window.location.href).origin === window.location.origin;
+  } catch (error) {
+    return false;
+  }
+};
+
+const resolveDownloadUrl = (url: string) => {
+  try {
+    return new URL(url, getApiBaseUrl()).toString();
+  } catch (error) {
+    return url;
+  }
+};
+
+const isApiOrigin = (url: string) => {
+  try {
+    const apiOrigin = new URL(getApiBaseUrl(), window.location.origin).origin;
+    return new URL(url, window.location.href).origin === apiOrigin;
   } catch (error) {
     return false;
   }
@@ -71,24 +88,52 @@ export function ArtifactAction({
         },
       });
 
-      const url = (response.data as { url?: string })?.url;
+      const rawUrl = (response.data as { url?: string })?.url;
+      const url = rawUrl ? resolveDownloadUrl(rawUrl) : undefined;
       if (!url) {
         throw new Error("Missing download URL");
       }
 
       if (isPreviewable) {
+        if (isApiOrigin(url)) {
+          const textResponse = await api.get(url, { responseType: "text" });
+          setPreviewContent(textResponse.data);
+          setOpen(true);
+          return;
+        }
         if (isSameOrigin(url)) {
           const textResponse = await api.get(url, { responseType: "text" });
           setPreviewContent(textResponse.data);
           setOpen(true);
-        } else {
-          window.open(url, "_blank", "noopener,noreferrer");
+          return;
         }
+        window.open(url, "_blank", "noopener,noreferrer");
         return;
       }
 
       if (shouldOpenInNewTab(artifact.mime)) {
+        if (isApiOrigin(url)) {
+          const fileResponse = await api.get(url, { responseType: "blob" });
+          const objectUrl = URL.createObjectURL(fileResponse.data);
+          window.open(objectUrl, "_blank", "noopener,noreferrer");
+          return;
+        }
         window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      if (isApiOrigin(url)) {
+        const fileResponse = await api.get(url, { responseType: "blob" });
+        const objectUrl = URL.createObjectURL(fileResponse.data);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = artifact.title || "artifact";
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
         return;
       }
 
