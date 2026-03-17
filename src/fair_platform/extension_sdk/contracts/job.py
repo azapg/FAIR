@@ -5,6 +5,9 @@ from pydantic import BaseModel, Field, model_validator
 from fair_platform.extension_sdk.contracts.common import contract_model_config
 from fair_platform.extension_sdk.contracts.rubric import RubricJobRequest
 
+# Type-safe log level for all logging operations
+LogLevel = Literal["debug", "info", "warn", "error"]
+
 
 class ActionPayload(BaseModel):
     model_config = contract_model_config
@@ -29,7 +32,7 @@ class ProgressPayload(BaseModel):
 class LogPayload(BaseModel):
     model_config = contract_model_config
 
-    level: Literal["debug", "info", "warn", "error"]
+    level: LogLevel
     output: str
 
 
@@ -121,6 +124,7 @@ class JobUpdateRequest(BaseModel):
 
 
 __all__ = [
+    "LogLevel",
     "ActionPayload",
     "ProgressPayload",
     "LogPayload",

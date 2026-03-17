@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fair_platform.backend.api.schema.utils import schema_config
 
 
@@ -32,6 +32,18 @@ class ArtifactUpdate(BaseModel):
     meta: Optional[Dict[str, Any]] = None
 
 
+class ArtifactDerivativeRead(BaseModel):
+    model_config = schema_config
+
+    id: UUID
+    artifact_id: UUID
+    derivative_type: str
+    storage_uri: str
+    mime_type: str
+    created_at: datetime
+    updated_at: datetime
+
+
 class ArtifactRead(ArtifactBase):
     id: UUID
     artifact_type: str
@@ -43,11 +55,13 @@ class ArtifactRead(ArtifactBase):
     course_id: Optional[UUID] = None
     assignment_id: Optional[UUID] = None
     access_level: str
+    derivatives: list[ArtifactDerivativeRead] = Field(default_factory=list)
 
 
 __all__ = [
     "ArtifactBase",
     "ArtifactCreate",
+    "ArtifactDerivativeRead",
     "ArtifactUpdate",
     "ArtifactRead",
 ]

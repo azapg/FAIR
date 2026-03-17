@@ -61,7 +61,8 @@ class FairExtension:
             payload = body.get("payload", {})
             action_name = str(payload["action"])
             raw_params = payload.get("params", {})
-            asyncio.create_task(self._execute(job_id=job_id, action_name=action_name, raw_params=raw_params))
+            metadata = body.get("metadata") or {}
+            asyncio.create_task(self._execute(job_id=job_id, action_name=action_name, raw_params=raw_params, metadata=metadata))
             return {"accepted": True}
 
     def action(self, name: str):
@@ -124,8 +125,8 @@ class FairExtension:
             ]
         return resolved
 
-    async def _execute(self, job_id: str, action_name: str, raw_params: dict[str, Any]) -> None:
-        async with JobContext(job_id=job_id, platform_url=self.platform_url, credentials=self.credentials) as ctx:
+    async def _execute(self, job_id: str, action_name: str, raw_params: dict[str, Any], metadata: dict[str, Any] | None = None) -> None:
+        async with JobContext(job_id=job_id, platform_url=self.platform_url, credentials=self.credentials, metadata=metadata) as ctx:
             try:
                 if action_name not in self._actions:
                     raise ValueError(f"Action '{action_name}' is not registered")
