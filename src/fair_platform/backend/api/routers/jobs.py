@@ -10,7 +10,7 @@ from fastapi.sse import EventSourceResponse, format_sse_event
 from pydantic import ValidationError
 
 from fair_platform.backend.api.dependencies import get_job_queue
-from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.api.routers.auth import get_current_user, create_extension_job_token
 from fair_platform.backend.api.schema.job import (
     JobCreateRequest,
     JobCreateResponse,
@@ -46,11 +46,18 @@ async def create_job(
             detail=f"Job with id {job_id!r} already exists",
         )
 
+    delegation_token = create_extension_job_token(
+        user_id=str(current_user.id),
+        job_id=job_id,
+        extension_id=payload.target,
+    )
+    job_metadata = {**payload.metadata, "_delegation_token": delegation_token}
+
     job = JobMessage(
         job_id=job_id,
         target=payload.target,
         payload=payload.payload.model_dump(),
-        metadata=payload.metadata,
+        metadata=job_metadata,
     )
     await queue.enqueue(job)
     await queue.set_state(

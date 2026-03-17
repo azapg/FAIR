@@ -41,8 +41,10 @@ RESEND_VERIFICATION_REQUEST_SENT_MESSAGE = (
 )
 TOKEN_PURPOSE_PASSWORD_RESET = "password_reset"
 TOKEN_PURPOSE_VERIFY_EMAIL = "verify_email"
+TOKEN_PURPOSE_EXT_JOB = "ext_job"
 PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60
 VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES = 30
+EXT_JOB_TOKEN_EXPIRE_HOURS = int(os.getenv("FAIR_EXT_JOB_TOKEN_EXPIRE_HOURS", "8"))
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -100,6 +102,23 @@ def _create_action_token(
         "email": str(user.email),
         "purpose": purpose,
         "exp": datetime.now(timezone.utc) + expires_delta,
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def create_extension_job_token(*, user_id: str, job_id: str, extension_id: str) -> str:
+    """Issue a short-lived delegation token for an extension to act on behalf of a user.
+
+    The token is signed with SECRET_KEY and carries enough claims for the artifact
+    download endpoint to resolve the real user and run can_view() on their behalf.
+    Deliberately omits 'role' so it cannot serve as a general user session token.
+    """
+    payload = {
+        "sub": user_id,
+        "job_id": job_id,
+        "ext": extension_id,
+        "purpose": TOKEN_PURPOSE_EXT_JOB,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=EXT_JOB_TOKEN_EXPIRE_HOURS),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 

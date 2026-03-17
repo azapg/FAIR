@@ -1,5 +1,5 @@
 from enum import Enum
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 
@@ -36,9 +36,6 @@ class Artifact(Base):
     id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     artifact_type: Mapped[str] = mapped_column("type", Text, nullable=False)
-    mime: Mapped[str] = mapped_column(Text, nullable=False)
-    storage_path: Mapped[str] = mapped_column(Text, nullable=False)
-    storage_type: Mapped[str] = mapped_column(Text, nullable=False)
     meta: Mapped[Optional[dict]] = mapped_column(json_document_type(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, nullable=False, default=datetime.utcnow
@@ -70,6 +67,50 @@ class Artifact(Base):
         back_populates="artifacts",
         viewonly=False,
     )
+    derivatives: Mapped[List["ArtifactDerivative"]] = relationship(
+        "ArtifactDerivative",
+        back_populates="artifact",
+        cascade="all, delete-orphan",
+        order_by="ArtifactDerivative.created_at",
+    )
+
+    def __init__(self, **kwargs):
+        legacy_mime = kwargs.pop("mime", None)
+        legacy_storage_path = kwargs.pop("storage_path", None)
+        legacy_storage_type = kwargs.pop("storage_type", None)
+        super().__init__(**kwargs)
+        if legacy_storage_path:
+            storage_scheme = legacy_storage_type or "local"
+            self.derivatives.append(
+                ArtifactDerivative(
+                    id=uuid4(),
+                    derivative_type="original",
+                    storage_uri=f"{storage_scheme}://{legacy_storage_path.lstrip('/')}",
+                    mime_type=legacy_mime or "application/octet-stream",
+                )
+            )
+
+    @property
+    def original_derivative(self) -> Optional["ArtifactDerivative"]:
+        for derivative in self.derivatives:
+            if derivative.derivative_type == "original":
+                return derivative
+        return self.derivatives[0] if self.derivatives else None
+
+    @property
+    def mime(self) -> str:
+        derivative = self.original_derivative
+        return derivative.mime_type if derivative else "application/octet-stream"
+
+    @property
+    def storage_path(self) -> Optional[str]:
+        derivative = self.original_derivative
+        return derivative.storage_path if derivative else None
+
+    @property
+    def storage_type(self) -> Optional[str]:
+        derivative = self.original_derivative
+        return derivative.storage_type if derivative else None
 
     def __repr__(self) -> str:
         return (
@@ -78,4 +119,33 @@ class Artifact(Base):
         )
 
 
-__all__ = ["Artifact", "ArtifactStatus", "AccessLevel"]
+class ArtifactDerivative(Base):
+    __tablename__ = "artifact_derivatives"
+
+    id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True)
+    artifact_id: Mapped[UUID] = mapped_column(
+        SAUUID, ForeignKey("artifacts.id", ondelete="CASCADE"), nullable=False
+    )
+    derivative_type: Mapped[str] = mapped_column(String, nullable=False)
+    storage_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, nullable=False, default=datetime.utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    artifact: Mapped["Artifact"] = relationship("Artifact", back_populates="derivatives")
+
+    @property
+    def storage_type(self) -> str:
+        return self.storage_uri.split("://", 1)[0]
+
+    @property
+    def storage_path(self) -> str:
+        _, _, path = self.storage_uri.partition("://")
+        return path
+
+
+__all__ = ["Artifact", "ArtifactDerivative", "ArtifactStatus", "AccessLevel"]

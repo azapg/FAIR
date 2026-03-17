@@ -6,12 +6,14 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
+from fair_platform.backend.api.routers.auth import create_extension_job_token
 from fair_platform.backend.api.schema.workflow import WorkflowStep
 from fair_platform.backend.api.schema.workflow_run import WorkflowRunRead, WorkflowRunStepState
 from fair_platform.backend.data.database import get_session
 from fair_platform.backend.data.models import (
+    Artifact,
     Submission,
     SubmissionResult,
     SubmissionStatus,
@@ -223,7 +225,7 @@ class WorkflowRunner:
             user = db.get(User, user_id)
             submissions = (
                 db.query(Submission)
-                .options(joinedload(Submission.artifacts))
+                .options(selectinload(Submission.artifacts).selectinload(Artifact.derivatives))
                 .filter(Submission.id.in_(submission_ids))
                 .all()
             )
@@ -268,6 +270,11 @@ class WorkflowRunner:
                 request_payload = self._build_step_request(
                     workflow_run_id, step_ctx, submissions, state_by_submission
                 )
+                delegation_token = create_extension_job_token(
+                    user_id=str(user_id),
+                    job_id=step_ctx.job_id,
+                    extension_id=step.plugin.extension_id,
+                )
                 await self._job_queue.enqueue(
                     JobMessage(
                         job_id=step_ctx.job_id,
@@ -284,6 +291,7 @@ class WorkflowRunner:
                             "workflow_run_id": str(workflow_run_id),
                             "step_id": step.id,
                             "step_index": index,
+                            "_delegation_token": delegation_token,
                         },
                     )
                 )
