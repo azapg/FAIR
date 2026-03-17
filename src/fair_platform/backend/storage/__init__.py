@@ -1,5 +1,6 @@
 from .provider import (
     LocalStorageProvider,
+    MultiStorageProvider,
     S3StorageProvider,
     StorageProvider,
     get_storage_provider,
@@ -8,6 +9,7 @@ from .provider import (
 
 __all__ = [
     "LocalStorageProvider",
+    "MultiStorageProvider",
     "S3StorageProvider",
     "StorageProvider",
     "get_storage_provider",

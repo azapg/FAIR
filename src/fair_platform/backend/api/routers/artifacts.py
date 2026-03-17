@@ -17,7 +17,7 @@ from fair_platform.backend.core.security.dependencies import require_capability,
 from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
-from fair_platform.backend.storage.provider import LocalStorageProvider, parse_storage_uri
+from fair_platform.backend.storage.provider import LocalStorageProvider, MultiStorageProvider, parse_storage_uri
 from fair_platform.backend.data.storage import storage
 
 router = APIRouter()
@@ -121,8 +121,11 @@ def download_artifact(
             detail="Artifact file not found",
         )
 
-    _, key = parse_storage_uri(derivative.storage_uri)
-    url = manager.storage_provider.get_presigned_url(key)
+    scheme, key = parse_storage_uri(derivative.storage_uri)
+    if isinstance(manager.storage_provider, MultiStorageProvider):
+        url = manager.storage_provider.get_provider(scheme).get_presigned_url(key)
+    else:
+        url = manager.storage_provider.get_presigned_url(key)
     accept = request.headers.get("accept", "")
     if "application/json" in accept:
         return JSONResponse({"url": url})
@@ -146,8 +149,11 @@ def download_artifact_derivative(
     if not derivative:
         raise HTTPException(status_code=404, detail="Artifact derivative not found")
 
-    _, key = parse_storage_uri(derivative.storage_uri)
-    url = manager.storage_provider.get_presigned_url(key)
+    scheme, key = parse_storage_uri(derivative.storage_uri)
+    if isinstance(manager.storage_provider, MultiStorageProvider):
+        url = manager.storage_provider.get_provider(scheme).get_presigned_url(key)
+    else:
+        url = manager.storage_provider.get_presigned_url(key)
     accept = request.headers.get("accept", "")
     if "application/json" in accept:
         return JSONResponse({"url": url})

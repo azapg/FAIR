@@ -21,6 +21,7 @@ from fair_platform.backend.storage.provider import (
     StorageProvider,
     get_storage_provider,
     parse_storage_uri,
+    MultiStorageProvider,
 )
 from fair_platform.backend.core.security.permissions import (
     has_capability,
@@ -757,7 +758,10 @@ class ArtifactManager:
         return f"artifacts/{artifact_id}/{derivative_type}_{safe_name}"
 
     def _delete_derivative_object(self, storage_uri: str) -> None:
-        _, key = parse_storage_uri(storage_uri)
+        scheme, key = parse_storage_uri(storage_uri)
+        if isinstance(self.storage_provider, MultiStorageProvider):
+            self.storage_provider.get_provider(scheme).delete_object(key)
+            return
         self.storage_provider.delete_object(key)
     
     def _validate_status_transition(self, current: ArtifactStatus, new: ArtifactStatus) -> None:

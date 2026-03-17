@@ -118,9 +118,68 @@ class S3StorageProvider:
             ExpiresIn=expires_in,
         )
 
+class MultiStorageProvider:
+    def __init__(self, providers: dict[str, StorageProvider], default_scheme: str):
+        if default_scheme not in providers:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Default storage backend '{default_scheme}' is not configured",
+            )
+        self.providers = providers
+        self.default_scheme = default_scheme
+
+    def get_provider(self, scheme: str) -> StorageProvider:
+        provider = self.providers.get(scheme)
+        if not provider:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Storage backend '{scheme}' is not configured",
+            )
+        return provider
+
+    def put_object(self, key: str, data: BinaryIO, content_type: str) -> str:
+        return self.get_provider(self.default_scheme).put_object(key, data, content_type)
+
+    def get_object(self, key: str) -> BinaryIO:
+        return self.get_provider(self.default_scheme).get_object(key)
+
+    def delete_object(self, key: str) -> None:
+        self.get_provider(self.default_scheme).delete_object(key)
+
+    def get_presigned_url(self, key: str, expires_in: int = 3600) -> str:
+        return self.get_provider(self.default_scheme).get_presigned_url(key, expires_in)
+
 
 def get_storage_provider(storage_backend: str | None = None) -> StorageProvider:
     backend = (storage_backend or os.getenv("FAIR_STORAGE_BACKEND", "local")).strip().lower()
+    multi_backends = os.getenv("FAIR_STORAGE_BACKENDS")
+    if multi_backends:
+        schemes = [part.strip().lower() for part in multi_backends.split(",") if part.strip()]
+        if not schemes:
+            raise HTTPException(status_code=500, detail="FAIR_STORAGE_BACKENDS is empty")
+        if backend not in schemes:
+            raise HTTPException(
+                status_code=500,
+                detail="FAIR_STORAGE_BACKEND must be listed in FAIR_STORAGE_BACKENDS",
+            )
+        providers: dict[str, StorageProvider] = {}
+        for scheme in schemes:
+            if scheme == "local":
+                providers[scheme] = LocalStorageProvider()
+            elif scheme == "s3":
+                bucket_name = os.getenv("S3_BUCKET_NAME")
+                if not bucket_name:
+                    raise HTTPException(status_code=500, detail="S3_BUCKET_NAME is not configured")
+                providers[scheme] = S3StorageProvider(
+                    bucket_name=bucket_name,
+                    endpoint_url=os.getenv("S3_ENDPOINT_URL"),
+                    access_key=os.getenv("S3_ACCESS_KEY"),
+                    secret_key=os.getenv("S3_SECRET_KEY"),
+                    region_name=os.getenv("S3_REGION"),
+                )
+            else:
+                raise HTTPException(status_code=500, detail=f"Unsupported storage backend: {scheme}")
+        return MultiStorageProvider(providers=providers, default_scheme=backend)
     if backend == "local":
         return LocalStorageProvider()
     if backend == "s3":
@@ -139,6 +198,7 @@ def get_storage_provider(storage_backend: str | None = None) -> StorageProvider:
 
 __all__ = [
     "LocalStorageProvider",
+    "MultiStorageProvider",
     "S3StorageProvider",
     "StorageProvider",
     "get_storage_provider",
