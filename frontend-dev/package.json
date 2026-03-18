@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bunx vite",
-    "build": "bunx vite build"
+    "dev": "bun x vite",
+    "build": "bun x vite build"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",
