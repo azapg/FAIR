@@ -9,6 +9,7 @@ import VerifyEmailPage from "@/app/verify-email/page";
 import CourseDetailPage from "@/app/courses/course/page";
 import AssignmentPage from "@/app/assignment/page";
 import RubricsPage from "@/app/rubrics/page";
+import AiDemoPage from "@/app/ai-demo/page"; /* TEMPORARY — delete before merge */
 import { IfSetting } from "@/components/if-setting";
 import ExtensionsPage from "@/app/extensions/page";
 import ExtensionDetailPage from "@/app/extensions/extension/page";
@@ -24,6 +25,7 @@ export function App() {
       <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage/>}/>
       <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage/>}/>
       <Route path={"rubrics"} element={<RubricsPage/>}/>
+      <Route path={"ai-demo"} element={<AiDemoPage/>}/>{/* TEMPORARY — delete before merge */}
       <Route path={"extensions"} element={<ExtensionsPage/>}/>
       <Route path={"extensions/:id"} element={<ExtensionDetailPage/>}/>
       <Route path={"login"} element={<LoginPage/>}/>

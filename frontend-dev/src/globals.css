@@ -4,6 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --animate-ai-glow: ai-glow-spin 4s linear infinite;
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --font-sans: var(--font-host-grotesk);
@@ -185,6 +186,17 @@
 
 @source inline('{text}-{gray,orange,red,yellow,green,blue}-{500}');
 @source inline('{bg}-{gray,orange,red,yellow,green,blue}-{500}/10');
+
+/* AI glow animation */
+@property --ai-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes ai-glow-spin {
+  to { --ai-angle: 360deg; }
+}
 
 /* Workaround for https://github.com/shadcn-ui/ui/issues/977 */
 html>body[data-scroll-locked] {
