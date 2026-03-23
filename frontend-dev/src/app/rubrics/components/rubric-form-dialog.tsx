@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
+import { AiTextarea } from "@/components/ui/ai-textarea";
 
 import {
   Rubric,
@@ -203,16 +203,12 @@ export function RubricFormDialog({
               />
             </div>
 
-            <div className="rounded-xl border bg-gradient-to-tl from-amber-100 to-cyan-100 dark:from-amber-300 dark:to-cyan-400 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Sparkles className="h-4 w-4" />
-                {t("rubrics.aiTitle")}
-              </div>
-              <Textarea
+            <div className="space-y-4">
+              <AiTextarea
                 value={instruction}
                 onChange={(event) => setInstruction(event.target.value)}
                 placeholder={t("rubrics.aiPlaceholder")}
-                className="min-h-24 text-foreground dark:placeholder:text-foreground/90"
+                className="min-h-24"
               />
               <div className="flex flex-col items-end">
                 <Button
