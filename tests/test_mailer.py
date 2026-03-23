@@ -2,7 +2,7 @@ from fair_platform.backend.services.email_provider import (
     ConsoleEmailProvider,
     ResendEmailProvider,
 )
-from fair_platform.backend.services.mailer import get_mailer
+from fair_platform.backend.services.mailer import _resolve_email_templates_dir, get_mailer
 
 
 def test_get_mailer_uses_console_provider_without_resend_key(monkeypatch) -> None:
@@ -18,3 +18,9 @@ def test_get_mailer_uses_resend_provider_with_resend_key(monkeypatch) -> None:
     mailer = get_mailer()
     assert isinstance(mailer.provider, ResendEmailProvider)
     assert mailer.provider.api_key == "re_live_example"
+
+
+def test_resolve_email_templates_dir_contains_expected_templates() -> None:
+    templates_dir = _resolve_email_templates_dir()
+    assert (templates_dir / "forgot_password.html").is_file()
+    assert (templates_dir / "verify_email.html").is_file()
