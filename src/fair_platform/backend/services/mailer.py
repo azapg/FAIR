@@ -16,6 +16,8 @@ from fair_platform.backend.services.email_provider import (
 def _resolve_email_templates_dir() -> Path:
     module_path = Path(__file__).resolve()
     candidates = [
+        # Installed package path: src/fair_platform/backend/templates/emails
+        module_path.parents[1] / "templates" / "emails",
         Path.cwd() / "src" / "templates" / "emails",
         module_path.parents[4] / "templates" / "emails",
     ]
