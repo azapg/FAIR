@@ -452,6 +452,39 @@ class TestAuthenticationFlow:
             data={"username": email, "password": password},
         )
         assert login_response.status_code == 200
+        assert login_response.cookies.get("access_token")
+
+    def test_auth_me_sets_access_token_cookie_when_called_with_bearer(
+        self, test_client: TestClient, test_db, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_EMAIL_ENABLED", "0")
+        email = f"me-cookie-{uuid4()}@test.com"
+        password = "test_password_123"
+        with test_db() as session:
+            user = User(
+                id=uuid4(),
+                name="Cookie Sync User",
+                email=email,
+                role=UserRole.user.value,
+                password_hash=hash_password(password),
+                is_verified=True,
+            )
+            session.add(user)
+            session.commit()
+
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": email, "password": password},
+        )
+        assert login_response.status_code == 200
+        token = login_response.json()["access_token"]
+
+        me_response = test_client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert me_response.status_code == 200
+        assert me_response.cookies.get("access_token")
 
     def test_login_succeeds_after_verify_when_enforced(
         self, test_client: TestClient, test_db, monkeypatch
@@ -668,6 +701,14 @@ class TestAuthenticationFlow:
         )
         assert me_response.status_code == 200
         assert me_response.json()["email"] == user.email
+        assert verify_response.cookies.get("access_token")
+
+    def test_logout_clears_access_token_cookie(self, test_client: TestClient):
+        response = test_client.post("/api/auth/logout")
+        assert response.status_code == 200
+        assert response.json()["detail"] == "Logged out"
+        set_cookie = response.headers.get("set-cookie", "")
+        assert "access_token=" in set_cookie
 
     def test_reset_password_confirm_updates_password_hash(self, test_client: TestClient, test_db):
         email = f"reset-{uuid4()}@test.com"

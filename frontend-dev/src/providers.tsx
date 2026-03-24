@@ -2,7 +2,7 @@ import {QueryClientProvider} from "@tanstack/react-query";
 import {queryClient} from "@/lib/query-client";
 import {AuthProvider} from "@/contexts/auth-context";
 import {ThemeProvider} from "@/components/theme-provider"
-import {ReactNode, useEffect} from "react";
+import {ReactNode, useEffect, useMemo} from "react";
 import {SessionSocketProvider} from "@/contexts/session-socket-context";
 import {useVersionCheck} from "@/hooks/use-version";
 import { useTheme } from "@/components/theme-provider";
@@ -11,6 +11,7 @@ import { useLocalPreference } from "@/hooks/use-local-preference";
 import { useUserSetting } from "@/hooks/use-user-settings";
 import type { LanguageCode, ThemeMode } from "@/hooks/use-preference-settings";
 import api from "@/lib/api";
+import { getOptionalInitialState } from "@/lib/initial-state";
 
 
 function VersionChecker() {
@@ -21,6 +22,8 @@ function VersionChecker() {
 function SettingsRuntime() {
   const { theme, setTheme } = useTheme();
   const { i18n } = useTranslation();
+  const initialState = useMemo(() => getOptionalInitialState(), []);
+  const injectedEmailEnabled = initialState?.features?.emailEnabled;
 
   const { value: localTheme, setValue: setLocalTheme } =
     useLocalPreference<ThemeMode | undefined>("ui.theme");
@@ -88,6 +91,11 @@ function SettingsRuntime() {
   }, [resolvedDevMode]);
 
   useEffect(() => {
+    if (typeof injectedEmailEnabled === "boolean") {
+      setLocalEmailEnabled(injectedEmailEnabled);
+      return;
+    }
+
     let active = true;
     const loadSystemConfig = async () => {
       try {
@@ -104,7 +112,7 @@ function SettingsRuntime() {
     return () => {
       active = false;
     };
-  }, [setLocalEmailEnabled]);
+  }, [injectedEmailEnabled, setLocalEmailEnabled]);
 
   return null;
 }
