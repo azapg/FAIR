@@ -11,10 +11,17 @@ FAIR_LLM_BASE_URL: str = os.getenv("FAIR_LLM_BASE_URL", "https://api.openai.com/
 FAIR_LLM_MODEL: str = os.getenv("FAIR_LLM_MODEL", "gpt-4o")
 
 _ai_client: Optional[AsyncOpenAI] = None
+MISSING_AI_CONFIG_MESSAGE = (
+    "AI features are not configured yet. Ask an administrator to set FAIR_LLM_API_KEY "
+    "and review the AI service setup documentation."
+)
 
 
 def get_ai_client() -> AsyncOpenAI:
     global _ai_client
+    if not FAIR_LLM_API_KEY:
+        raise RuntimeError(MISSING_AI_CONFIG_MESSAGE)
+
     if _ai_client is None:
         _ai_client = AsyncOpenAI(
             api_key=FAIR_LLM_API_KEY,
@@ -33,4 +40,5 @@ __all__ = [
     "FAIR_LLM_API_KEY",
     "FAIR_LLM_BASE_URL",
     "FAIR_LLM_MODEL",
+    "MISSING_AI_CONFIG_MESSAGE",
 ]

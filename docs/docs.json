@@ -61,6 +61,7 @@
                   "en/platform/assignments",
                   "en/platform/workflows",
                   "en/platform/integrations",
+                  "en/platform/ai-service",
                   "en/platform/settings"
                 ]
               }
@@ -120,6 +121,7 @@
                 "pages": [
                   "es/platform/workflows",
                   "es/platform/integrations",
+                  "es/platform/ai-service",
                   "es/platform/settings"
                 ]
               }

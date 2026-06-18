@@ -32,15 +32,16 @@ class TestAIService:
         mock_client_instance = MagicMock()
         mock_async_openai.return_value = mock_client_instance
 
-        with patch("openai.AsyncOpenAI", mock_async_openai):
-            import fair_platform.backend.services.ai_service as ai_service
-            importlib.reload(ai_service)
+        with patch.dict("os.environ", {"FAIR_LLM_API_KEY": "test-api-key"}, clear=False):
+            with patch("openai.AsyncOpenAI", mock_async_openai):
+                import fair_platform.backend.services.ai_service as ai_service
+                importlib.reload(ai_service)
 
-            client1 = ai_service.get_ai_client()
-            client2 = ai_service.get_ai_client()
+                client1 = ai_service.get_ai_client()
+                client2 = ai_service.get_ai_client()
 
-            assert client1 is client2
-            assert mock_async_openai.call_count == 1
+                assert client1 is client2
+                assert mock_async_openai.call_count == 1
 
     def test_get_llm_model_returns_configured_model(self):
         with patch.dict("os.environ", {"FAIR_LLM_MODEL": "gpt-4-turbo"}, clear=False):
@@ -58,3 +59,21 @@ class TestAIService:
             importlib.reload(ai_service)
 
             assert ai_service.FAIR_LLM_BASE_URL == "https://api.openai.com/v1"
+
+    def test_get_ai_client_requires_configured_api_key(self):
+        env_without_api_keys = {
+            k: v
+            for k, v in __import__("os").environ.items()
+            if k not in {"FAIR_LLM_API_KEY", "OPENAI_API_KEY"}
+        }
+        with patch.dict("os.environ", env_without_api_keys, clear=True):
+            import fair_platform.backend.services.ai_service as ai_service
+            importlib.reload(ai_service)
+
+            with pytest.raises(RuntimeError) as exc_info:
+                ai_service.get_ai_client()
+
+            message = str(exc_info.value)
+            assert "AI features are not configured yet" in message
+            assert "FAIR_LLM_API_KEY" in message
+            assert "api_key client option" not in message

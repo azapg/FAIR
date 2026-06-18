@@ -190,10 +190,9 @@ class RubricService:
             f"Instruction:\n{instruction}"
         )
 
-        client = get_ai_client()
-        model = get_llm_model()
-
         try:
+            client = get_ai_client()
+            model = get_llm_model()
             response = await client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
