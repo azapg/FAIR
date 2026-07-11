@@ -79,6 +79,26 @@ async def test_generate_rubric_from_instruction_rejects_invalid_json():
 
 
 @pytest.mark.asyncio
+async def test_generate_rubric_from_instruction_handles_missing_ai_config():
+    service = RubricService(db=None)
+
+    with patch(
+        "fair_platform.backend.services.rubric_service.get_ai_client",
+        side_effect=RuntimeError(
+            "AI features are not configured yet. Ask an administrator to set FAIR_LLM_API_KEY "
+            "and review the AI service setup documentation."
+        ),
+    ):
+        with pytest.raises(HTTPException) as exc_info:
+            await service.generate_rubric_from_instruction("Essay rubric")
+
+    assert exc_info.value.status_code == 502
+    assert "AI features are not configured yet" in exc_info.value.detail
+    assert "FAIR_LLM_API_KEY" in exc_info.value.detail
+    assert "api_key client option" not in exc_info.value.detail
+
+
+@pytest.mark.asyncio
 async def test_generate_rubric_from_instruction_retries_invalid_json():
     valid_output = """{
       "levels": ["Poor", "Fair", "Good", "Excellent"],

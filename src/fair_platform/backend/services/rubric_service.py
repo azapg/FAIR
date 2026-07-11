@@ -190,8 +190,14 @@ class RubricService:
             f"Instruction:\n{instruction}"
         )
 
-        client = get_ai_client()
-        model = get_llm_model()
+        try:
+            client = get_ai_client()
+            model = get_llm_model()
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to generate rubric content: {str(e)}",
+            ) from e
 
         last_validation_error: HTTPException | None = None
 
