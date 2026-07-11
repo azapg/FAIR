@@ -2,8 +2,8 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Attachment, AttachmentMedia, AttachmentContent, AttachmentTitle, AttachmentDescription, AttachmentActions, AttachmentAction } from "@/components/ui/attachment"
-import { Plus, Mic, Volume2, Send, Globe, Sparkles, Paperclip, Check, X } from "lucide-react"
-import { FolderLibraryIcon } from "hugeicons-react"
+import { Plus, Mic, Volume2, Globe, Sparkles, Paperclip, Check, X } from "lucide-react"
+import { FolderLibraryIcon, ArrowUp02Icon } from "hugeicons-react"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -228,7 +228,7 @@ export function ChatInput({ onSend, disabled, placeholder = "Write a message..."
               disabled={disabled}
               onClick={handleSend}
             >
-              <Send className="w-3.5 h-3.5" />
+              <ArrowUp02Icon className="w-3.5 h-3.5" />
             </Button>
           ) : (
             <Button

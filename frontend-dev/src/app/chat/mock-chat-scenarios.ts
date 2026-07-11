@@ -1,157 +1,53 @@
-export interface MockMessage {
-  id: string
-  role: "user" | "assistant" | "system"
-  senderName: string
-  timestamp: string
-  content: string
-  attachments?: {
-    name: string
-    size: string
-    type: string
-    isImage?: boolean
-    src?: string
-  }[]
-  tasks?: {
-    title: string
-    state: "pending" | "running" | "completed" | "failed"
-    description?: string
-  }[]
-  statusPulse?: {
-    message: string
-    elapsed: string
-  }
-  elicitation?: {
-    id: string
-    questions: {
-      id: string
-      title: string
-      options: { label: string; value: string }[]
-    }[]
-    resolved?: boolean
-    selectedOption?: string
-  }
-  sources?: {
-    title: string
-    url?: string
-    snippet?: string
-    index: number
-    type?: "web" | "file" | "doc"
-  }[]
-  canvasContent?: {
-    title: string
-    type: string
-    code?: string
-    visualType: "chart" | "simulation" | "code"
-    data?: any
-  }
-}
+import { Message } from "@/store/chat-store"
 
 export interface Scenario {
   id: string
   title: string
   description: string
-  messages: MockMessage[]
+  messages: Message[]
 }
 
 export const mockScenarios: Scenario[] = [
   {
-    id: "t1-student-concept",
-    title: "Student: Concept Help",
-    description: "T1: Simple, single-turn conversation explaining a concept without heavy tools.",
-    messages: [
-      {
-        id: "t1-1",
-        role: "user",
-        senderName: "Student",
-        timestamp: "10:00 AM",
-        content: "I don't understand why the chain rule works intuitively. Can you show me?"
-      },
-      {
-        id: "t1-2",
-        role: "assistant",
-        senderName: "Fair Tutor",
-        timestamp: "10:02 AM",
-        content: "Think of it like zooming in on a curve at a point until it looks straight. The chain rule says: if you stretch one function, then stretch the result by another function, the total stretch is the product of both rates.\n\nTry visualizing how the outer function \"scales\" the inner rate of change.",
-        tasks: [
-          {
-            title: "exec(\"retrieve_concept('chain_rule', 'intuition')\")",
-            state: "completed",
-            description: "Fetched pedagogical framing: 'zooming in on a curve'."
-          },
-          {
-            title: "exec(\"generate_analogy('chain_rule')\")",
-            state: "completed",
-            description: "Selected 'stretching functions' analogy."
-          }
-        ]
-      }
-    ]
+    id: "none",
+    title: "None (Empty)",
+    description: "Clears the chat state.",
+    messages: []
   },
   {
-    id: "tb-cases",
-    title: "Student: Data Viz",
-    description: "T2: Analytical scenario where an agent parses a CSV, generates summary statistics, and draws a chart.",
+    id: "data-viz-complex",
+    title: "Student: Data Analysis Agent",
+    description: "Data analysis scenario showing complex CoT, tool errors, retries, and canvas widgets.",
     messages: [
       {
-        id: "tb1",
+        id: "m1",
         role: "user",
         senderName: "Student Researcher",
         timestamp: "7:07 PM",
         content: "Can you create a plot of all TB cases over time per region? Also add a trend line. Here is the dataset.",
         attachments: [
-          {
-            name: "TB Burden Country Data.csv",
-            size: "342 KB",
-            type: "CSV"
-          }
+          { name: "TB Burden Country Data.csv", size: "342 KB", type: "CSV", isImage: false }
         ]
       },
       {
-        id: "tb2",
+        id: "m2",
         role: "assistant",
-        senderName: "Analyst Agent",
+        senderName: "Data Analyst",
         timestamp: "7:09 PM",
-        content: "I have successfully loaded and parsed the CSV file [2]. The dataset contains 5,120 rows tracking estimates of TB incidence, prevalence, and mortality from 1990 onwards.\n\nAfrican region (AFR) and South-East Asia (SEA) show the highest total incident cases, while other regions show a steady decline [1]. I've generated an interactive plot for you to explore.",
-        tasks: [
-          {
-            title: "read_file(\"TB Burden Country Data.csv\")",
-            state: "completed",
-            description: "Loaded target dataset CSV header structure."
-          },
-          {
-            title: "exec(\"python -c 'import pandas as pd; df=pd.read_csv(\\\"TB Burden Country Data.csv\\\"); df.dropna(inplace=True)'\")",
-            state: "completed",
-            description: "Cleaned dataset, dropping 42 NaN values."
-          },
-          {
-            title: "exec(\"python -c 'grouped = df.groupby([\\\"Region\\\", \\\"Year\\\"])[\\\"e_inc_num\\\"].sum()'\")",
-            state: "completed",
-            description: "Aggregating regional incident metrics using pandas."
-          },
-          {
-            title: "exec(\"python -c 'import scipy.stats as stats; ...'\")",
-            state: "completed",
-            description: "Calculating regional case regression trend lines."
-          }
+        content: "I have successfully loaded and parsed the CSV file [2]. The dataset contains 5,120 rows tracking estimates of TB incidence from 1990 onwards.\n\nAfrican region (AFR) and South-East Asia (SEA) show the highest total incident cases, while other regions show a steady decline [1]. I've generated an interactive plot for you to explore.",
+        events: [
+          { type: "thought", content: "The user wants a plot of TB cases over time grouped by region, including a trend line. I need to load the attached CSV first to see the column names.", durationMs: 1200 },
+          { type: "tool_call", toolName: "run_command", args: { command: "head -n 5 'TB Burden Country Data.csv'" }, status: "completed", resultSummary: "Columns: Country, Region, Year, e_inc_num, e_pop_num" },
+          { type: "thought", content: "Great. The relevant columns are 'Region', 'Year', and 'e_inc_num' (estimated incidence). I will write a quick pandas script to aggregate this data.", durationMs: 2500 },
+          { type: "tool_call", toolName: "run_command", args: { command: "python -c 'import pandas as pd; df=pd.read_csv(\"TB Burden Country Data.csv\")'" }, status: "failed", resultSummary: "FileNotFoundError: 'TB Burden Country Data.csv'" },
+          { type: "thought", content: "Wait, the file wasn't found in the current working directory. It might be in the attachments folder. Let me check the directory contents.", durationMs: 800 },
+          { type: "tool_call", toolName: "run_command", args: { command: "ls ./attachments/" }, status: "completed", resultSummary: "TB Burden Country Data.csv" },
+          { type: "thought", content: "Found it. I will run the aggregation and generate the JSON payload for the UI canvas widget.", durationMs: 3100 },
+          { type: "tool_call", toolName: "run_command", args: { command: "python ./scripts/aggregate_tb_data.py --input ./attachments/'TB Burden Country Data.csv'" }, status: "completed", resultSummary: "Successfully aggregated 5,120 rows into 6 regional time series." }
         ],
-        statusPulse: {
-          message: "Aggregating regional incident metrics using pandas",
-          elapsed: "32s"
-        },
         sources: [
-          {
-            index: 1,
-            title: "WHO Tuberculosis Report",
-            url: "https://www.who.int/teams/global-tuberculosis-programme/data",
-            snippet: "Global TB burden database and estimates of tuberculosis incidence, prevalence, and mortality.",
-            type: "web"
-          },
-          {
-            index: 2,
-            title: "TB Burden Country Data.csv",
-            snippet: "Local dataset containing 5,120 rows tracking annual incident tuberculosis rates.",
-            type: "file"
-          }
+          { index: 1, title: "WHO Tuberculosis Report", url: "https://www.who.int/teams/global-tuberculosis-programme/data", snippet: "Global TB burden database.", type: "web" },
+          { index: 2, title: "TB Burden Country Data.csv", snippet: "Local dataset containing 5,120 rows.", type: "file" }
         ],
         canvasContent: {
           title: "TB Cases Over Time by Region",
@@ -170,14 +66,15 @@ export const mockScenarios: Scenario[] = [
               WPR: [85, 88, 89, 93, 95]
             }
           }
-        }
+        },
+        statusPulse: { message: "Generating plotly visualization", elapsed: "32s" }
       }
     ]
   },
   {
-    id: "batch-grade",
-    title: "Professor: Batch Grade",
-    description: "T3: Orchestration scenario illustrating sub-agents, live status pulses, and human-in-the-loop validation.",
+    id: "batch-grade-orchestration",
+    title: "Professor: Orchestrator Agent",
+    description: "Scenario illustrating sub-agents, live status pulses, and human-in-the-loop validation.",
     messages: [
       {
         id: "bg1",
@@ -186,11 +83,7 @@ export const mockScenarios: Scenario[] = [
         timestamp: "8:00 AM",
         content: "Grade all HW3 submissions using the rubric I uploaded. Flag anything under 0.8 confidence for my review.",
         attachments: [
-          {
-            name: "hw3_rubric.json",
-            size: "1.2 KB",
-            type: "JSON"
-          }
+          { name: "hw3_rubric.json", size: "1.2 KB", type: "JSON", isImage: false }
         ]
       },
       {
@@ -199,44 +92,17 @@ export const mockScenarios: Scenario[] = [
         senderName: "Grading Coordinator",
         timestamp: "8:04 AM",
         content: "Grading complete — 32 submissions processed. Class median: **74 / 100**. The distribution dashboard is above. Four submissions had AI confidence below 0.8 and are flagged for your review [1].",
-        tasks: [
-          {
-            title: "read_file(\"hw3_rubric.json\")",
-            state: "completed",
-            description: "Loaded target dataset rubric criteria."
-          },
-          {
-            title: "read_file(\"submissions_hw3/\")",
-            state: "completed",
-            description: "Fetched 32 student submission files list."
-          },
-          {
-            title: "exec(\"pdf_extract_text(submissions_hw3/*)\")",
-            state: "completed",
-            description: "Extracted raw text via OCR for all submissions."
-          },
-          {
-            title: "exec(\"grade_submission × 32\")",
-            state: "completed",
-            description: "Spawning local grading sub-agents per student folder."
-          },
-          {
-            title: "exec(\"compile_results_to_csv()\")",
-            state: "completed",
-            description: "Compiled all sub-agent results into a master ledger."
-          }
+        events: [
+          { type: "thought", content: "I need to parse the hw3_rubric.json and apply it to the 32 submissions in the HW3 folder. I will delegate the grading to sub-agents to process them in parallel.", durationMs: 400 },
+          { type: "tool_call", toolName: "read_file", args: { path: "hw3_rubric.json" }, status: "completed", resultSummary: "Loaded rubric containing 5 criteria." },
+          { type: "tool_call", toolName: "list_dir", args: { path: "submissions_hw3/" }, status: "completed", resultSummary: "Found 32 PDF submissions." },
+          { type: "thought", content: "I will invoke 32 grading sub-agents. I'll need to wait for them to finish and compile the ledger.", durationMs: 1100 },
+          { type: "tool_call", toolName: "invoke_subagents", args: { count: 32, type: "grader" }, status: "running", resultSummary: "Spawning 32 grading sub-agents..." },
+          { type: "tool_call", toolName: "invoke_subagents", args: {}, status: "completed", resultSummary: "All 32 agents finished. 4 submissions flagged with confidence < 0.8." },
+          { type: "artifact_update", action: "create", artifactName: "grading_ledger.csv", diff: { added: 33, removed: 0 } }
         ],
-        statusPulse: {
-          message: "Working — 28 of 32 submissions graded",
-          elapsed: "2m 14s"
-        },
         sources: [
-          {
-            index: 1,
-            title: "Grading confidence ledger",
-            snippet: "Raw log of confidence margins calculated by the parser model.",
-            type: "file"
-          }
+          { index: 1, title: "Grading confidence ledger", snippet: "Raw log of confidence margins calculated by the parser model.", type: "file" }
         ],
         elicitation: {
           id: "int-grading",
@@ -272,272 +138,9 @@ export const mockScenarios: Scenario[] = [
     ]
   },
   {
-    id: "t4-course-material",
-    title: "Professor: Course Material",
-    description: "T4: Generative artifact chain creating slide decks and explainer videos.",
-    messages: [
-      {
-        id: "t4-1",
-        role: "user",
-        senderName: "Professor Allan",
-        timestamp: "9:00 AM",
-        content: "Create a 12-slide intro to Newton's laws for first-year physics. Include a simulation slide and generate a short explainer video for each law."
-      },
-      {
-        id: "t4-2",
-        role: "assistant",
-        senderName: "Content Creator",
-        timestamp: "9:05 AM",
-        content: "Slides and all three videos are ready. The videos have been embedded into the slide deck directly. Let me know if you want to tweak the video scripts before publishing.",
-        tasks: [
-          {
-            title: "exec(\"generate_slides(topic='Newton\\'s laws', slides=12)\")",
-            state: "completed",
-            description: "Generated 12 PPTX slides outlining the 3 laws and examples."
-          },
-          {
-            title: "exec(\"generate_video(prompt='Newton 1st Law inertia', duration=45s)\")",
-            state: "completed",
-            description: "Generated 45s explainer via Veo 3.1: hockey puck on frictionless ice."
-          },
-          {
-            title: "exec(\"generate_video(prompt='Newton 2nd Law F=ma', duration=45s)\")",
-            state: "completed",
-            description: "Generated 52s explainer via Veo 3.1: pushing different masses."
-          },
-          {
-            title: "exec(\"generate_video(prompt='Newton 3rd Law reaction', duration=45s)\")",
-            state: "completed",
-            description: "Generated 48s explainer via Veo 3.1: rocket propulsion."
-          },
-          {
-            title: "write_file(\"newtons_laws_intro.pptx\")",
-            state: "completed",
-            description: "Compiled all media into the final PPTX presentation."
-          }
-        ],
-        statusPulse: {
-          message: "Rendering videos via Veo 3.1 API (Law 3/3)...",
-          elapsed: "4m 12s"
-        },
-        canvasContent: {
-          title: "Newton's Laws Intro Deck",
-          type: "Presentation · PPTX",
-          visualType: "code",
-          code: `// Presentation Preview\nSlide 1: Title\nSlide 2: What is a force?\nSlide 3: First Law - Inertia\nSlide 4: Video 1 (Inertia)\nSlide 5: Second Law - F=ma\n...\nSlide 12: Summary`
-        }
-      }
-    ]
-  },
-  {
-    id: "diagnostic-KC",
-    title: "Researcher: Diagnostic",
-    description: "T5: Calculus diagnostic semantic clustering and knowledge component mapping, flagging new taxonomic items.",
-    messages: [
-      {
-        id: "kc1",
-        role: "user",
-        senderName: "Researcher Allan",
-        timestamp: "10:15 AM",
-        content: "Analyze the calculus diagnostic test results for 200 students. Identify dominant error clusters and map them to the knowledge component taxonomy.",
-        attachments: [
-          {
-            name: "diag_results.csv",
-            size: "18 KB",
-            type: "CSV"
-          }
-        ]
-      },
-      {
-        id: "kc2",
-        role: "assistant",
-        senderName: "Researcher Assistant",
-        timestamp: "10:17 AM",
-        content: "I grouped the 200 responses into 7 clusters [1]. Six of the clusters map cleanly to the Calc_V2 Knowledge Component taxonomy. However, Cluster 6 (implicit chain rule errors) does not match any existing KC. Would you like to expand the taxonomy?",
-        tasks: [
-          {
-            title: "read_file(\"diag_results.csv\")",
-            state: "completed",
-            description: "Loaded student diagnostic CSV answers."
-          },
-          {
-            title: "exec(\"python run_embeddings.py --model text-embedding-3\")",
-            state: "completed",
-            description: "Generated 1536-dimensional embeddings for 200 student responses."
-          },
-          {
-            title: "exec(\"python run_clustering.py --algorithm umap_kmeans\")",
-            state: "completed",
-            description: "Computed 7 KMeans centroids and 2D UMAP projection coordinates."
-          },
-          {
-            title: "exec(\"python map_to_kc_taxonomy.py --taxonomy calc_v2\")",
-            state: "completed",
-            description: "Matched 5/7 clusters, 1 ambiguous, 1 completely new."
-          }
-        ],
-        sources: [
-          {
-            index: 1,
-            title: "Calculus KC Taxonomy Calc_V2",
-            snippet: "Official map of calculus competencies and diagnostic tags.",
-            type: "doc"
-          }
-        ],
-        elicitation: {
-          id: "int-kc",
-          questions: [
-            {
-              id: "q1",
-              title: "Cluster 6 does not match any existing KC. Add to taxonomy?",
-              options: [
-                { label: "Add to Taxonomy (Affects 23 students)", value: "add" },
-                { label: "Ignore cluster", value: "ignore" }
-              ]
-            }
-          ]
-        },
-        canvasContent: {
-          title: "Error Cluster UMAP Projection",
-          type: "Analysis · Plotly",
-          visualType: "chart",
-          data: {
-             regions: ["C1 (Limits)", "C2 (Derivatives)", "C3 (Integration)", "C6 (Unknown)"],
-             years: [1, 2],
-             series: {
-               "C1 (Limits)": [1.2, 3.4],
-               "C2 (Derivatives)": [5.1, 2.2],
-               "C3 (Integration)": [4.4, 6.7],
-               "C6 (Unknown)": [8.8, 1.1]
-             }
-          }
-        }
-      }
-    ]
-  },
-  {
-    id: "t6-long-running-audit",
-    title: "Professor: Long-running Audit",
-    description: "T6: What 'long-running with multiple interrupts' looks like as a full conversation thread.",
-    messages: [
-      {
-        id: "t6-1",
-        role: "user",
-        senderName: "Professor Allan",
-        timestamp: "2:00 PM",
-        content: "Run the full semester grading audit — all 8 assignments, flag outliers, and generate the final performance report for my 45 students."
-      },
-      {
-        id: "t6-2",
-        role: "assistant",
-        senderName: "Audit Agent",
-        timestamp: "2:08 PM",
-        content: "I've started processing HW1 through HW8. During HW3 processing, I noticed an ambiguity.",
-        tasks: [
-          {
-            title: "exec(\"fetch_assignments(course='CS101', assignments=8)\")",
-            state: "completed",
-            description: "Loaded 360 total submissions across 8 assignments."
-          },
-          {
-            title: "exec(\"grade_batch(assignment='HW1')\")",
-            state: "completed",
-            description: "Graded HW1: Mean 82%"
-          },
-          {
-            title: "exec(\"grade_batch(assignment='HW2')\")",
-            state: "completed",
-            description: "Graded HW2: Mean 79%"
-          },
-          {
-            title: "exec(\"grade_batch(assignment='HW3')\")",
-            state: "completed",
-            description: "Processing HW3 - encountered derivation mismatch."
-          }
-        ],
-        statusPulse: {
-          message: "Processing HW3 — 45 submissions",
-          elapsed: "6m 12s"
-        },
-        elicitation: {
-          id: "int-audit-1",
-          questions: [
-            {
-              id: "q1",
-              title: "Which widget should I prototype first for FAIR's chat UI?",
-              options: [
-                { label: "Rubric result card", value: "rubric" },
-                { label: "Grade distribution chart", value: "chart" },
-                { label: "Feedback explainer", value: "feedback" },
-                { label: "Confidence band indicator", value: "confidence" }
-              ]
-            },
-            {
-              id: "q2",
-              title: "Who's the primary audience for this first prototype?",
-              options: [
-                { label: "Students", value: "students" },
-                { label: "Teachers", value: "teachers" },
-                { label: "Both equally", value: "both" }
-              ]
-            }
-          ]
-        }
-      },
-      {
-        id: "t6-3",
-        role: "user",
-        senderName: "Professor Allan",
-        timestamp: "2:09 PM",
-        content: "Accept as valid"
-      },
-      {
-        id: "t6-4",
-        role: "assistant",
-        senderName: "Audit Agent",
-        timestamp: "2:13 PM",
-        content: "Got it — awarding full credit to all 11 students on Q4. \n\nI continued processing up to HW6 and found a significant statistical outlier.",
-        tasks: [
-          {
-            title: "exec(\"grade_batch(assignment='HW4')\")",
-            state: "completed",
-            description: "Graded HW4: Mean 85%"
-          },
-          {
-            title: "exec(\"grade_batch(assignment='HW5')\")",
-            state: "completed",
-            description: "Graded HW5: Mean 77%"
-          },
-          {
-            title: "exec(\"grade_batch(assignment='HW6')\")",
-            state: "completed",
-            description: "Graded HW6: Outlier detected in standard deviation bands."
-          }
-        ],
-        statusPulse: {
-          message: "Processing HW6 — running anomaly detection",
-          elapsed: "11m 45s"
-        },
-        elicitation: {
-          id: "int-audit-2",
-          questions: [
-            {
-              id: "q1",
-              title: "Student s_017 shows a sudden score drop in HW6 (84→31).",
-              options: [
-                { label: "Flag for follow-up", value: "flag" },
-                { label: "Exclude from trend", value: "exclude" }
-              ]
-            }
-          ]
-        }
-      }
-    ]
-  },
-  {
     id: "student-code-debug",
-    title: "Student: Code Debugging",
-    description: "T7: Student needs help fixing a bug in their programming assignment. Agent uses sandbox execution.",
+    title: "Student: Code Sandbox",
+    description: "Student needs help fixing a bug in their programming assignment. Agent uses sandbox execution and artifact editing.",
     messages: [
       {
         id: "scd1",
@@ -546,11 +149,7 @@ export const mockScenarios: Scenario[] = [
         timestamp: "2:05 PM",
         content: "My sorting algorithm is failing on the autograder. Can you look at my code?",
         attachments: [
-          {
-            name: "mergesort.py",
-            size: "2 KB",
-            type: "Python"
-          }
+          { name: "mergesort.py", size: "2 KB", type: "file", isImage: false }
         ]
       },
       {
@@ -558,23 +157,13 @@ export const mockScenarios: Scenario[] = [
         role: "assistant",
         senderName: "Teaching Agent",
         timestamp: "2:06 PM",
-        content: "Your code looks close, but it's failing when the list contains duplicate numbers. What happens in your `merge` function when `left[i] == right[j]`?",
-        tasks: [
-          {
-            title: "read_file(\"mergesort.py\")",
-            state: "completed",
-            description: "Read the provided python script."
-          },
-          {
-            title: "exec(\"python -m venv sandbox\")",
-            state: "completed",
-            description: "Created safe execution sandbox environment."
-          },
-          {
-            title: "exec(\"python -m unittest tests.test_mergesort\")",
-            state: "completed",
-            description: "Ran hidden test suite cs101_hw4. 8/10 passed, failed on array with duplicates."
-          }
+        content: "Your code looks close, but it's failing when the list contains duplicate numbers. I've created an artifact with a proposed fix. Notice what happens in your `merge` function when `left[i] == right[j]`.",
+        events: [
+          { type: "thought", content: "Let's read the student's code and run it in a sandbox against the hidden test suite.", durationMs: 1000 },
+          { type: "tool_call", toolName: "read_file", args: { path: "mergesort.py" }, status: "completed", resultSummary: "Read 42 lines." },
+          { type: "tool_call", toolName: "run_command", args: { command: "python -m unittest tests.test_mergesort" }, status: "failed", resultSummary: "FAIL: test_duplicates... AssertionError: Lists differ: [1, 2, 3] != [1, 2, 2, 3]" },
+          { type: "thought", content: "Ah, the student missed the equality case in the merge loop. I will generate an artifact showing the diff, but I will only guide them to it rather than just giving the answer directly.", durationMs: 4500 },
+          { type: "artifact_update", action: "create", artifactName: "mergesort_fix.py", diff: { added: 3, removed: 1 } }
         ],
         canvasContent: {
           title: "mergesort.py",
@@ -589,271 +178,291 @@ export const mockScenarios: Scenario[] = [
         senderName: "Student",
         timestamp: "2:08 PM",
         content: "Oh, I only have `if left[i] < right[j]` and `elif left[i] > right[j]`. I didn't handle the equal case!"
-      },
-      {
-        id: "scd4",
-        role: "assistant",
-        senderName: "Teaching Agent",
-        timestamp: "2:08 PM",
-        content: "Exactly! How could you update your condition to handle duplicates correctly without losing elements?"
       }
     ]
   },
   {
-    id: "ta-plagiarism-check",
-    title: "TA: Plagiarism Check",
-    description: "T8: Teaching Assistant running an integrity check on a midterm. Large batch processing, cross-referencing.",
+    id: "stress-regrade",
+    title: "Professor: Regrade Stress Test",
+    description: "Stress test scenario for advanced agent actions: delegation, parallel sub-agents, web search, interrupts.",
     messages: [
       {
-        id: "ta1",
+        id: "stress_user_1",
         role: "user",
-        senderName: "TA Mike",
-        timestamp: "4:00 PM",
-        content: "Run an integrity check on the CS201 Midterm submissions. Look for unusually high semantic similarity between code structures."
+        senderName: "Professor",
+        timestamp: "2026-07-08T14:00:00Z",
+        content: "Regrade all Essay 2 submissions with the updated rubric, but first make sure the rubric matches what's posted, and check on Maria's late submission before you touch her grade."
       },
       {
-        id: "ta2",
+        id: "msg_stress_regrade_essay2_part1",
         role: "assistant",
-        senderName: "Integrity Checker",
-        timestamp: "4:03 PM",
-        content: "I have parsed 120 submissions and computed structural similarity scores across all 7,140 pairs using AST analysis. Most submissions look fine, but I have flagged 3 pairs with > 0.85 structural similarity [1].",
-        tasks: [
+        senderName: "Grading Coordinator",
+        timestamp: "2026-07-08T14:00:27Z",
+        content: "Which rubric should I use — the stored version (3 pts for Sources) or the posted version (5 pts)? I'll hold the Sources grading until you decide.",
+        events: [
           {
-            title: "fetch_submissions(\"cs201_midterm\")",
-            state: "completed",
-            description: "Retrieved 120 submission files."
+            id: "evt_01",
+            type: "thought",
+            timestamp: "2026-07-08T14:00:02Z",
+            playbackDelayMs: 400,
+            content: "Break this into three parts: verify the rubric is current, resolve Maria's late-submission status, then batch-grade the rest.",
           },
           {
-            title: "exec(\"python build_ast.py --batch cs201_midterm\")",
-            state: "completed",
-            description: "Generated Abstract Syntax Trees for all 120 files."
+            id: "evt_02",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:00:06Z",
+            playbackDelayMs: 600,
+            toolName: "read_rubric",
+            category: "data_read",
+            args: { assignmentId: "essay-2" },
+            status: "completed",
+            label: "Read rubric for Essay 2",
+            result: { version: "stored-v3", sections: 4, totalPoints: 100 },
           },
           {
-            title: "exec(\"python compute_ast_similarity.py\")",
-            state: "completed",
-            description: "Computed 7,140 pairwise similarity matrices using tree-edit distance."
-          }
-        ],
-        statusPulse: {
-          message: "Computing pairwise AST similarities — 4,200 of 7,140 pairs",
-          elapsed: "2m 40s"
-        },
-        sources: [
+            id: "evt_03",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:00:11Z",
+            playbackDelayMs: 500,
+            toolName: "get_course_info",
+            category: "data_read",
+            args: { courseId: "eng-201" },
+            status: "completed",
+            label: "Checked posted rubric link on course page",
+            result: { postedRubricVersion: "v4", postedAt: "2026-07-02" },
+          },
           {
-            index: 1,
-            title: "Similarity Matrix Dataset",
-            snippet: "Matrix containing pairwise structural similarity scores for all submissions.",
-            type: "file"
+            id: "evt_04",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:00:19Z",
+            playbackDelayMs: 3800,
+            toolName: "web_search",
+            category: "web_search",
+            args: { query: "MLA 9th edition citation rubric standard" },
+            status: "completed",
+            label: "Checked current MLA 9 citation rules",
+            result: { source: "mla.org", summary: "confirms in-text citation format referenced in rubric" },
+          },
+          {
+            id: "evt_05",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:00:24Z",
+            playbackDelayMs: 500,
+            toolName: "verify_rubric_alignment",
+            category: "validation",
+            args: { stored: "stored-v3", posted: "v4" },
+            status: "completed",
+            label: "Found mismatch between stored and posted rubric",
+            result: { mismatch: true, section: "Sources", storedPoints: 3, postedPoints: 5 },
+          },
+          {
+            id: "evt_06",
+            type: "thought",
+            timestamp: "2026-07-08T14:00:26Z",
+            playbackDelayMs: 400,
+            content: "Section 3 (Sources) is worth 3 points in the stored rubric but 5 in the posted version. Silently picking one could change every grade. Flag it.",
           }
         ],
         elicitation: {
-          id: "int-plagiarism",
+          id: "eli_rubric_mismatch",
           questions: [
             {
-              id: "q1",
-              title: "s_042 and s_089 share 92% AST structure on Q3. Flag them?",
+              id: "q_rubric",
+              title: "Rubric Mismatch Detected",
               options: [
-                { label: "Flag all 3 pairs", value: "flag" },
-                { label: "Ignore", value: "ignore" },
-                { label: "Let me review code side-by-side", value: "review" }
-              ]
-            }
-          ]
-        },
-        canvasContent: {
-          title: "Code Similarity Heatmap",
-          type: "Python · Plotly",
-          visualType: "chart",
-          data: {
-             regions: ["s_042", "s_089", "s_101", "s_034"],
-             years: [1, 2, 3, 4],
-             series: {
-               "s_042": [1.0, 0.92, 0.1, 0.2],
-               "s_089": [0.92, 1.0, 0.15, 0.1],
-               "s_101": [0.1, 0.15, 1.0, 0.88],
-               "s_034": [0.2, 0.1, 0.88, 1.0]
-             }
-          }
-        }
-      }
-    ]
-  },
-  {
-    id: "system-error-recovery",
-    title: "System: Error & Recovery",
-    description: "T9: Agent encounters an external system failure and recovers. Displays the error UI block.",
-    messages: [
-      {
-        id: "sys1",
-        role: "user",
-        senderName: "Professor Allan",
-        timestamp: "5:00 PM",
-        content: "Sync the final grades for HW4 to the Canvas LMS."
-      },
-      {
-        id: "sys2",
-        role: "assistant",
-        senderName: "LMS Integrator",
-        timestamp: "5:01 PM",
-        content: "I attempted to sync the grades, but the Canvas API timed out.",
-        tasks: [
-          {
-            title: "read_file(\"hw4_grades.csv\")",
-            state: "completed",
-            description: "Loaded 45 student grade records."
-          },
-          {
-            title: "exec(\"curl -X POST https://canvas.edu/api/v1/courses/...\")",
-            state: "running",
-            description: "Attempting to POST grades to Canvas API endpoint."
-          },
-          {
-            title: "sync_lms_grades(\"hw4\", \"canvas\")",
-            state: "failed",
-            description: "HTTP 503 Service Unavailable: Canvas API timeout after 30s."
-          }
-        ],
-        elicitation: {
-          id: "int-error",
-          questions: [
-            {
-              id: "q1",
-              title: "Tool error: Canvas LMS sync failed. Retry now?",
-              options: [
-                { label: "Retry now", value: "retry" },
-                { label: "Abort", value: "abort" }
+                { label: "Use posted version (5 pts)", value: "posted" },
+                { label: "Use stored version (3 pts)", value: "stored" }
               ]
             }
           ]
         }
       },
       {
-        id: "sys3",
-        role: "user",
-        senderName: "Professor Allan",
-        timestamp: "5:02 PM",
-        content: "Retry now"
-      },
-      {
-        id: "sys4",
+        id: "msg_stress_regrade_essay2_part2",
         role: "assistant",
-        senderName: "LMS Integrator",
-        timestamp: "5:03 PM",
-        content: "Grades synced successfully on the second attempt.",
-        tasks: [
+        senderName: "Grading Coordinator",
+        timestamp: "2026-07-08T14:06:14Z",
+        content: "Graded 39 of 40 Essay 2 submissions. Maria's submission was late but inside her approved extension, so no penalty applied; I drafted a note to her but haven't sent it. One file, submission_23.pdf, wouldn't parse and needs a manual look.",
+        events: [
           {
-            title: "sync_lms_grades(\"hw4\", \"canvas\")",
-            state: "completed",
-            description: "Success: 45 grades synced to Canvas (Status: 200 OK)."
+            id: "evt_08",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:00:41Z",
+            playbackDelayMs: 2500,
+            toolName: "get_student_record",
+            category: "data_read",
+            args: { studentName: "Maria Chen", fetchHistory: true },
+            status: "completed",
+            label: "Checked Maria's extension status and history",
+            result: { extensionApproved: true, extensionUntil: "2026-07-07T23:59:00Z" },
+          },
+          {
+            id: "evt_09",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:00:47Z",
+            playbackDelayMs: 2200,
+            toolName: "check_course_calendar",
+            category: "calendar",
+            args: { courseId: "eng-201", syncExternal: true },
+            status: "completed",
+            label: "Cross-checked submission time against updated calendar",
+            result: { submittedAt: "2026-07-08T01:52:00Z", withinExtension: true },
+          },
+          {
+            id: "evt_10",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:00:55Z",
+            playbackDelayMs: 8000,
+            toolName: "web_search",
+            category: "web_search",
+            args: { query: "Maria Chen academic integrity violations prior semester" },
+            status: "completed",
+            label: "Scanned academic integrity database for prior flags",
+            result: { flags: 0, status: "clear" },
+          },
+          {
+            id: "evt_11",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:01:05Z",
+            playbackDelayMs: 4000,
+            toolName: "delegate_subagents",
+            category: "delegation",
+            args: { task: "deep_plagiarism_analysis", batch: "1-40", strict: true },
+            status: "completed",
+            label: "Delegated deep plagiarism analysis to 4 sub-agents",
+            result: { subagentIds: ["sub_a", "sub_b", "sub_c", "sub_d"] },
+          },
+          {
+            id: "evt_12",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:01:10Z",
+            playbackDelayMs: 12000,
+            parentId: "evt_11",
+            toolName: "run_command",
+            category: "code_execution",
+            args: { subagent: "sub_a", command: "python cross_ref.py --batch=1-10 --deep" },
+            status: "completed",
+            label: "Sub-agent A running cross-reference NLP engine (Batch 1-10)",
+            result: { completed: true, flagged: 0 },
+          },
+          {
+            id: "evt_13",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:01:10Z",
+            playbackDelayMs: 15000,
+            parentId: "evt_11",
+            toolName: "run_command",
+            category: "code_execution",
+            args: { subagent: "sub_b", command: "python cross_ref.py --batch=11-20 --deep" },
+            status: "completed",
+            label: "Sub-agent B running cross-reference NLP engine (Batch 11-20)",
+            result: { completed: true, flagged: 2 },
+          },
+          {
+            id: "evt_14",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:01:10Z",
+            playbackDelayMs: 9000,
+            parentId: "evt_11",
+            toolName: "run_command",
+            category: "code_execution",
+            args: { subagent: "sub_c", command: "python cross_ref.py --batch=21-30 --deep" },
+            status: "error",
+            label: "Sub-agent C NLP engine crashed (OOM) on submission_23.pdf",
+            result: { error: "Out of memory processing large file" },
+          },
+          {
+            id: "evt_15",
+            type: "thought",
+            timestamp: "2026-07-08T14:01:25Z",
+            playbackDelayMs: 2500,
+            content: "Sub-agent C crashed due to OOM. I will isolate submission_23.pdf and restart the rest of batch 21-30 using a fresh subagent.",
+          },
+          {
+            id: "evt_16",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:01:27Z",
+            playbackDelayMs: 11000,
+            parentId: "evt_11",
+            toolName: "run_command",
+            category: "code_execution",
+            args: { subagent: "sub_c_retry", command: "python cross_ref.py --batch=21-30 --exclude=23" },
+            status: "completed",
+            label: "Sub-agent C (Retry) finishing batch 21-30",
+            result: { completed: true, flagged: 0 },
+          },
+          {
+            id: "evt_17",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:01:10Z",
+            playbackDelayMs: 22000,
+            parentId: "evt_11",
+            toolName: "run_command",
+            category: "code_execution",
+            args: { subagent: "sub_d", command: "python cross_ref.py --batch=31-40 --deep" },
+            status: "completed",
+            label: "Sub-agent D running cross-reference NLP engine (Batch 31-40)",
+            result: { completed: true, flagged: 1 },
+          },
+          {
+            id: "evt_18",
+            type: "status_pulse",
+            timestamp: "2026-07-08T14:02:00Z",
+            playbackDelayMs: 2000,
+            content: "Plagiarism analysis complete. Delegating rubric grading...",
+          },
+          {
+            id: "evt_19",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:02:05Z",
+            playbackDelayMs: 24000,
+            toolName: "grade_student",
+            category: "grading",
+            args: { batch: "1-40", parallel: true, rubricPoints: 5 },
+            status: "completed",
+            label: "Grading all 40 submissions against rubric (5 pts per Source)",
+            result: { graded: 39, failed: 1 },
+          },
+          {
+            id: "evt_20",
+            type: "status_pulse",
+            timestamp: "2026-07-08T14:02:30Z",
+            playbackDelayMs: 1500,
+            content: "Grading 40 submissions… 39 of 40 complete",
+          },
+          {
+            id: "evt_21",
+            type: "artifact_update",
+            timestamp: "2026-07-08T14:02:35Z",
+            playbackDelayMs: 2000,
+            content: "Grade distribution — Essay 2",
+            result: { graded: 39, needsReview: 1, chartType: "histogram" },
+          },
+          {
+            id: "evt_22",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:02:40Z",
+            playbackDelayMs: 8000,
+            toolName: "draft_feedback_email",
+            category: "communication",
+            args: { studentName: "Maria Chen" },
+            status: "completed",
+            label: "Drafting custom feedback note to Maria (preview only)",
+            result: { previewOnly: true, sent: false },
+          },
+          {
+            id: "evt_23",
+            type: "tool_call",
+            timestamp: "2026-07-08T14:02:50Z",
+            playbackDelayMs: 6500,
+            toolName: "draft_feedback_email",
+            category: "communication",
+            args: { studentName: "John Doe", flags: 2 },
+            status: "completed",
+            label: "Drafting plagiarism warning note to John Doe",
+            result: { previewOnly: true, sent: false },
           }
         ]
-      }
-    ]
-  },
-  {
-    id: "scrolling-debug",
-    title: "Vercel AI SDK Scroll Demo",
-    description: "Demonstrates how the MessageScroller handles streaming auto-scroll pinning.",
-    messages: [
-      {
-        id: "m1",
-        role: "user",
-        senderName: "Student Developer",
-        timestamp: "7:24 PM",
-        content: "I'm building a chat for our app and the scroll behavior is driving me nuts. Every time the AI streams a reply, the whole thread jumps around.",
-      },
-      {
-        id: "m2",
-        role: "assistant",
-        senderName: "Fair Co-pilot",
-        timestamp: "7:25 PM",
-        content: "That's the classic streaming scroll problem. Wrap your message list in `MessageScroller` and turn on `autoScroll` — the viewport pins to the bottom as tokens arrive, so users always see the latest text land in place.\n\nThe important part: it only auto-scrolls while the reader is already at the bottom. The moment they scroll up to read something earlier, auto-scroll backs off and their position is preserved [1]. You get smooth streaming without fighting the user's intent [2].",
-        tasks: [
-          {
-            title: "read_file(\"src/components/ui/chat/message-scroller.tsx\")",
-            state: "completed",
-            description: "Inspected scroll viewport event handlers."
-          },
-          {
-            title: "write_file(\"src/components/ui/chat/message-scroller.tsx\")",
-            state: "completed",
-            description: "Fixed scroll anchoring constraints."
-          }
-        ],
-        sources: [
-          {
-            index: 1,
-            title: "Shadcn MessageScroller Docs",
-            url: "https://ui.shadcn.com/docs/components/radix/message-scroller",
-            snippet: "API reference and layout classes for implementing the message viewport scroll pinning.",
-            type: "web"
-          },
-          {
-            index: 2,
-            title: "Vercel AI SDK Elements API",
-            url: "https://elements.ai-sdk.dev/components/task",
-            snippet: "Official library of status-aware UI components for building responsive agent chat flows.",
-            type: "web"
-          }
-        ],
-        canvasContent: {
-          title: "MessageScroller Code Example",
-          type: "React · TypeScript",
-          visualType: "code",
-          code: `import { MessageScroller } from "@shadcn/react/message-scroller";\n \nexport function ChatList({ messages }) {\n  return (\n    <MessageScroller.Provider autoScroll>\n      <MessageScroller.Root className="h-[500px]">\n        <MessageScroller.Viewport>\n          <MessageScroller.Content>\n            {messages.map((m) => (\n              <MessageScroller.Item key={m.id} messageId={m.id}>\n                <Bubble role={m.role}>{m.content}</Bubble>\n              </MessageScroller.Item>\n            ))}\n          </MessageScroller.Content>\n        </MessageScroller.Viewport>\n      </MessageScroller.Root>\n    </MessageScroller.Provider>\n  );\n}`
-        }
-      }
-    ]
-  },
-  {
-    id: "simulation",
-    title: "Double Pendulum Simulation",
-    description: "A physics simulation helping students visualize chaotic motion.",
-    messages: [
-      {
-        id: "sim1",
-        role: "user",
-        senderName: "Physics Teacher",
-        timestamp: "7:12 PM",
-        content: "Can you create an interactive double pendulum simulation to help my students understand chaotic motion? I want them to be able to drag the pendulums to set the initial angles and watch the trajectory."
-      },
-      {
-        id: "sim2",
-        role: "assistant",
-        senderName: "Physics Tutor",
-        timestamp: "7:13 PM",
-        content: "Sure! A double pendulum is a classic example of a simple physical system that exhibits chaotic behavior [1]. The motion is governed by a set of coupled ordinary differential equations.\n\nI will create a real-time interactive canvas simulation using the Runge-Kutta 4th order method to solve the equations of motion accurately.",
-        tasks: [
-          {
-            title: "read_file(\"DoublePendulum.tsx\")",
-            state: "completed",
-            description: "Inspected existing physics canvas component properties."
-          },
-          {
-            title: "write_file(\"src/components/physics/double-pendulum.tsx\")",
-            state: "completed",
-            description: "Implemented RK4 coordinate numerical integration loops."
-          },
-          {
-            title: "exec(\"bun build --minify\")",
-            state: "completed",
-            description: "Bundled simulation assets cleanly."
-          }
-        ],
-        sources: [
-          {
-            index: 1,
-            title: "Double Pendulum Lagrangian Mechanics",
-            url: "https://en.wikipedia.org/wiki/Double_pendulum",
-            snippet: "Detailed equations of motion and chaos theory mathematics.",
-            type: "web"
-          }
-        ],
-        canvasContent: {
-          title: "Double Pendulum Motion Solver",
-          type: "HTML5 Canvas · JS",
-          visualType: "simulation"
-        }
       }
     ]
   }

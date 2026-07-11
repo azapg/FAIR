@@ -1,32 +1,24 @@
 import * as React from "react"
-import { mockScenarios, Scenario, MockMessage } from "@/app/chat/mock-chat-scenarios"
+import { mockScenarios, Scenario } from "@/app/chat/mock-chat-scenarios"
+import { useChatStore, Message, ChatEventBlock } from "@/store/chat-store"
 
 export function useScenarioPlayback() {
+  const store = useChatStore()
+  
   // Role view state: simplified or complete
   const [userRole, setUserRole] = React.useState<"simplified" | "complete">("complete")
 
   // Scenario selector state
-  const [selectedScenarioId, setSelectedScenarioId] = React.useState<string>("tb-cases")
+  const [selectedScenarioId, setSelectedScenarioId] = React.useState<string>("data-viz-complex")
   const [activeScenario, setActiveScenario] = React.useState<Scenario>(
-    mockScenarios.find((s) => s.id === "tb-cases") || mockScenarios[0]
+    mockScenarios.find((s) => s.id === "data-viz-complex") || mockScenarios[0]
   )
 
-  // Simulation states
-  const [messages, setMessages] = React.useState<MockMessage[]>([])
-  const [currentStreamingText, setCurrentStreamingText] = React.useState<string>("")
-  const [streamingMessageId, setStreamingMessageId] = React.useState<string | null>(null)
   const [isStreaming, setIsStreaming] = React.useState(false)
   const [playbackIndex, setPlaybackIndex] = React.useState(0)
   
-  // Canva state
-  const [canvaOpen, setCanvaOpen] = React.useState(true)
-  const [activeCanvasContent, setActiveCanvasContent] = React.useState<any>(null)
-
-  // Collapsible Open/Close tracking state for Tasks and Sources
+  // Collapsible Open/Close tracking state for Working wrapper and Sources
   const [openStates, setOpenStates] = React.useState<Record<string, boolean>>({})
-
-  // Timer states for the Working/Worked checklist title
-  const [taskTimers, setTaskTimers] = React.useState<Record<string, { elapsed: number; completed: boolean }>>({})
 
   // State to track loaded Rive persona contexts to prevent blank flashes
   const [personaLoaded, setPersonaLoaded] = React.useState<Record<string, boolean>>({})
@@ -41,13 +33,11 @@ export function useScenarioPlayback() {
   // Reset the chat
   const resetSimulation = (scenario = activeScenario) => {
     setIsStreaming(false)
-    setMessages([])
-    setCurrentStreamingText("")
-    setStreamingMessageId(null)
+    store.clearChat()
     setPlaybackIndex(0)
-    setActiveCanvasContent(null)
+    store.setActiveCanvasContent(null)
+    store.setCanvasOpen(false)
     setOpenStates({})
-    setTaskTimers({})
     setPersonaLoaded({})
   }
 
@@ -60,147 +50,115 @@ export function useScenarioPlayback() {
 
     // If user message, add it instantly
     if (nextMsg.role === "user") {
-      setMessages((prev) => [...prev, nextMsg])
+      store.appendMessage({ ...nextMsg, events: [] })
       setPlaybackIndex((prev) => prev + 1)
       setIsStreaming(false)
       
-      // Auto-open canvas if user message triggers canvas content
       if (nextMsg.canvasContent) {
-        setActiveCanvasContent(nextMsg.canvasContent)
+        store.setActiveCanvasContent(nextMsg.canvasContent)
+        store.setCanvasOpen(true)
       }
       return
     }
 
     // Assistant message: Step-by-step playback simulation
-    setStreamingMessageId(nextMsg.id)
+    store.setStreamingMessageId(nextMsg.id)
+    store.setAgentState("working")
 
-    // 1. Initial State: add empty message, show Thinking...
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: nextMsg.id,
-        role: "assistant",
-        senderName: nextMsg.senderName,
-        timestamp: nextMsg.timestamp,
-        content: "",
-        tasks: [],
-      },
-    ])
-
-    // Simulated TTT delay: 200ms - 1200ms before working panel appears
-    const tttDelay = 200 + Math.floor(Math.random() * 1000)
-    await new Promise((resolve) => setTimeout(resolve, tttDelay))
-
-    // Initialize task timer tracking
-    const startTime = Date.now()
-    setTaskTimers((prev) => ({
-      ...prev,
-      [nextMsg.id]: { elapsed: 0, completed: false }
-    }))
-
-    const timerInterval = setInterval(() => {
-      setTaskTimers((prev) => {
-        const current = prev[nextMsg.id]
-        if (!current || current.completed) {
-          clearInterval(timerInterval)
-          return prev
-        }
-        return {
-          ...prev,
-          [nextMsg.id]: { ...current, elapsed: Math.floor((Date.now() - startTime) / 1000) }
-        }
-      })
-    }, 100)
-
-    // 2. Stream Tasks (Tools usage simulation)
-    const fullTasks = nextMsg.tasks || []
-    const currentTasks: any[] = []
-
-    for (let i = 0; i < fullTasks.length; i++) {
-      // Spawn current task in "running" state
-      const runningTask = { ...fullTasks[i], state: "running" as const }
-      currentTasks.push(runningTask)
-      
-      setMessages((prev) =>
-        prev.map((m) => (m.id === nextMsg.id ? { ...m, tasks: [...currentTasks] } : m))
-      )
-      setOpenStates((prev) => ({ ...prev, [`${nextMsg.id}-tasks`]: true }))
-
-      // Wait 1200ms to simulate tool execution
-      await new Promise((resolve) => setTimeout(resolve, 1200))
-
-      // Complete the task
-      currentTasks[i] = { ...fullTasks[i], state: fullTasks[i].state }
-      setMessages((prev) =>
-        prev.map((m) => (m.id === nextMsg.id ? { ...m, tasks: [...currentTasks] } : m))
-      )
-    }
-
-    // Mark task timer as completed
-    setTaskTimers((prev) => {
-      const elapsed = prev[nextMsg.id] ? Math.floor((Date.now() - startTime) / 1000) : 3
-      return {
-        ...prev,
-        [nextMsg.id]: { elapsed: Math.max(elapsed, 1), completed: true }
-      }
+    // 1. Initial State: add empty message
+    store.appendMessage({
+      id: nextMsg.id,
+      role: "assistant",
+      senderName: nextMsg.senderName,
+      timestamp: nextMsg.timestamp,
+      content: "",
+      events: [],
     })
 
-    // 3. Collapse tasks panel, hide "Thinking..." shimmer and start streaming response text
-    setOpenStates((prev) => ({ ...prev, [`${nextMsg.id}-tasks`]: false }))
+    // Auto-expand the working wrapper initially
+    setOpenStates((prev) => ({ ...prev, [`${nextMsg.id}-working`]: true }))
 
+    // Simulated TTT delay
+    await new Promise((resolve) => setTimeout(resolve, 600))
+
+    // 2. Stream Events (Thoughts, Tool Calls, Artifacts)
+    const fullEvents = nextMsg.events || []
+    
+    for (let i = 0; i < fullEvents.length; i++) {
+      const ev = fullEvents[i]
+      
+      if (ev.type === "text") {
+        // Break out of the event loop to stream the text below
+        break;
+      } else if (ev.type === "tool_call") {
+        // Push running state
+        store.addMessageEvent(nextMsg.id, { ...ev, status: "running" })
+        await new Promise((resolve) => setTimeout(resolve, ev.playbackDelayMs || 800))
+        // Update to completed/failed/error
+        store.updateLastMessageEvent(nextMsg.id, () => ev)
+      } else if (ev.type === "thought") {
+        store.addMessageEvent(nextMsg.id, ev)
+        await new Promise((resolve) => setTimeout(resolve, ev.playbackDelayMs || ev.durationMs || 500))
+      } else if (ev.type === "artifact_update") {
+        store.addMessageEvent(nextMsg.id, ev)
+        await new Promise((resolve) => setTimeout(resolve, ev.playbackDelayMs || 600))
+      } else if (ev.type === "interrupt") {
+        store.addMessageEvent(nextMsg.id, ev)
+        await new Promise((resolve) => setTimeout(resolve, ev.playbackDelayMs || 500))
+      } else if (ev.type === "status_pulse") {
+        store.addMessageEvent(nextMsg.id, ev)
+        await new Promise((resolve) => setTimeout(resolve, ev.playbackDelayMs || 500))
+      }
+    }
+
+    // Collapse working panel when text starts
+    setOpenStates((prev) => ({ ...prev, [`${nextMsg.id}-working`]: false }))
+    // Continue in "working" state while streaming text
+
+    // 3. Stream Text
     const words = nextMsg.content.split(" ")
     let textBuffer = ""
 
     for (let i = 0; i < words.length; i++) {
       textBuffer += (i === 0 ? "" : " ") + words[i]
-      setCurrentStreamingText(textBuffer)
-      setMessages((prev) =>
-        prev.map((m) => (m.id === nextMsg.id ? { ...m, content: textBuffer } : m))
-      )
-      // Stream speed: 40ms per word
-      await new Promise((resolve) => setTimeout(resolve, 40))
+      store.updateMessage(nextMsg.id, { content: textBuffer })
+      await new Promise((resolve) => setTimeout(resolve, 40)) // 40ms per word
     }
 
-    // 4. Stream Sources citation card (at the very end)
+    // 4. Stream extra payload
     if (nextMsg.sources && nextMsg.sources.length > 0) {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === nextMsg.id ? { ...m, sources: nextMsg.sources } : m))
-      )
-      setOpenStates((prev) => ({ ...prev, [`${nextMsg.id}-sources`]: false })) // collapse sources by default
+      store.updateMessage(nextMsg.id, { sources: nextMsg.sources })
     }
 
-    // 5. Render canvas trigger card (at the very end)
-    if (nextMsg.canvasContent) {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === nextMsg.id ? { ...m, canvasContent: nextMsg.canvasContent } : m))
-      )
-    }
-
-    // 6. Append elicitation if present (simulating pausing the stream for human response)
     if (nextMsg.elicitation) {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === nextMsg.id ? { ...m, elicitation: nextMsg.elicitation } : m))
-      )
+      store.updateMessage(nextMsg.id, { elicitation: nextMsg.elicitation })
+      store.setActiveElicitation(nextMsg.elicitation)
+      store.setAgentState("waiting_for_user")
+    } else {
+      store.setAgentState("idle")
+    }
+
+    if (nextMsg.statusPulse) {
+      store.updateMessage(nextMsg.id, { statusPulse: nextMsg.statusPulse })
+    }
+
+    if (nextMsg.canvasContent) {
+      store.updateMessage(nextMsg.id, { canvasContent: nextMsg.canvasContent })
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      store.setActiveCanvasContent(nextMsg.canvasContent)
+      store.setCanvasOpen(true)
     }
 
     // 7. Streaming completes
     setIsStreaming(false)
-    setStreamingMessageId(null)
-    setCurrentStreamingText("")
+    store.setStreamingMessageId(null)
     setPlaybackIndex((prev) => prev + 1)
-
-    // 8. Slide open the canvas side panel (after text finishes with a smooth delay)
-    if (nextMsg.canvasContent) {
-      await new Promise((resolve) => setTimeout(resolve, 400))
-      setActiveCanvasContent(nextMsg.canvasContent)
-      setCanvaOpen(true)
-    }
   }
 
   // Auto play the scenario (only if not interrupted by a pending elicitation)
   React.useEffect(() => {
     let timeout: any
-    const hasUnresolvedElicitation = messages.some((msg) => msg.elicitation && !msg.elicitation.resolved)
+    const hasUnresolvedElicitation = store.activeElicitation != null
 
     if (
       isStreaming === false &&
@@ -213,252 +171,82 @@ export function useScenarioPlayback() {
       }, 1000)
     }
     return () => clearTimeout(timeout)
-  }, [playbackIndex, isStreaming, messages, activeScenario])
+  }, [playbackIndex, isStreaming, store.messages, activeScenario])
 
   // Resolve an elicitation
   const handleResolveElicitation = async (messageId: string, optionLabel: string) => {
-    // 1. Mark elicitation as resolved in messages state
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId && msg.elicitation
-          ? { ...msg, elicitation: { ...msg.elicitation, resolved: true, selectedOption: optionLabel } }
-          : msg
-      )
-    )
+    store.setActiveElicitation(null)
+    store.updateMessage(messageId, { 
+      elicitation: { ...store.messages.find(m => m.id === messageId)!.elicitation!, resolved: true, selectedOption: optionLabel }
+    })
 
-    // 2. Append user response bubble reflecting the decision
     const userMsgId = `user-decision-${Date.now()}`
-    const userMsg: MockMessage = {
+    const userMsg: Message = {
       id: userMsgId,
       role: "user",
       senderName: userRole === "complete" ? "Professor Allan" : "Student Allan",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       content: `${optionLabel}`
     }
+    store.appendMessage(userMsg)
 
-    setMessages((prev) => [...prev, userMsg])
-
-    // 3. Trigger simulated response completion
-    setIsStreaming(true)
-    const followUpMsgId = `assistant-followup-${Date.now()}`
-
-    let content = ""
-    let tasks: any[] = []
-    let canvasContent: any = null
-
-    if (selectedScenarioId === "batch-grade") {
-      content = "Understood — applying provisional grades. I have generated the audited semester report PDF for s_012, s_019, s_024, and s_031. Outliers have been logged successfully [1]."
-      tasks = [
-        { title: "write_file(\"semester_report_final.pdf\")", state: "completed" as const, description: "Generating final semester performance PDF." }
-      ]
-      canvasContent = {
-        title: "Semester Performance Report Summary",
-        type: "PDF · Document",
-        visualType: "code",
-        code: `FAIR Grading Audit Report - HW3
-Status: Audited
-Decided Action: Provisional Grades Accepted
-Flagged Items: 4 (Handwriting thresholds resolved)
-Median Class Score: 74/100`
-      }
-    } else {
-      content = `Got it — adding the knowledge component 'applying chain rule to implicit functions incorrectly' to the Calc_V2 taxonomy ledger [1].`
-      tasks = [
-        { title: "write_file(\"calc_v2_taxonomy.json\")", state: "completed" as const, description: "Rebuilding taxonomy node hierarchy." }
-      ]
-    }
-
-    setMessages((prev) => [
-      ...prev,
-      {
+    // Simulate response only for the orchestration scenario
+    if (activeScenario.id === "batch-grade-orchestration") {
+      setIsStreaming(true)
+      store.setAgentState("working")
+      const followUpMsgId = `assistant-followup-${Date.now()}`
+      
+      store.appendMessage({
         id: followUpMsgId,
         role: "assistant",
-        senderName: "Fair Co-pilot",
+        senderName: "Grading Coordinator",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         content: "",
-        tasks: []
+        events: []
+      })
+
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      setOpenStates((prev) => ({ ...prev, [`${followUpMsgId}-working`]: true }))
+      
+      store.addMessageEvent(followUpMsgId, { type: "thought", content: "User accepted provisional grades. Generating final PDF report...", durationMs: 800 })
+      await new Promise((resolve) => setTimeout(resolve, 800))
+      
+      store.addMessageEvent(followUpMsgId, { type: "tool_call", toolName: "write_file", args: { path: "semester_report.pdf" }, status: "completed", resultSummary: "Generated PDF." })
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      
+      setOpenStates((prev) => ({ ...prev, [`${followUpMsgId}-working`]: false }))
+
+      const content = "Understood — applying provisional grades. I have generated the audited semester report PDF for you."
+      const words = content.split(" ")
+      let textBuffer = ""
+      for (let i = 0; i < words.length; i++) {
+        textBuffer += (i === 0 ? "" : " ") + words[i]
+        store.updateMessage(followUpMsgId, { content: textBuffer })
+        await new Promise((resolve) => setTimeout(resolve, 40))
       }
-    ])
 
-    // TTT delay
-    await new Promise((resolve) => setTimeout(resolve, 600))
-
-    // Run task timer
-    const startTime = Date.now()
-    setTaskTimers((prev) => ({
-      ...prev,
-      [followUpMsgId]: { elapsed: 0, completed: false }
-    }))
-
-    const timerInterval = setInterval(() => {
-      setTaskTimers((prev) => {
-        const current = prev[followUpMsgId]
-        if (!current || current.completed) {
-          clearInterval(timerInterval)
-          return prev
-        }
-        return {
-          ...prev,
-          [followUpMsgId]: { ...current, elapsed: Math.floor((Date.now() - startTime) / 1000) }
+      store.updateMessage(followUpMsgId, { 
+        canvasContent: {
+          title: "Semester Performance Report Summary",
+          type: "PDF · Document",
+          visualType: "code",
+          code: `FAIR Grading Audit Report - HW3\nStatus: Audited\nDecided Action: Provisional Grades Accepted\nMedian Class Score: 74/100`
         }
       })
-    }, 100)
-
-    setMessages((prev) =>
-      prev.map((m) => (m.id === followUpMsgId ? { ...m, tasks: [{ ...tasks[0], state: "running" as const }] } : m))
-    )
-    setOpenStates((prev) => ({ ...prev, [`${followUpMsgId}-tasks`]: true }))
-
-    await new Promise((resolve) => setTimeout(resolve, 1200))
-
-    setMessages((prev) =>
-      prev.map((m) => (m.id === followUpMsgId ? { ...m, tasks: tasks } : m))
-    )
-    setTaskTimers((prev) => ({
-      ...prev,
-      [followUpMsgId]: { elapsed: 1, completed: true }
-    }))
-    setOpenStates((prev) => ({ ...prev, [`${followUpMsgId}-tasks`]: false }))
-
-    // Stream text
-    const words = content.split(" ")
-    let textBuffer = ""
-    for (let i = 0; i < words.length; i++) {
-      textBuffer += (i === 0 ? "" : " ") + words[i]
-      setMessages((prev) =>
-        prev.map((m) => (m.id === followUpMsgId ? { ...m, content: textBuffer } : m))
-      )
-      await new Promise((resolve) => setTimeout(resolve, 40))
-    }
-
-    // Append mock sources
-    const finalSources = [
-      { index: 1, title: "Calculus KC Mapping Registry", snippet: "Registry entries updated with decision nodes.", type: "doc" as const }
-    ]
-    setMessages((prev) =>
-      prev.map((m) => (m.id === followUpMsgId ? { ...m, sources: finalSources, canvasContent } : m))
-    )
-
-    setIsStreaming(false)
-    setStreamingMessageId(null)
-
-    if (canvasContent) {
-      await new Promise((resolve) => setTimeout(resolve, 300))
-      setActiveCanvasContent(canvasContent)
+      
+      store.setActiveCanvasContent(store.messages.find(m => m.id === followUpMsgId)!.canvasContent!)
+      store.setCanvasOpen(true)
+      
+      setIsStreaming(false)
+      store.setStreamingMessageId(null)
+      store.setAgentState("idle")
     }
   }
 
-  const simulateGenericResponse = async () => {
-    setIsStreaming(true)
-    const agentMsgId = `agent-${Date.now()}`
-    const responseText = "I have updated the analysis model. Let's inspect the results [1]. Let me know if you would like me to compile another calculation [2]."
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: agentMsgId,
-        role: "assistant",
-        senderName: "Fair Co-pilot",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        content: "",
-        tasks: [],
-      }
-    ])
-
-    // Simulated TTT delay: 200ms - 1200ms before working panel appears
-    const tttDelay = 200 + Math.floor(Math.random() * 1000)
-    await new Promise((resolve) => setTimeout(resolve, tttDelay))
-
-    setOpenStates((prev) => ({
-      ...prev,
-      [`${agentMsgId}-tasks`]: true,
-      [`${agentMsgId}-sources`]: false,
-    }))
-
-    // Initialize timer tracking
-    const startTime = Date.now()
-    setTaskTimers((prev) => ({
-      ...prev,
-      [agentMsgId]: { elapsed: 0, completed: false }
-    }))
-
-    const timerInterval = setInterval(() => {
-      setTaskTimers((prev) => {
-        const current = prev[agentMsgId]
-        if (!current || current.completed) {
-          clearInterval(timerInterval)
-          return prev
-        }
-        return {
-          ...prev,
-          [agentMsgId]: { ...current, elapsed: Math.floor((Date.now() - startTime) / 1000) }
-        }
-      })
-    }, 100)
-
-    // Simulate steps running
-    const steps = [
-      { title: "read_file(\"diagnostic_schema.json\")", state: "completed" as const },
-      { title: "exec(\"python run_compilation.py\")", state: "completed" as const }
-    ]
-
-    const currentTasks: any[] = []
-    for (let i = 0; i < steps.length; i++) {
-      currentTasks.push({ ...steps[i], state: "running" as const })
-      setMessages((prev) =>
-        prev.map((m) => (m.id === agentMsgId ? { ...m, tasks: [...currentTasks] } : m))
-      )
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      currentTasks[i] = steps[i]
-      setMessages((prev) =>
-        prev.map((m) => (m.id === agentMsgId ? { ...m, tasks: [...currentTasks] } : m))
-      )
-    }
-
-    // Stop timer
-    setTaskTimers((prev) => {
-      const elapsed = prev[agentMsgId] ? Math.floor((Date.now() - startTime) / 1000) : 2
-      return {
-        ...prev,
-        [agentMsgId]: { elapsed: Math.max(elapsed, 1), completed: true }
-      }
-    })
-
-    setOpenStates((prev) => ({ ...prev, [`${agentMsgId}-tasks`]: false }))
-
-    // Stream text
-    const words = responseText.split(" ")
-    let textBuffer = ""
-
-    for (let i = 0; i < words.length; i++) {
-      textBuffer += (i === 0 ? "" : " ") + words[i]
-      setMessages((prev) =>
-        prev.map((m) => (m.id === agentMsgId ? { ...m, content: textBuffer } : m))
-      )
-      await new Promise((resolve) => setTimeout(resolve, 40))
-    }
-
-    // Add sources
-    const finalSources = [
-      { index: 1, title: "Diagnostic Schema Metadata", snippet: "Main specification mapping metrics to grading rules.", type: "file" as const },
-      { index: 2, title: "Model Run Log", snippet: "Logs of local testing iterations.", type: "doc" as const }
-    ]
-
-    setMessages((prev) =>
-      prev.map((m) => (m.id === agentMsgId ? { ...m, sources: finalSources } : m))
-    )
-    setOpenStates((prev) => ({ ...prev, [`${agentMsgId}-sources`]: false }))
-
-    setIsStreaming(false)
-    setStreamingMessageId(null)
-  }
-
-  // Handle manual message send wrapper
   const handleSend = (inputValue: string, uploadedFiles: any[]) => {
     if (!inputValue.trim() && uploadedFiles.length === 0) return
 
-    const newMsg: MockMessage = {
+    const newMsg: Message = {
       id: `user-${Date.now()}`,
       role: "user",
       senderName: "Allan",
@@ -467,12 +255,74 @@ Median Class Score: 74/100`
       attachments: uploadedFiles.map(f => ({ ...f, isImage: false })),
     }
 
-    setMessages((prev) => [...prev, newMsg])
+    store.appendMessage(newMsg)
+  }
 
-    // Simulate generic agent response after a short delay
-    setTimeout(() => {
-      simulateGenericResponse()
-    }, 1000)
+  // Simulate a custom message (mocks times and steps)
+  const simulateMessage = async (msg: Message) => {
+    if (isStreaming) return
+    setIsStreaming(true)
+    store.setAgentState("working")
+    store.setStreamingMessageId(msg.id)
+    setOpenStates((prev) => ({ ...prev, [`${msg.id}-working`]: true }))
+
+    // Add empty shell message
+    store.appendMessage({ ...msg, content: "", events: [], sources: [], canvasContent: undefined, statusPulse: undefined, elicitation: undefined })
+    await new Promise((resolve) => setTimeout(resolve, 600))
+
+    const fullEvents = msg.events || []
+    for (let i = 0; i < fullEvents.length; i++) {
+      const ev = fullEvents[i]
+      if (ev.type === "text") break
+      else if (ev.type === "tool_call") {
+        store.addMessageEvent(msg.id, { ...ev, status: "running" })
+        await new Promise((resolve) => setTimeout(resolve, ev.playbackDelayMs || 800))
+        store.updateLastMessageEvent(msg.id, () => ev)
+      } else if (ev.type === "thought") {
+        store.addMessageEvent(msg.id, ev)
+        await new Promise((resolve) => setTimeout(resolve, ev.playbackDelayMs || ev.durationMs || 500))
+      } else if (ev.type === "artifact_update") {
+        store.addMessageEvent(msg.id, ev)
+        await new Promise((resolve) => setTimeout(resolve, ev.playbackDelayMs || 600))
+      } else if (ev.type === "interrupt") {
+        store.addMessageEvent(msg.id, ev)
+        await new Promise((resolve) => setTimeout(resolve, ev.playbackDelayMs || 500))
+      } else if (ev.type === "status_pulse") {
+        store.addMessageEvent(msg.id, ev)
+        await new Promise((resolve) => setTimeout(resolve, ev.playbackDelayMs || 500))
+      }
+    }
+
+    setOpenStates((prev) => ({ ...prev, [`${msg.id}-working`]: false }))
+
+    const words = msg.content.split(" ")
+    let textBuffer = ""
+    for (let i = 0; i < words.length; i++) {
+      textBuffer += (i === 0 ? "" : " ") + words[i]
+      store.updateMessage(msg.id, { content: textBuffer })
+      await new Promise((resolve) => setTimeout(resolve, 40))
+    }
+
+    if (msg.sources && msg.sources.length > 0) store.updateMessage(msg.id, { sources: msg.sources })
+    if (msg.statusPulse) store.updateMessage(msg.id, { statusPulse: msg.statusPulse })
+
+    if (msg.canvasContent) {
+      store.updateMessage(msg.id, { canvasContent: msg.canvasContent })
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      store.setActiveCanvasContent(msg.canvasContent)
+      store.setCanvasOpen(true)
+    }
+
+    if (msg.elicitation) {
+      store.updateMessage(msg.id, { elicitation: msg.elicitation })
+      store.setActiveElicitation(msg.elicitation)
+      store.setAgentState("waiting_for_user")
+    } else {
+      store.setAgentState("idle")
+    }
+
+    setIsStreaming(false)
+    store.setStreamingMessageId(null)
   }
 
   return {
@@ -481,23 +331,18 @@ Median Class Score: 74/100`
     selectedScenarioId,
     setSelectedScenarioId,
     activeScenario,
-    messages,
-    setMessages,
+    messages: store.messages,
     isStreaming,
     playbackIndex,
-    canvaOpen,
-    setCanvaOpen,
-    activeCanvasContent,
-    setActiveCanvasContent,
     openStates,
     setOpenStates,
-    taskTimers,
     personaLoaded,
     setPersonaLoaded,
-    streamingMessageId,
+    streamingMessageId: store.streamingMessageId,
     resetSimulation,
     playNextTurn,
     handleResolveElicitation,
-    handleSend
+    handleSend,
+    simulateMessage
   }
 }
