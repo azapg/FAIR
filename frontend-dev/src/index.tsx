@@ -12,27 +12,29 @@ import RubricsPage from "@/app/rubrics/page";
 import { IfSetting } from "@/components/if-setting";
 import ExtensionsPage from "@/app/extensions/page";
 import ExtensionDetailPage from "@/app/extensions/extension/page";
+import ChatPage from "@/app/chat/page";
 
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home/>}/>
+      <Route path="/" element={<Home />} />
+      <Route path="chat" element={<ChatPage />} />
 
-      <Route path={"courses"} element={<CoursesPage/>}/>
-      <Route path={"courses/:courseId"} element={<CourseDetailPage/>}/>
-      <Route path={"courses/:courseId/"} element={<CourseDetailPage/>}/>
-      <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage/>}/>
-      <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage/>}/>
-      <Route path={"rubrics"} element={<RubricsPage/>}/>
-      <Route path={"extensions"} element={<ExtensionsPage/>}/>
-      <Route path={"extensions/:id"} element={<ExtensionDetailPage/>}/>
-      <Route path={"login"} element={<LoginPage/>}/>
-      <Route path={"register"} element={<RegisterPage/>}/>
-      <Route path={"forgot-password"} element={<ForgotPasswordPage/>}/>
-      <Route path={"reset-password"} element={<ResetPasswordPage/>}/>
-      <Route path={"verify-email"} element={<VerifyEmailPage/>}/>
+      <Route path={"courses"} element={<CoursesPage />} />
+      <Route path={"courses/:courseId"} element={<CourseDetailPage />} />
+      <Route path={"courses/:courseId/"} element={<CourseDetailPage />} />
+      <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage />} />
+      <Route path={"courses/:courseId/assignments/:assignmentId"} element={<AssignmentPage />} />
+      <Route path={"rubrics"} element={<RubricsPage />} />
+      <Route path={"extensions"} element={<ExtensionsPage />} />
+      <Route path={"extensions/:id"} element={<ExtensionDetailPage />} />
+      <Route path={"login"} element={<LoginPage />} />
+      <Route path={"register"} element={<RegisterPage />} />
+      <Route path={"forgot-password"} element={<ForgotPasswordPage />} />
+      <Route path={"reset-password"} element={<ResetPasswordPage />} />
+      <Route path={"verify-email"} element={<VerifyEmailPage />} />
 
-      <Route path="*" element={<div>Not Found</div>}/>
+      <Route path="*" element={<div>Not Found</div>} />
     </Routes>
   )
 }
