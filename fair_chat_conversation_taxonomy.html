@@ -1,0 +1,461 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans, system-ui); font-size: 15px; color: var(--text-primary); background: transparent; }
+
+  .nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 0.5px solid var(--border); }
+  .nav button { font-size: 13px; padding: 6px 14px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all .15s; font-family: inherit; }
+  .nav button:hover { background: var(--surface-1); color: var(--text-primary); }
+  .nav button.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  h2 { font-size: 18px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; }
+  h3 { font-size: 15px; font-weight: 500; color: var(--text-primary); margin: 20px 0 8px; }
+  h4 { font-size: 13px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; margin: 16px 0 8px; }
+  p { color: var(--text-secondary); line-height: 1.6; font-size: 14px; margin-bottom: 10px; }
+
+  .label { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; letter-spacing: .02em; }
+  .label-blue { background: var(--bg-accent); color: var(--text-accent); }
+  .label-green { background: var(--bg-success); color: var(--text-success); }
+  .label-amber { background: var(--bg-warning); color: var(--text-warning); }
+  .label-muted { background: var(--surface-1); color: var(--text-secondary); border: 0.5px solid var(--border); }
+  .label-danger { background: var(--bg-danger); color: var(--text-danger); }
+
+  .msg-row { display: flex; gap: 12px; margin-bottom: 6px; align-items: flex-start; }
+  .msg-row.user { flex-direction: row-reverse; }
+  .bubble { max-width: 70%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; border: 0.5px solid var(--border); background: var(--surface-2); color: var(--text-primary); }
+  .bubble.user { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+  .bubble.agent { background: var(--surface-1); }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .av-u { background: var(--bg-accent); color: var(--text-accent); }
+  .av-a { background: var(--surface-1); color: var(--text-secondary); border: 0.5px solid var(--border); }
+
+  .block { margin: 6px 0 6px 40px; border-radius: 8px; border: 0.5px solid var(--border); overflow: hidden; font-size: 12px; }
+  .block-header { padding: 6px 12px; background: var(--surface-1); font-size: 11px; font-weight: 500; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; border-bottom: 0.5px solid var(--border); }
+  .block-body { padding: 10px 12px; color: var(--text-secondary); line-height: 1.5; font-family: var(--font-mono); font-size: 11px; }
+  .block-body.prose { font-family: var(--font-sans); font-size: 13px; color: var(--text-primary); }
+
+  .thinking { border-color: var(--border); }
+  .thinking .block-header { background: var(--surface-0); }
+  .tool-call { border-color: var(--border-accent); }
+  .tool-call .block-header { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+  .artifact { border-color: var(--border-success); }
+  .artifact .block-header { background: var(--bg-success); color: var(--text-success); border-color: var(--border-success); }
+  .error { border-color: var(--border-danger); }
+  .error .block-header { background: var(--bg-danger); color: var(--text-danger); border-color: var(--border-danger); }
+  .interrupt { border-color: var(--border-warning); }
+  .interrupt .block-header { background: var(--bg-warning); color: var(--text-warning); border-color: var(--border-warning); }
+
+  .turn { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .turn-label { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+  .step-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 500; background: var(--surface-1); color: var(--text-secondary); border: 0.5px solid var(--border); margin-right: 6px; flex-shrink: 0; }
+
+  .type-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .type-card { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px; }
+  .type-card .type-icon { font-size: 20px; margin-bottom: 8px; }
+  .type-card .type-name { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+  .type-card .type-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+
+  .schema { background: var(--surface-1); border-radius: 8px; padding: 14px; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); line-height: 1.7; margin: 10px 0; border: 0.5px solid var(--border); overflow-x: auto; }
+  .schema .key { color: var(--text-accent); }
+  .schema .type { color: var(--text-success); }
+  .schema .comment { color: var(--text-muted); }
+
+  .traj-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .traj-tab { font-size: 12px; padding: 5px 12px; border-radius: var(--radius); border: 0.5px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; font-family: inherit; transition: all .12s; }
+  .traj-tab:hover { background: var(--surface-1); }
+  .traj-tab.active { background: var(--surface-1); color: var(--text-primary); border-color: var(--border-strong); }
+  .traj-panel { display: none; }
+  .traj-panel.active { display: block; }
+
+  .rule { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+  .rule-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  .divider { border: none; border-top: 0.5px solid var(--border); margin: 20px 0; }
+
+  .api-field { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+  .api-field:last-child { border-bottom: none; }
+  .api-key { font-family: var(--font-mono); font-size: 12px; color: var(--text-accent); min-width: 180px; flex-shrink: 0; }
+  .api-type { font-size: 12px; color: var(--text-muted); min-width: 80px; flex-shrink: 0; }
+  .api-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+  .progress-dots { display: flex; gap: 5px; align-items: center; margin-left: 8px; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }
+  .dot.active { background: var(--text-accent); }
+  .dot.done { background: var(--text-success); }
+</style>
+
+<h2 aria-label="FAIR Chat UI – Conversation Taxonomy">FAIR chat — conversation taxonomy</h2>
+<p>A structured spec for conversation trajectories, message anatomy, and UI event types across all FAIR agent roles.</p>
+
+<nav class="nav">
+  <button class="active" onclick="showPage('overview')">Overview</button>
+  <button onclick="showPage('anatomy')">Message anatomy</button>
+  <button onclick="showPage('trajectories')">Trajectories</button>
+  <button onclick="showPage('roles')">Roles</button>
+  <button onclick="showPage('api')">API contract</button>
+</nav>
+
+<!-- OVERVIEW -->
+<div id="page-overview" class="page active">
+  <h3>What this is</h3>
+  <p>FAIR's chat UI is not a chatbot — it is a long-running agent orchestration surface. Conversations can span minutes to hours, emit dozens of artifacts, spawn sub-agents, request human approval, and resume across sessions. This taxonomy defines every state, event, and structural unit the UI must be capable of rendering.</p>
+
+  <h4>Seven message categories</h4>
+  <div class="type-grid">
+    <div class="type-card">
+      <div class="type-icon"><i class="ti ti-user" aria-hidden="true" style="color:var(--text-accent)"></i></div>
+      <div class="type-name">Human turn</div>
+      <div class="type-desc">Text, file uploads, voice, in-line references to prior artifacts or grades.</div>
+    </div>
+    <div class="type-card">
+      <div class="type-icon"><i class="ti ti-cpu" aria-hidden="true" style="color:var(--text-success)"></i></div>
+      <div class="type-name">Agent turn</div>
+      <div class="type-desc">One or many content blocks: text, CoT, tool calls, tool results, final answer.</div>
+    </div>
+    <div class="type-card">
+      <div class="type-icon"><i class="ti ti-tools" aria-hidden="true" style="color:var(--text-warning)"></i></div>
+      <div class="type-name">Tool event</div>
+      <div class="type-desc">Structured call + structured result. Can nest (sub-agent launches another agent).</div>
+    </div>
+    <div class="type-card">
+      <div class="type-icon"><i class="ti ti-file-text" aria-hidden="true" style="color:var(--text-success)"></i></div>
+      <div class="type-name">Artifact</div>
+      <div class="type-desc">Chart, dashboard, PDF, slide deck, code file, video, simulation output, grading report.</div>
+    </div>
+    <div class="type-card">
+      <div class="type-icon"><i class="ti ti-hand-stop" aria-hidden="true" style="color:var(--text-warning)"></i></div>
+      <div class="type-name">Interrupt</div>
+      <div class="type-desc">Agent pauses and asks the human for a decision, approval, or clarification.</div>
+    </div>
+    <div class="type-card">
+      <div class="type-icon"><i class="ti ti-clock" aria-hidden="true" style="color:var(--text-muted)"></i></div>
+      <div class="type-name">Status pulse</div>
+      <div class="type-desc">Lightweight heartbeat streamed during long work. Keeps the UI alive without spamming.</div>
+    </div>
+    <div class="type-card">
+      <div class="type-icon"><i class="ti ti-alert-triangle" aria-hidden="true" style="color:var(--text-danger)"></i></div>
+      <div class="type-name">Error / recovery</div>
+      <div class="type-desc">Tool failure, partial output, retry state, or agent-level exception with cause.</div>
+    </div>
+  </div>
+
+  <h4>Conversation lifecycle states</h4>
+  <div class="schema">
+    <span class="comment">// A conversation moves through these states, sometimes non-linearly</span><br>
+    IDLE → STREAMING → TOOL_RUNNING → INTERRUPTED → STREAMING → COMPLETE<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ ERROR → (retry | abandon)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↳ SUB_AGENT_RUNNING → STREAMING<br>
+    <span class="comment">// INTERRUPTED pauses streaming until human resolves the interrupt</span><br>
+    <span class="comment">// COMPLETE can have pending artifacts still rendering client-side</span>
+  </div>
+
+  <h4>Key design constraints</h4>
+  <div class="rule"><span class="rule-icon">◆</span><span>Agents work for <strong>minutes or hours</strong>. The UI must stay alive with status pulses and never time out optimistically. Always show elapsed time and last activity.</span></div>
+  <div class="rule"><span class="rule-icon">◆</span><span>A single agent turn may emit <strong>0–N artifacts</strong>. Artifacts appear inline as they are produced, not at the end. Each has an independent render state.</span></div>
+  <div class="rule"><span class="rule-icon">◆</span><span>Chain-of-thought (CoT) is <strong>auto-collapsed</strong> when the final message arrives. Users can re-expand it. Never discard CoT — it is research data in FAIR's context.</span></div>
+  <div class="rule"><span class="rule-icon">◆</span><span>Tool calls and results can be <strong>nested</strong>: a grading agent can launch a sub-agent per student submission. The UI must handle recursive tool/result blocks to arbitrary depth.</span></div>
+  <div class="rule"><span class="rule-icon">◆</span><span><strong>Role-awareness</strong>: the UI renders differently for student, professor, and researcher contexts. Same conversation model; different default collapsed states and action affordances.</span></div>
+</div>
+
+<!-- ANATOMY -->
+<div id="page-anatomy" class="page">
+  <h3>Anatomy of a single agent turn</h3>
+  <p>One agent response is a <em>stream</em> of ordered blocks. The order matters for rendering. Here is a complete example of a complex turn (professor asking the agent to grade a batch and produce a dashboard).</p>
+
+  <div class="turn">
+    <div class="turn-label"><span class="step-badge">1</span>Thinking / CoT block <span class="label label-muted" style="margin-left:4px">auto-collapses on completion</span></div>
+    <div class="block thinking">
+      <div class="block-header"><i class="ti ti-brain" aria-hidden="true"></i> Thinking <span class="progress-dots"><span class="dot done"></span><span class="dot done"></span><span class="dot done"></span></span></div>
+      <div class="block-body">I have 32 submissions. I'll grade each one with the rubric, then aggregate into a dashboard. Let me start by reading the rubric file...</div>
+    </div>
+  </div>
+
+  <div class="turn">
+    <div class="turn-label"><span class="step-badge">2</span>Tool call block <span class="label label-blue" style="margin-left:4px">repeated 0–N times</span></div>
+    <div class="block tool-call">
+      <div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> read_rubric( assignment_id: "hw3" )</div>
+      <div class="block-body">→ { rubric: [...], max_score: 100, criteria: 5 }</div>
+    </div>
+    <div class="block tool-call" style="margin-top:6px">
+      <div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> grade_submission( student: "s_042", rubric_id: "hw3" ) <span class="label label-muted" style="margin-left:6px">sub-agent</span></div>
+      <div class="block-body">→ { score: 78, rubric_scores: {...}, feedback: [...], confidence: 0.91 }</div>
+    </div>
+    <div style="margin: 6px 0 6px 40px; font-size: 12px; color: var(--text-muted);">× 32 — progress shown inline, collapsed by default</div>
+  </div>
+
+  <div class="turn">
+    <div class="turn-label"><span class="step-badge">3</span>Status pulse <span class="label label-muted" style="margin-left:4px">only during long tool work</span></div>
+    <div class="block">
+      <div class="block-header" style="background:var(--surface-0)"><i class="ti ti-clock" aria-hidden="true"></i> Working — 24 of 32 submissions graded · 1m 12s elapsed</div>
+    </div>
+  </div>
+
+  <div class="turn">
+    <div class="turn-label"><span class="step-badge">4</span>Artifact blocks <span class="label label-green" style="margin-left:4px">0–N, streamed as produced</span></div>
+    <div class="block artifact">
+      <div class="block-header"><i class="ti ti-chart-bar" aria-hidden="true"></i> Artifact: grade_distribution_hw3.html <span class="label label-green" style="margin-left:6px">interactive</span></div>
+      <div class="block-body prose">Score distribution dashboard — interactive histogram, class median, top/bottom performer highlights, criterion breakdown.</div>
+    </div>
+    <div class="block artifact" style="margin-top:6px">
+      <div class="block-header"><i class="ti ti-file-text" aria-hidden="true"></i> Artifact: hw3_grades.csv <span class="label label-muted" style="margin-left:6px">downloadable</span></div>
+      <div class="block-body prose">Full grade export with per-criterion breakdown and AI confidence scores.</div>
+    </div>
+  </div>
+
+  <div class="turn">
+    <div class="turn-label"><span class="step-badge">5</span>Final prose message <span class="label label-muted" style="margin-left:4px">streamed after artifacts</span></div>
+    <div class="msg-row">
+      <div class="avatar av-a">AI</div>
+      <div class="bubble agent">Grading complete — 32 submissions processed. Class median: <strong>74 / 100</strong>. The distribution dashboard is above. Four submissions have confidence below 0.7 and are flagged for your review.</div>
+    </div>
+  </div>
+
+  <div class="turn">
+    <div class="turn-label"><span class="step-badge">6</span>Interrupt block <span class="label label-amber" style="margin-left:4px">pauses conversation until resolved</span></div>
+    <div class="block interrupt">
+      <div class="block-header"><i class="ti ti-hand-stop" aria-hidden="true"></i> Approval needed — 4 low-confidence submissions</div>
+      <div class="block-body prose">These 4 submissions had AI confidence &lt; 0.7. Would you like to: <strong>A)</strong> Accept AI grades as provisional  <strong>B)</strong> Review each manually  <strong>C)</strong> Re-run with stricter rubric</div>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <h3>Minimal turns (simple query)</h3>
+  <p>Not every turn is complex. A student asking a concept question typically looks like:</p>
+  <div class="msg-row user">
+    <div class="avatar av-u">S</div>
+    <div class="bubble user">What's the difference between variance and standard deviation?</div>
+  </div>
+  <div class="msg-row">
+    <div class="avatar av-a">AI</div>
+    <div class="bubble agent">Variance measures the average squared deviation from the mean. Standard deviation is just its square root, which puts the answer back in the original unit of the data — making it easier to interpret.</div>
+  </div>
+  <p style="margin-top:10px">No CoT block, no tools, no artifacts. The message type infrastructure still exists; these fields simply aren't present.</p>
+</div>
+
+<!-- TRAJECTORIES -->
+<div id="page-trajectories" class="page">
+  <div class="traj-tabs">
+    <button class="traj-tab active" onclick="showTraj('t1')">Student: concept help</button>
+    <button class="traj-tab" onclick="showTraj('t2')">Student: data viz</button>
+    <button class="traj-tab" onclick="showTraj('t3')">Professor: batch grade</button>
+    <button class="traj-tab" onclick="showTraj('t4')">Professor: course material</button>
+    <button class="traj-tab" onclick="showTraj('t5')">Researcher: diagnostic</button>
+    <button class="traj-tab" onclick="showTraj('t6')">Long-running w/ interrupt</button>
+    <button class="traj-tab" onclick="showTraj('t7')">Student: code debugging</button>
+    <button class="traj-tab" onclick="showTraj('t8')">TA: plagiarism check</button>
+    <button class="traj-tab" onclick="showTraj('t9')">System: error & recovery</button>
+  </div>
+
+  <!-- T1: Student concept -->
+  <div id="traj-t1" class="traj-panel active">
+    <p><strong>Student asking for help understanding a calculus concept.</strong> Simple, single-turn. Fast response. No tools needed.</p>
+    <div class="msg-row user"><div class="avatar av-u">S</div><div class="bubble user">I don't understand why the chain rule works intuitively. Can you show me?</div></div>
+    <div class="block thinking">
+      <div class="block-header"><i class="ti ti-brain" aria-hidden="true"></i> Thinking <span class="label label-muted" style="margin-left:6px">auto-collapses</span></div>
+      <div class="block-body">Student wants intuition, not a proof. I'll use the "zooming in on a curve" framing and then show an animated example...</div>
+    </div>
+    <div class="msg-row"><div class="avatar av-a">AI</div><div class="bubble agent">Think of it like zooming in on a curve at a point until it looks straight. The chain rule says: if you stretch one function, then stretch the result by another function, the total stretch is the product of both rates. Here's an interactive version:</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-player-play" aria-hidden="true"></i> Artifact: chain_rule_demo.html <span class="label label-green" style="margin-left:6px">interactive</span></div><div class="block-body prose">Animated visualization of chain rule — drag a slider to see how composition changes slope.</div></div>
+    <div class="msg-row"><div class="avatar av-a">AI</div><div class="bubble agent">Does this help? Try dragging the slope slider and notice how the outer function "scales" the inner rate.</div></div>
+    <p style="margin-top:12px; font-size:12px; color:var(--text-muted)">Turn count: 1 human + 1 agent. Blocks: CoT → prose → artifact → prose. CoT collapsed on final message arrival.</p>
+  </div>
+
+  <!-- T2: Student data viz -->
+  <div id="traj-t2" class="traj-panel">
+    <p><strong>Student uploads a CSV for a class project and asks for a visualization.</strong> Like the Gemini screenshots you shared. Tools used.</p>
+    <div class="msg-row user"><div class="avatar av-u">S</div><div class="bubble user">Can you plot TB cases over time per region with a trend line? Here's the dataset. <span class="label label-muted" style="vertical-align:middle;margin-left:4px">📎 TB_Burden_Data.csv · 342 KB</span></div></div>
+    <div class="block thinking"><div class="block-header"><i class="ti ti-brain" aria-hidden="true"></i> Thinking</div><div class="block-body">I'll read the CSV, check column names, aggregate by region and year, then produce a Plotly chart with linear regression overlays per region...</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> read_file( path: "TB_Burden_Data.csv" )</div><div class="block-body">→ 5,120 rows · columns: country, region, year, e_inc_num, e_inc_num_lo, e_inc_num_hi…</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> execute_python( snippet: "aggregate by region+year, compute trend…" )</div><div class="block-body">→ { success: true, shape: [186, 3], regions: ["AFR","AMR","EMR","EUR","SEA","WPR"] }</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-chart-line" aria-hidden="true"></i> Artifact: tb_cases_by_region.html <span class="label label-green" style="margin-left:6px">interactive · Plotly</span></div><div class="block-body prose">Multi-series line chart with per-region trend lines. Interactive legend, hover tooltips, zoom.</div></div>
+    <div class="msg-row"><div class="avatar av-a">AI</div><div class="bubble agent">Here's the chart. AFR and SEA carry the highest burden; most other regions trend downward. The trend lines are linear regressions — hover any region to see the slope.</div></div>
+    <p style="margin-top:12px; font-size:12px; color:var(--text-muted)">Turn count: 1+1. Blocks: CoT → tool×2 → artifact → prose. This is the exact Gemini-equivalent trajectory in FAIR.</p>
+  </div>
+
+  <!-- T3: Professor batch grade -->
+  <div id="traj-t3" class="traj-panel">
+    <p><strong>Professor kicks off a batch grading run.</strong> Long-running, sub-agents, interrupt, multiple artifacts.</p>
+    <div class="msg-row user"><div class="avatar av-u">P</div><div class="bubble user">Grade all HW3 submissions using the rubric I uploaded. Flag anything under 0.8 confidence for my review.</div></div>
+    <div class="block thinking"><div class="block-header"><i class="ti ti-brain" aria-hidden="true"></i> Thinking</div><div class="block-body">I'll fetch the submission list, load the rubric, spawn a grading sub-agent per submission, aggregate scores, then produce a dashboard and flag low-confidence ones...</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> list_submissions( assignment_id: "hw3" )</div><div class="block-body">→ 32 submissions · avg size: 4.2 pages</div></div>
+    <div class="block"><div class="block-header" style="background:var(--surface-0)"><i class="ti ti-clock" aria-hidden="true"></i> Working — 8 of 32 graded · 28s elapsed</div></div>
+    <div class="block"><div class="block-header" style="background:var(--surface-0)"><i class="ti ti-clock" aria-hidden="true"></i> Working — 20 of 32 graded · 1m 04s elapsed</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> grade_submission × 32 <span class="label label-muted" style="margin-left:6px">sub-agent</span></div><div class="block-body">→ 28 completed · 4 flagged (confidence &lt; 0.8)</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-chart-bar" aria-hidden="true"></i> Artifact: hw3_dashboard.html</div><div class="block-body prose">Score distribution, per-criterion breakdown, class percentile, Anna Karenina clustering view.</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-file-spreadsheet" aria-hidden="true"></i> Artifact: hw3_grades_export.csv</div><div class="block-body prose">Full grade table with confidence bands, rubric scores, and feedback text per student.</div></div>
+    <div class="block interrupt"><div class="block-header"><i class="ti ti-hand-stop" aria-hidden="true"></i> Your decision needed — 4 low-confidence submissions</div><div class="block-body prose">Submissions by s_012, s_019, s_024, s_031 were flagged. Options: A) Accept provisional grades  B) Review manually  C) Re-run with stricter rubric interpretation.</div></div>
+    <p style="margin-top:12px; font-size:12px; color:var(--text-muted)">Turn count: 1+1 (plus interrupt resolution turn). Total wall time: ~2m. Blocks: CoT → tool → status×2 → tool (batch) → artifact×2 → interrupt. Conversation paused until professor resolves interrupt.</p>
+  </div>
+
+  <!-- T4: Professor course material -->
+  <div id="traj-t4" class="traj-panel">
+    <p><strong>Professor asks the agent to generate a lecture slide deck and explanation video.</strong> Creative + generative artifact chain.</p>
+    <div class="msg-row user"><div class="avatar av-u">P</div><div class="bubble user">Create a 12-slide intro to Newton's laws for first-year physics. Include a simulation slide and generate a short explainer video for each law.</div></div>
+    <div class="block thinking"><div class="block-header"><i class="ti ti-brain" aria-hidden="true"></i> Thinking</div><div class="block-body">I'll create the slide deck first as a PPTX, then generate the three explainer videos via the video generation tool, then link them into the slides...</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> generate_slides( topic: "Newton's laws", n_slides: 12, include_simulation: true )</div><div class="block-body">→ slides.pptx · 12 slides ready</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-presentation" aria-hidden="true"></i> Artifact: newtons_laws_intro.pptx</div><div class="block-body prose">12-slide deck with title, concept slides, worked examples, and an embedded interactive simulation on slide 9.</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> generate_video( prompt: "Newton's First Law — inertia", duration: 45s ) <span class="label label-muted" style="margin-left:6px">Veo 3.1</span></div><div class="block-body">→ law1_explainer.mp4 · 46s</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-movie" aria-hidden="true"></i> Artifact: law1_inertia.mp4</div><div class="block-body prose">45s explainer: object in motion stays in motion. Visual: hockey puck on frictionless ice, then collisions.</div></div>
+    <div class="block"><div class="block-header" style="background:var(--surface-0)"><i class="ti ti-clock" aria-hidden="true"></i> Generating videos 2 and 3 · 2m 12s elapsed</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-movie" aria-hidden="true"></i> Artifact: law2_force_mass.mp4</div><div class="block-body prose">52s explainer: F = ma. Visual: same force, different masses.</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-movie" aria-hidden="true"></i> Artifact: law3_action_reaction.mp4</div><div class="block-body prose">48s explainer: action-reaction pairs. Visual: rocket propulsion, swimming.</div></div>
+    <div class="msg-row"><div class="avatar av-a">AI</div><div class="bubble agent">Slides and all three videos are ready. The simulation on slide 9 is interactive — students can drag the mass slider. Videos are linked in the slide notes. Total run time: 3m 18s.</div></div>
+    <p style="margin-top:12px; font-size:12px; color:var(--text-muted)">Turn count: 1+1. Total wall time: ~3-4 minutes. 5 artifacts emitted inline as they complete. Note: status pulse used during long video generation.</p>
+  </div>
+
+  <!-- T5: Researcher diagnostic -->
+  <div id="traj-t5" class="traj-panel">
+    <p><strong>Researcher running analysis on grading diagnostic test results.</strong> Multi-step research workflow.</p>
+    <div class="msg-row user"><div class="avatar av-u">R</div><div class="bubble user">Here are the results from 200 students on our calculus diagnostic. Can you identify the dominant error clusters and map them to the knowledge component taxonomy? Export a report.</div></div>
+    <div class="block thinking"><div class="block-header"><i class="ti ti-brain" aria-hidden="true"></i> Thinking</div><div class="block-body">I'll embed the student responses, cluster by semantic similarity, then compare cluster centroids against the KC taxonomy. I should watch for Anna Karenina effects in the lower score band...</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> embed_responses( dataset: "diag_200", model: "text-embedding-3" )</div><div class="block-body">→ embeddings ready · 200 × 1536 matrix</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> cluster_kmeans( k: "auto", embeddings: "diag_200" )</div><div class="block-body">→ 7 clusters · silhouette: 0.63 · Anna Karenina index: high in clusters 3–5</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-chart-scatter" aria-hidden="true"></i> Artifact: error_cluster_map.html</div><div class="block-body prose">2D UMAP projection with cluster hulls, KC labels, and Anna Karenina heatmap overlay. Click cluster to see representative responses.</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> map_to_kc_taxonomy( clusters: 7, taxonomy: "calc_v2" )</div><div class="block-body">→ matched: 5/7 · ambiguous: 2/7 · new KC candidate: "implicit differentiation misapplication"</div></div>
+    <div class="block interrupt"><div class="block-header"><i class="ti ti-hand-stop" aria-hidden="true"></i> New knowledge component detected</div><div class="block-body prose">Cluster 6 doesn't match any existing KC. It appears to be "applying chain rule to implicit functions incorrectly". Add to taxonomy? This would affect 23 students (11.5%).</div></div>
+    <p style="margin-top:12px; font-size:12px; color:var(--text-muted)">Researcher resolves interrupt → agent continues → exports final report PDF. Multi-turn research workflow with human-in-the-loop taxonomy decision.</p>
+  </div>
+
+  <!-- T6: Long-running interrupt -->
+  <div id="traj-t6" class="traj-panel">
+    <p><strong>What "long-running with multiple interrupts" looks like as a full conversation thread.</strong> Shows the full lifecycle including resumption after interrupt resolution.</p>
+    <div class="msg-row user"><div class="avatar av-u">P</div><div class="bubble user">Run the full semester grading audit — all 8 assignments, flag outliers, and generate the final performance report for my 45 students.</div></div>
+    <div class="block thinking"><div class="block-header"><i class="ti ti-brain" aria-hidden="true"></i> Thinking</div><div class="block-body">This will take 10–15 minutes. I'll process assignments sequentially, aggregate per-student trajectories, run outlier detection, and emit partial reports as I go so the professor can see progress.</div></div>
+    <div class="block"><div class="block-header" style="background:var(--surface-0)"><i class="ti ti-clock" aria-hidden="true"></i> Processing HW1 — 45 submissions · 45s elapsed</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-chart-bar" aria-hidden="true"></i> Artifact: hw1_distribution.html <span class="label label-muted">partial</span></div><div class="block-body prose">HW1 score distribution available early — professor can review while HW2–8 process.</div></div>
+    <div class="block interrupt"><div class="block-header"><i class="ti ti-hand-stop" aria-hidden="true"></i> Ambiguous rubric — HW3 Q4</div><div class="block-body prose">11 students used an alternative derivation for Q4 that isn't in the rubric. Accept as valid (award full credit) or flag for manual review?</div></div>
+    <div class="msg-row user"><div class="avatar av-u">P</div><div class="bubble user">Accept it — that derivation is valid.</div></div>
+    <div class="msg-row"><div class="avatar av-a">AI</div><div class="bubble agent">Got it — awarding full credit to all 11 students on Q4. Continuing with HW4–8...</div></div>
+    <div class="block"><div class="block-header" style="background:var(--surface-0)"><i class="ti ti-clock" aria-hidden="true"></i> Processing HW5 — 6m 33s elapsed total</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-alert-triangle" aria-hidden="true" style="color:var(--text-warning)"></i> Artifact: outlier_flags.html <span class="label label-amber">3 outliers</span></div><div class="block-body prose">Student s_017 shows a sudden score drop in HW6 (84→31). Possible: illness, incident, or academic integrity concern.</div></div>
+    <div class="block interrupt"><div class="block-header"><i class="ti ti-hand-stop" aria-hidden="true"></i> Outlier needs context — s_017</div><div class="block-body prose">The drop is statistically significant (z = −3.4). Before I include it in the final report: note an explanation, exclude from trend, or flag as integrity concern?</div></div>
+    <div class="msg-row user"><div class="avatar av-u">P</div><div class="bubble user">Flag as needing follow-up, don't exclude.</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-file-text" aria-hidden="true"></i> Artifact: semester_report_final.pdf</div><div class="block-body prose">45-student performance report, all 8 assignments, trajectory plots, outlier summary, KC mastery breakdown. s_017 flagged throughout.</div></div>
+    <div class="msg-row"><div class="avatar av-a">AI</div><div class="bubble agent">Audit complete — 12m 44s total. Report is ready. 3 interrupts resolved, 1 student flagged for follow-up, 1 rubric clarification applied retroactively to 11 students.</div></div>
+    <p style="margin-top:12px; font-size:12px; color:var(--text-muted)">Total: 3 human turns, 3 agent turns, 2 interrupts resolved, 4 artifacts. Wall time: ~13 minutes. This is the heaviest trajectory FAIR UI must support.</p>
+  </div>
+
+  <!-- T7: Student code debugging -->
+  <div id="traj-t7" class="traj-panel">
+    <p><strong>Student needs help fixing a bug in their programming assignment.</strong> Agent uses sandbox execution, encounters an error, and guides the student without giving the direct answer.</p>
+    <div class="msg-row user"><div class="avatar av-u">S</div><div class="bubble user">My sorting algorithm is failing on the autograder. Can you look at my code? <span class="label label-muted" style="vertical-align:middle;margin-left:4px">📎 mergesort.py</span></div></div>
+    <div class="block thinking"><div class="block-header"><i class="ti ti-brain" aria-hidden="true"></i> Thinking</div><div class="block-body">I'll read the code, run it against the hidden test suite in the sandbox, identify the failure, and then formulate a hint based on the Socratic tutoring guidelines.</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> run_tests( file: "mergesort.py", suite: "cs101_hw4" )</div><div class="block-body">→ 8/10 passed · failed on array with duplicate elements</div></div>
+    <div class="msg-row"><div class="avatar av-a">AI</div><div class="bubble agent">Your code looks close, but it's failing when the list contains duplicate numbers. What happens in your <code>merge</code> function when <code>left[i] == right[j]</code>? </div></div>
+    <div class="msg-row user"><div class="avatar av-u">S</div><div class="bubble user">Oh, I only have <code>if left[i] &lt; right[j]</code> and <code>else if left[i] &gt; right[j]</code>. I didn't handle the equal case!</div></div>
+    <div class="msg-row"><div class="avatar av-a">AI</div><div class="bubble agent">Exactly! How could you update your condition to handle duplicates correctly without losing elements?</div></div>
+    <p style="margin-top:12px; font-size:12px; color:var(--text-muted)">Turn count: 2+2. Blocks: CoT → tool → prose. Showcases safe code execution and pedagogical constraints (not giving away the answer).</p>
+  </div>
+
+  <!-- T8: TA plagiarism check -->
+  <div id="traj-t8" class="traj-panel">
+    <p><strong>Teaching Assistant running an integrity check on a midterm.</strong> Large batch processing, cross-referencing, and interrupt for human judgment.</p>
+    <div class="msg-row user"><div class="avatar av-u">T</div><div class="bubble user">Run an integrity check on the CS201 Midterm submissions. Look for unusually high semantic similarity between code structures.</div></div>
+    <div class="block thinking"><div class="block-header"><i class="ti ti-brain" aria-hidden="true"></i> Thinking</div><div class="block-body">I need to parse all 120 submissions, build ASTs (Abstract Syntax Trees), compute structural similarity scores across all pairs, and flag pairs &gt; 0.85 similarity.</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> fetch_submissions( assignment: "cs201_midterm" )</div><div class="block-body">→ 120 files retrieved</div></div>
+    <div class="block"><div class="block-header" style="background:var(--surface-0)"><i class="ti ti-clock" aria-hidden="true"></i> Computing pairwise AST similarities — 4,200 of 7,140 pairs · 1m 40s elapsed</div></div>
+    <div class="block artifact"><div class="block-header"><i class="ti ti-chart-scatter" aria-hidden="true"></i> Artifact: similarity_matrix.html <span class="label label-green">interactive</span></div><div class="block-body prose">Heatmap showing submission similarity. 3 pairs flagged with &gt; 0.85 structural similarity.</div></div>
+    <div class="block interrupt"><div class="block-header"><i class="ti ti-hand-stop" aria-hidden="true"></i> High similarity detected — 3 pairs</div><div class="block-body prose">s_042 and s_089 share 92% AST structure on Q3. Variable names differ, but logic is identical. Do you want to flag them for academic review? Options: <strong>A)</strong> Flag all 3 pairs  <strong>B)</strong> Ignore  <strong>C)</strong> Let me review code side-by-side</div></div>
+    <p style="margin-top:12px; font-size:12px; color:var(--text-muted)">TA resolves interrupt to view side-by-side diff. Demonstrates complex background processing and high-stakes interrupt resolution.</p>
+  </div>
+
+  <!-- T9: System error and recovery -->
+  <div id="traj-t9" class="traj-panel">
+    <p><strong>Agent encounters an external system failure and recovers.</strong> Displays the error UI block and retry mechanism.</p>
+    <div class="msg-row user"><div class="avatar av-u">P</div><div class="bubble user">Sync the final grades for HW4 to the Canvas LMS.</div></div>
+    <div class="block thinking"><div class="block-header"><i class="ti ti-brain" aria-hidden="true"></i> Thinking</div><div class="block-body">I will read the grade export from our DB and push it to the Canvas API using the configured integration token.</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> sync_lms_grades( assignment: "hw4", target: "canvas" )</div><div class="block-body" style="color:var(--text-danger)">→ HTTP 503 Service Unavailable: Canvas API timeout</div></div>
+    <div class="block error"><div class="block-header"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Tool error: Canvas LMS sync failed</div><div class="block-body prose">The Canvas API is currently unresponsive. I can retry the sync now, or you can try again later. Options: <strong>A)</strong> Retry now <strong>B)</strong> Abort</div></div>
+    <div class="msg-row user"><div class="avatar av-u">P</div><div class="bubble user">Retry now</div></div>
+    <div class="block tool-call"><div class="block-header"><i class="ti ti-plug" aria-hidden="true"></i> sync_lms_grades( assignment: "hw4", target: "canvas" )</div><div class="block-body">→ Success: 45 grades synced to Canvas</div></div>
+    <div class="msg-row"><div class="avatar av-a">AI</div><div class="bubble agent">Grades synced successfully on the second attempt.</div></div>
+    <p style="margin-top:12px; font-size:12px; color:var(--text-muted)">Shows explicit tool failure UI (red border/header), how the agent pauses for user guidance on failure, and successful retry.</p>
+  </div>
+</div>
+
+<!-- ROLES -->
+<div id="page-roles" class="page">
+  <h3>Role-differentiated UI behavior</h3>
+  <p>Same underlying conversation model; different default presentation, affordances, and suggested actions per role.</p>
+
+  <h4>Student view</h4>
+  <div class="turn">
+    <div class="rule"><span class="rule-icon"><i class="ti ti-eye" aria-hidden="true" style="color:var(--text-accent)"></i></span><span><strong>CoT visible but minimal by default.</strong> Show "thinking" indicator only; expand on tap. Students should focus on the answer, not the reasoning machinery.</span></div>
+    <div class="rule"><span class="rule-icon"><i class="ti ti-file-text" aria-hidden="true" style="color:var(--text-accent)"></i></span><span><strong>Artifacts emphasize learning.</strong> Interactive simulations, step-by-step worked solutions, visualizations. No grading reports, no batch views.</span></div>
+    <div class="rule"><span class="rule-icon"><i class="ti ti-ban" aria-hidden="true" style="color:var(--text-danger)"></i></span><span><strong>No approval interrupts.</strong> Students don't make grading decisions. Interrupt blocks are filtered from student view or replaced with "waiting for instructor" placeholder.</span></div>
+    <div class="rule"><span class="rule-icon"><i class="ti ti-history" aria-hidden="true" style="color:var(--text-accent)"></i></span><span><strong>Practice mode persistence.</strong> Conversation stores which problems were attempted, errors made, and progress so adaptive problem selection works across sessions.</span></div>
+  </div>
+
+  <h4>Professor view</h4>
+  <div class="turn">
+    <div class="rule"><span class="rule-icon"><i class="ti ti-tool" aria-hidden="true" style="color:var(--text-warning)"></i></span><span><strong>Tool calls and results visible collapsed.</strong> Professors want to trust but verify. Tool calls expand on click with full input/output. Sub-agent chains are summarized as "32 sub-tasks completed".</span></div>
+    <div class="rule"><span class="rule-icon"><i class="ti ti-hand-stop" aria-hidden="true" style="color:var(--text-warning)"></i></span><span><strong>Interrupts are primary UI.</strong> Interrupt blocks are prominent, scroll into view automatically, and block the input field until resolved.</span></div>
+    <div class="rule"><span class="rule-icon"><i class="ti ti-chart-bar" aria-hidden="true" style="color:var(--text-warning)"></i></span><span><strong>Dashboard artifacts are first-class.</strong> Grade distribution charts, performance tables, and KC mastery views are full-width and pin to the artifact panel.</span></div>
+    <div class="rule"><span class="rule-icon"><i class="ti ti-edit" aria-hidden="true" style="color:var(--text-warning)"></i></span><span><strong>Inline override affordance.</strong> Professors can override any AI-assigned grade directly from the artifact without re-prompting. Override triggers a record in the grading audit log.</span></div>
+  </div>
+
+  <h4>Researcher view</h4>
+  <div class="turn">
+    <div class="rule"><span class="rule-icon"><i class="ti ti-brain" aria-hidden="true" style="color:var(--text-success)"></i></span><span><strong>Full CoT always expanded.</strong> Researchers want to see the agent's reasoning in detail. CoT is never auto-collapsed; it's treated as primary data.</span></div>
+    <div class="rule"><span class="rule-icon"><i class="ti ti-database" aria-hidden="true" style="color:var(--text-success)"></i></span><span><strong>Raw tool outputs available.</strong> Every tool call has a "show raw JSON" toggle. Researchers can copy tool inputs/outputs directly for their own analysis pipelines.</span></div>
+    <div class="rule"><span class="rule-icon"><i class="ti ti-notebook" aria-hidden="true" style="color:var(--text-success)"></i></span><span><strong>Session export.</strong> Full conversation — messages, tool calls, CoT, artifacts — exportable as structured JSON or Markdown for research documentation.</span></div>
+    <div class="rule"><span class="rule-icon"><i class="ti ti-chart-scatter" aria-hidden="true" style="color:var(--text-success)"></i></span><span><strong>Analysis artifacts are default full-screen.</strong> Clustering maps, embedding projections, and diagnostic visualizations open in a full-width canvas panel, not an inline bubble.</span></div>
+  </div>
+</div>
+
+<!-- API CONTRACT -->
+<div id="page-api" class="page">
+  <h3>Server-sent event stream contract</h3>
+  <p>FAIR agents stream events to the client via SSE. Every event has a <code>type</code> field. The UI renders blocks incrementally as events arrive.</p>
+
+  <h4>Event types (aligns with AI SDK)</h4>
+  <div class="turn">
+    <div class="api-field"><div class="api-key">text_delta</div><div class="api-type">string</div><div class="api-desc">Incremental token. Appended to current prose block. Differentiates CoT vs final by <code>content_block_type</code>.</div></div>
+    <div class="api-field"><div class="api-key">tool_use_start</div><div class="api-type">object</div><div class="api-desc">Opens a tool call block. Fields: <code>tool_name</code>, <code>tool_input</code> (streamed), <code>call_id</code>. Render as collapsible row.</div></div>
+    <div class="api-field"><div class="api-key">tool_result</div><div class="api-type">object</div><div class="api-desc">Closes a tool call. Fields: <code>call_id</code>, <code>content</code> (raw), <code>is_error</code>. Appended to the matching <code>tool_use_start</code> block.</div></div>
+    <div class="api-field"><div class="api-key">artifact_start</div><div class="api-type">object</div><div class="api-desc">Opens an artifact block. Fields: <code>artifact_id</code>, <code>type</code> (html|csv|pdf|mp4|pptx|image), <code>title</code>, <code>render_inline</code>.</div></div>
+    <div class="api-field"><div class="api-key">artifact_chunk</div><div class="api-type">bytes</div><div class="api-desc">Binary chunk for artifact content (used for large files). Accumulated client-side until <code>artifact_end</code>.</div></div>
+    <div class="api-field"><div class="api-key">artifact_end</div><div class="api-type">object</div><div class="api-desc">Closes artifact. Fields: <code>artifact_id</code>, <code>size_bytes</code>, <code>download_url</code>, <code>render_complete</code>.</div></div>
+    <div class="api-field"><div class="api-key">status_pulse</div><div class="api-type">object</div><div class="api-desc">Heartbeat during long work. Fields: <code>message</code>, <code>progress</code> (0–1 or null), <code>elapsed_ms</code>. Replaces prior pulse in UI (not a new block).</div></div>
+    <div class="api-field"><div class="api-key">interrupt</div><div class="api-type">object</div><div class="api-desc">Pauses stream until resolved. Fields: <code>interrupt_id</code>, <code>title</code>, <code>body</code>, <code>options[]</code> (label + value pairs). UI blocks input until user picks an option and sends <code>interrupt_response</code>.</div></div>
+    <div class="api-field"><div class="api-key">subagent_start</div><div class="api-type">object</div><div class="api-desc">A nested agent has been launched. Fields: <code>agent_id</code>, <code>purpose</code>, <code>parent_tool_call_id</code>. Shown as indented sub-block.</div></div>
+    <div class="api-field"><div class="api-key">subagent_done</div><div class="api-type">object</div><div class="api-desc">Nested agent completed. Summarized as "N sub-tasks completed" in collapsed state.</div></div>
+    <div class="api-field"><div class="api-key">error</div><div class="api-type">object</div><div class="api-desc">Fields: <code>code</code>, <code>message</code>, <code>recoverable</code>, <code>retry_after_ms</code>. Renders error block with retry affordance if recoverable.</div></div>
+    <div class="api-field"><div class="api-key">message_stop</div><div class="api-type">object</div><div class="api-desc">Turn complete. Fields: <code>stop_reason</code> (end_turn | tool_use | interrupt | error), <code>usage</code>. Triggers CoT auto-collapse in student/professor views.</div></div>
+  </div>
+
+  <h4>Artifact type → render strategy</h4>
+  <div class="type-grid" style="margin-top:10px">
+    <div class="type-card"><div class="type-name" style="font-family:var(--font-mono);font-size:12px">html</div><div class="type-desc">Render in sandboxed iframe inline. Width: 100%. Height: auto from content.</div></div>
+    <div class="type-card"><div class="type-name" style="font-family:var(--font-mono);font-size:12px">csv / xlsx</div><div class="type-desc">Preview as table (first 50 rows). Full download link + open in spreadsheet.</div></div>
+    <div class="type-card"><div class="type-name" style="font-family:var(--font-mono);font-size:12px">pdf</div><div class="type-desc">Inline PDF viewer (first page preview + scroll). Full download.</div></div>
+    <div class="type-card"><div class="type-name" style="font-family:var(--font-mono);font-size:12px">mp4</div><div class="type-desc">Inline video player with autoplay=false. Thumbnail shown until play.</div></div>
+    <div class="type-card"><div class="type-name" style="font-family:var(--font-mono);font-size:12px">pptx</div><div class="type-desc">Static slide thumbnails (1 per slide). Download link. No live render client-side.</div></div>
+    <div class="type-card"><div class="type-name" style="font-family:var(--font-mono);font-size:12px">image</div><div class="type-desc">Inline img with lightbox on click. Alt text required from agent.</div></div>
+  </div>
+
+  <h4>AI SDK / Python SDK alignment notes</h4>
+  <div class="rule"><span class="rule-icon">◆</span><span><code>text_delta</code> maps to AI SDK's <code>TextStreamPart</code>. Use <code>content_block_type: "thinking"</code> vs <code>"text"</code> to differentiate CoT from final prose.</span></div>
+  <div class="rule"><span class="rule-icon">◆</span><span><code>tool_use_start</code> / <code>tool_result</code> map to <code>ToolCallStreamPart</code> / <code>ToolResultStreamPart</code>. FAIR adds <code>sub_agent</code> flag for nested launches.</span></div>
+  <div class="rule"><span class="rule-icon">◆</span><span><code>artifact_*</code> events are FAIR-specific extensions — not in base AI SDK. They wrap a tool result that produces a renderable file, tagged with a FAIR artifact envelope.</span></div>
+  <div class="rule"><span class="rule-icon">◆</span><span><code>status_pulse</code> is a FAIR extension. Emitted by the orchestrator every 5–15s during long tool runs. Replaces rather than appends — client keeps only the latest pulse per turn.</span></div>
+  <div class="rule"><span class="rule-icon">◆</span><span><code>interrupt</code> is a FAIR extension. When received, stream is paused server-side. Client must POST <code>/conversation/{id}/interrupt/{interrupt_id}/resolve</code> with the user's choice to resume.</span></div>
+</div>
+
+<script>
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+function showTraj(id) {
+  document.querySelectorAll('.traj-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.traj-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('traj-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
