@@ -14,13 +14,14 @@ if TYPE_CHECKING:
     from .submission import Submission
     from .user import User
     from .course import Course
+    from .artifacts_v2 import ArtifactVersion
 
 
 class ArtifactStatus(str, Enum):
-    pending = "pending"          # Uploaded but not attached
-    attached = "attached"        # Linked to assignment/submission
-    orphaned = "orphaned"        # Parent deleted but artifact remains
-    archived = "archived"        # Soft deleted
+    pending = "pending"  # Uploaded but not attached
+    attached = "attached"  # Linked to assignment/submission
+    orphaned = "orphaned"  # Parent deleted but artifact remains
+    archived = "archived"  # Soft deleted
 
 
 class AccessLevel(str, Enum):
@@ -43,16 +44,52 @@ class Artifact(Base):
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
-    creator_id: Mapped[UUID] = mapped_column(SAUUID, ForeignKey("users.id"), nullable=False)
-    status: Mapped[ArtifactStatus] = mapped_column(String, nullable=False, default=ArtifactStatus.pending)
-    access_level: Mapped[AccessLevel] = mapped_column(String, nullable=False, default=AccessLevel.private)
-    
-    course_id: Mapped[Optional[UUID]] = mapped_column(SAUUID, ForeignKey("courses.id"), nullable=True)
-    assignment_id: Mapped[Optional[UUID]] = mapped_column(SAUUID, ForeignKey("assignments.id"), nullable=True)
+    creator_id: Mapped[UUID] = mapped_column(
+        SAUUID, ForeignKey("users.id"), nullable=False
+    )
+    status: Mapped[ArtifactStatus] = mapped_column(
+        String, nullable=False, default=ArtifactStatus.pending
+    )
+    access_level: Mapped[AccessLevel] = mapped_column(
+        String, nullable=False, default=AccessLevel.private
+    )
 
-    creator: Mapped["User"] = relationship("User", back_populates="created_artifacts")
-    course: Mapped[Optional["Course"]] = relationship("Course", back_populates="artifacts")
-    assignment: Mapped[Optional["Assignment"]] = relationship("Assignment", back_populates="direct_artifacts")
+    course_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("courses.id"), nullable=True
+    )
+    assignment_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("assignments.id"), nullable=True
+    )
+    # v2 logical-artifact metadata. The legacy fields above remain available to
+    # the current artifact API while the new versioned model is introduced.
+    kind_uri: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    owner_user_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+    sensitivity: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    access_policy: Mapped[Optional[dict]] = mapped_column(
+        json_document_type(), nullable=True
+    )
+    current_version_id: Mapped[Optional[UUID]] = mapped_column(SAUUID, nullable=True)
+
+    creator: Mapped["User"] = relationship(
+        "User", back_populates="created_artifacts", foreign_keys=[creator_id]
+    )
+    course: Mapped[Optional["Course"]] = relationship(
+        "Course", back_populates="artifacts"
+    )
+    assignment: Mapped[Optional["Assignment"]] = relationship(
+        "Assignment", back_populates="direct_artifacts"
+    )
+    owner = relationship("User", foreign_keys=[owner_user_id])
+    versions: Mapped[List["ArtifactVersion"]] = relationship(
+        "ArtifactVersion",
+        foreign_keys="ArtifactVersion.artifact_id",
+        back_populates="artifact",
+        cascade="all, delete-orphan",
+        order_by="ArtifactVersion.ordinal",
+    )
 
     assignments: Mapped[List["Assignment"]] = relationship(
         "Assignment",
@@ -136,7 +173,9 @@ class ArtifactDerivative(Base):
         TIMESTAMP, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    artifact: Mapped["Artifact"] = relationship("Artifact", back_populates="derivatives")
+    artifact: Mapped["Artifact"] = relationship(
+        "Artifact", back_populates="derivatives"
+    )
 
     @property
     def storage_type(self) -> str:

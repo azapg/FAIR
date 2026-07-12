@@ -21,6 +21,8 @@ import { DOCS_BASE_URL } from "@/lib/constants";
 interface CreateAssignmentDialogProps {
   courseId?: string;
   onAssignmentCreated: (assignment: Assignment) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface FileItem {
@@ -28,8 +30,20 @@ interface FileItem {
   id: string;
 }
 
-export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: CreateAssignmentDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CreateAssignmentDialog({
+  courseId,
+  onAssignmentCreated,
+  open: controlledOpen,
+  onOpenChange,
+}: CreateAssignmentDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    if (controlledOpen === undefined) {
+      setInternalOpen(next);
+    }
+    onOpenChange?.(next);
+  };
   const [form, setForm] = useState<CreateAssignmentForm>({
     title: "",
     description: "",

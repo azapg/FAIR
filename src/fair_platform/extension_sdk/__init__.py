@@ -9,6 +9,12 @@ from fair_platform.extension_sdk.contracts.plugin import (
     WorkflowStepExecutionRequest,
     WorkflowStepExecutionResult,
 )
+from fair_platform.extension_sdk.execution import ExecutionReporter
+from fair_platform.extension_sdk.contracts.events import (
+    ExecutionEventBatch,
+    ExecutionEventCreate,
+    ExecutionEventRead,
+)
 from fair_platform.extension_sdk.extension import FairExtension
 from fair_platform.extension_sdk.settings import (
     ArtifactRefField,
@@ -27,11 +33,15 @@ from fair_platform.extension_sdk.settings import (
 __all__ = [
     "ExtensionCredentials",
     "build_extension_auth_headers",
+    "ExecutionReporter",
     "JobContext",
     "PluginDescriptor",
     "PluginType",
     "WorkflowStepExecutionRequest",
     "WorkflowStepExecutionResult",
+    "ExecutionEventBatch",
+    "ExecutionEventCreate",
+    "ExecutionEventRead",
     "FairExtension",
     "SettingsField",
     "TextField",

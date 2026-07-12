@@ -57,7 +57,7 @@ class User(Base):
         "WorkflowRun", back_populates="runner"
     )
     created_artifacts: Mapped[List["Artifact"]] = relationship(
-        "Artifact", back_populates="creator"
+        "Artifact", back_populates="creator", foreign_keys="Artifact.creator_id"
     )
     # Relationship to submitters that link to this user account
     submitters: Mapped[List["Submitter"]] = relationship(

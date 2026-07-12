@@ -1,0 +1,259 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any, Optional
+from uuid import UUID, uuid4
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from fair_platform.backend.data.models.execution import (
+    EventDurability,
+    EventVisibility,
+    Execution,
+    ExecutionEvent,
+    ExecutionStatus,
+    Turn,
+)
+
+
+class ExecutionStoreError(ValueError):
+    """Base error for invalid durable Execution operations."""
+
+
+class EventIdentityConflict(ExecutionStoreError):
+    """A producer reused an event identity for different content or work."""
+
+
+class ExecutionNotFound(ExecutionStoreError):
+    """The referenced Execution does not exist."""
+
+
+@dataclass(frozen=True)
+class EventAppendResult:
+    event: ExecutionEvent
+    duplicate: bool
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def create_execution(
+    session: Session,
+    *,
+    kind: str,
+    thread_id: UUID | None = None,
+    turn_id: UUID | None = None,
+    initiated_by_user_id: UUID | None = None,
+    parent_execution_id: UUID | None = None,
+    retry_of_execution_id: UUID | None = None,
+    **values: Any,
+) -> Execution:
+    """Create an Execution with valid root/parent/retry lineage."""
+
+    parent = (
+        session.get(Execution, parent_execution_id)
+        if parent_execution_id is not None
+        else None
+    )
+    retry_of = (
+        session.get(Execution, retry_of_execution_id)
+        if retry_of_execution_id is not None
+        else None
+    )
+    if parent_execution_id is not None and parent is None:
+        raise ExecutionNotFound(
+            f"parent Execution {parent_execution_id} does not exist"
+        )
+    if retry_of_execution_id is not None and retry_of is None:
+        raise ExecutionNotFound(
+            f"retry Execution {retry_of_execution_id} does not exist"
+        )
+    if parent is not None and retry_of is not None:
+        if parent.root_execution_id != retry_of.root_execution_id:
+            raise ExecutionStoreError(
+                "parent and retry Executions must belong to the same root lineage"
+            )
+        if retry_of.parent_execution_id != parent.id:
+            raise ExecutionStoreError(
+                "a retried child Execution must retain its original parent"
+            )
+    if turn_id is not None:
+        turn = session.get(Turn, turn_id)
+        if turn is None:
+            raise ExecutionStoreError(f"Turn {turn_id} does not exist")
+        if thread_id is None or turn.thread_id != thread_id:
+            raise ExecutionStoreError(
+                "turn_id must belong to the Execution's thread_id"
+            )
+
+    execution_id = uuid4()
+    root_id = (
+        (parent or retry_of).root_execution_id if (parent or retry_of) else execution_id
+    )
+    execution = Execution(
+        id=execution_id,
+        thread_id=thread_id,
+        turn_id=turn_id,
+        parent_execution_id=parent_execution_id,
+        root_execution_id=root_id,
+        retry_of_execution_id=retry_of_execution_id,
+        attempt=(retry_of.attempt + 1) if retry_of is not None else 1,
+        kind=kind,
+        initiated_by_user_id=initiated_by_user_id,
+        **values,
+    )
+    session.add(execution)
+    session.flush()
+    return execution
+
+
+def append_execution_event(
+    session: Session,
+    *,
+    execution_id: UUID,
+    producer_source: str,
+    producer_event_id: str,
+    event_type: str,
+    schema_uri: str,
+    payload: dict[str, Any],
+    occurred_at: Optional[datetime] = None,
+    producer_sequence: Optional[int] = None,
+    visibility: EventVisibility = EventVisibility.user,
+    durability: EventDurability = EventDurability.durable,
+    parent_event_id: Optional[UUID] = None,
+    trace_id: Optional[str] = None,
+    span_id: Optional[str] = None,
+) -> EventAppendResult:
+    """Append one accepted durable event with server-assigned ordering.
+
+    The Execution row is locked before allocating the next sequence. PostgreSQL
+    uses that lock for concurrent writers; SQLite serializes the write through
+    its normal transaction lock. Producer identity makes retries idempotent.
+    """
+
+    if durability is not EventDurability.durable:
+        raise ExecutionStoreError(
+            "ephemeral events must not enter the durable event store"
+        )
+    if not producer_source or len(producer_source) > 255:
+        raise ExecutionStoreError("producer_source must be 1-255 characters")
+    if not producer_event_id or len(producer_event_id) > 255:
+        raise ExecutionStoreError("producer_event_id must be 1-255 characters")
+    if not event_type or len(event_type) > 255:
+        raise ExecutionStoreError("event_type must be 1-255 characters")
+    if not schema_uri or len(schema_uri) > 2048:
+        raise ExecutionStoreError("schema_uri must be 1-2048 characters")
+    if producer_sequence is not None and (
+        isinstance(producer_sequence, bool) or producer_sequence < 1
+    ):
+        raise ExecutionStoreError("producer_sequence must be a positive integer")
+
+    existing = session.scalar(
+        select(ExecutionEvent).where(
+            ExecutionEvent.producer_source == producer_source,
+            ExecutionEvent.producer_event_id == producer_event_id,
+        )
+    )
+    if existing is not None:
+        same_event = (
+            existing.execution_id == execution_id
+            and existing.type == event_type
+            and existing.schema_uri == schema_uri
+            and existing.payload == payload
+            and existing.producer_sequence == producer_sequence
+        )
+        if not same_event:
+            raise EventIdentityConflict(
+                f"producer event {producer_source!r}/{producer_event_id!r} "
+                "was already accepted with different content"
+            )
+        return EventAppendResult(event=existing, duplicate=True)
+
+    execution = session.scalar(
+        select(Execution).where(Execution.id == execution_id).with_for_update()
+    )
+    if execution is None:
+        raise ExecutionNotFound(f"Execution {execution_id} does not exist")
+    if execution.status in {
+        ExecutionStatus.completed,
+        ExecutionStatus.failed,
+        ExecutionStatus.cancelled,
+        ExecutionStatus.expired,
+        ExecutionStatus.completed.value,
+        ExecutionStatus.failed.value,
+        ExecutionStatus.cancelled.value,
+        ExecutionStatus.expired.value,
+    }:
+        raise ExecutionStoreError(
+            f"Execution {execution_id} is terminal and cannot accept new events"
+        )
+
+    # Re-check after locking so a concurrent writer that committed between the
+    # first lookup and the row lock is still handled idempotently.
+    existing = session.scalar(
+        select(ExecutionEvent).where(
+            ExecutionEvent.producer_source == producer_source,
+            ExecutionEvent.producer_event_id == producer_event_id,
+        )
+    )
+    if existing is not None:
+        same_event = (
+            existing.execution_id == execution_id
+            and existing.type == event_type
+            and existing.schema_uri == schema_uri
+            and existing.payload == payload
+            and existing.producer_sequence == producer_sequence
+        )
+        if not same_event:
+            raise EventIdentityConflict(
+                f"producer event {producer_source!r}/{producer_event_id!r} "
+                "was already accepted with different content"
+            )
+        return EventAppendResult(event=existing, duplicate=True)
+
+    if parent_event_id is not None:
+        parent_event = session.get(ExecutionEvent, parent_event_id)
+        if parent_event is None:
+            raise ExecutionStoreError(f"parent event {parent_event_id} does not exist")
+        if parent_event.execution_id != execution_id:
+            raise ExecutionStoreError(
+                "parent_event_id must reference an event in the same Execution"
+            )
+
+    last_sequence = session.scalar(
+        select(func.max(ExecutionEvent.sequence)).where(
+            ExecutionEvent.execution_id == execution_id
+        )
+    )
+    event = ExecutionEvent(
+        execution_id=execution_id,
+        sequence=int(last_sequence or 0) + 1,
+        producer_source=producer_source,
+        producer_event_id=producer_event_id,
+        producer_sequence=producer_sequence,
+        type=event_type,
+        schema_uri=schema_uri,
+        occurred_at=occurred_at or _utc_now(),
+        visibility=visibility,
+        durability=durability,
+        payload=payload,
+        parent_event_id=parent_event_id,
+        trace_id=trace_id,
+        span_id=span_id,
+    )
+    session.add(event)
+    session.flush()
+    return EventAppendResult(event=event, duplicate=False)
+
+
+__all__ = [
+    "EventAppendResult",
+    "EventIdentityConflict",
+    "ExecutionNotFound",
+    "ExecutionStoreError",
+    "append_execution_event",
+    "create_execution",
+]

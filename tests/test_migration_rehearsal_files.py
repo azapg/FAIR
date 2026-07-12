@@ -56,3 +56,13 @@ def test_build_alembic_config_skips_runtime_logging_reconfiguration() -> None:
     config = build_alembic_config("sqlite:///:memory:")
     assert config.get_main_option("fair.skip_logging_config") == "1"
 
+
+def test_phase1_revision_is_explicit_and_not_live_metadata_driven() -> None:
+    revision = (
+        Path(__file__).parents[1]
+        / "src/fair_platform/backend/alembic/versions/20260711_0017_phase1_foundation.py"
+    ).read_text(encoding="utf-8")
+    assert "Base.metadata.create_all" not in revision
+    assert 'op.create_table(\n        "executions"' in revision
+    assert 'op.create_table(\n        "artifact_versions"' in revision
+    assert 'op.create_table(\n        "flow_versions"' in revision

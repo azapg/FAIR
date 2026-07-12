@@ -1,4 +1,4 @@
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, type CellContext, type Table } from "@tanstack/react-table";
 import {
   Ellipsis,
   History,
@@ -319,7 +319,7 @@ export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] 
     () => [
       ...(canManage ? [{
         id: "select",
-        header: ({ table }) => {
+        header: ({ table }: { table: Table<Submission> }) => {
           const all = table.getIsAllRowsSelected();
           const some = table.getIsSomeRowsSelected();
           const checkedValue: boolean | "indeterminate" = all
@@ -336,7 +336,7 @@ export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] 
             />
           );
         },
-        cell: ({ row }) => (
+        cell: ({ row }: CellContext<Submission, unknown>) => (
           <Checkbox
             onClick={(e) => e.stopPropagation()}
             checked={row.getIsSelected()}
@@ -412,7 +412,7 @@ export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] 
       },
       ...(canManage ? [{
         id: "actions",
-        cell: (info) => (
+        cell: (info: CellContext<Submission, unknown>) => (
           <SubmissionActionsCell submission={info.row.original} />
         ),
       }] : []),

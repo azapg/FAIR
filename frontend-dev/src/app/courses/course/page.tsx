@@ -115,7 +115,7 @@ export default function CourseDetailPage() {
       {showEnrollmentControls && (
         <EnrollmentControls
           enrollmentCode={enrollmentCode}
-          isEnrollmentEnabled={isEnrollmentEnabled}
+          isEnrollmentEnabled={isEnrollmentEnabled ?? false}
           onToggle={handleToggle}
           onResetCode={handleResetCode}
           isTogglePending={updateCourseSettings.isPending}
