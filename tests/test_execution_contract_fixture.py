@@ -9,7 +9,7 @@ def test_shared_execution_event_fixture_validates_against_python_contract():
         Path(__file__).resolve().parents[1]
         / "specs"
         / "fixtures"
-        / "execution-events-v1.json"
+        / "execution-events.json"
     )
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
 

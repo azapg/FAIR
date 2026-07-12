@@ -50,7 +50,7 @@ from fair_platform.backend.services.execution_store import (
 def _user() -> User:
     return User(
         id=uuid4(),
-        name="v2 test user",
+        name="Foundation test user",
         email=f"{uuid4()}@example.test",
         role=UserRole.student,
     )
@@ -79,7 +79,7 @@ def _execution(session, user: User) -> Execution:
     )
 
 
-def test_v2_table_inventory_is_registered():
+def test_foundation_table_inventory_is_registered():
     expected = {
         "threads",
         "turns",

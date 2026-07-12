@@ -7,7 +7,7 @@ from .submission import Submission, SubmissionStatus
 from .submission_event import SubmissionEvent, SubmissionEventType
 from .workflow import Workflow
 from .workflow_run import WorkflowRun, WorkflowRunStatus
-from .artifact import Artifact, ArtifactDerivative
+from .legacy_artifact import Artifact, ArtifactDerivative
 from .submission_result import SubmissionResult
 from .rubric import Rubric
 from .extension_client import ExtensionClient
@@ -43,7 +43,7 @@ from .extension import (
     GrantDecision,
 )
 from .flow import Flow, FlowVersion, FlowVersionState
-from .artifacts_v2 import (
+from .artifact import (
     ArtifactLink,
     ArtifactLinkRelationship,
     ArtifactLinkTargetType,

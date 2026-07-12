@@ -12,6 +12,7 @@ from fair_platform.backend.data.models.execution import (
     ExecutionEvent,
     ExecutionSnapshot,
     ExecutionStatus,
+    EventVisibility,
     InteractionRequest,
     InteractionStatus,
     Message,
@@ -362,18 +363,22 @@ def replay_execution_events(
     *,
     after_sequence: int = 0,
     limit: int = 100,
+    visibility: EventVisibility | None = None,
 ) -> list[ExecutionEvent]:
     if after_sequence < 0:
         raise ValueError("after_sequence must be non-negative")
     if limit < 1 or limit > 500:
         raise ValueError("limit must be between 1 and 500")
+    filters = [
+        ExecutionEvent.execution_id == execution_id,
+        ExecutionEvent.sequence > after_sequence,
+    ]
+    if visibility is not None:
+        filters.append(ExecutionEvent.visibility == visibility)
     return list(
         session.scalars(
             select(ExecutionEvent)
-            .where(
-                ExecutionEvent.execution_id == execution_id,
-                ExecutionEvent.sequence > after_sequence,
-            )
+            .where(*filters)
             .order_by(ExecutionEvent.sequence)
             .limit(limit)
         )

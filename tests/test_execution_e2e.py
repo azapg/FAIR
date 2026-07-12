@@ -8,7 +8,13 @@ from fastapi.testclient import TestClient
 
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.api.routers.executions import get_stream_session_factory
-from fair_platform.backend.data.models import ExtensionClient, Message, User, UserRole
+from fair_platform.backend.data.models import (
+    ExtensionClient,
+    ExtensionInstallation,
+    Message,
+    User,
+    UserRole,
+)
 from fair_platform.backend.main import app
 from fair_platform.backend.services.execution_outbox_dispatcher import (
     ExecutionOutboxDispatcher,
@@ -42,6 +48,7 @@ def test_mock_extension_outbox_replay_rebuild_and_sse_reconnect(test_db):
         session.add_all(
             [
                 user,
+                ExtensionInstallation(extension_id="mock.extension"),
                 ExtensionClient(
                     extension_id="mock.extension",
                     secret_hash=hash_extension_secret("e2e-secret"),
@@ -100,6 +107,11 @@ def test_mock_extension_outbox_replay_rebuild_and_sse_reconnect(test_db):
                 await reporter.message_started(message_id)
                 await reporter.message_delta(message_id, part_id, "Hello from E2E")
                 await reporter.message_completed(message_id)
+                await reporter.emit(
+                    "extension.diagnostic",
+                    visibility="private",
+                    payload={"secret": "not user-visible"},
+                )
                 await reporter.completed({"answer": "ok"})
                 await api_client.aclose()
                 return httpx.Response(202, json={"accepted": True})
@@ -154,6 +166,7 @@ def test_mock_extension_outbox_replay_rebuild_and_sse_reconnect(test_db):
                 "message.started",
                 "message.delta",
                 "message.completed",
+                "extension.diagnostic",
                 "execution.completed",
             ]
 
@@ -165,7 +178,7 @@ def test_mock_extension_outbox_replay_rebuild_and_sse_reconnect(test_db):
                 .one()
             )
             assert snapshot is not None
-            assert snapshot.last_sequence == 6
+            assert snapshot.last_sequence == 7
             assert message.parts[0].text_content == "Hello from E2E"
 
         with client.stream(
@@ -180,7 +193,7 @@ def test_mock_extension_outbox_replay_rebuild_and_sse_reconnect(test_db):
             for line in stream_body.splitlines()
             if line.startswith("id: ")
         ]
-        assert ids == [3, 4, 5, 6]
+        assert ids == [3, 4, 5, 7]
 
         with client.stream(
             "GET",
@@ -194,7 +207,7 @@ def test_mock_extension_outbox_replay_rebuild_and_sse_reconnect(test_db):
             for line in reconnect_body.splitlines()
             if line.startswith("id: ")
         ]
-        assert reconnect_ids == [5, 6]
+        assert reconnect_ids == [5, 7]
     finally:
         app.dependency_overrides.pop(get_current_user, None)
         app.dependency_overrides.pop(get_stream_session_factory, None)

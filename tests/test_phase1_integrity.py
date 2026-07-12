@@ -3,13 +3,13 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
 
 from fair_platform.backend.data.models import (
     Artifact,
     ArtifactPart,
     ArtifactVersion,
+    ArtifactVersionMutationError,
     ExtensionGrant,
     ExtensionInstallation,
     Flow,
@@ -89,7 +89,7 @@ def test_published_flow_versions_are_immutable(test_db):
             session.commit()
 
 
-def test_extension_effects_are_deny_by_default_and_deny_wins(test_db):
+def test_extension_effects_are_deny_by_default_and_duplicate_scope_is_rejected(test_db):
     with test_db() as session:
         installation = ExtensionInstallation(extension_id="phase1.test")
         session.add(installation)
@@ -99,26 +99,23 @@ def test_extension_effects_are_deny_by_default_and_deny_wins(test_db):
         )
         assert missing["artifacts:write"].allowed is False
 
-        session.add_all(
-            [
-                ExtensionGrant(
-                    installation_id=installation.id,
-                    effect="artifacts:write",
-                    decision=GrantDecision.allow,
-                ),
-                ExtensionGrant(
-                    installation_id=installation.id,
-                    effect="artifacts:write",
-                    decision=GrantDecision.deny,
-                ),
-            ]
+        session.add(
+            ExtensionGrant(
+                installation_id=installation.id,
+                effect="artifacts:write",
+                decision=GrantDecision.allow,
+            )
         )
         session.flush()
-        resolved = resolve_extension_effects(
-            session, installation_id=installation.id, effects=["artifacts:write"]
+        session.add(
+            ExtensionGrant(
+                installation_id=installation.id,
+                effect="artifacts:write",
+                decision=GrantDecision.deny,
+            )
         )
-        assert resolved["artifacts:write"].allowed is False
-        assert resolved["artifacts:write"].denying_grant_ids
+        with pytest.raises(IntegrityError):
+            session.flush()
 
 
 def test_grade_tables_expose_phase1_lifecycle_constraints():
@@ -131,7 +128,7 @@ def test_grade_tables_expose_phase1_lifecycle_constraints():
     assert "uq_grade_proposals_submission_ordinal" in proposal_constraints
     assert "ck_grade_proposals_ordinal_positive" in proposal_constraints
     assert "ck_grade_proposals_confidence_range" in proposal_constraints
-    assert "ck_grade_proposals_single_actor" in proposal_constraints
+    assert "ck_grade_proposals_actor_present" in proposal_constraints
     assert "ck_grade_decisions_manual_replacement_content" in decision_constraints
 
 
@@ -162,9 +159,65 @@ def test_execution_turn_must_belong_to_its_thread(test_db):
             )
 
 
-def test_artifact_current_version_pointer_is_owned_by_the_service_boundary(test_db):
+def test_abandoned_artifact_version_does_not_require_finalized_hashes(test_db):
     with test_db() as session:
-        foreign_keys = inspect(session.get_bind()).get_foreign_keys("artifacts")
-    assert not any(
-        fk["constrained_columns"] == ["current_version_id"] for fk in foreign_keys
-    )
+        user = _user()
+        artifact = Artifact(
+            id=uuid4(), title="A", artifact_type="document", creator_id=user.id
+        )
+        session.add_all([user, artifact])
+        session.flush()
+        session.add(
+            ArtifactVersion(
+                artifact_id=artifact.id,
+                ordinal=1,
+                state="abandoned",
+                provenance={},
+            )
+        )
+        session.commit()
+
+
+def test_artifact_current_version_cannot_point_to_another_artifact(test_db):
+    with test_db() as session:
+        user = _user()
+        first = Artifact(
+            id=uuid4(), title="A", artifact_type="document", creator_id=user.id
+        )
+        second = Artifact(
+            id=uuid4(), title="B", artifact_type="document", creator_id=user.id
+        )
+        session.add_all([user, first, second])
+        session.flush()
+        version = ArtifactVersion(artifact_id=second.id, ordinal=1, provenance={})
+        session.add(version)
+        session.flush()
+        first.current_version_id = version.id
+        with pytest.raises(ArtifactVersionMutationError, match="same Artifact"):
+            session.flush()
+
+
+def test_artifact_version_can_only_supersede_earlier_same_artifact_version(test_db):
+    with test_db() as session:
+        user = _user()
+        first = Artifact(
+            id=uuid4(), title="A", artifact_type="document", creator_id=user.id
+        )
+        second = Artifact(
+            id=uuid4(), title="B", artifact_type="document", creator_id=user.id
+        )
+        session.add_all([user, first, second])
+        session.flush()
+        prior = ArtifactVersion(artifact_id=second.id, ordinal=1, provenance={})
+        session.add(prior)
+        session.flush()
+        session.add(
+            ArtifactVersion(
+                artifact_id=first.id,
+                ordinal=2,
+                provenance={},
+                supersedes_version_id=prior.id,
+            )
+        )
+        with pytest.raises(ArtifactVersionMutationError, match="same Artifact"):
+            session.flush()

@@ -44,6 +44,7 @@ from fair_platform.backend.data.models import (
     User,
 )
 from fair_platform.backend.data.models.execution import MessageAuthorType
+from fair_platform.backend.data.models.execution import EventVisibility
 from fair_platform.backend.services.execution_outbox import enqueue_dispatch
 from fair_platform.backend.services.execution_projection import (
     ExecutionProjectionError,
@@ -58,6 +59,11 @@ from fair_platform.backend.services.execution_store import (
 
 
 router = APIRouter()
+
+# User-authenticated callers may only add explicitly user-authored, non-state-
+# changing events. Lifecycle, message, artifact, and interaction events are
+# accepted only from the platform or the authenticated producing extension.
+USER_APPENDABLE_EVENT_TYPES = frozenset({"user.feedback"})
 
 
 def get_stream_session_factory() -> Callable[[], Session]:
@@ -283,13 +289,15 @@ def create_turn(
         )
     )
     if installation is None:
-        installation = ExtensionInstallation(
-            id=uuid4(),
-            extension_id=payload.target,
-            display_name=payload.target,
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target extension installation not found",
         )
-        db.add(installation)
-        db.flush()
+    if _enum_value(installation.status) != ExtensionInstallationStatus.enabled.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Target extension installation is not enabled",
+        )
 
     execution = create_execution(
         db,
@@ -353,7 +361,11 @@ def read_execution_events(
     return [
         _event_read(event)
         for event in replay_execution_events(
-            db, execution.id, after_sequence=after_sequence, limit=limit
+            db,
+            execution.id,
+            after_sequence=after_sequence,
+            limit=limit,
+            visibility=EventVisibility.user,
         )
     ]
 
@@ -373,22 +385,22 @@ def append_execution_events(
     accepted = []
     try:
         for event in batch.events:
-            if event.type == "interaction.resolved":
+            if event.type not in USER_APPENDABLE_EVENT_TYPES:
                 db.rollback()
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Use the interaction resolve endpoint for user responses",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Event type is not accepted from user-authenticated callers",
                 )
             result = append_and_project_event(
                 db,
                 execution_id=execution.id,
-                producer_source=event.producer_source,
+                producer_source=f"user:{current_user.id}",
                 producer_event_id=event.producer_event_id,
                 producer_sequence=event.producer_sequence,
                 event_type=event.type,
                 schema_uri=event.schema_uri,
                 occurred_at=event.occurred_at,
-                visibility=event.visibility,
+                visibility=EventVisibility.user,
                 payload=event.payload,
                 parent_event_id=event.parent_event_id,
                 trace_id=event.trace_id,
@@ -591,6 +603,7 @@ async def stream_execution_events(
                         execution.id,
                         after_sequence=cursor,
                         limit=500,
+                        visibility=EventVisibility.user,
                     )
                     stream_status = _enum_value(stream_execution.status)
 

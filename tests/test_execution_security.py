@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 
@@ -17,6 +17,93 @@ from fair_platform.backend.main import app
 from fair_platform.backend.services.extension_grants import resolve_extension_effects
 from fair_platform.backend.services.extension_auth import hash_extension_secret
 from fair_platform.backend.data.models import ExtensionClient
+from fair_platform.backend.services.execution_projection import append_and_project_event
+
+
+def test_turn_rejects_unknown_and_disabled_targets_and_user_events_cannot_spoof(test_db):
+    user = User(
+        id=uuid4(),
+        name="Boundary user",
+        email=f"{uuid4()}@example.test",
+        role=UserRole.student,
+    )
+    with test_db() as session:
+        session.add_all([
+            user,
+            ExtensionInstallation(
+                extension_id="disabled.extension",
+                status=ExtensionInstallationStatus.disabled,
+            ),
+            ExtensionInstallation(extension_id="enabled.extension"),
+        ])
+        session.commit()
+
+    app.dependency_overrides[get_current_user] = lambda: user
+    try:
+        client = TestClient(app)
+        thread = client.post("/api/v1/threads", json={"title": "Boundary"}).json()
+        unknown = client.post(
+            f"/api/v1/threads/{thread['id']}/turns",
+            json={"content": "no", "target": "unknown.extension"},
+        )
+        assert unknown.status_code == 404, unknown.text
+        disabled = client.post(
+            f"/api/v1/threads/{thread['id']}/turns",
+            json={"content": "no", "target": "disabled.extension"},
+        )
+        assert disabled.status_code == 409, disabled.text
+
+        turn = client.post(
+            f"/api/v1/threads/{thread['id']}/turns",
+            json={"content": "yes", "target": "enabled.extension"},
+        ).json()
+        execution_id = turn["executionId"]
+        spoof = client.post(
+            f"/api/v1/executions/{execution_id}/events",
+            json={"events": [{
+                "producerSource": "fair.platform",
+                "producerEventId": "spoof-complete",
+                "type": "execution.completed",
+                "schemaUri": "urn:fair:event:execution.completed:v1",
+                "payload": {},
+            }]},
+        )
+        assert spoof.status_code == 403, spoof.text
+
+        feedback = client.post(
+            f"/api/v1/executions/{execution_id}/events",
+            json={"events": [{
+                "producerSource": "spoofed.extension",
+                "producerEventId": "feedback-1",
+                "type": "user.feedback",
+                "schemaUri": "urn:fair:event:user.feedback:v1",
+                "visibility": "private",
+                "payload": {"rating": 1},
+            }]},
+        )
+        assert feedback.status_code == 202, feedback.text
+        assert feedback.json()[0]["producerSource"] == f"user:{user.id}"
+        assert feedback.json()[0]["visibility"] == "user"
+
+        with test_db() as session:
+            append_and_project_event(
+                session,
+                execution_id=UUID(execution_id),
+                producer_source="enabled.extension",
+                producer_event_id="private-diagnostic",
+                event_type="extension.diagnostic",
+                schema_uri="urn:fair:event:extension.diagnostic:v1",
+                visibility="private",
+                payload={"secret": "must-not-leak"},
+            )
+            session.commit()
+        replay = client.get(f"/api/v1/executions/{execution_id}/events")
+        assert replay.status_code == 200
+        assert "private-diagnostic" not in {
+            event["producerEventId"] for event in replay.json()
+        }
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 def test_extension_grants_are_deny_by_default_and_deny_wins(test_db):
@@ -93,7 +180,7 @@ def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events
     with test_db() as session:
         session.add(user)
         now = datetime.now(timezone.utc)
-        session.add(
+        session.add_all([
             ExtensionClient(
                 extension_id="security.extension",
                 secret_hash=hash_extension_secret("security-secret"),
@@ -101,8 +188,9 @@ def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events
                 enabled=True,
                 created_at=now,
                 updated_at=now,
-            )
-        )
+            ),
+            ExtensionInstallation(extension_id="security.extension"),
+        ])
         session.commit()
 
     app.dependency_overrides[get_current_user] = lambda: user
@@ -116,18 +204,22 @@ def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events
         execution_id = turn["executionId"]
 
         response = client.post(
-            f"/api/v1/executions/{execution_id}/events",
+            f"/api/v1/executions/{execution_id}/events/ingest",
+            headers={
+                "X-FAIR-Extension-Id": "security.extension",
+                "Authorization": "Bearer security-secret",
+            },
             json={
                 "events": [
                     {
-                        "producerSource": "security-test",
+                        "producerSource": "security.extension",
                         "producerEventId": "valid-before-invalid",
                         "type": "execution.started",
                         "schemaUri": "urn:fair:event:execution.started:v1",
                         "payload": {},
                     },
                     {
-                        "producerSource": "security-test",
+                        "producerSource": "security.extension",
                         "producerEventId": "invalid-message",
                         "type": "message.delta",
                         "schemaUri": "urn:fair:event:message.delta:v1",
@@ -141,11 +233,15 @@ def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events
         assert [event["type"] for event in events] == ["execution.created"]
 
         completed = client.post(
-            f"/api/v1/executions/{execution_id}/events",
+            f"/api/v1/executions/{execution_id}/events/ingest",
+            headers={
+                "X-FAIR-Extension-Id": "security.extension",
+                "Authorization": "Bearer security-secret",
+            },
             json={
                 "events": [
                     {
-                        "producerSource": "security-test",
+                        "producerSource": "security.extension",
                         "producerEventId": "complete",
                         "type": "execution.completed",
                         "schemaUri": "urn:fair:event:execution.completed:v1",
@@ -156,11 +252,15 @@ def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events
         )
         assert completed.status_code == 202, completed.text
         terminal = client.post(
-            f"/api/v1/executions/{execution_id}/events",
+            f"/api/v1/executions/{execution_id}/events/ingest",
+            headers={
+                "X-FAIR-Extension-Id": "security.extension",
+                "Authorization": "Bearer security-secret",
+            },
             json={
                 "events": [
                     {
-                        "producerSource": "security-test",
+                        "producerSource": "security.extension",
                         "producerEventId": "after-terminal",
                         "type": "execution.started",
                         "schemaUri": "urn:fair:event:execution.started:v1",
@@ -194,6 +294,7 @@ def test_interaction_resolution_is_user_owned_and_extension_cannot_finalize_it(t
                     created_at=now,
                     updated_at=now,
                 ),
+                ExtensionInstallation(extension_id="interaction.extension"),
             ]
         )
         session.commit()
@@ -210,7 +311,11 @@ def test_interaction_resolution_is_user_owned_and_extension_cannot_finalize_it(t
         interaction_id = str(uuid4())
 
         requested = client.post(
-            f"/api/v1/executions/{execution_id}/events",
+            f"/api/v1/executions/{execution_id}/events/ingest",
+            headers={
+                "X-FAIR-Extension-Id": "interaction.extension",
+                "Authorization": "Bearer interaction-secret",
+            },
             json={
                 "events": [
                     {

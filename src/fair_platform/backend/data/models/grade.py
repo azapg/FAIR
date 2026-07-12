@@ -61,8 +61,8 @@ class GradeProposal(Base):
             name="ck_grade_proposals_confidence_range",
         ),
         CheckConstraint(
-            "NOT (created_by_user_id IS NOT NULL AND created_by_extension_installation_id IS NOT NULL)",
-            name="ck_grade_proposals_single_actor",
+            "created_by_user_id IS NOT NULL OR created_by_extension_installation_id IS NOT NULL",
+            name="ck_grade_proposals_actor_present",
         ),
     )
 

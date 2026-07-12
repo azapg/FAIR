@@ -72,7 +72,7 @@ function interactionFromEvent(event: ExecutionEvent): Interaction {
   };
 }
 
-export function useV2ExecutionChat() {
+export function useExecutionChat() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);

@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from fair_platform.backend.data.models.artifact import Artifact
-from fair_platform.backend.data.models.artifacts_v2 import (
+from fair_platform.backend.data.models.artifact import (
     ArtifactPart,
     ArtifactVersion,
     ArtifactVersionState,

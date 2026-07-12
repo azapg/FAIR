@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+from alembic import command
 from alembic.script import ScriptDirectory
 
 from fair_platform.backend.data.migrations import (
@@ -50,6 +51,18 @@ def test_upgrade_rehearsal_head_to_head_is_idempotent(tmp_path: Path) -> None:
 
     assert first == _alembic_head()
     assert second == first
+
+
+def test_phase1_downgrade_and_reupgrade_rehearsal(tmp_path: Path) -> None:
+    db_path = tmp_path / "rehearsal_phase1_round_trip.sqlite"
+    database_url = f"sqlite:///{db_path.as_posix()}"
+
+    run_migrations_to_head(database_url)
+    command.downgrade(build_alembic_config(database_url), "20260307_0013")
+    assert _read_revision(db_path) == "20260307_0013"
+
+    run_migrations_to_head(database_url)
+    assert _read_revision(db_path) == _alembic_head()
 
 
 def test_build_alembic_config_skips_runtime_logging_reconfiguration() -> None:

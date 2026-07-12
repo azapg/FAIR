@@ -14,7 +14,7 @@ from fair_platform.backend.data.database import init_db
 from fair_platform.backend.data.migrations import run_migrations_to_head
 from fair_platform.backend.api.routers.users import router as users_router
 from fair_platform.backend.api.routers.courses import router as courses_router
-from fair_platform.backend.api.routers.artifacts import router as artifacts_router
+from fair_platform.backend.api.routers.legacy_artifacts import router as legacy_artifacts_router
 from fair_platform.backend.api.routers.assignments import router as assignments_router
 from fair_platform.backend.api.routers.plugins import router as plugins_router
 from fair_platform.backend.api.routers.submissions import router as submissions_router
@@ -31,7 +31,7 @@ from fair_platform.backend.api.routers.jobs import router as jobs_router
 from fair_platform.backend.api.routers.extensions import router as extensions_router
 from fair_platform.backend.api.routers.system import router as system_router
 from fair_platform.backend.api.routers.executions import router as executions_router
-from fair_platform.backend.api.routers.artifacts_v2 import router as artifacts_v2_router
+from fair_platform.backend.api.routers.artifacts import router as artifacts_router
 from fair_platform.backend.services.extension_registry import LocalExtensionRegistry
 from fair_platform.backend.services.job_dispatcher import JobDispatcher
 from fair_platform.backend.services.execution_outbox_dispatcher import (
@@ -238,7 +238,7 @@ app.add_middleware(
 
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
-app.include_router(artifacts_router, prefix="/api/artifacts", tags=["artifacts"])
+app.include_router(legacy_artifacts_router, prefix="/api/artifacts", tags=["artifacts"])
 app.include_router(assignments_router, prefix="/api/assignments", tags=["assignments"])
 app.include_router(plugins_router, prefix="/api/plugins", tags=["plugins", "workflows"])
 app.include_router(submissions_router, prefix="/api/submissions", tags=["submissions"])
@@ -253,7 +253,7 @@ app.include_router(jobs_router, prefix="/api/jobs", tags=["jobs"])
 app.include_router(extensions_router, prefix="/api/extensions", tags=["extensions"])
 app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
 app.include_router(executions_router, prefix="/api/v1", tags=["executions"])
-app.include_router(artifacts_v2_router, prefix="/api/v1", tags=["artifacts-v2"])
+app.include_router(artifacts_router, prefix="/api/v1", tags=["artifacts"])
 
 
 @app.get("/health")

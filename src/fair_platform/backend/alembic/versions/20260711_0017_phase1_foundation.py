@@ -1,4 +1,4 @@
-"""Create the explicit FAIR v2 Phase 1 foundation.
+"""Create the explicit FAIR 1.0 Phase 1 foundation.
 
 Revision ID: 20260711_0017
 Revises: 20260307_0013
@@ -46,6 +46,21 @@ def _create_immutability_guards() -> None:
         CREATE TRIGGER fair_artifact_part_immutable
         BEFORE UPDATE OR DELETE ON artifact_parts
         FOR EACH ROW EXECUTE FUNCTION fair_reject_terminal_artifact_part_mutation();
+        CREATE FUNCTION fair_validate_artifact_version_supersedes()
+        RETURNS trigger AS $$ BEGIN
+          IF NEW.supersedes_version_id IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM artifact_versions prior
+             WHERE prior.id = NEW.supersedes_version_id
+               AND prior.artifact_id = NEW.artifact_id
+               AND prior.ordinal < NEW.ordinal
+          ) THEN
+            RAISE EXCEPTION 'superseded ArtifactVersion must be an earlier version of the same Artifact';
+          END IF;
+          RETURN NEW;
+        END; $$ LANGUAGE plpgsql;
+        CREATE TRIGGER fair_artifact_version_supersedes
+        BEFORE INSERT OR UPDATE OF artifact_id, ordinal, supersedes_version_id ON artifact_versions
+        FOR EACH ROW EXECUTE FUNCTION fair_validate_artifact_version_supersedes();
         """)
         )
     else:
@@ -54,6 +69,8 @@ def _create_immutability_guards() -> None:
             "CREATE TRIGGER fair_artifact_version_immutable_delete BEFORE DELETE ON artifact_versions WHEN OLD.state IN ('finalized','abandoned') BEGIN SELECT RAISE(ABORT, 'terminal ArtifactVersion is immutable'); END",
             "CREATE TRIGGER fair_artifact_part_immutable_update BEFORE UPDATE ON artifact_parts WHEN EXISTS (SELECT 1 FROM artifact_versions WHERE id=OLD.artifact_version_id AND state IN ('finalized','abandoned')) BEGIN SELECT RAISE(ABORT, 'parts of terminal ArtifactVersion are immutable'); END",
             "CREATE TRIGGER fair_artifact_part_immutable_delete BEFORE DELETE ON artifact_parts WHEN EXISTS (SELECT 1 FROM artifact_versions WHERE id=OLD.artifact_version_id AND state IN ('finalized','abandoned')) BEGIN SELECT RAISE(ABORT, 'parts of terminal ArtifactVersion are immutable'); END",
+            "CREATE TRIGGER fair_artifact_version_supersedes_insert BEFORE INSERT ON artifact_versions WHEN NEW.supersedes_version_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM artifact_versions prior WHERE prior.id=NEW.supersedes_version_id AND prior.artifact_id=NEW.artifact_id AND prior.ordinal < NEW.ordinal) BEGIN SELECT RAISE(ABORT, 'superseded ArtifactVersion must be an earlier version of the same Artifact'); END",
+            "CREATE TRIGGER fair_artifact_version_supersedes_update BEFORE UPDATE OF artifact_id, ordinal, supersedes_version_id ON artifact_versions WHEN NEW.supersedes_version_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM artifact_versions prior WHERE prior.id=NEW.supersedes_version_id AND prior.artifact_id=NEW.artifact_id AND prior.ordinal < NEW.ordinal) BEGIN SELECT RAISE(ABORT, 'superseded ArtifactVersion must be an earlier version of the same Artifact'); END",
         ):
             op.execute(sa.text(statement))
 
@@ -187,15 +204,24 @@ def upgrade() -> None:
             ["installation_id"], ["extension_installations.id"], ondelete="RESTRICT"
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "installation_id",
-            "capability_definition_id",
-            "course_id",
-            "assignment_id",
-            "effect",
-            name="uq_extension_grants_scope_effect",
-        ),
     )
+    scope_columns = ("capability_definition_id", "course_id", "assignment_id")
+    for mask in range(8):
+        present_columns = [
+            column for bit, column in enumerate(scope_columns) if mask & (1 << bit)
+        ]
+        predicate = " AND ".join(
+            f"{column} IS {'NOT ' if mask & (1 << bit) else ''}NULL"
+            for bit, column in enumerate(scope_columns)
+        )
+        op.create_index(
+            f"uq_extension_grants_scope_{mask:03b}",
+            "extension_grants",
+            ["installation_id", "effect", *present_columns],
+            unique=True,
+            postgresql_where=sa.text(predicate),
+            sqlite_where=sa.text(predicate),
+        )
     op.create_index(
         "ix_extension_grants_resolution",
         "extension_grants",
@@ -422,7 +448,7 @@ def upgrade() -> None:
             name="ck_artifact_versions_size_nonnegative",
         ),
         sa.CheckConstraint(
-            "state = 'draft' OR (hash_algorithm IS NOT NULL AND content_hash IS NOT NULL AND size_bytes IS NOT NULL)",
+            "state != 'finalized' OR (hash_algorithm IS NOT NULL AND content_hash IS NOT NULL AND size_bytes IS NOT NULL)",
             name="ck_artifact_versions_terminal_integrity",
         ),
         sa.ForeignKeyConstraint(["artifact_id"], ["artifacts.id"], ondelete="RESTRICT"),
@@ -443,6 +469,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "artifact_id", "ordinal", name="uq_artifact_versions_artifact_ordinal"
+        ),
+        sa.UniqueConstraint(
+            "artifact_id", "id", name="uq_artifact_versions_artifact_id"
         ),
     )
     op.create_index(
@@ -849,8 +878,8 @@ def upgrade() -> None:
             name="ck_grade_proposals_confidence_range",
         ),
         sa.CheckConstraint(
-            "NOT (created_by_user_id IS NOT NULL AND created_by_extension_installation_id IS NOT NULL)",
-            name="ck_grade_proposals_single_actor",
+            "created_by_user_id IS NOT NULL OR created_by_extension_installation_id IS NOT NULL",
+            name="ck_grade_proposals_actor_present",
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
@@ -976,6 +1005,13 @@ def upgrade() -> None:
             ["id"],
             ondelete="RESTRICT",
         )
+        batch_op.create_foreign_key(
+            "fk_artifacts_current_version",
+            "artifact_versions",
+            ["id", "current_version_id"],
+            ["artifact_id", "id"],
+            ondelete="RESTRICT",
+        )
     _create_immutability_guards()
     # ### end Alembic commands ###
 
@@ -985,7 +1021,17 @@ def downgrade() -> None:
     if op.get_bind().dialect.name == "postgresql":
         op.execute(
             sa.text(
+                "DROP TRIGGER IF EXISTS fair_artifact_version_supersedes ON artifact_versions"
+            )
+        )
+        op.execute(
+            sa.text(
                 "DROP TRIGGER IF EXISTS fair_artifact_part_immutable ON artifact_parts"
+            )
+        )
+        op.execute(
+            sa.text(
+                "DROP FUNCTION IF EXISTS fair_validate_artifact_version_supersedes()"
             )
         )
         op.execute(
@@ -1009,9 +1055,12 @@ def downgrade() -> None:
             "fair_artifact_part_immutable_update",
             "fair_artifact_version_immutable_delete",
             "fair_artifact_version_immutable_update",
+            "fair_artifact_version_supersedes_update",
+            "fair_artifact_version_supersedes_insert",
         ):
             op.execute(sa.text(f"DROP TRIGGER IF EXISTS {name}"))
     with op.batch_alter_table("artifacts") as batch_op:
+        batch_op.drop_constraint("fk_artifacts_current_version", type_="foreignkey")
         batch_op.drop_constraint("fk_artifacts_owner_user_id", type_="foreignkey")
     op.drop_column("artifacts", "current_version_id")
     op.drop_column("artifacts", "access_policy")
@@ -1059,6 +1108,10 @@ def downgrade() -> None:
     op.drop_index("ix_flow_versions_published", table_name="flow_versions")
     op.drop_table("flow_versions")
     op.drop_index("ix_extension_grants_resolution", table_name="extension_grants")
+    for mask in range(8):
+        op.drop_index(
+            f"uq_extension_grants_scope_{mask:03b}", table_name="extension_grants"
+        )
     op.drop_table("extension_grants")
     op.drop_index("ix_flows_owner_archived", table_name="flows")
     op.drop_table("flows")

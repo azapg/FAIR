@@ -12,8 +12,9 @@ from sqlalchemy import (
     Index,
     String,
     Text,
-    UUID as SAUUID,
     UniqueConstraint,
+    UUID as SAUUID,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -39,7 +40,9 @@ class GrantDecision(str, Enum):
 class ExtensionInstallation(Base):
     __tablename__ = "extension_installations"
     __table_args__ = (
-        UniqueConstraint("extension_id", name="uq_extension_installations_extension_id"),
+        UniqueConstraint(
+            "extension_id", name="uq_extension_installations_extension_id"
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True, default=uuid4)
@@ -66,7 +69,9 @@ class ExtensionInstallation(Base):
     )
 
     capabilities: Mapped[list["CapabilityDefinition"]] = relationship(
-        "CapabilityDefinition", back_populates="installation", cascade="all, delete-orphan"
+        "CapabilityDefinition",
+        back_populates="installation",
+        cascade="all, delete-orphan",
     )
     grants: Mapped[list["ExtensionGrant"]] = relationship(
         "ExtensionGrant", back_populates="installation", cascade="all, delete-orphan"
@@ -94,9 +99,7 @@ class CapabilityDefinition(Base):
     capability_id: Mapped[str] = mapped_column(String(255), nullable=False)
     kind: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[str] = mapped_column(String(128), nullable=False)
-    input_schema_uri: Mapped[Optional[str]] = mapped_column(
-        String(2048), nullable=True
-    )
+    input_schema_uri: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     output_schema_uri: Mapped[Optional[str]] = mapped_column(
         String(2048), nullable=True
     )
@@ -137,13 +140,37 @@ class CapabilityDefinition(Base):
 class ExtensionGrant(Base):
     __tablename__ = "extension_grants"
     __table_args__ = (
-        UniqueConstraint(
-            "installation_id",
-            "capability_definition_id",
-            "course_id",
-            "assignment_id",
-            "effect",
-            name="uq_extension_grants_scope_effect",
+        *(
+            Index(
+                f"uq_extension_grants_scope_{mask:03b}",
+                "installation_id",
+                "effect",
+                *(
+                    column
+                    for bit, column in enumerate(
+                        ("capability_definition_id", "course_id", "assignment_id")
+                    )
+                    if mask & (1 << bit)
+                ),
+                unique=True,
+                postgresql_where=text(
+                    " AND ".join(
+                        f"{column} IS {'NOT ' if mask & (1 << bit) else ''}NULL"
+                        for bit, column in enumerate(
+                            ("capability_definition_id", "course_id", "assignment_id")
+                        )
+                    )
+                ),
+                sqlite_where=text(
+                    " AND ".join(
+                        f"{column} IS {'NOT ' if mask & (1 << bit) else ''}NULL"
+                        for bit, column in enumerate(
+                            ("capability_definition_id", "course_id", "assignment_id")
+                        )
+                    )
+                ),
+            )
+            for mask in range(8)
         ),
         Index(
             "ix_extension_grants_resolution",

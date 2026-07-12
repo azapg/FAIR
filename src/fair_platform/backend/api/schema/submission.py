@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from fair_platform.backend.data.models.submission import SubmissionStatus
 from fair_platform.backend.api.schema.submitter import SubmitterRead
-from fair_platform.backend.api.schema.artifact import ArtifactRead
+from fair_platform.backend.api.schema.legacy_artifact import ArtifactRead
 from fair_platform.backend.api.schema.submission_result import SubmissionResultRead
 from fair_platform.backend.api.schema.utils import schema_config
 

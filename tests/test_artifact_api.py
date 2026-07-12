@@ -4,12 +4,17 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.data.models import ExtensionClient, User, UserRole
+from fair_platform.backend.data.models import (
+    ExtensionClient,
+    ExtensionInstallation,
+    User,
+    UserRole,
+)
 from fair_platform.backend.main import app
 from fair_platform.backend.services.extension_auth import hash_extension_secret
 
 
-def test_v2_artifact_api_creates_draft_finalizes_and_reads_hashed_version(test_db):
+def test_artifact_api_creates_draft_finalizes_and_reads_hashed_version(test_db):
     user = User(
         id=uuid4(),
         name="Artifact API user",
@@ -113,6 +118,7 @@ def test_extension_can_create_a_provenance_stamped_artifact_for_its_execution(te
                     created_at=now,
                     updated_at=now,
                 ),
+                ExtensionInstallation(extension_id="artifact.extension"),
             ]
         )
         session.commit()

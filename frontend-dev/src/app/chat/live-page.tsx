@@ -11,10 +11,10 @@ import { Button } from "@/components/ui/button";
 import { ChatInput } from "@/components/chat/chat-input";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ElicitationPanel } from "@/components/chat/elicitation-panel";
-import { useV2ExecutionChat } from "@/hooks/use-v2-execution-chat";
+import { useExecutionChat } from "@/hooks/use-execution-chat";
 
 export default function LiveChatPage() {
-  const live = useV2ExecutionChat();
+  const live = useExecutionChat();
   const pending = live.pendingInteraction;
   const elicitation = pending
     ? {
@@ -38,7 +38,7 @@ export default function LiveChatPage() {
       <div className="flex h-screen w-full flex-col bg-background">
         <header className="flex h-14 shrink-0 items-center justify-between border-b px-6">
           <div>
-            <h1 className="text-sm font-semibold">FAIR v2 live execution</h1>
+            <h1 className="text-sm font-semibold">FAIR live execution</h1>
             <p className="text-xs text-muted-foreground">
               {live.executionId ? `Execution ${live.executionId.slice(0, 8)} · ${live.status}` : "No active Execution"}
             </p>
@@ -104,7 +104,7 @@ export default function LiveChatPage() {
                 <ChatInput
                   onSend={(content) => void live.send(content)}
                   disabled={live.status === "streaming" || Boolean(pending)}
-                  placeholder={pending ? "Awaiting your response above…" : "Ask the v2 Execution service…"}
+                  placeholder={pending ? "Awaiting your response above…" : "Ask the Execution service…"}
                 />
               </div>
             </div>

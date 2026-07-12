@@ -4,20 +4,37 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.data.models import ExtensionClient, User, UserRole
+from fair_platform.backend.data.models import (
+    ExtensionClient,
+    ExtensionInstallation,
+    User,
+    UserRole,
+)
 from fair_platform.backend.main import app
 from fair_platform.backend.services.extension_auth import hash_extension_secret
 
 
-def test_v2_turn_execution_and_event_replay_api(test_db):
+def test_turn_execution_and_event_replay_api(test_db):
     user = User(
         id=uuid4(),
-        name="API v2 user",
+        name="Execution API user",
         email=f"{uuid4()}@example.test",
         role=UserRole.student,
     )
     with test_db() as session:
-        session.add(user)
+        now = datetime.now(timezone.utc)
+        session.add_all([
+            user,
+            ExtensionInstallation(extension_id="agent.default"),
+            ExtensionClient(
+                extension_id="agent.default",
+                secret_hash=hash_extension_secret("default-secret"),
+                scopes=["executions:events"],
+                enabled=True,
+                created_at=now,
+                updated_at=now,
+            ),
+        ])
         session.commit()
 
     app.dependency_overrides[get_current_user] = lambda: user
@@ -55,18 +72,22 @@ def test_v2_turn_execution_and_event_replay_api(test_db):
         message_id = str(uuid4())
         part_id = str(uuid4())
         event_response = client.post(
-            f"/api/v1/executions/{turn['executionId']}/events",
+            f"/api/v1/executions/{turn['executionId']}/events/ingest",
+            headers={
+                "X-FAIR-Extension-Id": "agent.default",
+                "Authorization": "Bearer default-secret",
+            },
             json={
                 "events": [
                     {
-                        "producerSource": "api-test",
+                        "producerSource": "agent.default",
                         "producerEventId": "started",
                         "type": "execution.started",
                         "schemaUri": "urn:fair:event:execution.started:v1",
                         "payload": {},
                     },
                     {
-                        "producerSource": "api-test",
+                        "producerSource": "agent.default",
                         "producerEventId": "message-started",
                         "type": "message.started",
                         "schemaUri": "urn:fair:event:message.started:v1",
@@ -78,7 +99,7 @@ def test_v2_turn_execution_and_event_replay_api(test_db):
                         },
                     },
                     {
-                        "producerSource": "api-test",
+                        "producerSource": "agent.default",
                         "producerEventId": "message-delta",
                         "type": "message.delta",
                         "schemaUri": "urn:fair:event:message.delta:v1",
@@ -91,14 +112,14 @@ def test_v2_turn_execution_and_event_replay_api(test_db):
                         },
                     },
                     {
-                        "producerSource": "api-test",
+                        "producerSource": "agent.default",
                         "producerEventId": "message-completed",
                         "type": "message.completed",
                         "schemaUri": "urn:fair:event:message.completed:v1",
                         "payload": {"messageId": message_id},
                     },
                     {
-                        "producerSource": "api-test",
+                        "producerSource": "agent.default",
                         "producerEventId": "completed",
                         "type": "execution.completed",
                         "schemaUri": "urn:fair:event:execution.completed:v1",
@@ -136,6 +157,7 @@ def test_extension_event_ingestion_requires_scope_and_matching_installation(test
         session.add_all(
             [
                 user,
+                ExtensionInstallation(extension_id="mock.extension"),
                 ExtensionClient(
                     extension_id="mock.extension",
                     secret_hash=hash_extension_secret("extension-secret"),
