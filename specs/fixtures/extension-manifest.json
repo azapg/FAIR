@@ -1,0 +1,40 @@
+{
+  "manifestVersion": "1",
+  "extensionId": "fair.example.reviewer",
+  "displayName": "Example Reviewer",
+  "version": "1.0.0",
+  "dispatchUrl": "https://extensions.example.test/executions",
+  "healthUrl": "https://extensions.example.test/health",
+  "capabilities": [
+    {
+      "capabilityId": "review.assignment",
+      "kind": "agent",
+      "version": "1.0.0",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "urn:fair:example:review-input",
+        "type": "object",
+        "properties": {"submissionId": {"type": "string", "format": "uuid"}},
+        "required": ["submissionId"],
+        "additionalProperties": false
+      },
+      "configSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {"tone": {"type": "string", "enum": ["concise", "detailed"]}},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {"feedback": {"type": "string"}},
+        "required": ["feedback"],
+        "additionalProperties": false
+      },
+      "requestedScopes": ["artifacts:read"],
+      "declaredEffects": ["feedback:write"],
+      "supportsStreaming": true,
+      "supportsCancellation": true
+    }
+  ]
+}

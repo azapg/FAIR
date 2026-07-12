@@ -28,10 +28,12 @@ from fair_platform.backend.api.routers.version import router as version_router
 from fair_platform.backend.api.routers.rubrics import router as rubrics_router
 from fair_platform.backend.api.routers.enrollments import router as enrollments_router
 from fair_platform.backend.api.routers.jobs import router as jobs_router
-from fair_platform.backend.api.routers.extensions import router as extensions_router
+from fair_platform.backend.api.routers.legacy_extensions import router as extensions_router
+from fair_platform.backend.api.routers.extensions import router as extension_resources_router
 from fair_platform.backend.api.routers.system import router as system_router
 from fair_platform.backend.api.routers.executions import router as executions_router
 from fair_platform.backend.api.routers.artifacts import router as artifacts_router
+from fair_platform.backend.api.routers.flows import router as flows_router
 from fair_platform.backend.services.extension_registry import LocalExtensionRegistry
 from fair_platform.backend.services.job_dispatcher import JobDispatcher
 from fair_platform.backend.services.execution_outbox_dispatcher import (
@@ -254,6 +256,12 @@ app.include_router(extensions_router, prefix="/api/extensions", tags=["extension
 app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
 app.include_router(executions_router, prefix="/api/v1", tags=["executions"])
 app.include_router(artifacts_router, prefix="/api/v1", tags=["artifacts"])
+app.include_router(flows_router, prefix="/api/v1", tags=["flows"])
+app.include_router(
+    extension_resources_router,
+    prefix="/api/v1/extensions",
+    tags=["extensions"],
+)
 
 
 @app.get("/health")
