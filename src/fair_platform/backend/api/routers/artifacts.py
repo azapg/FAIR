@@ -1,381 +1,483 @@
-from uuid import UUID
-from pathlib import Path
-from typing import List, Optional
+from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Query, Request
-from sqlalchemy.orm import Session
-from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
+import hashlib
+from uuid import UUID, uuid4
 
-from fair_platform.backend.data.database import session_dependency
-from fair_platform.backend.data.models.artifact import AccessLevel, ArtifactStatus
-from fair_platform.backend.api.schema.artifact import (
-    ArtifactRead,
-    ArtifactUpdate,
-)
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, selectinload
+
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.core.security.dependencies import require_capability, get_artifact_download_user
-from fair_platform.backend.core.security.permissions import has_capability
-from fair_platform.backend.data.models.user import User
-from fair_platform.backend.services.artifact_manager import get_artifact_manager
-from fair_platform.backend.storage.provider import LocalStorageProvider, MultiStorageProvider, parse_storage_uri
-from fair_platform.backend.data.storage import storage
+from fair_platform.backend.core.security.dependencies import require_extension_client
+from fair_platform.backend.api.schema.artifact import (
+    ArtifactCreate,
+    ExecutionArtifactCreate,
+    ArtifactLinkCreate,
+    ArtifactLinkRead,
+    ArtifactPartRead,
+    ArtifactRead,
+    ArtifactVersionCreate,
+    ArtifactVersionRead,
+)
+from fair_platform.backend.data.database import session_dependency
+from fair_platform.backend.data.models import (
+    Artifact,
+    Execution,
+    ExecutionEvent,
+    ExtensionClient,
+    ExtensionInstallation,
+    ExtensionInstallationStatus,
+    User,
+)
+from fair_platform.backend.data.models.artifact import (
+    ArtifactLink,
+    ArtifactPart,
+    ArtifactVersion,
+    ArtifactLinkTargetType,
+)
+from fair_platform.backend.services.artifact_version_service import (
+    ArtifactVersionError,
+    ArtifactVersionNotFound,
+    finalize_artifact_version,
+)
+from fair_platform.backend.services.execution_projection import (
+    ExecutionProjectionError,
+    append_and_project_event,
+)
+from fair_platform.backend.services.execution_store import (
+    EventIdentityConflict,
+    ExecutionStoreError,
+)
+from fair_platform.backend.core.security.permissions import has_capability_or_owner
+
 
 router = APIRouter()
 
-@router.post(
-    "/",
-    status_code=status.HTTP_201_CREATED,
-    response_model=List[ArtifactRead],
-    dependencies=[Depends(require_capability("create_artifact"))],
-)
+
+def _enum_value(value: object) -> str:
+    return value.value if hasattr(value, "value") else str(value)
+
+
+def _assert_artifact_access(artifact: Artifact | None, user: User) -> Artifact:
+    if artifact is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artifact not found")
+    owner_id = artifact.owner_user_id or artifact.creator_id
+    if not has_capability_or_owner(user, "view_all_artifacts", owner_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Artifact access denied")
+    return artifact
+
+
+def _part_read(part: ArtifactPart) -> ArtifactPartRead:
+    return ArtifactPartRead(
+        id=part.id,
+        artifact_version_id=part.artifact_version_id,
+        ordinal=part.ordinal,
+        name=part.name,
+        role=part.role,
+        media_type=part.media_type,
+        schema_uri=part.schema_uri,
+        storage_uri=part.storage_uri,
+        inline_json=part.inline_json,
+        content_hash=part.content_hash,
+        size_bytes=part.size_bytes,
+        annotations=part.annotations,
+        hash_algorithm=part.hash_algorithm,
+        created_at=part.created_at,
+    )
+
+
+def _version_read(version: ArtifactVersion) -> ArtifactVersionRead:
+    return ArtifactVersionRead(
+        id=version.id,
+        artifact_id=version.artifact_id,
+        ordinal=version.ordinal,
+        state=_enum_value(version.state),
+        media_type=version.media_type,
+        schema_uri=version.schema_uri,
+        metadata=version.metadata_json,
+        created_by_user_id=version.created_by_user_id,
+        created_by_extension_installation_id=version.created_by_extension_installation_id,
+        producing_execution_id=version.producing_execution_id,
+        hash_algorithm=version.hash_algorithm,
+        content_hash=version.content_hash,
+        size_bytes=version.size_bytes,
+        provenance=version.provenance,
+        supersedes_version_id=version.supersedes_version_id,
+        created_at=version.created_at,
+        finalized_at=version.finalized_at,
+        abandoned_at=version.abandoned_at,
+        parts=[_part_read(part) for part in version.parts],
+        links=[_link_read(link) for link in version.links if link.retracted_at is None],
+    )
+
+
+def _link_read(link: ArtifactLink) -> ArtifactLinkRead:
+    return ArtifactLinkRead(
+        id=link.id,
+        artifact_version_id=link.artifact_version_id,
+        relationship=_enum_value(link.link_relationship),
+        target_type=_enum_value(link.target_type),
+        target_id=link.target_id,
+        metadata=link.metadata_json,
+        created_by_execution_id=link.created_by_execution_id,
+        created_at=link.created_at,
+        retracted_at=link.retracted_at,
+    )
+
+
+def _artifact_read(artifact: Artifact) -> ArtifactRead:
+    return ArtifactRead(
+        id=artifact.id,
+        title=artifact.title,
+        artifact_type=artifact.artifact_type,
+        kind_uri=artifact.kind_uri,
+        description=artifact.description,
+        owner_user_id=artifact.owner_user_id,
+        creator_id=artifact.creator_id,
+        sensitivity=artifact.sensitivity,
+        access_policy=artifact.access_policy,
+        current_version_id=artifact.current_version_id,
+        created_at=artifact.created_at,
+        updated_at=artifact.updated_at,
+        versions=[_version_read(version) for version in artifact.versions],
+    )
+
+
+def _load_artifact(session: Session, artifact_id: UUID, user: User) -> Artifact:
+    artifact = session.scalar(
+        select(Artifact)
+        .where(Artifact.id == artifact_id)
+        .options(selectinload(Artifact.versions).selectinload(ArtifactVersion.parts))
+    )
+    return _assert_artifact_access(artifact, user)
+
+
+@router.post("/artifacts", response_model=ArtifactRead, status_code=status.HTTP_201_CREATED)
 def create_artifact(
-    files: List[UploadFile],
-    db: Session = Depends(session_dependency),
+    payload: ArtifactCreate,
     current_user: User = Depends(get_current_user),
-):
-    """
-    Upload one or more artifacts.
-    
-    Creates artifacts in 'pending' status. They must be attached to
-    assignments or submissions to become 'attached'.
-    """
-    manager = get_artifact_manager(db)
-    
-    try:
-        artifacts = manager.create_artifacts_bulk(files, creator=current_user)
-        db.commit()
-        return artifacts
-    except Exception as e:
-        db.rollback()
+    db: Session = Depends(session_dependency),
+) -> ArtifactRead:
+    artifact = Artifact(
+        id=uuid4(),
+        title=payload.title,
+        artifact_type=payload.kind_uri,
+        kind_uri=payload.kind_uri,
+        description=payload.description,
+        sensitivity=payload.sensitivity,
+        access_policy=payload.access_policy,
+        creator_id=current_user.id,
+        owner_user_id=current_user.id,
+    )
+    db.add(artifact)
+    db.commit()
+    db.refresh(artifact)
+    return _artifact_read(artifact)
+
+
+@router.post(
+    "/executions/{execution_id}/artifacts",
+    response_model=ArtifactRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_execution_artifact(
+    execution_id: UUID,
+    payload: ExecutionArtifactCreate,
+    extension_client: ExtensionClient = Depends(
+        require_extension_client(("artifacts:write",))
+    ),
+    db: Session = Depends(session_dependency),
+) -> ArtifactRead:
+    execution = db.get(Execution, execution_id)
+    if execution is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Execution not found")
+    installation = db.get(ExtensionInstallation, execution.extension_installation_id)
+    if (
+        installation is None
+        or installation.extension_id != extension_client.extension_id
+        or _enum_value(installation.status) != ExtensionInstallationStatus.enabled.value
+    ):
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Extension is not the producing installation for this Execution",
+        )
+    if execution.initiated_by_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Execution has no user owner for artifact access policy",
+        )
+    request_id = payload.client_request_id or str(uuid4())
+    request_fingerprint = hashlib.sha256(request_id.encode("utf-8")).hexdigest()
+    producer_event_id = f"artifact-created:{execution.id}:{request_fingerprint}"
+    existing_event = db.scalar(
+        select(ExecutionEvent).where(
+            ExecutionEvent.producer_source == extension_client.extension_id,
+            ExecutionEvent.producer_event_id == producer_event_id,
+        )
+    )
+    if existing_event is not None:
+        try:
+            existing_artifact_id = UUID(str(existing_event.payload["artifact_id"]))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Existing artifact request has invalid provenance",
+            ) from exc
+        owner = db.get(User, execution.initiated_by_user_id)
+        if owner is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Execution owner no longer exists",
+            )
+        return _artifact_read(_load_artifact(db, existing_artifact_id, owner))
+    if payload.version.supersedes_version_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="execution artifact creation cannot supersede a version from another logical artifact",
         )
 
+    artifact = Artifact(
+        id=uuid4(),
+        title=payload.title,
+        artifact_type=payload.kind_uri,
+        kind_uri=payload.kind_uri,
+        description=payload.description,
+        sensitivity=payload.sensitivity,
+        access_policy=payload.access_policy,
+        creator_id=execution.initiated_by_user_id,
+        owner_user_id=execution.initiated_by_user_id,
+    )
+    version = ArtifactVersion(
+        id=uuid4(),
+        artifact_id=artifact.id,
+        ordinal=1,
+        media_type=payload.version.media_type,
+        schema_uri=payload.version.schema_uri,
+        metadata_json=payload.version.metadata,
+        provenance=payload.version.provenance,
+        created_by_extension_installation_id=installation.id,
+        producing_execution_id=execution.id,
+    )
+    version.parts = [
+        ArtifactPart(
+            id=uuid4(),
+            ordinal=index,
+            name=part.name,
+            role=part.role,
+            media_type=part.media_type,
+            schema_uri=part.schema_uri,
+            storage_uri=part.storage_uri,
+            inline_json=part.inline_json,
+            content_hash=part.content_hash,
+            size_bytes=part.size_bytes,
+            annotations=part.annotations,
+        )
+        for index, part in enumerate(payload.version.parts, start=1)
+    ]
+    db.add_all([artifact, version])
+    try:
+        if payload.finalize:
+            finalize_artifact_version(db, version.id)
+        append_and_project_event(
+            db,
+            execution_id=execution.id,
+            producer_source=extension_client.extension_id,
+            producer_event_id=producer_event_id,
+            event_type="artifact.created",
+            schema_uri="urn:fair:event:artifact.created:v1",
+            payload={
+                "artifact_id": str(artifact.id),
+                "artifact_version_id": str(version.id),
+                "state": _enum_value(version.state),
+                "kind_uri": artifact.kind_uri,
+            },
+        )
+        db.commit()
+    except (ArtifactVersionError, ArtifactVersionNotFound, EventIdentityConflict,
+            ExecutionStoreError, ExecutionProjectionError) as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    owner = db.get(User, execution.initiated_by_user_id)
+    if owner is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Execution owner no longer exists",
+        )
+    return _artifact_read(_load_artifact(db, artifact.id, owner))
 
-@router.get("/", response_model=List[ArtifactRead])
-def list_artifacts(
-    creator_id: Optional[UUID] = Query(None),
-    course_id: Optional[UUID] = Query(None),
-    assignment_id: Optional[UUID] = Query(None),
-    status_filter: Optional[str] = Query(None, alias="status"),
-    access_level: Optional[str] = Query(None),
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    List artifacts with optional filters.
-    
-    Filters are applied before permission checking, so users will only
-    see artifacts they have permission to view.
-    """
-    manager = get_artifact_manager(db)
-    
-    filters = {}
-    if creator_id:
-        filters["creator_id"] = creator_id
-    if course_id:
-        filters["course_id"] = course_id
-    if assignment_id:
-        filters["assignment_id"] = assignment_id
-    if status_filter:
-        filters["status"] = status_filter
-    if access_level:
-        filters["access_level"] = access_level
 
-    return manager.list_artifacts(user=current_user, filters=filters)
-
-
-@router.get("/{artifact_id}", response_model=ArtifactRead)
+@router.get("/artifacts/{artifact_id}", response_model=ArtifactRead)
 def get_artifact(
     artifact_id: UUID,
-    db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
-):
-    """Get specific artifact with permission check."""
-    manager = get_artifact_manager(db)
-    
-    try:
-        return manager.get_artifact(artifact_id, current_user)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/{artifact_id}/download")
-def download_artifact(
-    artifact_id: UUID,
-    request: Request,
     db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_artifact_download_user),
-):
-    """Redirect to the original derivative download URL with permission enforcement."""
-    manager = get_artifact_manager(db)
+) -> ArtifactRead:
+    return _artifact_read(_load_artifact(db, artifact_id, current_user))
 
-    artifact = manager.get_artifact(artifact_id, current_user)
-    derivative = artifact.original_derivative
-    if not derivative:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Artifact file not found",
-        )
 
-    scheme, key = parse_storage_uri(derivative.storage_uri)
-    if isinstance(manager.storage_provider, MultiStorageProvider):
-        url = manager.storage_provider.get_provider(scheme).get_presigned_url(key)
-    else:
-        url = manager.storage_provider.get_presigned_url(key)
-    accept = request.headers.get("accept", "")
-    if "application/json" in accept:
-        return JSONResponse({"url": url})
-    return RedirectResponse(
-        url=url,
-        status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+@router.post(
+    "/artifacts/{artifact_id}/versions",
+    response_model=ArtifactVersionRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_artifact_version(
+    artifact_id: UUID,
+    payload: ArtifactVersionCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ArtifactVersionRead:
+    artifact = _load_artifact(db, artifact_id, current_user)
+    last_ordinal = db.scalar(
+        select(func.max(ArtifactVersion.ordinal)).where(ArtifactVersion.artifact_id == artifact.id)
     )
-
-
-@router.get("/{artifact_id}/derivatives/{derivative_id}/download")
-def download_artifact_derivative(
-    artifact_id: UUID,
-    derivative_id: UUID,
-    request: Request,
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    manager = get_artifact_manager(db)
-    artifact = manager.get_artifact(artifact_id, current_user)
-    derivative = next((d for d in artifact.derivatives if d.id == derivative_id), None)
-    if not derivative:
-        raise HTTPException(status_code=404, detail="Artifact derivative not found")
-
-    scheme, key = parse_storage_uri(derivative.storage_uri)
-    if isinstance(manager.storage_provider, MultiStorageProvider):
-        url = manager.storage_provider.get_provider(scheme).get_presigned_url(key)
-    else:
-        url = manager.storage_provider.get_presigned_url(key)
-    accept = request.headers.get("accept", "")
-    if "application/json" in accept:
-        return JSONResponse({"url": url})
-    return RedirectResponse(
-        url=url,
-        status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+    version = ArtifactVersion(
+        id=uuid4(),
+        artifact_id=artifact.id,
+        ordinal=int(last_ordinal or 0) + 1,
+        media_type=payload.media_type,
+        schema_uri=payload.schema_uri,
+        metadata_json=payload.metadata,
+        provenance=payload.provenance,
+        supersedes_version_id=payload.supersedes_version_id,
+        created_by_user_id=current_user.id,
     )
-
-
-@router.get("/storage/local/{key:path}")
-def download_local_storage_object(
-    key: str,
-    current_user: User = Depends(get_current_user),
-):
-    del current_user
-    provider = LocalStorageProvider(uploads_dir=storage.uploads_dir, api_prefix="/api/artifacts/storage/local")
-    file_path = provider.uploads_dir / Path(key)
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Stored file not found")
-    return FileResponse(file_path)
-
-
-@router.put("/{artifact_id}", response_model=ArtifactRead)
-def update_artifact(
-    artifact_id: UUID,
-    payload: ArtifactUpdate,
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    """Update artifact metadata with permission check."""
-    manager = get_artifact_manager(db)
-    
-    try:
-        access_level = AccessLevel(payload.access_level) if payload.access_level else None
-        status_val = ArtifactStatus(payload.status) if payload.status else None
-        
-        artifact = manager.update_artifact(
-            artifact_id=artifact_id,
-            user=current_user,
-            title=payload.title,
-            meta=payload.meta,
-            access_level=access_level,
-            status=status_val,
-            course_id=payload.course_id,
-            assignment_id=payload.assignment_id,
+    version.parts = [
+        ArtifactPart(
+            id=uuid4(),
+            ordinal=index,
+            name=part.name,
+            role=part.role,
+            media_type=part.media_type,
+            schema_uri=part.schema_uri,
+            storage_uri=part.storage_uri,
+            inline_json=part.inline_json,
+            content_hash=part.content_hash,
+            size_bytes=part.size_bytes,
+            annotations=part.annotations,
         )
-        db.commit()
-        return artifact
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        for index, part in enumerate(payload.parts, start=1)
+    ]
+    db.add(version)
+    db.commit()
+    db.refresh(version)
+    return _version_read(version)
 
 
-@router.delete("/{artifact_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_artifact(
-    artifact_id: UUID,
-    hard_delete: bool = Query(False, description="Permanently delete (admin only)"),
-    db: Session = Depends(session_dependency),
+@router.get("/artifact-versions/{version_id}", response_model=ArtifactVersionRead)
+def get_artifact_version(
+    version_id: UUID,
     current_user: User = Depends(get_current_user),
-):
-    """
-    Delete artifact (soft delete by default, hard delete for admins).
-    
-    Soft delete marks the artifact as archived but preserves the file.
-    Hard delete removes both the database record and the physical file.
-    """
-    manager = get_artifact_manager(db)
-    
-    try:
-        # TODO: I do not like this API, it is doing too much logic here
-        manager.delete_artifact(artifact_id, current_user, hard_delete=hard_delete)
-        db.commit()
-        return None
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ============================================================================
-# ATTACHMENT ENDPOINTS
-# ============================================================================
-
-@router.post("/{artifact_id}/attach/assignment/{assignment_id}", response_model=ArtifactRead)
-def attach_artifact_to_assignment(
-    artifact_id: UUID,
-    assignment_id: UUID,
     db: Session = Depends(session_dependency),
+) -> ArtifactVersionRead:
+    version = db.scalar(
+        select(ArtifactVersion)
+        .where(ArtifactVersion.id == version_id)
+        .options(selectinload(ArtifactVersion.parts), selectinload(ArtifactVersion.artifact))
+    )
+    if version is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ArtifactVersion not found")
+    _assert_artifact_access(version.artifact, current_user)
+    return _version_read(version)
+
+
+def _load_version_for_user(session: Session, version_id: UUID, user: User) -> ArtifactVersion:
+    version = session.scalar(
+        select(ArtifactVersion)
+        .where(ArtifactVersion.id == version_id)
+        .options(selectinload(ArtifactVersion.parts), selectinload(ArtifactVersion.artifact))
+    )
+    if version is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ArtifactVersion not found")
+    _assert_artifact_access(version.artifact, user)
+    return version
+
+
+@router.get(
+    "/artifact-versions/{version_id}/links",
+    response_model=list[ArtifactLinkRead],
+)
+def list_artifact_links(
+    version_id: UUID,
     current_user: User = Depends(get_current_user),
-):
-    """
-    Attach existing artifact to an assignment.
-    
-    Updates the artifact's status to 'attached' if it was 'pending'.
-    """
-    manager = get_artifact_manager(db)
-    
-    try:
-        artifact = manager.attach_to_assignment(artifact_id, assignment_id, current_user)
-        db.commit()
-        return artifact
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/{artifact_id}/attach/submission/{submission_id}", response_model=ArtifactRead)
-def attach_artifact_to_submission(
-    artifact_id: UUID,
-    submission_id: UUID,
     db: Session = Depends(session_dependency),
+) -> list[ArtifactLinkRead]:
+    version = _load_version_for_user(db, version_id, current_user)
+    return [_link_read(link) for link in version.links if link.retracted_at is None]
+
+
+@router.post(
+    "/artifact-versions/{version_id}/links",
+    response_model=ArtifactLinkRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_artifact_link(
+    version_id: UUID,
+    payload: ArtifactLinkCreate,
     current_user: User = Depends(get_current_user),
-):
-    """
-    Attach existing artifact to a submission.
-    
-    Updates the artifact's status to 'attached' if it was 'pending'.
-    """
-    manager = get_artifact_manager(db)
-    
-    try:
-        artifact = manager.attach_to_submission(artifact_id, submission_id, current_user)
-        db.commit()
-        return artifact
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/{artifact_id}/detach/assignment/{assignment_id}", response_model=ArtifactRead)
-def detach_artifact_from_assignment(
-    artifact_id: UUID,
-    assignment_id: UUID,
     db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Detach artifact from assignment.
-    
-    If artifact has no other attachments, it will be marked as 'orphaned'.
-    """
-    manager = get_artifact_manager(db)
-    
-    try:
-        artifact = manager.detach_from_assignment(artifact_id, assignment_id, current_user)
-        db.commit()
-        return artifact
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/{artifact_id}/detach/submission/{submission_id}", response_model=ArtifactRead)
-def detach_artifact_from_submission(
-    artifact_id: UUID,
-    submission_id: UUID,
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Detach artifact from submission.
-    
-    If artifact has no other attachments, it will be marked as 'orphaned'.
-    """
-    manager = get_artifact_manager(db)
-    
-    try:
-        artifact = manager.detach_from_submission(artifact_id, submission_id, current_user)
-        db.commit()
-        return artifact
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ============================================================================
-# ADMIN ENDPOINTS
-# ============================================================================
-
-@router.post("/admin/cleanup-orphaned")
-def cleanup_orphaned_artifacts(
-    older_than_days: int = Query(7, description="Clean artifacts orphaned for N days"),
-    hard_delete: bool = Query(False, description="Permanently delete files (requires admin)"),
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Cleanup orphaned artifacts (admin only).
-    
-    Removes artifacts that have been in 'orphaned' status for longer than
-    the specified number of days. By default, soft deletes (archives) them.
-    """
-    if not has_capability(current_user, "cleanup_orphaned_artifacts"):
-        raise HTTPException(
-            status_code=403,
-            detail="Only admins can cleanup orphaned artifacts"
+) -> ArtifactLinkRead:
+    version = _load_version_for_user(db, version_id, current_user)
+    if payload.target_type is ArtifactLinkTargetType.artifact_version:
+        target_version = db.scalar(
+            select(ArtifactVersion)
+            .where(ArtifactVersion.id == payload.target_id)
+            .options(selectinload(ArtifactVersion.artifact))
         )
-    
-    manager = get_artifact_manager(db)
-    
+        if target_version is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link target not found")
+        _assert_artifact_access(target_version.artifact, current_user)
+    if payload.created_by_execution_id is not None:
+        execution = db.get(Execution, payload.created_by_execution_id)
+        if execution is None or (
+            execution.initiated_by_user_id != current_user.id
+            and (execution.thread is None or execution.thread.owner_user_id != current_user.id)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Execution provenance is not owned by the current user",
+            )
+    link = ArtifactLink(
+        id=uuid4(),
+        artifact_version_id=version.id,
+        link_relationship=payload.relationship,
+        target_type=payload.target_type,
+        target_id=payload.target_id,
+        metadata_json=payload.metadata,
+        created_by_execution_id=payload.created_by_execution_id,
+    )
+    db.add(link)
     try:
-        count = manager.cleanup_orphaned(older_than_days, hard_delete)
         db.commit()
-        return {
-            "cleaned_up": count,
-            "hard_delete": hard_delete,
-            "older_than_days": older_than_days
-        }
-    except Exception as e:
+    except IntegrityError as exc:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Artifact link already exists") from exc
+    db.refresh(link)
+    return _link_read(link)
+
+
+@router.post("/artifact-versions/{version_id}/finalize", response_model=ArtifactVersionRead)
+def finalize_artifact_version_route(
+    version_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ArtifactVersionRead:
+    version = db.scalar(
+        select(ArtifactVersion)
+        .where(ArtifactVersion.id == version_id)
+        .options(selectinload(ArtifactVersion.parts), selectinload(ArtifactVersion.artifact))
+    )
+    if version is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ArtifactVersion not found")
+    _assert_artifact_access(version.artifact, current_user)
+    try:
+        finalized = finalize_artifact_version(db, version.id)
+        db.commit()
+    except (ArtifactVersionError, ArtifactVersionNotFound) as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    db.refresh(finalized)
+    return _version_read(finalized)
 
 
 __all__ = ["router"]

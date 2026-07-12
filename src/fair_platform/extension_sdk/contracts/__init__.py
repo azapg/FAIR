@@ -1,3 +1,8 @@
+from fair_platform.extension_sdk.contracts.events import (
+    ExecutionEventBatch,
+    ExecutionEventCreate,
+    ExecutionEventRead,
+)
 from fair_platform.extension_sdk.contracts.extension import (
     ExtensionRead,
     ExtensionRegisterRequest,
@@ -17,6 +22,18 @@ from fair_platform.extension_sdk.contracts.job import (
     ResultPayload,
     TokenPayload,
 )
+from fair_platform.extension_sdk.contracts.plugin import (
+    GraderSubmissionResult,
+    PluginDescriptor,
+    PluginType,
+    ReviewerSubmissionResult,
+    SubmissionArtifactRef,
+    SubmissionExecutionInput,
+    SubmissionPipelineState,
+    TranscriberSubmissionResult,
+    WorkflowStepExecutionRequest,
+    WorkflowStepExecutionResult,
+)
 from fair_platform.extension_sdk.contracts.rubric import (
     RubricContent,
     RubricCriterion,
@@ -27,6 +44,9 @@ from fair_platform.extension_sdk.contracts.rubric import (
 __all__ = [
     "ExtensionRegisterRequest",
     "ExtensionRead",
+    "ExecutionEventBatch",
+    "ExecutionEventCreate",
+    "ExecutionEventRead",
     "ActionPayload",
     "ProgressPayload",
     "LogPayload",
@@ -40,32 +60,7 @@ __all__ = [
     "JobUpdateError",
     "JobUpdateEvent",
     "JobUpdateRequest",
-    "RubricCriterion",
-    "RubricContent",
-    "RubricJobRequest",
-    "RubricGenerateResponse",
-]
-from .plugin import (
-    GraderSubmissionResult,
-    PluginDescriptor,
-    PluginType,
-    ReviewerSubmissionResult,
-    SubmissionArtifactRef,
-    SubmissionExecutionInput,
-    SubmissionPipelineState,
-    TranscriberSubmissionResult,
-    WorkflowStepExecutionRequest,
-    WorkflowStepExecutionResult,
-)
-from .extension import ExtensionRead, ExtensionRegisterRequest
-from .job import ActionPayload, JobUpdateRequest
-
-__all__ = [
-    "ActionPayload",
-    "ExtensionRead",
-    "ExtensionRegisterRequest",
     "GraderSubmissionResult",
-    "JobUpdateRequest",
     "PluginDescriptor",
     "PluginType",
     "ReviewerSubmissionResult",
@@ -75,4 +70,8 @@ __all__ = [
     "TranscriberSubmissionResult",
     "WorkflowStepExecutionRequest",
     "WorkflowStepExecutionResult",
+    "RubricCriterion",
+    "RubricContent",
+    "RubricJobRequest",
+    "RubricGenerateResponse",
 ]

@@ -14,7 +14,7 @@ from fair_platform.backend.data.database import init_db
 from fair_platform.backend.data.migrations import run_migrations_to_head
 from fair_platform.backend.api.routers.users import router as users_router
 from fair_platform.backend.api.routers.courses import router as courses_router
-from fair_platform.backend.api.routers.artifacts import router as artifacts_router
+from fair_platform.backend.api.routers.legacy_artifacts import router as legacy_artifacts_router
 from fair_platform.backend.api.routers.assignments import router as assignments_router
 from fair_platform.backend.api.routers.plugins import router as plugins_router
 from fair_platform.backend.api.routers.submissions import router as submissions_router
@@ -30,8 +30,13 @@ from fair_platform.backend.api.routers.enrollments import router as enrollments_
 from fair_platform.backend.api.routers.jobs import router as jobs_router
 from fair_platform.backend.api.routers.extensions import router as extensions_router
 from fair_platform.backend.api.routers.system import router as system_router
+from fair_platform.backend.api.routers.executions import router as executions_router
+from fair_platform.backend.api.routers.artifacts import router as artifacts_router
 from fair_platform.backend.services.extension_registry import LocalExtensionRegistry
 from fair_platform.backend.services.job_dispatcher import JobDispatcher
+from fair_platform.backend.services.execution_outbox_dispatcher import (
+    ExecutionOutboxDispatcher,
+)
 from fair_platform.backend.services.job_queue import create_job_queue
 from fair_platform.backend.services.workflow_runner import (
     WorkflowRunEventBroker,
@@ -72,6 +77,16 @@ def _configured_cors_origins() -> list[str]:
 
 def _is_job_dispatcher_enabled() -> bool:
     raw = os.getenv("FAIR_ENABLE_JOB_DISPATCHER", "1").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _is_execution_dispatcher_enabled() -> bool:
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+    raw = os.getenv(
+        "FAIR_ENABLE_EXECUTION_DISPATCHER",
+        os.getenv("FAIR_ENABLE_JOB_DISPATCHER", "1"),
+    ).strip().lower()
     return raw in {"1", "true", "yes", "on"}
 
 
@@ -170,12 +185,18 @@ async def lifespan(_ignored: FastAPI):
         job_queue=app.state.job_queue,
         event_broker=app.state.workflow_run_event_broker,
     )
+    app.state.execution_outbox_dispatcher = ExecutionOutboxDispatcher(
+        session_factory=SessionLocal,
+        queue=app.state.job_queue,
+    )
     app.state.core_extension_process = None
     if _is_core_extension_enabled():
         _ensure_core_extension_client()
         app.state.core_extension_process = await _start_core_extension()
     if _is_job_dispatcher_enabled():
         await app.state.job_dispatcher.start()
+    if _is_execution_dispatcher_enabled():
+        await app.state.execution_outbox_dispatcher.start()
     try:
         yield
     finally:
@@ -187,6 +208,9 @@ async def lifespan(_ignored: FastAPI):
             except TimeoutError:
                 core_process.kill()
                 await core_process.wait()
+        execution_dispatcher = getattr(app.state, "execution_outbox_dispatcher", None)
+        if execution_dispatcher is not None:
+            await execution_dispatcher.stop()
         dispatcher = getattr(app.state, "job_dispatcher", None)
         if dispatcher is not None:
             await dispatcher.stop()
@@ -214,7 +238,7 @@ app.add_middleware(
 
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
-app.include_router(artifacts_router, prefix="/api/artifacts", tags=["artifacts"])
+app.include_router(legacy_artifacts_router, prefix="/api/artifacts", tags=["artifacts"])
 app.include_router(assignments_router, prefix="/api/assignments", tags=["assignments"])
 app.include_router(plugins_router, prefix="/api/plugins", tags=["plugins", "workflows"])
 app.include_router(submissions_router, prefix="/api/submissions", tags=["submissions"])
@@ -228,6 +252,8 @@ app.include_router(enrollments_router, prefix="/api/enrollments", tags=["enrollm
 app.include_router(jobs_router, prefix="/api/jobs", tags=["jobs"])
 app.include_router(extensions_router, prefix="/api/extensions", tags=["extensions"])
 app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
+app.include_router(executions_router, prefix="/api/v1", tags=["executions"])
+app.include_router(artifacts_router, prefix="/api/v1", tags=["artifacts"])
 
 
 @app.get("/health")

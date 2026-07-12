@@ -3,6 +3,7 @@ import { getApiBaseUrl } from "@/lib/api";
 export type SseEvent = {
   event: string;
   data: string;
+  id?: string;
 };
 
 export type SseStreamOptions = {
@@ -26,6 +27,7 @@ function resolveApiOrigin(): string {
 function parseEventBlock(block: string): SseEvent | null {
   const lines = block.split(/\r?\n/);
   let event = "message";
+  let id: string | undefined;
   const dataParts: string[] = [];
 
   for (const line of lines) {
@@ -34,6 +36,10 @@ function parseEventBlock(block: string): SseEvent | null {
     }
     if (line.startsWith("event:")) {
       event = line.slice("event:".length).trim();
+      continue;
+    }
+    if (line.startsWith("id:")) {
+      id = line.slice("id:".length).trim();
       continue;
     }
     if (line.startsWith("data:")) {
@@ -45,7 +51,7 @@ function parseEventBlock(block: string): SseEvent | null {
     return null;
   }
 
-  return { event, data: dataParts.join("\n") };
+  return { event, data: dataParts.join("\n"), id };
 }
 
 export async function streamSse(

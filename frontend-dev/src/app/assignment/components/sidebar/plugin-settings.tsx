@@ -14,7 +14,7 @@ import {
 import { ExtensionPluginRead } from "@/hooks/use-plugins";
 import { SDKArtifact, toSDKArtifact, useArtifacts } from "@/hooks/use-artifacts";
 import { Rubric, useRubrics } from "@/hooks/use-rubrics";
-import { useCallback, useRef } from "react";
+import { type ComponentType, useCallback, useRef } from "react";
 import { useWorkflowStore } from "@/store/workflows-store";
 import { shallow } from "zustand/shallow";
 import { useTranslation } from "react-i18next";
@@ -361,7 +361,12 @@ function createInputComponent(
     return <UnsupportedField key={name} property={property} name={name} />;
   }
 
-  const Component = INPUT_COMPONENTS[componentType];
+  const Component = INPUT_COMPONENTS[componentType] as unknown as ComponentType<{
+    property: PluginSettingsField;
+    value: unknown;
+    onChange: (value: unknown) => void;
+    name: string;
+  }>;
 
   return (
     <div key={name} className="space-y-2">

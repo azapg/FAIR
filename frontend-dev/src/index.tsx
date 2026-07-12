@@ -13,12 +13,14 @@ import { IfSetting } from "@/components/if-setting";
 import ExtensionsPage from "@/app/extensions/page";
 import ExtensionDetailPage from "@/app/extensions/extension/page";
 import ChatPage from "@/app/chat/page";
+import LiveChatPage from "@/app/chat/live-page";
 
 export function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="chat" element={<ChatPage />} />
+      <Route path="chat/live" element={<LiveChatPage />} />
 
       <Route path={"courses"} element={<CoursesPage />} />
       <Route path={"courses/:courseId"} element={<CourseDetailPage />} />
