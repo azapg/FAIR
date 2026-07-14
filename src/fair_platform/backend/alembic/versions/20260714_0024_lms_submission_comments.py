@@ -16,6 +16,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    if "submission_comments" in sa.inspect(op.get_bind()).get_table_names():
+        return
+
     op.create_table(
         "submission_comments",
         sa.Column("id", sa.UUID(), nullable=False),

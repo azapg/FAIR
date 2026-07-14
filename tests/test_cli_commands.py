@@ -30,6 +30,25 @@ class InterruptingBackendProcess(StubBackendProcess):
         raise KeyboardInterrupt
 
 
+class StubFrontendProcess:
+    pid = 4321
+
+    def __init__(self):
+        self.returncode = None
+        self.wait_calls = []
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        self.wait_calls.append(timeout)
+        self.returncode = 0
+        return self.returncode
+
+    def kill(self):
+        self.returncode = -9
+
+
 def test_dev_command_runs_backend_only_when_frontend_disabled(monkeypatch):
     runner = CliRunner()
     backend_calls = {}
@@ -108,6 +127,40 @@ def test_dev_command_handles_keyboard_interrupt(monkeypatch):
 
     assert result.exit_code == 0
     assert backend in stopped
+
+
+def test_frontend_starts_in_a_separate_windows_process_group(monkeypatch, tmp_path):
+    captured = {}
+    frontend = StubFrontendProcess()
+
+    def fake_popen(command, **kwargs):
+        captured["command"] = command
+        captured["kwargs"] = kwargs
+        return frontend
+
+    monkeypatch.setattr(cli_main, "_is_windows", lambda: True)
+    monkeypatch.setattr(cli_main.subprocess, "Popen", fake_popen)
+
+    assert cli_main._start_frontend_process(tmp_path) is frontend
+    assert captured["command"] == ["bun", "dev"]
+    assert captured["kwargs"]["creationflags"] == cli_main._CREATE_NEW_PROCESS_GROUP
+
+
+def test_frontend_shutdown_kills_windows_process_tree(monkeypatch):
+    frontend = StubFrontendProcess()
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+
+    monkeypatch.setattr(cli_main, "_is_windows", lambda: True)
+    monkeypatch.setattr(cli_main.subprocess, "run", fake_run)
+
+    cli_main._stop_frontend(frontend)
+
+    assert calls[0][0] == ["taskkill", "/PID", "4321", "/T", "/F"]
+    assert calls[0][1]["check"] is False
+    assert frontend.wait_calls == [5]
 
 
 def test_db_upgrade_command_invokes_alembic(monkeypatch):

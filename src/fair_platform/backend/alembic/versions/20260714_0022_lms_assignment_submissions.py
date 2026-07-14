@@ -15,7 +15,25 @@ branch_labels = None
 depends_on = None
 
 
+def _column_names(table_name: str) -> set[str]:
+    return {
+        column["name"] for column in sa.inspect(op.get_bind()).get_columns(table_name)
+    }
+
+
 def upgrade() -> None:
+    expected_assignment_columns = {"status", "published_at", "allow_resubmissions"}
+    expected_submission_columns = {"attempt_number", "is_late"}
+    assignment_columns = _column_names("assignments")
+    submission_columns = _column_names("submissions")
+    present = (expected_assignment_columns & assignment_columns) | (
+        expected_submission_columns & submission_columns
+    )
+    if expected_assignment_columns <= assignment_columns and expected_submission_columns <= submission_columns:
+        return
+    if present:
+        raise RuntimeError("LMS assignment/submission migration is only partially applied")
+
     with op.batch_alter_table("assignments") as batch_op:
         batch_op.add_column(
             sa.Column("status", sa.String(length=32), server_default="published", nullable=False)

@@ -15,7 +15,22 @@ branch_labels = None
 depends_on = None
 
 
+EXPECTED_TABLES = {
+    "course_posts",
+    "course_post_artifacts",
+    "course_comments",
+    "notifications",
+}
+
+
 def upgrade() -> None:
+    existing_tables = set(sa.inspect(op.get_bind()).get_table_names())
+    present = EXPECTED_TABLES & existing_tables
+    if present == EXPECTED_TABLES:
+        return
+    if present:
+        raise RuntimeError("LMS communication migration is only partially applied")
+
     op.create_table(
         "course_posts",
         sa.Column("id", sa.UUID(), nullable=False),
