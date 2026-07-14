@@ -143,7 +143,7 @@ def test_frontend_starts_in_a_separate_windows_process_group(monkeypatch, tmp_pa
 
     assert cli_main._start_frontend_process(tmp_path) is frontend
     assert captured["command"] == ["bun", "dev"]
-    assert captured["kwargs"]["creationflags"] == cli_main.subprocess.CREATE_NEW_PROCESS_GROUP
+    assert captured["kwargs"]["creationflags"] == cli_main._CREATE_NEW_PROCESS_GROUP
 
 
 def test_frontend_shutdown_kills_windows_process_tree(monkeypatch):

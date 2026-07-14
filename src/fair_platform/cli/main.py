@@ -36,6 +36,7 @@ def _get_version() -> str:
 
 __version__ = _get_version()
 _PROCESS_POLL_INTERVAL_SECONDS = 0.5
+_CREATE_NEW_PROCESS_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
 _DATA_TABLE_ORDER = [
     "users",
     "plugins",
@@ -98,7 +99,7 @@ def _start_backend_process(port: int, headless: bool) -> multiprocessing.Process
 def _start_frontend_process(frontend_dir: Path) -> subprocess.Popen:
     try:
         process_options = (
-            {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+            {"creationflags": _CREATE_NEW_PROCESS_GROUP}
             if _is_windows()
             else {"start_new_session": True}
         )
