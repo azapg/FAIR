@@ -4,10 +4,10 @@ import { Input } from "@/components/ui/input";
 import { SubmissionsTable } from "@/app/assignment/components/submissions/submissions-table";
 import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
 import {
-  WorkflowsSidebarProvider,
-  WorkflowsSidebarTrigger,
+  FlowSidebarProvider,
+  FlowSidebarTrigger,
 } from "@/components/ui/sidebar";
-import { WorkflowsSidebar } from "@/app/assignment/components/sidebar/workflows-sidebar";
+import { FlowsSidebar } from "@/app/assignment/components/sidebar/flows-sidebar";
 import {
   PropertiesDisplay,
   Property,
@@ -21,9 +21,7 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useParams } from "react-router-dom";
 import { useAssignment, Assignment, useUpdateAssignmentStatus } from "@/hooks/use-assignments";
 import { useCourse } from "@/hooks/use-courses";
-import { useWorkflowStore } from "@/store/workflows-store";
-import { useWorkflows } from "@/hooks/use-workflows";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CreateSubmissionDialog } from "@/app/assignment/components/submissions/create-submission-dialog";
 import { useArtifacts } from "@/hooks/use-artifacts";
 import { useCreateStudentSubmission, useSubmissions, Submission } from "@/hooks/use-submissions";
@@ -146,10 +144,6 @@ export default function AssignmentPage() {
     !!user && !!course && (
       instructorId === user.id || canManageUsers || course.membershipRole === 'assistant'
     );
-  const setActiveCourseId = useWorkflowStore(
-    (state) => state.setActiveCourseId,
-  );
-  const { isLoading: isLoadingWorkflows } = useWorkflows(canManageAssignmentUi);
   const {
     data: artifacts,
     isLoading: isLoadingArtifacts,
@@ -170,17 +164,10 @@ export default function AssignmentPage() {
 
   const isOverallLoading =
     isLoading ||
-    isLoadingWorkflows ||
     isLoadingArtifacts ||
     isLoadingSubmissions;
 
   const columns = useSubmissionColumns(canManageAssignmentUi);
-
-  useEffect(() => {
-    if (course?.id) {
-      setActiveCourseId(course.id);
-    }
-  }, [course]);
 
   if (isOverallLoading) {
     return <div>{t("common.loading")}</div>;
@@ -200,8 +187,8 @@ export default function AssignmentPage() {
   const isInstructorView = isCourseOwner || canManageUsers || course.membershipRole === 'assistant';
 
   return (
-    <WorkflowsSidebarProvider
-      cookieName="workflow_sidebar_state"
+    <FlowSidebarProvider
+      cookieName="flow_sidebar_state"
       keyboardShortcut="m"
       width="22rem"
       widthMobile="18rem"
@@ -233,7 +220,7 @@ export default function AssignmentPage() {
                 },
               ]}
             />
-            {isInstructorView && <WorkflowsSidebarTrigger />}
+            {isInstructorView && <FlowSidebarTrigger />}
           </div>
           <div className={"px-8 pt-2"}>
             <div className={"mb-5"}>
@@ -331,8 +318,12 @@ export default function AssignmentPage() {
         </div>
       </ScrollArea>
       {isInstructorView && (
-        <WorkflowsSidebar side={"right"} assignmentId={assignmentId ?? ""} />
+        <FlowsSidebar
+          side={"right"}
+          courseId={course.id}
+          assignmentId={assignment.id}
+        />
       )}
-    </WorkflowsSidebarProvider>
+    </FlowSidebarProvider>
   );
 }

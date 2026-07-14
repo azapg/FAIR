@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -13,6 +13,8 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Table,
+    Column,
     Text,
     UUID as SAUUID,
     UniqueConstraint,
@@ -21,6 +23,34 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
 from .types import json_document_type
+
+if TYPE_CHECKING:
+    from .assignment import Assignment
+    from .course import Course
+    from .submission import Submission
+
+
+execution_submissions = Table(
+    "execution_submissions",
+    Base.metadata,
+    Column(
+        "execution_id",
+        SAUUID,
+        ForeignKey("executions.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "submission_id",
+        SAUUID,
+        ForeignKey("submissions.id", ondelete="RESTRICT"),
+        primary_key=True,
+    ),
+    Index(
+        "ix_execution_submissions_submission",
+        "submission_id",
+        "execution_id",
+    ),
+)
 
 
 def utc_now() -> datetime:
@@ -200,9 +230,17 @@ class Execution(Base):
         CheckConstraint("attempt >= 1", name="ck_executions_attempt_positive"),
         CheckConstraint("id != parent_execution_id", name="ck_executions_no_self_parent"),
         CheckConstraint("id != retry_of_execution_id", name="ck_executions_no_self_retry"),
+        UniqueConstraint(
+            "root_execution_id",
+            "flow_node_id",
+            "attempt",
+            name="uq_executions_flow_node_attempt",
+        ),
         Index("ix_executions_thread_created", "thread_id", "created_at"),
         Index("ix_executions_root_created", "root_execution_id", "created_at"),
         Index("ix_executions_status_created", "status", "created_at"),
+        Index("ix_executions_course_created", "course_id", "created_at"),
+        Index("ix_executions_assignment_created", "assignment_id", "created_at"),
     )
 
     id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True, default=uuid4)
@@ -211,6 +249,12 @@ class Execution(Base):
     )
     turn_id: Mapped[Optional[UUID]] = mapped_column(
         SAUUID, ForeignKey("turns.id", ondelete="RESTRICT"), nullable=True
+    )
+    course_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("courses.id", ondelete="RESTRICT"), nullable=True
+    )
+    assignment_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("assignments.id", ondelete="RESTRICT"), nullable=True
     )
     parent_execution_id: Mapped[Optional[UUID]] = mapped_column(
         SAUUID, ForeignKey("executions.id", ondelete="RESTRICT"), nullable=True
@@ -270,6 +314,17 @@ class Execution(Base):
 
     thread: Mapped[Optional[Thread]] = relationship("Thread", back_populates="executions")
     turn: Mapped[Optional[Turn]] = relationship("Turn", back_populates="executions")
+    course: Mapped[Optional["Course"]] = relationship(
+        "Course", back_populates="executions"
+    )
+    assignment: Mapped[Optional["Assignment"]] = relationship(
+        "Assignment", back_populates="executions"
+    )
+    submissions: Mapped[list["Submission"]] = relationship(
+        "Submission",
+        secondary="execution_submissions",
+        back_populates="executions",
+    )
     parent = relationship(
         "Execution", foreign_keys=[parent_execution_id], remote_side=[id]
     )
@@ -467,29 +522,6 @@ class ExecutionDispatchOutbox(Base):
     )
 
 
-class ExecutionLegacyRef(Base):
-    __tablename__ = "execution_legacy_refs"
-    __table_args__ = (
-        UniqueConstraint(
-            "source_type", "legacy_id", name="uq_execution_legacy_refs_identity"
-        ),
-    )
-
-    execution_id: Mapped[UUID] = mapped_column(
-        SAUUID, ForeignKey("executions.id", ondelete="CASCADE"), primary_key=True
-    )
-    source_type: Mapped[str] = mapped_column(String(64), primary_key=True)
-    legacy_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    metadata_json: Mapped[Optional[dict[str, Any]]] = mapped_column(
-        "metadata", json_document_type(), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utc_now
-    )
-
-    execution: Mapped[Execution] = relationship("Execution")
-
-
 class Message(Base):
     __tablename__ = "messages"
     __table_args__ = (
@@ -589,7 +621,6 @@ __all__ = [
     "ExecutionDispatchOutbox",
     "ExecutionEvent",
     "ExecutionKind",
-    "ExecutionLegacyRef",
     "ExecutionSnapshot",
     "ExecutionStatus",
     "InteractionRequest",

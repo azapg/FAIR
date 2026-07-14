@@ -25,6 +25,12 @@ def test_configured_cors_origins_from_env(monkeypatch):
     assert origins == ["https://a.example", "https://b.example"]
 
 
+def test_execution_dispatcher_enabled_by_default(monkeypatch):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.delenv("FAIR_ENABLE_EXECUTION_DISPATCHER", raising=False)
+    assert backend_main._is_execution_dispatcher_enabled() is True
+
+
 def test_enterprise_mode_rejects_default_secret(monkeypatch):
     monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "ENTERPRISE")
 
@@ -38,21 +44,18 @@ def test_community_mode_allows_local_default_secret(monkeypatch):
     validate_security_configuration(INSECURE_DEFAULT_SECRET_KEY)
 
 
-def test_job_dispatcher_enabled_by_default(monkeypatch):
-    monkeypatch.delenv("FAIR_ENABLE_JOB_DISPATCHER", raising=False)
-    assert backend_main._is_job_dispatcher_enabled() is True
-
-
 @pytest.mark.parametrize("value", ["1", "true", "yes", "on", " TRUE "])
-def test_job_dispatcher_enabled_truthy_values(monkeypatch, value: str):
-    monkeypatch.setenv("FAIR_ENABLE_JOB_DISPATCHER", value)
-    assert backend_main._is_job_dispatcher_enabled() is True
+def test_execution_dispatcher_enabled_truthy_values(monkeypatch, value: str):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("FAIR_ENABLE_EXECUTION_DISPATCHER", value)
+    assert backend_main._is_execution_dispatcher_enabled() is True
 
 
 @pytest.mark.parametrize("value", ["0", "false", "no", "off", " FALSE ", ""])
-def test_job_dispatcher_disabled_values(monkeypatch, value: str):
-    monkeypatch.setenv("FAIR_ENABLE_JOB_DISPATCHER", value)
-    assert backend_main._is_job_dispatcher_enabled() is False
+def test_execution_dispatcher_disabled_values(monkeypatch, value: str):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("FAIR_ENABLE_EXECUTION_DISPATCHER", value)
+    assert backend_main._is_execution_dispatcher_enabled() is False
 
 
 @pytest.mark.parametrize("value", ["1", "true", "yes", "on", "TRUE", " Yes "])

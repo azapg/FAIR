@@ -8,8 +8,7 @@ from fair_platform.backend.data.models.submission import Submission, SubmissionS
 from fair_platform.backend.data.models.submission_event import SubmissionEvent, SubmissionEventType
 from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.user import User, UserRole
-from fair_platform.backend.data.models.workflow import Workflow
-from fair_platform.backend.data.models.workflow_run import WorkflowRun, WorkflowRunStatus
+from fair_platform.backend.data.models.execution import Execution, ExecutionKind, ExecutionStatus
 from fair_platform.backend.services.submission_manager import SubmissionManager
 
 
@@ -60,44 +59,39 @@ def _build_submission_graph(session):
     )
     session.add(submission)
 
-    workflow = Workflow(
-        id=uuid4(),
+    execution_id = uuid4()
+    execution = Execution(
+        id=execution_id,
+        root_execution_id=execution_id,
         course_id=course.id,
-        name="Workflow",
-        description="Wf",
-        created_by=professor.id,
-        created_at=datetime.utcnow(),
+        assignment_id=assignment.id,
+        initiated_by_user_id=professor.id,
+        kind=ExecutionKind.action,
+        status=ExecutionStatus.completed,
+        input={},
     )
-    session.add(workflow)
-
-    workflow_run = WorkflowRun(
-        id=uuid4(),
-        workflow_id=workflow.id,
-        run_by=professor.id,
-        status=WorkflowRunStatus.success,
-    )
-    session.add(workflow_run)
+    session.add(execution)
     session.commit()
 
-    return professor, submission, workflow_run
+    return professor, submission, execution
 
 
 def test_record_ai_result_splits_initial_vs_regrade(test_db):
     with test_db() as session:
-        _, submission, workflow_run = _build_submission_graph(session)
+        _, submission, execution = _build_submission_graph(session)
         manager = SubmissionManager(session)
 
         manager.record_ai_result(
             submission_id=submission.id,
             score=82.0,
             feedback="Initial feedback",
-            workflow_run_id=workflow_run.id,
+            execution_id=execution.id,
         )
         manager.record_ai_result(
             submission_id=submission.id,
             score=91.0,
             feedback="Updated feedback",
-            workflow_run_id=workflow_run.id,
+            execution_id=execution.id,
         )
         session.commit()
 

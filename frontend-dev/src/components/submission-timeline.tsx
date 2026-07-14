@@ -62,10 +62,8 @@ const TimelineItem = ({
   let actorName = t("submissions.timelineEvents.actor.system");
   if (event.actor?.name) {
     actorName = event.actor.name;
-  } else if (event.workflowRun) {
-    actorName =
-      event.workflowRun.runner?.name ||
-      t("submissions.timelineEvents.actor.automation");
+  } else if (event.execution) {
+    actorName = t("submissions.timelineEvents.actor.automation");
   }
 
   const body = renderer.renderBody?.({ event, t });

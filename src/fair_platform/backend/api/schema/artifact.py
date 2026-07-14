@@ -23,6 +23,17 @@ class ArtifactCreate(BaseModel):
     access_policy: dict[str, Any] | None = None
 
 
+class ArtifactUpdate(BaseModel):
+    model_config = schema_config
+
+    title: str | None = Field(default=None, min_length=1, max_length=500)
+    course_id: UUID | None = None
+    assignment_id: UUID | None = None
+    access_level: str | None = None
+    status: str | None = None
+    meta: dict[str, Any] | None = None
+
+
 class ArtifactPartCreate(BaseModel):
     model_config = schema_config
 
@@ -94,6 +105,18 @@ class ArtifactLinkRead(BaseModel):
     retracted_at: datetime | None
 
 
+class ArtifactDerivativeRead(BaseModel):
+    model_config = schema_config
+
+    id: UUID
+    artifact_id: UUID
+    derivative_type: str
+    storage_uri: str
+    mime_type: str
+    created_at: datetime
+    updated_at: datetime
+
+
 class ArtifactVersionRead(BaseModel):
     model_config = schema_config
 
@@ -125,6 +148,12 @@ class ArtifactRead(BaseModel):
     id: UUID
     title: str
     artifact_type: str
+    mime: str
+    meta: dict[str, Any] | None
+    status: str
+    access_level: str
+    course_id: UUID | None
+    assignment_id: UUID | None
     kind_uri: str | None
     description: str | None
     owner_user_id: UUID | None
@@ -134,11 +163,14 @@ class ArtifactRead(BaseModel):
     current_version_id: UUID | None
     created_at: datetime
     updated_at: datetime
+    derivatives: list[ArtifactDerivativeRead]
     versions: list[ArtifactVersionRead]
 
 
 __all__ = [
     "ArtifactCreate",
+    "ArtifactUpdate",
+    "ArtifactDerivativeRead",
     "ExecutionArtifactCreate",
     "ArtifactPartCreate",
     "ArtifactPartRead",

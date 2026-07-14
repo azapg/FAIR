@@ -29,7 +29,7 @@ def parse_storage_uri(storage_uri: str) -> tuple[str, str]:
 
 
 class LocalStorageProvider:
-    def __init__(self, uploads_dir: Path | None = None, api_prefix: str = "/api/artifacts/storage/local"):
+    def __init__(self, uploads_dir: Path | None = None, api_prefix: str = "/api/v1/artifact-storage/local"):
         self.uploads_dir = uploads_dir or storage.uploads_dir
         self.api_prefix = api_prefix.rstrip("/")
 

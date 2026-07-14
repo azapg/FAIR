@@ -22,7 +22,10 @@ from fair_platform.backend.data.models.submission_event import (
 )
 from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.user import User
-from fair_platform.backend.data.models.workflow import Workflow
+from fair_platform.backend.services.execution_store import (
+    append_execution_event,
+    create_execution,
+)
 
 
 def _normalize_postgres_url(raw_url: str) -> str:
@@ -103,10 +106,13 @@ def test_postgres_json_columns_are_jsonb(postgres_database_url: str) -> None:
         ("assignments", "max_grade"),
         ("artifacts", "meta"),
         ("users", "settings"),
-        ("workflows", "steps"),
-        ("workflow_runs", "logs"),
+        ("flow_versions", "definition"),
+        ("flow_versions", "capability_pins"),
+        ("executions", "input"),
+        ("execution_events", "payload"),
+        ("extension_installations", "manifest"),
+        ("artifact_versions", "provenance"),
         ("submission_events", "details"),
-        ("submission_results", "grading_meta"),
         ("rubrics", "content"),
     ]
 
@@ -154,37 +160,6 @@ def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
         session.add(course)
         session.flush()
 
-        workflow = Workflow(
-            id=uuid.uuid4(),
-            course_id=course.id,
-            name="Workflow",
-            description=None,
-            created_by=user.id,
-            created_at=datetime.utcnow(),
-            updated_at=None,
-            archived=False,
-            steps=[
-                {
-                    "id": "step-0-review",
-                    "order": 0,
-                    "pluginType": "reviewer",
-                    "plugin": {
-                        "pluginId": "mock.reviewer",
-                        "extensionId": "mock.extension",
-                        "name": "Reviewer",
-                        "pluginType": "reviewer",
-                        "action": "plugin.review",
-                        "settingsSchema": {"type": "object"},
-                        "metadata": {},
-                        "settings": {"threshold": 0.8},
-                    },
-                    "settings": {"threshold": 0.8},
-                }
-            ],
-        )
-        session.add(workflow)
-        session.flush()
-
         assignment = Assignment(
             id=uuid.uuid4(),
             course_id=course.id,
@@ -213,7 +188,6 @@ def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
             created_by_id=user.id,
             submitted_at=datetime.utcnow(),
             status=SubmissionStatus.submitted,
-            official_run_id=None,
             draft_score=None,
             draft_feedback=None,
             published_score=None,
@@ -223,12 +197,31 @@ def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
         session.add(submission)
         session.flush()
 
+        execution = create_execution(
+            session,
+            kind="capability",
+            initiated_by_user_id=user.id,
+            course_id=course.id,
+            assignment_id=assignment.id,
+            submission_ids=[submission.id],
+            input={"source": "postgres-compat"},
+        )
+        append_execution_event(
+            session,
+            execution_id=execution.id,
+            producer_source="postgres-compat",
+            producer_event_id="event-1",
+            event_type="execution.started",
+            schema_uri="urn:fair:event:execution.started:v1",
+            payload={"status": "running"},
+        )
+
         event = SubmissionEvent(
             id=uuid.uuid4(),
             submission_id=submission.id,
             event_type=SubmissionEventType.submission_submitted,
             actor_id=user.id,
-            workflow_run_id=None,
+            execution_id=execution.id,
             details={"status": "submitted"},
             created_at=datetime.utcnow(),
         )

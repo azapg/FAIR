@@ -1,9 +1,8 @@
 """Executable checklist for removing the pre-1.0 execution stack.
 
-The inventory tests prevent an unlisted legacy surface from being added.  The
-stage checks intentionally fail until every route and source file in that stage
-has been removed.  Delete stages in numeric order; historical Alembic revisions
-are deliberately not part of the source-removal inventory.
+The inventory tests prevent a removed surface from being added again.
+Historical Alembic revisions are deliberately not part of the source-removal
+inventory.
 """
 
 from __future__ import annotations
@@ -45,6 +44,19 @@ CUTOVER_STAGES = (
         files=(
             "api/routers/workflow_runs.py",
             "api/schema/workflow_run.py",
+        ),
+    ),
+    CutoverStage(
+        5,
+        "unversioned Extension and Artifact adapters",
+        (
+            "stages 1 through 4 are complete",
+            "all callers use canonical /api/v1 resources",
+        ),
+        files=(
+            "api/routers/legacy_artifacts.py",
+            "api/schema/legacy_artifact.py",
+            "data/models/legacy_artifact.py",
         ),
     ),
     CutoverStage(
@@ -119,6 +131,8 @@ LEGACY_ROUTE_PREFIXES = (
     "/api/workflow-runs",
     "/api/jobs",
     "/api/plugins",
+    "/api/extensions",
+    "/api/artifacts",
 )
 
 
@@ -165,14 +179,11 @@ def test_legacy_cutover_stage_is_complete(stage: CutoverStage) -> None:
     remaining_files = sorted(
         file for file in stage.files if (BACKEND_ROOT / file).is_file()
     )
-    if remaining_routes or remaining_files:
-        # Imperative pytest.xfail is non-strict: it keeps the suite green now and
-        # naturally becomes an ordinary pass once this stage has no remnants.
-        pytest.xfail(
-            f"Cutover stage {stage.number} ({stage.name}) is not complete. "
-            f"Dependencies: {'; '.join(stage.depends_on)}. "
-            f"Remaining routes: {remaining_routes}. Remaining files: {remaining_files}."
-        )
+    assert not remaining_routes and not remaining_files, (
+        f"Cutover stage {stage.number} ({stage.name}) regressed. "
+        f"Dependencies: {'; '.join(stage.depends_on)}. "
+        f"Remaining routes: {remaining_routes}. Remaining files: {remaining_files}."
+    )
 
 
 def test_legacy_cutover_is_complete() -> None:
@@ -180,8 +191,7 @@ def test_legacy_cutover_is_complete() -> None:
     remaining_files = sorted(
         file for file in DECLARED_LEGACY_FILES if (BACKEND_ROOT / file).is_file()
     )
-    if remaining_routes or remaining_files:
-        pytest.xfail(
-            "Legacy cutover is not complete. Complete the four ordered stage gates. "
-            f"Remaining routes: {remaining_routes}. Remaining files: {remaining_files}."
-        )
+    assert not remaining_routes and not remaining_files, (
+        "Legacy cutover regressed. "
+        f"Remaining routes: {remaining_routes}. Remaining files: {remaining_files}."
+    )

@@ -8,10 +8,21 @@ from uuid import UUID
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, selectinload
 
+from fair_platform.backend.api.schema.flow import FlowDefinition
+from fair_platform.backend.data.models.extension import (
+    CapabilityDefinition,
+    ExtensionInstallation,
+    ExtensionInstallationStatus,
+)
 from fair_platform.backend.data.models.execution import ExecutionKind
 from fair_platform.backend.data.models.flow import Flow, FlowVersion, FlowVersionState
-from fair_platform.backend.services.execution_outbox import enqueue_dispatch
+from fair_platform.backend.services.execution_projection import append_and_project_event
 from fair_platform.backend.services.execution_store import create_execution
+from fair_platform.backend.services.flow_runtime import (
+    FlowRuntimeError,
+    advance_flow_execution,
+    validate_flow_runtime,
+)
 
 
 class FlowNotFound(ValueError):
@@ -85,8 +96,7 @@ def create_flow_version(
     *,
     flow: Flow,
     created_by_user_id: UUID,
-    definition: dict,
-    capability_pins: list[dict],
+    definition: FlowDefinition,
     config_snapshot: dict,
 ) -> FlowVersion:
     if flow.archived_at is not None:
@@ -101,14 +111,41 @@ def create_flow_version(
         )
         or 0
     ) + 1
+    definition_document = definition.model_dump(mode="json", by_alias=True)
+    capability_pins = []
+    for node in definition.nodes:
+        capability = session.get(CapabilityDefinition, node.capability_definition_id)
+        if capability is None:
+            raise FlowStateError(
+                f"Flow node {node.id!r} references an unknown CapabilityDefinition"
+            )
+        installation = session.get(ExtensionInstallation, capability.installation_id)
+        if installation is None or _state(installation.status) != ExtensionInstallationStatus.enabled.value:
+            raise FlowStateError(
+                f"Flow node {node.id!r} requires an enabled Extension installation"
+            )
+        capability_pins.append(
+            {
+                "nodeId": node.id,
+                "capabilityDefinitionId": str(capability.id),
+                "extensionInstallationId": str(installation.id),
+                "extensionId": installation.extension_id,
+                "extensionVersion": installation.version,
+                "capabilityId": capability.capability_id,
+                "capabilityVersion": capability.version,
+                "kind": capability.kind,
+                "declaredEffects": list(capability.declared_effects or []),
+                "manifestSnapshot": capability.manifest_snapshot,
+            }
+        )
     version = FlowVersion(
         flow_id=flow.id,
         ordinal=next_ordinal,
-        definition=definition,
+        definition=definition_document,
         capability_pins=capability_pins,
         config_snapshot=config_snapshot,
         definition_hash=_version_hash(
-            definition, capability_pins, config_snapshot
+            definition_document, capability_pins, config_snapshot
         ),
         created_by_user_id=created_by_user_id,
     )
@@ -148,6 +185,8 @@ def start_flow_execution(
     initiated_by_user_id: UUID,
     input_payload: dict,
     flow_version_id: UUID | None,
+    assignment_id: UUID | None = None,
+    submission_ids: list[UUID] | None = None,
 ):
     query = select(FlowVersion).where(
         FlowVersion.flow_id == flow.id,
@@ -165,22 +204,48 @@ def start_flow_execution(
         session,
         kind=ExecutionKind.flow.value,
         initiated_by_user_id=initiated_by_user_id,
+        course_id=flow.course_id,
+        assignment_id=assignment_id,
+        submission_ids=submission_ids,
         flow_version_id=version.id,
         input=input_payload,
     )
-    dispatch = enqueue_dispatch(
+    append_and_project_event(
         session,
         execution_id=execution.id,
-        target="flow.executor",
+        producer_source="fair.flow-runtime",
+        producer_event_id=f"{execution.id}:root:created",
+        event_type="execution.created",
+        schema_uri="urn:fair:event:execution.created:v1",
         payload={
-            "executionId": str(execution.id),
+            "status": "queued",
             "flowId": str(flow.id),
             "flowVersionId": str(version.id),
             "definitionHash": version.definition_hash,
-            "input": input_payload,
         },
     )
-    return execution, version, dispatch
+    append_and_project_event(
+        session,
+        execution_id=execution.id,
+        producer_source="fair.flow-runtime",
+        producer_event_id=f"{execution.id}:root:started",
+        event_type="execution.started",
+        schema_uri="urn:fair:event:execution.started:v1",
+        payload={"flowVersionId": str(version.id)},
+    )
+    try:
+        validate_flow_runtime(
+            session,
+            version=version,
+            course_id=execution.course_id,
+            assignment_id=execution.assignment_id,
+        )
+        advanced = advance_flow_execution(session, execution.id)
+    except FlowRuntimeError as exc:
+        raise FlowStateError(str(exc)) from exc
+    if advanced.step is None or advanced.dispatch is None:
+        raise FlowStateError("Published FlowVersion did not produce a dispatchable step")
+    return execution, version, advanced.step, advanced.dispatch
 
 
 __all__ = [

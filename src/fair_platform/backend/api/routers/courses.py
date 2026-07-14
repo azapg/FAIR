@@ -233,7 +233,7 @@ def get_course(
         .options(
             joinedload(Course.instructor),
             selectinload(Course.assignments),
-            selectinload(Course.workflows),
+            selectinload(Course.flows),
         )
         .filter(Course.id == course_id)
         .first()
@@ -252,7 +252,7 @@ def get_course(
 
     include_code = manages_course
     if detailed and manages_course:
-        from fair_platform.backend.api.routers.workflows import _db_workflow_to_read
+        from fair_platform.backend.api.routers.flows import _flow_read
 
         return {
             "id": course.id,
@@ -260,7 +260,7 @@ def get_course(
             "description": course.description,
             "instructor": course.instructor,
             "assignments": course.assignments or [],
-            "workflows": [_db_workflow_to_read(workflow) for workflow in (course.workflows or [])],
+            "flows": [_flow_read(flow) for flow in (course.flows or [])],
             "enrollment_code": course.enrollment_code if include_code else None,
             "is_enrollment_enabled": course.is_enrollment_enabled if include_code else None,
             "section": course.section,

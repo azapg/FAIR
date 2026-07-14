@@ -338,10 +338,6 @@
     "addLevel": "Agregar nivel",
     "levelMeaningHint": "Cada celda describe este criterio en ese nivel de desempeño. Ejemplo para Nivel 1: \"El estudiante no presentó ningún trabajo.\"",
     "weightHint": "Los pesos deben sumar 1.0 entre todos los criterios.",
-    "aiTitle": "Generar desde instrucción",
-    "aiPlaceholder": "Describe qué se debe evaluar, criterios, niveles y estilo de ponderación.",
-    "generate": "Generar rúbrica",
-    "generating": "Generando...",
     "contentJson": "JSON de la rúbrica",
     "empty": "Aún no hay rúbricas. Crea una para comenzar.",
     "detailDescription": "Detalles de la rúbrica",
@@ -353,7 +349,6 @@
       "actions": "Acciones"
     },
     "messages": {
-      "instructionRequired": "La instrucción es obligatoria para generar una rúbrica.",
       "nameRequired": "El nombre es obligatorio.",
       "invalidJson": "El contenido de la rúbrica debe ser JSON válido."
     }

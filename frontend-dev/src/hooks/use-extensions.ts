@@ -18,6 +18,19 @@ export type ExtensionClientSecret = {
   enabled: boolean;
 };
 
+export type CapabilityDefinition = {
+  id: string;
+  installationId: string;
+  capabilityId: string;
+  kind: string;
+  version: string;
+  declaredEffects: string[];
+  supportsStreaming: boolean;
+  supportsCancellation: boolean;
+  supportsResume: boolean;
+  supportsBatch: boolean;
+};
+
 export type CreateExtensionInput = {
   extensionId: string;
   scopes?: string[];
@@ -39,22 +52,22 @@ export const extensionKeys = {
 };
 
 const listExtensions = async (): Promise<ExtensionClient[]> => {
-  const res = await api.get("/extensions/admin/clients");
+  const res = await api.get("/v1/extensions/clients");
   return res.data;
 };
 
 const getExtension = async (extensionId: string): Promise<ExtensionClient> => {
-  const res = await api.get(`/extensions/admin/clients/${extensionId}`);
+  const res = await api.get(`/v1/extensions/clients/${extensionId}`);
   return res.data;
 };
 
 const createExtension = async (payload: CreateExtensionInput): Promise<ExtensionClientSecret> => {
-  const res = await api.post("/extensions/admin/clients", payload);
+  const res = await api.post("/v1/extensions/clients", payload);
   return res.data;
 };
 
 const updateExtension = async (payload: UpdateExtensionInput): Promise<ExtensionClient> => {
-  const res = await api.patch(`/extensions/admin/clients/${payload.extensionId}`, {
+  const res = await api.patch(`/v1/extensions/clients/${payload.extensionId}`, {
     scopes: payload.scopes,
     enabled: payload.enabled,
   });
@@ -62,7 +75,7 @@ const updateExtension = async (payload: UpdateExtensionInput): Promise<Extension
 };
 
 const rotateExtensionSecret = async (extensionId: string): Promise<ExtensionClientSecret> => {
-  const res = await api.post(`/extensions/admin/clients/${extensionId}/rotate`);
+  const res = await api.post(`/v1/extensions/clients/${extensionId}/rotate`);
   return res.data;
 };
 
@@ -70,6 +83,17 @@ export function useExtensions(enabled = true) {
   return useQuery({
     queryKey: extensionKeys.list(),
     queryFn: listExtensions,
+    enabled,
+  });
+}
+
+export function useCapabilities(enabled = true) {
+  return useQuery({
+    queryKey: [...extensionKeys.all, "capabilities"],
+    queryFn: async (): Promise<CapabilityDefinition[]> => {
+      const response = await api.get("/v1/extensions/capabilities");
+      return response.data;
+    },
     enabled,
   });
 }

@@ -341,12 +341,12 @@ class TestArtifactEnrollmentPermissions:
 
         # Enrolled student can view
         headers = _auth(test_client, stu1.email)
-        resp = test_client.get(f"/api/artifacts/{art_id}", headers=headers)
+        resp = test_client.get(f"/api/v1/artifacts/{art_id}", headers=headers)
         assert resp.status_code == 200
 
         # Non-enrolled student cannot view
         headers = _auth(test_client, stu2.email)
-        resp = test_client.get(f"/api/artifacts/{art_id}", headers=headers)
+        resp = test_client.get(f"/api/v1/artifacts/{art_id}", headers=headers)
         assert resp.status_code == 403
 
 
@@ -367,10 +367,10 @@ class TestLimitedViewsAndOwnership:
         assert payload.get("enrollmentCode") is None
         assert payload.get("isEnrollmentEnabled") is None
         # Limited response should not expose instructor-only nested data.
-        assert "workflows" not in payload
+        assert "flows" not in payload
         assert "instructor" not in payload
 
-    def test_enrolled_user_cannot_list_workflows_for_foreign_course(self, test_client, test_db):
+    def test_enrolled_user_cannot_see_foreign_course_flows(self, test_client, test_db):
         with test_db() as s:
             _, prof, stu1, _ = _make_users(s)
             course = _make_course(s, prof)
@@ -378,8 +378,9 @@ class TestLimitedViewsAndOwnership:
             s.commit()
 
         headers = _auth(test_client, stu1.email)
-        resp = test_client.get(f"/api/workflows/?course_id={course.id}", headers=headers)
-        assert resp.status_code == 403
+        resp = test_client.get(f"/api/v1/flows?course_id={course.id}", headers=headers)
+        assert resp.status_code == 200
+        assert resp.json() == []
 
     def test_enrolled_user_cannot_create_assignment_in_foreign_course(self, test_client, test_db):
         with test_db() as s:

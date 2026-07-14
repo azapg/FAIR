@@ -338,10 +338,6 @@
     "addLevel": "Add level",
     "levelMeaningHint": "Each cell describes this criterion at that performance level. Example for Level 1: \"The student did not present any work.\"",
     "weightHint": "Weights should add up to 1.0 across all criteria.",
-    "aiTitle": "Generate from instruction",
-    "aiPlaceholder": "Describe what should be evaluated, criteria, levels, and weighting style.",
-    "generate": "Generate rubric",
-    "generating": "Generating...",
     "contentJson": "Rubric JSON",
     "empty": "No rubrics yet. Create one to get started.",
     "detailDescription": "Rubric details",
@@ -353,7 +349,6 @@
       "actions": "Actions"
     },
     "messages": {
-      "instructionRequired": "Instruction is required to generate a rubric.",
       "nameRequired": "Name is required.",
       "invalidJson": "Rubric content must be valid JSON."
     }

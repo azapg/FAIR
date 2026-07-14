@@ -10,10 +10,14 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.sse import EventSourceResponse, format_sse_event
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session, selectinload
 
 from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.core.security.permissions import (
+    has_capability,
+    has_capability_and_owner,
+)
 from fair_platform.backend.core.security.dependencies import require_extension_client
 from fair_platform.backend.api.schema.execution import (
     ExecutionEventBatch,
@@ -30,6 +34,7 @@ from fair_platform.backend.data.database import SessionLocal, session_dependency
 from fair_platform.backend.data.models import (
     Execution,
     ExecutionEvent,
+    Course,
     ExtensionClient,
     ExtensionInstallation,
     ExtensionInstallationStatus,
@@ -55,6 +60,11 @@ from fair_platform.backend.services.execution_store import (
     EventIdentityConflict,
     ExecutionStoreError,
     create_execution,
+)
+from fair_platform.backend.services.flow_runtime import (
+    FlowRuntimeError,
+    advance_flow_execution,
+    fail_flow_execution,
 )
 
 
@@ -97,6 +107,12 @@ def _assert_execution_access(execution: Execution | None, user: User) -> Executi
         return execution
     if execution.thread is not None and execution.thread.owner_user_id == user.id:
         return execution
+    if execution.course is not None and has_capability_and_owner(
+        user,
+        "read_executions",
+        execution.course.instructor_id,
+    ):
+        return execution
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Execution access denied")
 
 
@@ -138,6 +154,9 @@ def _execution_read(execution: Execution) -> ExecutionRead:
         id=execution.id,
         thread_id=execution.thread_id,
         turn_id=execution.turn_id,
+        course_id=execution.course_id,
+        assignment_id=execution.assignment_id,
+        submission_ids=[submission.id for submission in execution.submissions],
         parent_execution_id=execution.parent_execution_id,
         root_execution_id=execution.root_execution_id,
         retry_of_execution_id=execution.retry_of_execution_id,
@@ -145,6 +164,9 @@ def _execution_read(execution: Execution) -> ExecutionRead:
         kind=_enum_value(execution.kind),
         capability_id=execution.capability_id,
         capability_version=execution.capability_version,
+        flow_version_id=execution.flow_version_id,
+        initiated_by_user_id=execution.initiated_by_user_id,
+        extension_installation_id=execution.extension_installation_id,
         status=_enum_value(execution.status),
         waiting_reason=execution.waiting_reason,
         created_at=execution.created_at,
@@ -152,6 +174,7 @@ def _execution_read(execution: Execution) -> ExecutionRead:
         finished_at=execution.finished_at,
         error_code=execution.error_code,
         error_summary=execution.error_summary,
+        output_summary=execution.output_summary,
         snapshot=snapshot_payload,
     )
 
@@ -349,6 +372,54 @@ def read_execution(
     return _execution_read(execution)
 
 
+@router.get("/executions", response_model=list[ExecutionRead])
+def list_executions(
+    course_id: UUID | None = None,
+    assignment_id: UUID | None = None,
+    submission_id: UUID | None = None,
+    flow_version_id: UUID | None = None,
+    execution_status: str | None = Query(default=None, alias="status"),
+    kind: str | None = None,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=500),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> list[ExecutionRead]:
+    query = select(Execution).options(
+        selectinload(Execution.snapshot),
+        selectinload(Execution.submissions),
+        selectinload(Execution.course),
+        selectinload(Execution.thread),
+    )
+    if course_id is not None:
+        query = query.where(Execution.course_id == course_id)
+    if assignment_id is not None:
+        query = query.where(Execution.assignment_id == assignment_id)
+    if submission_id is not None:
+        query = query.where(Execution.submissions.any(id=submission_id))
+    if flow_version_id is not None:
+        query = query.where(Execution.flow_version_id == flow_version_id)
+    if execution_status is not None:
+        query = query.where(Execution.status == execution_status)
+    if kind is not None:
+        query = query.where(Execution.kind == kind)
+
+    if not has_capability(current_user, "update_any_course"):
+        owned_courses = select(Course.id).where(Course.instructor_id == current_user.id)
+        query = query.where(
+            or_(
+                Execution.initiated_by_user_id == current_user.id,
+                Execution.thread.has(Thread.owner_user_id == current_user.id),
+                Execution.course_id.in_(owned_courses),
+            )
+        )
+
+    executions = db.scalars(
+        query.order_by(Execution.created_at.desc()).offset(offset).limit(limit)
+    ).unique().all()
+    return [_execution_read(execution) for execution in executions]
+
+
 @router.get("/executions/{execution_id}/events", response_model=list[ExecutionEventRead])
 def read_execution_events(
     execution_id: UUID,
@@ -477,6 +548,15 @@ def ingest_extension_events(
                 span_id=event.span_id,
             )
             accepted.append(_event_read(result.event))
+        if (
+            _enum_value(execution.kind) == "flow_step"
+            and _enum_value(execution.status)
+            in {"completed", "failed", "cancelled", "expired"}
+        ):
+            try:
+                advance_flow_execution(db, execution.root_execution_id)
+            except FlowRuntimeError as exc:
+                fail_flow_execution(db, execution.root_execution_id, str(exc))
         db.commit()
     except HTTPException:
         db.rollback()

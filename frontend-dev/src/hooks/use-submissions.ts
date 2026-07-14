@@ -27,11 +27,12 @@ export type SubmissionEvent = {
   submissionId: string
   eventType: SubmissionEventType
   actor?: { name: string } | null
-  workflowRun?: {
+  execution?: {
     id: string
-    status: "pending" | "running" | "success" | "failure" | "cancelled"
-    workflow?: { name: string } | null
-    runner?: { name: string } | null
+    status: "queued" | "running" | "waiting" | "completed" | "failed" | "cancelled" | "expired"
+    kind: "agent" | "action" | "flow" | "flow_step" | "tool" | "system"
+    capabilityId?: string | null
+    flowVersionId?: string | null
   } | null
   details?: Record<string, unknown> | null
   createdAt: string
@@ -59,21 +60,6 @@ export type Submitter = {
   role: string
 }
 
-export type SubmissionResult = {
-  id: string
-  submissionId: string
-  workflowRunId: string
-
-  transcription?: string | null
-  transcriptionConfidence?: number | null
-  transcribedAt?: string | null
-
-  score?: number | null
-  feedback?: string | null
-  gradedAt?: string | null
-  gradingMeta?: Record<string, unknown> | null
-}
-
 export type Submission = {
   id: string
   assignmentId: string
@@ -81,8 +67,6 @@ export type Submission = {
   submitter?: Submitter
   submittedAt: string
   status: SubmissionStatus
-  officialRunId?: string | null
-  officialResult?: SubmissionResult | null
   draftScore?: number | null
   draftFeedback?: string | null
   publishedScore?: number | null

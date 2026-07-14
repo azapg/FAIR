@@ -33,7 +33,7 @@ from fair_platform.backend.data.models.enrollment import (
 from fair_platform.backend.data.models.submission import Submission, SubmissionStatus
 from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.user import User
-from fair_platform.backend.data.models.legacy_artifact import AccessLevel, Artifact
+from fair_platform.backend.data.models.artifact import AccessLevel, Artifact
 from fair_platform.backend.data.models.lms_communication import (
     CourseComment,
     CoursePost,

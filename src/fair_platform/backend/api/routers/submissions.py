@@ -23,12 +23,10 @@ from fair_platform.backend.api.schema.submission import (
     SubmissionUpdate,
     SubmissionDraftUpdate,
 )
-from fair_platform.backend.api.schema.submission_result import SubmissionResultRead
 from fair_platform.backend.api.schema.submission_event import SubmissionTimelineEventRead
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 from fair_platform.backend.services.submission_manager import get_submission_manager
-from fair_platform.backend.data.models.workflow_run import WorkflowRun
 from fair_platform.backend.data.models.submission_event import SubmissionEvent
 from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.models.enrollment import (
@@ -205,9 +203,6 @@ async def create_submission(
 def list_submissions(
     db: Session = Depends(session_dependency),
     assignment_id: UUID = Query(None, description="Filter submissions by assignment ID"),
-    include_results: bool = Query(
-        True, description="Include all results in response (optional)"
-    ),
     current_user: User = Depends(get_current_user),
 ):
     """List all submissions, optionally filtered by assignment ID."""
@@ -264,7 +259,6 @@ def list_submissions(
             "submitted_at": sub.submitted_at,
             "status": sub.status,
             "artifacts": sub.artifacts,
-            "official_run_id": sub.official_run_id,
             "draft_score": sub.draft_score,
             "draft_feedback": sub.draft_feedback,
             "published_score": sub.published_score,
@@ -274,34 +268,12 @@ def list_submissions(
             "is_late": sub.is_late,
         }
 
-        # Attach official_result if present
         assignment = db.get(Assignment, sub.assignment_id)
         course = db.get(Course, assignment.course_id) if assignment else None
         manages_submission = bool(course and can_manage_course(db, course, current_user))
         if not manages_submission:
             sub_dict["draft_score"] = None
             sub_dict["draft_feedback"] = None
-
-        if sub.official_run_id and include_results and manages_submission:
-            # Lazy import to avoid circulars
-            from fair_platform.backend.data.models import SubmissionResult as SRModel
-
-            sr = (
-                db.query(SRModel)
-                .filter(
-                    SRModel.submission_id == sub.id,
-                    SRModel.workflow_run_id == sub.official_run_id,
-                )
-                .first()
-            )
-            if sr:
-                sub_dict["official_result"] = SubmissionResultRead.model_validate(
-                    sr
-                )
-            else:
-                sub_dict["official_result"] = None
-        else:
-            sub_dict["official_result"] = None
         result.append(sub_dict)
 
     return result
@@ -311,9 +283,6 @@ def list_submissions(
 @router.get("/{submission_id}", response_model=SubmissionRead)
 def get_submission(
     submission_id: UUID,
-    run_id: Optional[UUID] = Query(
-        None, description="If provided, return result for this workflow run"
-    ),
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
@@ -344,7 +313,6 @@ def get_submission(
         "submitted_at": sub.submitted_at,
         "status": sub.status,
         "artifacts": sub.artifacts,
-        "official_run_id": sub.official_run_id,
         "draft_score": sub.draft_score if can_manage else None,
         "draft_feedback": sub.draft_feedback if can_manage else None,
         "published_score": sub.published_score,
@@ -353,25 +321,6 @@ def get_submission(
         "attempt_number": sub.attempt_number,
         "is_late": sub.is_late,
     }
-
-    selected_run_id = run_id or sub.official_run_id
-    if selected_run_id and can_manage:
-        from fair_platform.backend.data.models import SubmissionResult as SRModel
-
-        sr = (
-            db.query(SRModel)
-            .filter(
-                SRModel.submission_id == sub.id,
-                SRModel.workflow_run_id == selected_run_id,
-            )
-            .first()
-        )
-        if sr:
-            response["official_result"] = SubmissionResultRead.model_validate(sr)
-        else:
-            response["official_result"] = None
-    else:
-        response["official_result"] = None
 
     return response
 
@@ -571,8 +520,7 @@ def get_submission_timeline(
         .filter(SubmissionEvent.submission_id == submission_id)
         .options(
             joinedload(SubmissionEvent.actor),
-            joinedload(SubmissionEvent.workflow_run).joinedload(WorkflowRun.runner),
-            joinedload(SubmissionEvent.workflow_run).joinedload(WorkflowRun.workflow),
+            joinedload(SubmissionEvent.execution),
         )
         .order_by(SubmissionEvent.created_at)
         .all()

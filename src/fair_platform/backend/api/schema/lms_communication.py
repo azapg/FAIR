@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from fair_platform.backend.api.schema.legacy_artifact import ArtifactRead
+from fair_platform.backend.api.schema.artifact import ArtifactRead
 from fair_platform.backend.api.schema.utils import schema_config
 from fair_platform.backend.data.models.lms_communication import CoursePostKind
 

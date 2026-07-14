@@ -1,73 +1,49 @@
 ---
-title: Welcome to Fair Grade
+title: Welcome to FAIR
+description: An open LMS and research platform with optional, installed Extensions.
 ---
-**Fair Grade** is an open-source ecosystem designed to allow researchers, professors, students, and policymakers integrate AI safely into the education system. Our Platform serves professors as a new AI-first _Learning Management System_ (LMS) where they can manage their courses and assignments using cutting edge AI tools based on the latest research in the field.
 
-The platform is part of the [Fair Grade Project](https://fairgradeproject.org), a research initiative that aims to explore the impact of AI on education and develop tools to ensure that AI is used in a way that is fair and equitable for all students. In these early stages of development, we are focused on building a robust and user-friendly LMS with AI graders and feedback tools, a core pillar of the **Fair Grade** vision. 
+**FAIR** is an open-source learning platform and research environment built by the [Fair Grade Project](https://fairgradeproject.org). It gives professors, students, and researchers a controlled place to study how new technology affects education while keeping human judgment at the center.
 
-Watch how FAIR transforms the grading workflow, processing nearly 200 pages of student submissions in seconds to provide detailed, criteria-based feedback.
+FAIR is intentionally useful without AI. With no Extensions installed, it behaves like a focused LMS: people, courses, assignments, submissions, rubrics, artifacts, and human decisions remain available.
 
-<iframe
-  className="w-full aspect-video rounded-xl"
-  src="https://www.youtube.com/embed/-MeTvNEhCK8"
-  title="FAIR Platform Demo"
-  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowFullScreen
-></iframe>
+## Extensions add behavior
 
-## The LMS Platform
-While Fair Grade functions as a standalone LMS, it is designed to be a flexible infrastructure that supports three key objectives:
+Installed Extensions add custom behavior such as:
 
-* **Seamless Integration**. You don't need to abandon your current setup. Our platform is built to connect with existing systems like **Google Classroom** and other industry-standard LMS providers, allowing you to bring AI-first workflows into your current environment.
-* **A Research Sandbox**. Beyond daily teaching, the platform provides researchers with a "live" environment to build, deploy, and test new AI methodologies in real-world educational settings. It is a lab for the future of pedagogy.
+- AI-assisted graders and feedback tools;
+- course-aware teaching assistants;
+- HTML slide and learning-material generators;
+- transcription and document processing;
+- deterministic analysis tools and external LMS connectors.
 
-* **Open & Accessible**. We are committed to the public good. Fair Grade is entirely open-source and free for educators and researchers. By keeping the code transparent and the access free, we ensure that the most powerful AI tools aren't locked behind a paywall.
+The platform does not embed those implementations or a global AI provider. It authenticates and authorizes an installed Extension, creates an observable Execution, records ordered events and Artifacts, and preserves the provenance needed for review and research.
 
+Read [Core and Extensions](/en/platform/extension-architecture) for the foundational boundary.
 
-## Our vision for the future of education
-At Fair Grade, we believe in the potential of AI to transform education, but we also recognize the risks. While we are starting with grading and feedback, our long-term vision is for Fair Grade to serve as the primary operating system for educational institutions. We are building toward a unified environment that replaces fragmented, non-specialized tools with a single, AI-native infrastructure that handles everything from policy to pedagogy.
+## Reproducible research through Flows
 
-### Beyond the LMS: What we are building
+A one-off task can be represented by one Execution. A **FlowVersion** pins an ordered procedure: exact capability versions, configuration, inputs, and linked step Executions. Researchers can then compare outcomes, costs, and interventions without depending on an opaque second workflow system.
 
-Our roadmap includes the development of core academic utilities that ensure students and faculty never have to leave a safe, governed environment:
+Read [Flows and Executions](/en/platform/flows) for the current model and implementation status.
 
-* **Secure Student Study-Chats**. Private, course-aware LLM interfaces that act as a personalized Teaching Assistant (TA). Unlike public tools like ChatGPT or Gemini which are often used as shortcuts, these chats are grounded in specific course materials and designed to support learning within a governed environment. The system brings students and professors closer: if the AI agent cannot resolve a complex query, it can forward the question directly to the professor, transforming the AI from a tool for cheating into a bridge for deeper engagement.
+## Human judgment remains explicit
 
-* **Academic Knowledge Engines**. A research-first alternative to tools like NotebookLM designed for deep study and content curation. This module allows professors to convert their books, notes, and guides into beautiful diagrams, videos, and even podcasts to increase student engagement. It serves as a hub where instructors share approved infographics and summaries, while students can quickly exchange notes, images, and resources generated by their agents within a collaborative, verified knowledge base.
+Extensions may analyze, explain, recommend, and propose. Completing an Execution does not silently publish a grade or make an institutional decision. Consequential outcomes remain explicit domain actions with visible human or policy provenance.
 
-* **Institutional Intelligence**. Tools for policymakers to oversee AI usage at scale, ensuring ethical deployment across entire departments or universities. This includes features for monitoring, auditing, and analyzing AI interactions to ensure compliance with institutional policies and ethical standards.
+## Next steps
 
-Read more about the future of the platform in our [roadmap](/en/roadmap). We are excited to collaborate with the education community to write the playbook for responsible AI in education.
-
-## Next Steps
 <Columns cols={2}>
-    <Card
-      title="Quickstart Guide"
-      icon="link"
-      href="/en/quickstart"
-      arrow="true"
-      cta="Read the guide"
-    >
-      Get your first course running in under 5 minutes.
-    </Card>
-    
-    <Card
-      title="Workflows and Plugins"
-      icon="link"
-      href="/en/platform/workflows"
-      arrow="true"
-      cta="Learn more"
-    >
-      Deep dive into how our research-backed graders work.
-    </Card>
-    
-    <Card
-      title="Integration Guide"
-      icon="link"
-      href="/en/platform/integration"
-      arrow="true"
-      cta="Learn more"
-    >
-      Learn how to sync Fair Grade with your existing courses.
-    </Card>
+  <Card title="Quickstart" icon="rocket" href="/en/quickstart">
+    Run FAIR and create your first course.
+  </Card>
+  <Card title="Core and Extensions" icon="blocks" href="/en/platform/extension-architecture">
+    Understand the boundary for every custom capability.
+  </Card>
+  <Card title="Flows and Executions" icon="workflow" href="/en/platform/flows">
+    Learn how reproducible procedures share one execution substrate.
+  </Card>
+  <Card title="Roadmap" icon="map" href="/en/roadmap">
+    Follow the path toward the FAIR 1.0 contract.
+  </Card>
 </Columns>

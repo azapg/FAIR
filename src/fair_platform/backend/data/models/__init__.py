@@ -5,10 +5,6 @@ from .enrollment import Enrollment, CourseMembershipRole, EnrollmentStatus
 from .submitter import Submitter
 from .submission import Submission, SubmissionStatus
 from .submission_event import SubmissionEvent, SubmissionEventType
-from .workflow import Workflow
-from .workflow_run import WorkflowRun, WorkflowRunStatus
-from .legacy_artifact import Artifact, ArtifactDerivative
-from .submission_result import SubmissionResult
 from .rubric import Rubric
 from .extension_client import ExtensionClient
 from .execution import (
@@ -20,9 +16,9 @@ from .execution import (
     ExecutionDispatchOutbox,
     ExecutionEvent,
     ExecutionKind,
-    ExecutionLegacyRef,
     ExecutionSnapshot,
     ExecutionStatus,
+    execution_submissions,
     InteractionRequest,
     InteractionStatus,
     Message,
@@ -44,6 +40,8 @@ from .extension import (
 )
 from .flow import Flow, FlowVersion, FlowVersionState
 from .artifact import (
+    Artifact,
+    ArtifactDerivative,
     ArtifactLink,
     ArtifactLinkRelationship,
     ArtifactLinkTargetType,
@@ -80,12 +78,8 @@ __all__ = [
     "SubmissionStatus",
     "SubmissionEvent",
     "SubmissionEventType",
-    "Workflow",
-    "WorkflowRun",
-    "WorkflowRunStatus",
     "Artifact",
     "ArtifactDerivative",
-    "SubmissionResult",
     "Rubric",
     "ExtensionClient",
     "DispatchCommandKind",
@@ -96,9 +90,9 @@ __all__ = [
     "ExecutionDispatchOutbox",
     "ExecutionEvent",
     "ExecutionKind",
-    "ExecutionLegacyRef",
     "ExecutionSnapshot",
     "ExecutionStatus",
+    "execution_submissions",
     "InteractionRequest",
     "InteractionStatus",
     "Message",

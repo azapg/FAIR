@@ -11,6 +11,10 @@ from sqlalchemy.orm import Session, selectinload
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.api.schema.extension import (
     CapabilityRead,
+    ExtensionClientIssueRequest,
+    ExtensionClientRead,
+    ExtensionClientSecretRead,
+    ExtensionClientUpdateRequest,
     GrantCreate,
     GrantRead,
     InstallationCreate,
@@ -21,12 +25,14 @@ from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import (
     CapabilityDefinition,
+    ExtensionClient,
     ExtensionGrant,
     ExtensionInstallation,
     ExtensionInstallationStatus,
     GrantDecision,
     User,
 )
+from fair_platform.backend.services.extension_auth import issue_extension_secret
 from fair_platform.extension_sdk.contracts.extension import CapabilityManifest, ExtensionManifest
 
 
@@ -40,6 +46,13 @@ def _value(value: object) -> str:
 def _require_admin(user: User) -> None:
     if not has_capability(user, "admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
+
+
+def _require_discovery(user: User) -> None:
+    if not has_capability(user, "discover_extension_capabilities"):
+        raise HTTPException(
+            status_code=403, detail="Extension capability discovery required"
+        )
 
 
 def _schema_uri(schema: dict, fallback: str) -> str:
@@ -85,6 +98,16 @@ def _grant_read(row: ExtensionGrant) -> GrantRead:
         decision=_value(row.decision),
         reason=row.reason,
         granted_by_user_id=row.granted_by_user_id,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+def _client_read(row: ExtensionClient) -> ExtensionClientRead:
+    return ExtensionClientRead(
+        extension_id=row.extension_id,
+        scopes=list(row.scopes or []),
+        enabled=bool(row.enabled),
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -150,6 +173,7 @@ def list_installations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> list[InstallationRead]:
+    _require_discovery(current_user)
     statement = select(ExtensionInstallation).options(
         selectinload(ExtensionInstallation.capabilities)
     ).order_by(ExtensionInstallation.extension_id)
@@ -168,6 +192,7 @@ def get_installation(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> InstallationRead:
+    _require_discovery(current_user)
     row = db.scalar(select(ExtensionInstallation).options(
         selectinload(ExtensionInstallation.capabilities)
     ).where(ExtensionInstallation.id == installation_id))
@@ -202,6 +227,7 @@ def list_capabilities(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> list[CapabilityRead]:
+    _require_discovery(current_user)
     statement = select(CapabilityDefinition).join(ExtensionInstallation).where(
         ExtensionInstallation.status == ExtensionInstallationStatus.enabled
     ).order_by(CapabilityDefinition.capability_id, CapabilityDefinition.version)
@@ -216,6 +242,7 @@ def get_capability(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> CapabilityRead:
+    _require_discovery(current_user)
     row = db.scalar(select(CapabilityDefinition).join(ExtensionInstallation).where(
         CapabilityDefinition.id == capability_id,
         ExtensionInstallation.status == ExtensionInstallationStatus.enabled,
@@ -282,6 +309,104 @@ def delete_grant(
         raise HTTPException(status_code=404, detail="Grant not found")
     db.delete(row)
     db.commit()
+
+
+@router.get("/clients", response_model=list[ExtensionClientRead])
+def list_extension_clients(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> list[ExtensionClientRead]:
+    _require_admin(current_user)
+    return [
+        _client_read(row)
+        for row in db.scalars(
+            select(ExtensionClient).order_by(ExtensionClient.extension_id)
+        )
+    ]
+
+
+@router.post(
+    "/clients",
+    response_model=ExtensionClientSecretRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_extension_client(
+    payload: ExtensionClientIssueRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ExtensionClientSecretRead:
+    _require_admin(current_user)
+    issued = issue_extension_secret(
+        db,
+        extension_id=payload.extension_id,
+        scopes=payload.scopes,
+        enabled=payload.enabled,
+    )
+    return ExtensionClientSecretRead(
+        extension_id=issued.extension_id,
+        extension_secret=issued.secret,
+        scopes=issued.scopes,
+        enabled=issued.enabled,
+    )
+
+
+@router.get("/clients/{extension_id}", response_model=ExtensionClientRead)
+def get_extension_client(
+    extension_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ExtensionClientRead:
+    _require_admin(current_user)
+    row = db.get(ExtensionClient, extension_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Extension client not found")
+    return _client_read(row)
+
+
+@router.patch("/clients/{extension_id}", response_model=ExtensionClientRead)
+def update_extension_client(
+    extension_id: str,
+    payload: ExtensionClientUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ExtensionClientRead:
+    _require_admin(current_user)
+    row = db.get(ExtensionClient, extension_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Extension client not found")
+    row.scopes = sorted({scope.strip() for scope in payload.scopes if scope.strip()})
+    row.enabled = payload.enabled
+    row.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(row)
+    return _client_read(row)
+
+
+@router.post(
+    "/clients/{extension_id}/rotate",
+    response_model=ExtensionClientSecretRead,
+)
+def rotate_extension_client(
+    extension_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ExtensionClientSecretRead:
+    _require_admin(current_user)
+    row = db.get(ExtensionClient, extension_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Extension client not found")
+    issued = issue_extension_secret(
+        db,
+        extension_id=extension_id,
+        scopes=list(row.scopes or []),
+        enabled=bool(row.enabled),
+    )
+    return ExtensionClientSecretRead(
+        extension_id=issued.extension_id,
+        extension_secret=issued.secret,
+        scopes=issued.scopes,
+        enabled=issued.enabled,
+    )
 
 
 __all__ = ["router"]

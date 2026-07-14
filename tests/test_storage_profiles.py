@@ -58,6 +58,7 @@ def test_s3_storage_profile_contract(monkeypatch):
 
 def test_profile_selection_defaults_local_and_requires_s3_bucket(monkeypatch):
     monkeypatch.delenv("FAIR_STORAGE_BACKEND", raising=False)
+    monkeypatch.delenv("FAIR_STORAGE_BACKENDS", raising=False)
     assert isinstance(get_storage_provider(), LocalStorageProvider)
 
     monkeypatch.setenv("FAIR_STORAGE_BACKEND", "s3")
