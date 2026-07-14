@@ -202,7 +202,7 @@ class TestArtifactAPIPermissions:
     #     token = get_auth_token(test_client, data["prof1"].email)
     #     headers = {"Authorization": f"Bearer {token}"}
     #
-    #     response = test_client.get("/api/artifacts", headers=headers)
+    #     response = test_client.get("/api/v1/artifacts", headers=headers)
     #     assert response.status_code == 200
     #
     #     artifacts = response.json()
@@ -224,7 +224,7 @@ class TestArtifactAPIPermissions:
     #     token = get_auth_token(test_client, data["student1"].email)
     #     headers = {"Authorization": f"Bearer {token}"}
     #
-    #     response = test_client.get("/api/artifacts", headers=headers)
+    #     response = test_client.get("/api/v1/artifacts", headers=headers)
     #     assert response.status_code == 200
     #
     #     artifacts = response.json()
@@ -255,7 +255,7 @@ class TestArtifactAPIPermissions:
         token = get_auth_token(test_client, data["prof1"].email)
         headers = {"Authorization": f"Bearer {token}"}
         
-        response = test_client.get(f"/api/artifacts/{private_artifact.id}", headers=headers)
+        response = test_client.get(f"/api/v1/artifacts/{private_artifact.id}", headers=headers)
         assert response.status_code == 200
         assert response.json()["title"] == "Prof1 Private Document"
         
@@ -263,11 +263,11 @@ class TestArtifactAPIPermissions:
         token = get_auth_token(test_client, data["student1"].email)
         headers = {"Authorization": f"Bearer {token}"}
         
-        response = test_client.get(f"/api/artifacts/{private_artifact.id}", headers=headers)
+        response = test_client.get(f"/api/v1/artifacts/{private_artifact.id}", headers=headers)
         assert response.status_code == 403
         
         # Test anyone can access public artifact
-        response = test_client.get(f"/api/artifacts/{public_artifact.id}", headers=headers)
+        response = test_client.get(f"/api/v1/artifacts/{public_artifact.id}", headers=headers)
         assert response.status_code == 200
         assert response.json()["title"] == "Public Document"
         
@@ -275,14 +275,14 @@ class TestArtifactAPIPermissions:
         token = get_auth_token(test_client, data["prof1"].email)
         headers = {"Authorization": f"Bearer {token}"}
         
-        response = test_client.get(f"/api/artifacts/{course_artifact.id}", headers=headers)
+        response = test_client.get(f"/api/v1/artifacts/{course_artifact.id}", headers=headers)
         assert response.status_code == 200
         
         # Test non-course instructor cannot access course artifact
         token = get_auth_token(test_client, data["prof2"].email)
         headers = {"Authorization": f"Bearer {token}"}
         
-        response = test_client.get(f"/api/artifacts/{course_artifact.id}", headers=headers)
+        response = test_client.get(f"/api/v1/artifacts/{course_artifact.id}", headers=headers)
         assert response.status_code == 403
 
     def test_artifact_edit_permissions(self, test_client, test_db):
@@ -301,7 +301,7 @@ class TestArtifactAPIPermissions:
         }
         
         response = test_client.put(
-            f"/api/artifacts/{private_artifact.id}",
+            f"/api/v1/artifacts/{private_artifact.id}",
             json=update_data,
             headers=headers
         )
@@ -315,7 +315,7 @@ class TestArtifactAPIPermissions:
         update_data = {"title": "Hacked Document"}
         
         response = test_client.put(
-            f"/api/artifacts/{private_artifact.id}",
+            f"/api/v1/artifacts/{private_artifact.id}",
             json=update_data,
             headers=headers
         )
@@ -329,7 +329,7 @@ class TestArtifactAPIPermissions:
         update_data = {"title": "Updated Course Material"}
         
         response = test_client.put(
-            f"/api/artifacts/{course_artifact.id}",
+            f"/api/v1/artifacts/{course_artifact.id}",
             json=update_data,
             headers=headers
         )
@@ -342,7 +342,7 @@ class TestArtifactAPIPermissions:
         update_data = {"title": "Updated Student Submission"}
         
         response = test_client.put(
-            f"/api/artifacts/{student_artifact.id}",
+            f"/api/v1/artifacts/{student_artifact.id}",
             json=update_data,
             headers=headers
         )
@@ -374,11 +374,11 @@ class TestArtifactAPIPermissions:
     #     token = get_auth_token(test_client, data["prof1"].email)
     #     headers = {"Authorization": f"Bearer {token}"}
     #
-    #     response = test_client.delete(f"/api/artifacts/{artifact_id}", headers=headers)
+    #     response = test_client.delete(f"/api/v1/artifacts/{artifact_id}", headers=headers)
     #     assert response.status_code == 204
     #
     #     # Verify artifact was deleted/marked for deletion
-    #     response = test_client.get(f"/api/artifacts/{artifact_id}", headers=headers)
+    #     response = test_client.get(f"/api/v1/artifacts/{artifact_id}", headers=headers)
     #     assert response.status_code == 404
     #
     # TODO(2026-02-05): Disabled failing test `test_artifact_delete_protection_active_submissions`. See tests/TODO.md.
@@ -416,14 +416,14 @@ class TestArtifactAPIPermissions:
     #     token = get_auth_token(test_client, data["prof1"].email)
     #     headers = {"Authorization": f"Bearer {token}"}
     #
-    #     response = test_client.delete(f"/api/artifacts/{student_artifact.id}", headers=headers)
+    #     response = test_client.delete(f"/api/v1/artifacts/{student_artifact.id}", headers=headers)
     #     assert response.status_code == 403  # Or 409 for conflict
     #
     #     # But student (owner) should still be able to delete their own
     #     token = get_auth_token(test_client, data["student1"].email)
     #     headers = {"Authorization": f"Bearer {token}"}
     #
-    #     response = test_client.delete(f"/api/artifacts/{student_artifact.id}", headers=headers)
+    #     response = test_client.delete(f"/api/v1/artifacts/{student_artifact.id}", headers=headers)
     #     assert response.status_code == 204
     #
     def test_admin_override_permissions(self, test_client, test_db):
@@ -435,21 +435,21 @@ class TestArtifactAPIPermissions:
         token = get_auth_token(test_client, data["admin"].email)
         headers = {"Authorization": f"Bearer {token}"}
         
-        response = test_client.get(f"/api/artifacts/{private_artifact.id}", headers=headers)
+        response = test_client.get(f"/api/v1/artifacts/{private_artifact.id}", headers=headers)
         assert response.status_code == 200
         
         # Test admin can edit any artifact
         update_data = {"title": "Admin Updated Document"}
         
         response = test_client.put(
-            f"/api/artifacts/{private_artifact.id}",
+            f"/api/v1/artifacts/{private_artifact.id}",
             json=update_data,
             headers=headers
         )
         assert response.status_code == 200
         
         # Test admin can delete any artifact
-        response = test_client.delete(f"/api/artifacts/{private_artifact.id}", headers=headers)
+        response = test_client.delete(f"/api/v1/artifacts/{private_artifact.id}", headers=headers)
         assert response.status_code == 204
 
     def test_course_context_filtering(self, test_client, test_db):
@@ -461,7 +461,7 @@ class TestArtifactAPIPermissions:
         headers = {"Authorization": f"Bearer {token}"}
         
         response = test_client.get(
-            f"/api/artifacts?course_id={data['course1'].id}",
+            f"/api/v1/artifacts?course_id={data['course1'].id}",
             headers=headers
         )
         assert response.status_code == 200
@@ -474,7 +474,7 @@ class TestArtifactAPIPermissions:
         
         # Test instructor cannot filter by course they don't own
         response = test_client.get(
-            f"/api/artifacts?course_id={data['course2'].id}",
+            f"/api/v1/artifacts?course_id={data['course2'].id}",
             headers=headers
         )
         # Should return empty or 403
@@ -491,7 +491,7 @@ class TestArtifactAPIPermissions:
         headers = {"Authorization": f"Bearer {token}"}
         
         response = test_client.get(
-            f"/api/artifacts?assignment_id={data['assignment1'].id}",
+            f"/api/v1/artifacts?assignment_id={data['assignment1'].id}",
             headers=headers
         )
         assert response.status_code == 200
@@ -513,7 +513,7 @@ class TestArtifactAPIPermissions:
     #     token = get_auth_token(test_client, data["prof1"].email)
     #     headers = {"Authorization": f"Bearer {token}"}
     #
-    #     response = test_client.get(f"/api/artifacts/{private_artifact.id}/download", headers=headers)
+    #     response = test_client.get(f"/api/v1/artifacts/{private_artifact.id}/download", headers=headers)
     #     # May be 200 (file content) or 302 (redirect to signed URL)
     #     assert response.status_code in [200, 302]
     #
@@ -521,11 +521,11 @@ class TestArtifactAPIPermissions:
     #     token = get_auth_token(test_client, data["student1"].email)
     #     headers = {"Authorization": f"Bearer {token}"}
     #
-    #     response = test_client.get(f"/api/artifacts/{private_artifact.id}/download", headers=headers)
+    #     response = test_client.get(f"/api/v1/artifacts/{private_artifact.id}/download", headers=headers)
     #     assert response.status_code == 403
     #
     #     # Test anyone can download public artifact
-    #     response = test_client.get(f"/api/artifacts/{public_artifact.id}/download", headers=headers)
+    #     response = test_client.get(f"/api/v1/artifacts/{public_artifact.id}/download", headers=headers)
     #     assert response.status_code in [200, 302]
     #
     def test_unauthenticated_access_restrictions(self, test_client, test_db):
@@ -533,17 +533,17 @@ class TestArtifactAPIPermissions:
         data = self.setup_test_data(test_db)
         
         # Test unauthenticated access to artifact list
-        response = test_client.get("/api/artifacts")
+        response = test_client.get("/api/v1/artifacts")
         assert response.status_code == 401  # Unauthorized
         
         # Test unauthenticated access to specific artifacts
         private_artifact = data["artifacts"][0]
-        response = test_client.get(f"/api/artifacts/{private_artifact.id}")
+        response = test_client.get(f"/api/v1/artifacts/{private_artifact.id}")
         assert response.status_code == 401
         
         # Public artifacts might be accessible without auth (depending on design)
         public_artifact = data["artifacts"][3]
-        response = test_client.get(f"/api/artifacts/{public_artifact.id}")
+        response = test_client.get(f"/api/v1/artifacts/{public_artifact.id}")
         # Could be 401 (if auth required) or 200 (if public access allowed)
         assert response.status_code in [200, 401]
 
@@ -553,7 +553,7 @@ class TestArtifactAPIPermissions:
         prof_token = get_auth_token(test_client, data["prof1"].email)
         prof_headers = {"Authorization": f"Bearer {prof_token}"}
         prof_response = test_client.post(
-            "/api/artifacts/admin/cleanup-orphaned",
+            "/api/v1/artifacts/admin/cleanup-orphaned",
             headers=prof_headers,
         )
         assert prof_response.status_code == 403
@@ -561,7 +561,7 @@ class TestArtifactAPIPermissions:
         admin_token = get_auth_token(test_client, data["admin"].email)
         admin_headers = {"Authorization": f"Bearer {admin_token}"}
         admin_response = test_client.post(
-            "/api/artifacts/admin/cleanup-orphaned",
+            "/api/v1/artifacts/admin/cleanup-orphaned",
             headers=admin_headers,
         )
         assert admin_response.status_code == 200
@@ -576,7 +576,7 @@ class TestArtifactAPIPermissions:
     #     headers = {"Authorization": f"Bearer {token}"}
     #
     #     private_artifact = data["artifacts"][0]
-    #     response = test_client.get(f"/api/artifacts/{private_artifact.id}", headers=headers)
+    #     response = test_client.get(f"/api/v1/artifacts/{private_artifact.id}", headers=headers)
     #     assert response.status_code == 200
     #
     #     artifact_data = response.json()
@@ -593,7 +593,7 @@ class TestArtifactAPIPermissions:
     #     headers = {"Authorization": f"Bearer {token}"}
     #
     #     public_artifact = data["artifacts"][3]
-    #     response = test_client.get(f"/api/artifacts/{public_artifact.id}", headers=headers)
+    #     response = test_client.get(f"/api/v1/artifacts/{public_artifact.id}", headers=headers)
     #     assert response.status_code == 200
     #
     #     artifact_data = response.json()

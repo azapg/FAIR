@@ -3,7 +3,6 @@ import {queryClient} from "@/lib/query-client";
 import {AuthProvider} from "@/contexts/auth-context";
 import {ThemeProvider} from "@/components/theme-provider"
 import {ReactNode, useEffect} from "react";
-import {SessionSocketProvider} from "@/contexts/session-socket-context";
 import {useVersionCheck} from "@/hooks/use-version";
 import { useTheme } from "@/components/theme-provider";
 import { useTranslation } from "react-i18next";
@@ -112,15 +111,13 @@ function SettingsRuntime() {
 export function Providers({children}: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionSocketProvider>
-        <ThemeProvider defaultTheme={"system"}>
-          <AuthProvider>
-            <VersionChecker />
-            <SettingsRuntime />
-            {children}
-          </AuthProvider>
-        </ThemeProvider>
-      </SessionSocketProvider>
+      <ThemeProvider defaultTheme={"system"}>
+        <AuthProvider>
+          <VersionChecker />
+          <SettingsRuntime />
+          {children}
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

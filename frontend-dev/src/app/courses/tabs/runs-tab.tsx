@@ -11,38 +11,44 @@ import {
 } from "lucide-react";
 
 import { DataTable, DataTableContent, DataTableEmpty } from "@/components/data-table";
-import { useWorkflowRuns } from "@/hooks/use-workflow-runs";
-import { useWorkflows } from "@/hooks/use-workflows";
-import { WorkflowRun, WorkflowRunStatus } from "@/store/workflows-store";
+import {
+  Execution,
+  ExecutionStatus,
+  useExecutions,
+} from "@/hooks/use-executions";
 
 const defaultSize = 14;
 
-const STATUS_ICONS: Record<WorkflowRunStatus, ReactNode> = {
-  pending: <SquircleDashed size={defaultSize} />,
+const STATUS_ICONS: Record<ExecutionStatus, ReactNode> = {
+  queued: <SquircleDashed size={defaultSize} />,
   running: (
     <Loader
       className="animate-spin [animation-duration:4.0s]"
       size={defaultSize}
     />
   ),
-  success: <CircleCheck size={defaultSize} />,
-  failure: <CircleAlert size={defaultSize} />,
+  waiting: <SquircleDashed size={defaultSize} />,
+  completed: <CircleCheck size={defaultSize} />,
+  failed: <CircleAlert size={defaultSize} />,
   cancelled: <CircleX size={defaultSize} />,
+  expired: <CircleX size={defaultSize} />,
 };
 
-const STATUS_COLORS: Record<WorkflowRunStatus, string> = {
-  pending: "gray-500",
+const STATUS_COLORS: Record<ExecutionStatus, string> = {
+  queued: "gray-500",
   running: "yellow-500",
-  success: "blue-500",
-  failure: "red-500",
+  waiting: "yellow-500",
+  completed: "blue-500",
+  failed: "red-500",
   cancelled: "gray-500",
+  expired: "gray-500",
 };
 
-interface WorkflowRunStatusLabelProps {
-  status: WorkflowRunStatus;
+interface ExecutionStatusLabelProps {
+  status: ExecutionStatus;
 }
 
-const WorkflowRunStatusLabel = ({ status }: WorkflowRunStatusLabelProps) => {
+const ExecutionStatusLabel = ({ status }: ExecutionStatusLabelProps) => {
   const { t } = useTranslation();
 
   const color = STATUS_COLORS[status] ?? "gray-500";
@@ -81,35 +87,28 @@ export function RunsTab({ courseId }: { courseId?: string }) {
     data: runs,
     isLoading: runsLoading,
     isError: runsError,
-  } = useWorkflowRuns({ courseId: courseId ?? "" });
-  const { workflows } = useWorkflows();
+  } = useExecutions({ courseId, enabled: !!courseId });
 
-  const workflowNames = useMemo(() => {
-    const map = new Map<string, string>();
-    workflows?.forEach((w) => map.set(w.id, w.name));
-    return map;
-  }, [workflows]);
-
-  const columns = useMemo<ColumnDef<WorkflowRun>[]>(
+  const columns = useMemo<ColumnDef<Execution>[]>(
     () => [
       {
-        id: "workflow",
+        id: "execution",
         header: t("runs.workflow"),
         cell: ({ row }) => (
           <span className="font-medium">
-            {workflowNames.get(row.original.workflowId) ?? row.original.workflowId}
+            {row.original.capabilityId ?? row.original.kind}
           </span>
         ),
       },
       {
         accessorKey: "status",
         header: t("runs.status"),
-        cell: ({ row }) => <WorkflowRunStatusLabel status={row.original.status} />,
+        cell: ({ row }) => <ExecutionStatusLabel status={row.original.status} />,
       },
       {
         id: "submissions",
         header: t("runs.submissions"),
-        cell: ({ row }) => row.original.submissions?.length || 0,
+        cell: ({ row }) => row.original.submissionIds.length,
       },
       {
         accessorKey: "startedAt",
@@ -127,12 +126,13 @@ export function RunsTab({ courseId }: { courseId?: string }) {
         header: () => <div className="text-right">{t("runs.runBy")}</div>,
         cell: ({ row }) => (
           <div className="text-right">
-            {row.original.runner?.name || t("submissions.timelineEvents.actor.system")}
+            {row.original.initiatedByUserId?.slice(0, 8) ||
+              t("submissions.timelineEvents.actor.system")}
           </div>
         ),
       },
     ],
-    [t, workflowNames],
+    [t],
   );
 
   if (!courseId) {

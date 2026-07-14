@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from fair_platform.backend.data.models.submission_event import SubmissionEventType
-from fair_platform.backend.data.models.workflow_run import WorkflowRunStatus
+from fair_platform.backend.data.models.execution import ExecutionKind, ExecutionStatus
 from fair_platform.backend.api.schema.utils import schema_config
 
 
@@ -15,25 +15,14 @@ class TimelineActorRead(BaseModel):
     name: str
 
 
-class TimelineRunnerRead(BaseModel):
-    model_config = schema_config
-
-    name: str
-
-
-class TimelineWorkflowRead(BaseModel):
-    model_config = schema_config
-
-    name: str
-
-
-class TimelineWorkflowRunRead(BaseModel):
+class TimelineExecutionRead(BaseModel):
     model_config = schema_config
 
     id: UUID
-    status: WorkflowRunStatus
-    workflow: Optional[TimelineWorkflowRead] = None
-    runner: Optional[TimelineRunnerRead] = None
+    status: ExecutionStatus
+    kind: ExecutionKind
+    capability_id: Optional[str] = None
+    flow_version_id: Optional[UUID] = None
 
 
 class SubmissionTimelineEventRead(BaseModel):
@@ -43,15 +32,13 @@ class SubmissionTimelineEventRead(BaseModel):
     submission_id: UUID
     event_type: SubmissionEventType
     actor: Optional[TimelineActorRead] = None
-    workflow_run: Optional[TimelineWorkflowRunRead] = None
+    execution: Optional[TimelineExecutionRead] = None
     details: Optional[dict] = None
     created_at: datetime
 
 
 __all__ = [
     "TimelineActorRead",
-    "TimelineRunnerRead",
-    "TimelineWorkflowRead",
-    "TimelineWorkflowRunRead",
+    "TimelineExecutionRead",
     "SubmissionTimelineEventRead",
 ]

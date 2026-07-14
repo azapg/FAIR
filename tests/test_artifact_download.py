@@ -51,7 +51,7 @@ def test_download_allows_authorized_user(test_client, test_db, admin_user):
         token = get_auth_token(test_client, admin_user.email)
         headers = {"Authorization": f"Bearer {token}"}
 
-        response = test_client.get(f"/api/artifacts/{artifact.id}/download", headers=headers)
+        response = test_client.get(f"/api/v1/artifacts/{artifact.id}/download", headers=headers)
 
         assert response.status_code == 200
         assert response.content == b"example content"
@@ -71,7 +71,7 @@ def test_download_enforces_permissions(test_client, test_db, professor_user, stu
         token = get_auth_token(test_client, student_user.email)
         headers = {"Authorization": f"Bearer {token}"}
 
-        response = test_client.get(f"/api/artifacts/{artifact.id}/download", headers=headers)
+        response = test_client.get(f"/api/v1/artifacts/{artifact.id}/download", headers=headers)
 
         assert response.status_code == 403
     finally:

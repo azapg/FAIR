@@ -48,7 +48,12 @@ def test_db():
     yield TestingSessionLocal
 
     app.dependency_overrides.clear()
-    Base.metadata.drop_all(bind=engine)
+    # SQLite enforces self-referential Execution lineage while dropping a
+    # populated schema. Disable FK checks only for fixture teardown; every test
+    # operation still runs with foreign keys enabled.
+    with engine.connect() as connection:
+        connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        Base.metadata.drop_all(bind=connection)
     engine.dispose()
 
     try:

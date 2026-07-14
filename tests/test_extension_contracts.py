@@ -101,3 +101,35 @@ def test_non_admin_can_discover_enabled_capabilities_but_not_mutate(test_db):
     assert capabilities.json()[0]["capabilityId"] == "review.assignment"
     denied = user_client.post("/api/v1/extensions/installations", json={"manifest": manifest})
     assert denied.status_code == 403
+
+
+def test_admin_manages_extension_ingest_credentials_on_v1_surface(test_db):
+    admin = User(
+        id=uuid4(), name="Admin", email=f"{uuid4()}@example.test", role=UserRole.admin
+    )
+    with test_db() as session:
+        session.add(admin)
+        session.commit()
+    client = _client(test_db, admin)
+
+    created = client.post(
+        "/api/v1/extensions/clients",
+        json={
+            "extensionId": "example.credential-client",
+            "scopes": ["executions:events"],
+            "enabled": True,
+        },
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["extensionSecret"]
+
+    updated = client.patch(
+        "/api/v1/extensions/clients/example.credential-client",
+        json={
+            "scopes": ["executions:events", "executions:events", "  "],
+            "enabled": False,
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["scopes"] == ["executions:events"]
+    assert updated.json()["enabled"] is False

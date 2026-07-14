@@ -9,8 +9,9 @@ if TYPE_CHECKING:
     from .user import User
     from .assignment import Assignment
     from .enrollment import Enrollment
-    from .workflow import Workflow
+    from .flow import Flow
     from .artifact import Artifact
+    from .execution import Execution
 
 
 class Course(Base):
@@ -33,14 +34,15 @@ class Course(Base):
     assignments: Mapped[List["Assignment"]] = relationship(
         "Assignment", back_populates="course"
     )
-    workflows: Mapped[List["Workflow"]] = relationship(
-        "Workflow", back_populates="course"
-    )
+    flows: Mapped[List["Flow"]] = relationship("Flow", back_populates="course")
     artifacts: Mapped[List["Artifact"]] = relationship(
         "Artifact", back_populates="course"
     )
     enrollments: Mapped[List["Enrollment"]] = relationship(
         "Enrollment", back_populates="course"
+    )
+    executions: Mapped[List["Execution"]] = relationship(
+        "Execution", back_populates="course"
     )
 
     def __repr__(self) -> str:

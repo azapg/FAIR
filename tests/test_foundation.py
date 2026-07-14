@@ -88,7 +88,6 @@ def test_foundation_table_inventory_is_registered():
         "execution_snapshots",
         "interaction_requests",
         "execution_dispatch_outbox",
-        "execution_legacy_refs",
         "messages",
         "message_parts",
         "artifact_versions",

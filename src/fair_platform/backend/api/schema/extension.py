@@ -10,8 +10,6 @@ from fair_platform.backend.api.schema.utils import schema_config
 from fair_platform.extension_sdk.contracts.extension import (
     CapabilityManifest,
     ExtensionManifest,
-    ExtensionRead,  # noqa: F401 - re-exported for the retiring registry router
-    ExtensionRegisterRequest,  # noqa: F401 - re-exported for the retiring registry router
     JsonSchemaDocument,  # noqa: F401 - public backend schema surface
 )
 

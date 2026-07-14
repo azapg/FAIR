@@ -1,5 +1,4 @@
 from uuid import uuid4
-from datetime import datetime
 
 from fastapi.testclient import TestClient
 
@@ -8,15 +7,16 @@ from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.submission import Submission, SubmissionStatus
 from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.submission_event import SubmissionEvent, SubmissionEventType
-from fair_platform.backend.data.models.workflow import Workflow
-from fair_platform.backend.data.models.workflow_run import WorkflowRun, WorkflowRunStatus
+from fair_platform.backend.data.models.execution import Execution, ExecutionKind, ExecutionStatus
 from tests.conftest import get_auth_token
 
 
 def test_get_submission_timeline_populates_fields(test_client: TestClient, test_db, professor_user, admin_user):
-    """Test that /submissions/{id}/timeline populates actor and workflow_run fields."""
+    """The submission timeline exposes canonical Execution context."""
     with test_db() as session:
         # 1. Setup basic data
+        professor_user.is_verified = True
+        session.add(professor_user)
         course = Course(
             id=uuid4(),
             name="Timeline Course",
@@ -48,22 +48,18 @@ def test_get_submission_timeline_populates_fields(test_client: TestClient, test_
         )
         session.add(submission)
         
-        workflow = Workflow(
-            id=uuid4(),
+        execution_id = uuid4()
+        execution = Execution(
+            id=execution_id,
+            root_execution_id=execution_id,
             course_id=course.id,
-            name="Timeline Workflow",
-            created_by=professor_user.id,
-            created_at=datetime.utcnow(),
+            assignment_id=assignment.id,
+            initiated_by_user_id=admin_user.id,
+            kind=ExecutionKind.flow,
+            status=ExecutionStatus.completed,
+            input={},
         )
-        session.add(workflow)
-        
-        workflow_run = WorkflowRun(
-            id=uuid4(),
-            workflow_id=workflow.id,
-            run_by=admin_user.id,
-            status=WorkflowRunStatus.success,
-        )
-        session.add(workflow_run)
+        session.add(execution)
         session.commit()
         
         # 2. Add events
@@ -76,12 +72,12 @@ def test_get_submission_timeline_populates_fields(test_client: TestClient, test_
             details={"score": {"old": None, "new": 85}},
         )
         
-        # Event 2: AI graded by workflow run
+        # Event 2: automated result recorded by an Execution
         event_ai = SubmissionEvent(
             id=uuid4(),
             submission_id=submission.id,
             event_type=SubmissionEventType.ai_initial_result_recorded,
-            workflow_run_id=workflow_run.id,
+            execution_id=execution.id,
             details={"score": 85},
         )
         
@@ -110,22 +106,17 @@ def test_get_submission_timeline_populates_fields(test_client: TestClient, test_
     assert "id" not in manual_event["actor"]
     assert "email" not in manual_event["actor"]
     assert "role" not in manual_event["actor"]
-    assert manual_event["workflowRun"] is None
+    assert manual_event["execution"] is None
     
     # Check AI graded event
     ai_event = next(
         e for e in timeline if e["eventType"] == "ai_initial_result_recorded"
     )
-    assert ai_event.get("workflowRunId") is None
-    assert ai_event["workflowRun"] is not None
-    assert ai_event["workflowRun"]["id"] == str(workflow_run.id)
-    assert ai_event["workflowRun"]["status"] == "success"
-    assert ai_event["workflowRun"]["workflow"]["name"] == workflow.name
-    assert ai_event["workflowRun"]["runner"]["name"] == admin_user.name
-    assert "workflowId" not in ai_event["workflowRun"]
-    assert "logs" not in ai_event["workflowRun"]
-    assert "id" not in ai_event["workflowRun"]["workflow"]
-    assert "id" not in ai_event["workflowRun"]["runner"]
-    assert "email" not in ai_event["workflowRun"]["runner"]
-    assert "role" not in ai_event["workflowRun"]["runner"]
+    assert ai_event.get("executionId") is None
+    assert ai_event["execution"] is not None
+    assert ai_event["execution"]["id"] == str(execution.id)
+    assert ai_event["execution"]["status"] == "completed"
+    assert ai_event["execution"]["kind"] == "flow"
+    assert "input" not in ai_event["execution"]
+    assert "outputSummary" not in ai_event["execution"]
     assert ai_event["actor"] is None

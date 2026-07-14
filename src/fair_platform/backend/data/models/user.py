@@ -14,8 +14,6 @@ from .types import json_document_type
 if TYPE_CHECKING:
     from .course import Course
     from .enrollment import Enrollment
-    from .workflow import Workflow
-    from .workflow_run import WorkflowRun
     from .artifact import Artifact
     from .submitter import Submitter
     from .submission import Submission
@@ -49,12 +47,6 @@ class User(Base):
     # Relationship to courses where this user is the instructor
     courses: Mapped[List["Course"]] = relationship(
         "Course", back_populates="instructor"
-    )
-    created_workflows: Mapped[List["Workflow"]] = relationship(
-        "Workflow", back_populates="creator"
-    )
-    workflow_runs: Mapped[List["WorkflowRun"]] = relationship(
-        "WorkflowRun", back_populates="runner"
     )
     created_artifacts: Mapped[List["Artifact"]] = relationship(
         "Artifact", back_populates="creator", foreign_keys="Artifact.creator_id"

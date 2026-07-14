@@ -5,6 +5,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.script import ScriptDirectory
+import pytest
 
 from fair_platform.backend.data.migrations import (
     build_alembic_config,
@@ -53,15 +54,13 @@ def test_upgrade_rehearsal_head_to_head_is_idempotent(tmp_path: Path) -> None:
     assert second == first
 
 
-def test_phase1_downgrade_and_reupgrade_rehearsal(tmp_path: Path) -> None:
-    db_path = tmp_path / "rehearsal_phase1_round_trip.sqlite"
+def test_destructive_cutover_rejects_downgrade(tmp_path: Path) -> None:
+    db_path = tmp_path / "rehearsal_destructive_cutover.sqlite"
     database_url = f"sqlite:///{db_path.as_posix()}"
 
     run_migrations_to_head(database_url)
-    command.downgrade(build_alembic_config(database_url), "20260307_0013")
-    assert _read_revision(db_path) == "20260307_0013"
-
-    run_migrations_to_head(database_url)
+    with pytest.raises(RuntimeError, match="intentional destructive cutover"):
+        command.downgrade(build_alembic_config(database_url), "20260307_0013")
     assert _read_revision(db_path) == _alembic_head()
 
 

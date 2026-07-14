@@ -10,14 +10,13 @@ import {useAssignments} from "@/hooks/use-assignments";
 import {ParticipantsTab} from "@/app/courses/tabs/participants-tab";
 import {RunsTab} from "@/app/courses/tabs/runs-tab";
 import {ArtifactsTab} from "@/app/courses/tabs/artifacts-tab";
-import {WorkflowsTab} from "@/app/courses/tabs/workflows-tab";
-import {PluginsTab} from "@/app/courses/tabs/plugins-tab";
-import {useWorkflowStore} from "@/store/workflows-store";
+import {FlowsTab} from "@/app/courses/tabs/flows-tab";
+import {CapabilitiesTab} from "@/app/courses/tabs/capabilities-tab";
 import { EnrollmentControls } from "../components/enrollment-controls";
 import {useResetEnrollmentCode, useUpdateCourseSettings} from "@/hooks/use-courses";
 import {useAuth} from "@/contexts/auth-context";
 import {usePermission} from "@/hooks/use-permission";
-type CourseTab = "assignments" | "participants" | "runs" | "artifacts" | "workflows" | "plugins";
+type CourseTab = "assignments" | "participants" | "runs" | "artifacts" | "flows" | "capabilities";
 
 export default function CourseDetailPage() {
   const params = useParams<{ courseId: string, tab: string }>()
@@ -28,7 +27,6 @@ export default function CourseDetailPage() {
   const {user} = useAuth();
   const canManageAnyCourseSettings = usePermission("manage_course_settings_any");
   const canManageUsers = usePermission("manage_users");
-  const {setActiveCourseId} = useWorkflowStore();
   const resetEnrollmentCode = useResetEnrollmentCode();
   const updateCourseSettings = useUpdateCourseSettings();
 
@@ -42,18 +40,12 @@ export default function CourseDetailPage() {
     const instructorId = "instructorId" in course ? course.instructorId : course.instructor?.id;
     const isInstructorView = !!user && (instructorId === user.id || canManageUsers);
     const visibleTabs: CourseTab[] = isInstructorView
-      ? ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"]
+      ? ["assignments", "participants", "runs", "artifacts", "flows", "capabilities"]
       : ["assignments", "artifacts"];
     if (!tab || !visibleTabs.includes(tab as CourseTab)) {
       navigate(`assignments`);
     }
   }, [tab, courseId, navigate, basePath, isLoading, isError, course, user, canManageUsers]);
-
-  useEffect(() => {
-    if (courseId) {
-      setActiveCourseId(courseId);
-    }
-  }, [courseId, setActiveCourseId]);
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -68,7 +60,7 @@ export default function CourseDetailPage() {
   const isCourseAdmin = !!user && canManageUsers;
   const isInstructorView = isCourseOwner || isCourseAdmin;
   const visibleTabs: CourseTab[] = isInstructorView
-    ? ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"]
+    ? ["assignments", "participants", "runs", "artifacts", "flows", "capabilities"]
     : ["assignments", "artifacts"];
   const currentTab = (tab && visibleTabs.includes(tab as CourseTab) ? tab : "assignments") as CourseTab;
 
@@ -133,8 +125,8 @@ export default function CourseDetailPage() {
             <TabsTrigger value="artifacts">{t("tabs.artifacts")}</TabsTrigger>
             {isInstructorView && <TabsTrigger value="participants">{t("tabs.participants")}</TabsTrigger>}
             {isInstructorView && <TabsTrigger value="runs">{t("tabs.runs")}</TabsTrigger>}
-            {isInstructorView && <TabsTrigger value="workflows">{t("tabs.workflows")}</TabsTrigger>}
-            {isInstructorView && <TabsTrigger value="plugins">{t("tabs.plugins")}</TabsTrigger>}
+            {isInstructorView && <TabsTrigger value="flows">Flows</TabsTrigger>}
+            {isInstructorView && <TabsTrigger value="capabilities">Capabilities</TabsTrigger>}
           </TabsList>
           <ScrollBar orientation="horizontal" className={"hidden"}/>
         </ScrollArea>
@@ -155,13 +147,13 @@ export default function CourseDetailPage() {
           </TabsContent>
         )}
         {isInstructorView && (
-          <TabsContent value={"workflows"} className={"px-8"}>
-            <WorkflowsTab courseId={courseId}/>
+          <TabsContent value={"flows"} className={"px-8"}>
+            <FlowsTab courseId={courseId}/>
           </TabsContent>
         )}
         {isInstructorView && (
-          <TabsContent value={"plugins"} className={"px-8"}>
-            <PluginsTab/>
+          <TabsContent value={"capabilities"} className={"px-8"}>
+            <CapabilitiesTab/>
           </TabsContent>
         )}
       </Tabs>

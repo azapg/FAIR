@@ -44,7 +44,7 @@ type SidebarContextProps = {
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
-const WorkflowsSidebarContext = React.createContext<SidebarContextProps | null>(null);
+const FlowSidebarContext = React.createContext<SidebarContextProps | null>(null);
 
 function useSidebar() {
   const context = React.useContext(SidebarContext);
@@ -55,10 +55,10 @@ function useSidebar() {
   return context;
 }
 
-function useWorkflowsSidebar() {
-  const context = React.useContext(WorkflowsSidebarContext);
+function useFlowSidebar() {
+  const context = React.useContext(FlowSidebarContext);
   if (!context) {
-    throw new Error("useWorkflowsSidebar must be used within a WorkflowsSidebarProvider.");
+    throw new Error("useFlowSidebar must be used within a FlowSidebarProvider.");
   }
 
   return context;
@@ -188,7 +188,7 @@ function SidebarProvider({
   );
 }
 
-function WorkflowsSidebarProvider({
+function FlowSidebarProvider({
   defaultOpen = true,
   open: openProp,
   onOpenChange: setOpenProp,
@@ -287,7 +287,7 @@ function WorkflowsSidebarProvider({
   );
 
   return (
-    <WorkflowsSidebarContext.Provider value={contextValue}>
+    <FlowSidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div
           data-slot="sidebar-wrapper"
@@ -308,7 +308,7 @@ function WorkflowsSidebarProvider({
           {children}
         </div>
       </TooltipProvider>
-    </WorkflowsSidebarContext.Provider>
+    </FlowSidebarContext.Provider>
   );
 }
 
@@ -325,13 +325,13 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
   const { style, ...containerProps } = props;
-  const workflowsContext = React.useContext(WorkflowsSidebarContext);
+  const flowContext = React.useContext(FlowSidebarContext);
   const sidebarContext = React.useContext(SidebarContext);
 
-  const context = workflowsContext || sidebarContext;
+  const context = flowContext || sidebarContext;
   if (!context) {
     throw new Error(
-      "useSidebar must be used within a SidebarProvider or WorkflowsSidebarProvider.",
+      "useSidebar must be used within a SidebarProvider or FlowSidebarProvider.",
     );
   }
 
@@ -452,12 +452,12 @@ function SidebarTrigger({
   );
 }
 
-function WorkflowsSidebarTrigger({
+function FlowSidebarTrigger({
   className,
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useWorkflowsSidebar();
+  const { toggleSidebar } = useFlowSidebar();
 
   return (
     <Button
@@ -922,7 +922,7 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
-  WorkflowsSidebarProvider,
-  WorkflowsSidebarTrigger,
-  useWorkflowsSidebar,
+  FlowSidebarProvider,
+  FlowSidebarTrigger,
+  useFlowSidebar,
 };

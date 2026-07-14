@@ -8,6 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.api.routers.auth import get_current_user
+from fair_platform.backend.core.security.permissions import (
+    has_capability,
+    has_capability_and_owner,
+)
 from fair_platform.backend.api.schema.flow import (
     FlowCreate,
     FlowExecutionRead,
@@ -18,7 +22,7 @@ from fair_platform.backend.api.schema.flow import (
     FlowVersionRead,
 )
 from fair_platform.backend.data.database import session_dependency
-from fair_platform.backend.data.models import Flow, FlowVersion, User
+from fair_platform.backend.data.models import Course, Flow, FlowVersion, User
 from fair_platform.backend.services.flow_service import (
     FlowNotFound,
     FlowStateError,
@@ -32,6 +36,11 @@ from fair_platform.backend.services.flow_service import (
 
 
 router = APIRouter(prefix="/flows")
+
+
+def _require_capability(user: User, capability: str) -> None:
+    if not has_capability(user, capability):
+        raise HTTPException(status_code=403, detail=f"{capability} capability required")
 
 
 def _state(value: object) -> str:
@@ -70,6 +79,7 @@ def _flow_read(flow: Flow) -> FlowRead:
 
 
 def _owned_flow(db: Session, flow_id: UUID, user: User) -> Flow:
+    _require_capability(user, "read_flow")
     try:
         return get_owned_flow(db, flow_id, user.id)
     except FlowNotFound as exc:
@@ -91,6 +101,20 @@ def create_flow_route(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> FlowRead:
+    _require_capability(current_user, "create_flow")
+    if payload.course_id is not None:
+        course = db.get(Course, payload.course_id)
+        if course is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+            )
+        if not has_capability_and_owner(
+            current_user, "update_own_course", course.instructor_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the course owner can create a course-scoped Flow",
+            )
     flow = create_flow(
         db,
         owner_user_id=current_user.id,
@@ -108,6 +132,7 @@ def list_flows(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> list[FlowRead]:
+    _require_capability(current_user, "read_flow")
     query = select(Flow).where(Flow.owner_user_id == current_user.id)
     if not include_archived:
         query = query.where(Flow.archived_at.is_(None))
@@ -131,6 +156,7 @@ def update_flow(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> FlowRead:
+    _require_capability(current_user, "update_flow")
     flow = _owned_flow(db, flow_id, current_user)
     if flow.archived_at is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Flow is archived")
@@ -148,6 +174,7 @@ def archive_flow(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> FlowRead:
+    _require_capability(current_user, "update_flow")
     flow = _owned_flow(db, flow_id, current_user)
     if flow.archived_at is None:
         flow.archived_at = datetime.now(timezone.utc)
@@ -166,6 +193,7 @@ def create_version(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> FlowVersionRead:
+    _require_capability(current_user, "update_flow")
     flow = _owned_flow(db, flow_id, current_user)
     try:
         version = create_flow_version(
@@ -173,7 +201,6 @@ def create_version(
             flow=flow,
             created_by_user_id=current_user.id,
             definition=payload.definition,
-            capability_pins=payload.capability_pins,
             config_snapshot=payload.config_snapshot,
         )
         db.commit()
@@ -200,6 +227,7 @@ def publish_version(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> FlowVersionRead:
+    _require_capability(current_user, "update_flow")
     flow = _owned_flow(db, flow_id, current_user)
     try:
         version = publish_flow_version(db, _version(flow, version_id))
@@ -217,6 +245,7 @@ def archive_version(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> FlowVersionRead:
+    _require_capability(current_user, "update_flow")
     flow = _owned_flow(db, flow_id, current_user)
     try:
         version = archive_flow_version(db, _version(flow, version_id))
@@ -238,16 +267,19 @@ def start_execution(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> FlowExecutionRead:
+    _require_capability(current_user, "execute_flow")
     flow = _owned_flow(db, flow_id, current_user)
     if flow.archived_at is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Flow is archived")
     try:
-        execution, version, dispatch = start_flow_execution(
+        execution, version, step, dispatch = start_flow_execution(
             db,
             flow=flow,
             initiated_by_user_id=current_user.id,
             input_payload=payload.input,
             flow_version_id=payload.flow_version_id,
+            assignment_id=payload.assignment_id,
+            submission_ids=payload.submission_ids,
         )
         db.commit()
     except FlowStateError as exc:
@@ -258,6 +290,7 @@ def start_execution(
         flow_version_id=version.id,
         status=_state(execution.status),
         dispatch_id=dispatch.id,
+        step_execution_id=step.id,
     )
 
 

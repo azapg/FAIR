@@ -25,7 +25,7 @@ export type CourseDetail = {
     role: 'instructor' | 'admin' | 'user',
   },
   assignments: Assignment[],
-  workflows: {
+  flows: {
     id: string,
     name: string,
     description?: string | null,

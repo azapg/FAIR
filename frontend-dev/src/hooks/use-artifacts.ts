@@ -71,27 +71,27 @@ const fetchArtifacts = async (params?: ArtifactsListParams): Promise<Artifact[]>
   if (params?.status) queryParams.status = params.status
   if (params?.accessLevel) queryParams.access_level = params.accessLevel
 
-  const res = await api.get('/artifacts', { params: queryParams })
+  const res = await api.get('/v1/artifacts', { params: queryParams })
   return res.data
 }
 
 const fetchArtifact = async (id: string): Promise<Artifact> => {
-  const res = await api.get(`/artifacts/${id}`)
+  const res = await api.get(`/v1/artifacts/${id}`)
   return res.data
 }
 
 const createArtifact = async (data: CreateArtifactInput): Promise<Artifact> => {
-  const res = await api.post('/artifacts', data)
+  const res = await api.post('/v1/artifacts', data)
   return res.data
 }
 
 const updateArtifact = async (id: string, data: UpdateArtifactInput): Promise<Artifact> => {
-  const res = await api.put(`/artifacts/${id}`, data)
+  const res = await api.put(`/v1/artifacts/${id}`, data)
   return res.data
 }
 
 const deleteArtifact = async (id: string): Promise<void> => {
-  await api.delete(`/artifacts/${id}`)
+  await api.delete(`/v1/artifacts/${id}`)
 }
 
 export function toSDKArtifact(artifact: Artifact): SDKArtifact {

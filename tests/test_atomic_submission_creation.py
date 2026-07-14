@@ -579,14 +579,14 @@ class TestAtomicSubmissionCreation:
         artifact_id = artifact["id"]
         
         # Test student can access their submission artifact
-        response = test_client.get(f"/api/artifacts/{artifact_id}", headers=headers)
+        response = test_client.get(f"/api/v1/artifacts/{artifact_id}", headers=headers)
         assert response.status_code == 200
         
         # Test professor can access submission artifact
         prof_token = get_auth_token(test_client, data["professor_email"])
         prof_headers = {"Authorization": f"Bearer {prof_token}"}
         
-        response = test_client.get(f"/api/artifacts/{artifact_id}", headers=prof_headers)
+        response = test_client.get(f"/api/v1/artifacts/{artifact_id}", headers=prof_headers)
         assert response.status_code == 200
 
     # TODO(2026-02-05): Disabled failing test `test_submission_timestamps_and_metadata`. See tests/TODO.md.

@@ -12,7 +12,7 @@ from .types import json_document_type
 if TYPE_CHECKING:
     from .submission import Submission
     from .user import User
-    from .workflow_run import WorkflowRun
+    from .execution import Execution
 
 
 class SubmissionEventType(str, Enum):
@@ -35,8 +35,8 @@ class SubmissionEvent(Base):
     actor_id: Mapped[Optional[UUID]] = mapped_column(
         SAUUID, ForeignKey("users.id"), nullable=True
     )
-    workflow_run_id: Mapped[Optional[UUID]] = mapped_column(
-        SAUUID, ForeignKey("workflow_runs.id"), nullable=True
+    execution_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("executions.id", ondelete="SET NULL"), nullable=True
     )
     details: Mapped[Optional[dict]] = mapped_column(
         json_document_type(), nullable=True
@@ -49,7 +49,7 @@ class SubmissionEvent(Base):
         "Submission", back_populates="events"
     )
     actor: Mapped[Optional["User"]] = relationship("User")
-    workflow_run: Mapped[Optional["WorkflowRun"]] = relationship("WorkflowRun")
+    execution: Mapped[Optional["Execution"]] = relationship("Execution")
 
     def __repr__(self) -> str:
         return (

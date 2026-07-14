@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from collections.abc import Iterable
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
@@ -15,7 +16,11 @@ from fair_platform.backend.data.models.execution import (
     ExecutionEvent,
     ExecutionStatus,
     Turn,
+    Thread,
 )
+from fair_platform.backend.data.models.assignment import Assignment
+from fair_platform.backend.data.models.course import Course
+from fair_platform.backend.data.models.submission import Submission
 
 
 class ExecutionStoreError(ValueError):
@@ -49,9 +54,12 @@ def create_execution(
     initiated_by_user_id: UUID | None = None,
     parent_execution_id: UUID | None = None,
     retry_of_execution_id: UUID | None = None,
+    course_id: UUID | None = None,
+    assignment_id: UUID | None = None,
+    submission_ids: Iterable[UUID] | None = None,
     **values: Any,
 ) -> Execution:
-    """Create an Execution with valid root/parent/retry lineage."""
+    """Create an Execution with valid lineage and typed LMS scope."""
 
     parent = (
         session.get(Execution, parent_execution_id)
@@ -80,6 +88,44 @@ def create_execution(
             raise ExecutionStoreError(
                 "a retried child Execution must retain its original parent"
             )
+
+    lineage_source = parent or retry_of
+    resolved_submission_ids = (
+        list(dict.fromkeys(submission_ids)) if submission_ids is not None else None
+    )
+    if lineage_source is not None:
+        if course_id is not None and course_id != lineage_source.course_id:
+            raise ExecutionStoreError(
+                "child and retry Executions must retain the root course scope"
+            )
+        if assignment_id is not None and assignment_id != lineage_source.assignment_id:
+            raise ExecutionStoreError(
+                "child and retry Executions must retain the root assignment scope"
+            )
+        course_id = lineage_source.course_id
+        assignment_id = lineage_source.assignment_id
+        if resolved_submission_ids is None:
+            resolved_submission_ids = [item.id for item in lineage_source.submissions]
+
+    thread = None
+    if thread_id is not None:
+        thread = session.get(Thread, thread_id)
+        if thread is None:
+            raise ExecutionStoreError(f"Thread {thread_id} does not exist")
+        if course_id is not None and thread.course_id not in {None, course_id}:
+            raise ExecutionStoreError("Execution course scope conflicts with its Thread")
+        if assignment_id is not None and thread.assignment_id not in {
+            None,
+            assignment_id,
+        }:
+            raise ExecutionStoreError(
+                "Execution assignment scope conflicts with its Thread"
+            )
+        course_id = course_id or thread.course_id
+        assignment_id = assignment_id or thread.assignment_id
+        if resolved_submission_ids is None and thread.submission_id is not None:
+            resolved_submission_ids = [thread.submission_id]
+
     if turn_id is not None:
         turn = session.get(Turn, turn_id)
         if turn is None:
@@ -89,6 +135,43 @@ def create_execution(
                 "turn_id must belong to the Execution's thread_id"
             )
 
+    submissions: list[Submission] = []
+    if resolved_submission_ids:
+        submissions = list(
+            session.scalars(
+                select(Submission).where(Submission.id.in_(resolved_submission_ids))
+            )
+        )
+        found_ids = {item.id for item in submissions}
+        missing_ids = [item for item in resolved_submission_ids if item not in found_ids]
+        if missing_ids:
+            raise ExecutionStoreError(
+                f"Submission scope contains unknown IDs: {missing_ids}"
+            )
+        submission_assignment_ids = {item.assignment_id for item in submissions}
+        if len(submission_assignment_ids) != 1:
+            raise ExecutionStoreError(
+                "one Execution cannot span submissions from multiple assignments"
+            )
+        submission_assignment_id = next(iter(submission_assignment_ids))
+        if assignment_id is not None and assignment_id != submission_assignment_id:
+            raise ExecutionStoreError(
+                "Execution submissions must belong to its assignment scope"
+            )
+        assignment_id = assignment_id or submission_assignment_id
+
+    if assignment_id is not None:
+        assignment = session.get(Assignment, assignment_id)
+        if assignment is None:
+            raise ExecutionStoreError(f"Assignment {assignment_id} does not exist")
+        if course_id is not None and course_id != assignment.course_id:
+            raise ExecutionStoreError(
+                "Execution assignment must belong to its course scope"
+            )
+        course_id = course_id or assignment.course_id
+    elif course_id is not None and session.get(Course, course_id) is None:
+        raise ExecutionStoreError(f"Course {course_id} does not exist")
+
     execution_id = uuid4()
     root_id = (
         (parent or retry_of).root_execution_id if (parent or retry_of) else execution_id
@@ -97,6 +180,8 @@ def create_execution(
         id=execution_id,
         thread_id=thread_id,
         turn_id=turn_id,
+        course_id=course_id,
+        assignment_id=assignment_id,
         parent_execution_id=parent_execution_id,
         root_execution_id=root_id,
         retry_of_execution_id=retry_of_execution_id,
@@ -105,6 +190,7 @@ def create_execution(
         initiated_by_user_id=initiated_by_user_id,
         **values,
     )
+    execution.submissions = submissions
     session.add(execution)
     session.flush()
     return execution

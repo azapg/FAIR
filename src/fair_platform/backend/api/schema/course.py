@@ -3,7 +3,7 @@ from uuid import UUID
 from pydantic import BaseModel
 from fair_platform.backend.api.schema.user import UserRead
 from fair_platform.backend.api.schema.assignment import AssignmentRead
-from fair_platform.backend.api.schema.workflow import WorkflowRead
+from fair_platform.backend.api.schema.flow import FlowRead
 from fair_platform.backend.api.schema.utils import schema_config
 
 
@@ -43,7 +43,7 @@ class CourseDetailRead(BaseModel):
     description: Optional[str] = None
     instructor: UserRead
     assignments: List[AssignmentRead] = []
-    workflows: List[WorkflowRead] = []
+    flows: List[FlowRead] = []
     enrollment_code: Optional[str] = None
     is_enrollment_enabled: Optional[bool] = None
 

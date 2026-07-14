@@ -106,7 +106,7 @@ export function ArtifactAction({
   const handleAction = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get(`/artifacts/${artifact.id}/download`, {
+      const response = await api.get(`/v1/artifacts/${artifact.id}/download`, {
         responseType: "json",
         headers: {
           Accept: "application/json",

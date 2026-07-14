@@ -23,7 +23,7 @@ class SubmissionManager:
         submission_id: UUID,
         event_type: SubmissionEventType,
         actor_id: Optional[UUID] = None,
-        workflow_run_id: Optional[UUID] = None,
+        execution_id: Optional[UUID] = None,
         details: Optional[dict] = None,
     ) -> SubmissionEvent:
         event = SubmissionEvent(
@@ -31,7 +31,7 @@ class SubmissionManager:
             submission_id=submission_id,
             event_type=event_type,
             actor_id=actor_id,
-            workflow_run_id=workflow_run_id,
+            execution_id=execution_id,
             details=details,
         )
         self.db.add(event)
@@ -43,7 +43,7 @@ class SubmissionManager:
         submission_id: UUID,
         score: float,
         feedback: str,
-        workflow_run_id: UUID,
+        execution_id: UUID,
     ) -> Submission:
         sub = self.db.get(Submission, submission_id)
         if not sub:
@@ -77,7 +77,7 @@ class SubmissionManager:
         self._log_event(
             submission_id=sub.id,
             event_type=event_type,
-            workflow_run_id=workflow_run_id,
+            execution_id=execution_id,
             details={
                 "score": score,
                 "feedback": feedback,
@@ -111,7 +111,7 @@ class SubmissionManager:
         submission_id: UUID,
         from_status: SubmissionStatus | str | None,
         to_status: SubmissionStatus | str,
-        workflow_run_id: Optional[UUID] = None,
+        execution_id: Optional[UUID] = None,
         actor_id: Optional[UUID] = None,
         reason: Optional[str] = None,
     ) -> SubmissionEvent | None:
@@ -124,7 +124,7 @@ class SubmissionManager:
             submission_id=submission_id,
             event_type=SubmissionEventType.status_transitioned,
             actor_id=actor_id,
-            workflow_run_id=workflow_run_id,
+            execution_id=execution_id,
             details={
                 "from_status": from_value,
                 "to_status": to_value,

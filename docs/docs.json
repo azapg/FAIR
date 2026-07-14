@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "almond",
   "name": "The Fair Docs",
-  "description": "FAIR (The Fair Platform) is an open-source, AI-powered grading platform for experimenting with interpreters, rubrics, agent-based graders, and reproducible assessment workflows.",
+  "description": "FAIR is an open-source LMS and research platform where installed Extensions add AI, agents, graders, renderers, and other custom behavior through one observable execution model.",
   "colors": {
     "primary": "#ff0000"
   },
@@ -59,9 +59,10 @@
                 "pages": [
                   "en/platform/courses",
                   "en/platform/assignments",
-                  "en/platform/workflows",
+                  "en/platform/extension-architecture",
+                  "en/platform/foundational-api",
+                  "en/platform/flows",
                   "en/platform/integrations",
-                  "en/platform/ai-service",
                   "en/platform/settings"
                 ]
               }
@@ -119,9 +120,10 @@
               {
                 "group": "Plataforma",
                 "pages": [
-                  "es/platform/workflows",
+                  "es/platform/extension-architecture",
+                  "es/platform/foundational-api",
+                  "es/platform/flows",
                   "es/platform/integrations",
-                  "es/platform/ai-service",
                   "es/platform/settings"
                 ]
               }

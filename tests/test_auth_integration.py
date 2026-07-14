@@ -173,10 +173,10 @@ class TestAuthenticationFlow:
         scenarios = [
             ("COMMUNITY", UserRole.admin.value, {"manage_users", "cleanup_orphaned_artifacts"}, set()),
             ("ENTERPRISE", UserRole.admin.value, {"manage_users", "cleanup_orphaned_artifacts"}, set()),
-            ("COMMUNITY", UserRole.instructor.value, {"create_workflow", "read_workflow_runs"}, {"cleanup_orphaned_artifacts"}),
-            ("ENTERPRISE", UserRole.instructor.value, {"create_workflow", "read_workflow_runs"}, {"cleanup_orphaned_artifacts"}),
-            ("COMMUNITY", UserRole.user.value, {"join_course", "create_workflow", "read_workflow_runs"}, set()),
-            ("ENTERPRISE", UserRole.user.value, {"join_course"}, {"create_workflow", "read_workflow_runs"}),
+            ("COMMUNITY", UserRole.instructor.value, {"create_flow", "read_executions"}, {"cleanup_orphaned_artifacts"}),
+            ("ENTERPRISE", UserRole.instructor.value, {"create_flow", "read_executions"}, {"cleanup_orphaned_artifacts"}),
+            ("COMMUNITY", UserRole.user.value, {"join_course", "create_flow", "read_executions"}, set()),
+            ("ENTERPRISE", UserRole.user.value, {"join_course"}, {"create_flow", "read_executions"}),
         ]
 
         for mode, role, expected_present, expected_missing in scenarios:

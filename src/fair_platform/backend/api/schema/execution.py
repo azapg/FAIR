@@ -63,6 +63,9 @@ class ExecutionRead(BaseModel):
     id: UUID
     thread_id: UUID | None
     turn_id: UUID | None
+    course_id: UUID | None
+    assignment_id: UUID | None
+    submission_ids: list[UUID] = Field(default_factory=list)
     parent_execution_id: UUID | None
     root_execution_id: UUID
     retry_of_execution_id: UUID | None
@@ -70,6 +73,9 @@ class ExecutionRead(BaseModel):
     kind: str
     capability_id: str | None
     capability_version: str | None
+    flow_version_id: UUID | None
+    initiated_by_user_id: UUID | None
+    extension_installation_id: UUID | None
     status: str
     waiting_reason: str | None
     created_at: datetime
@@ -77,6 +83,7 @@ class ExecutionRead(BaseModel):
     finished_at: datetime | None
     error_code: str | None
     error_summary: str | None
+    output_summary: dict[str, Any] | None
     snapshot: dict[str, Any] | None = None
 
 

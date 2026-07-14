@@ -23,11 +23,157 @@ from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from ..database import Base
 from .types import json_document_type
-from .legacy_artifact import AccessLevel, Artifact, ArtifactDerivative, ArtifactStatus
-
-
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+class ArtifactStatus(str, Enum):
+    pending = "pending"
+    attached = "attached"
+    orphaned = "orphaned"
+    archived = "archived"
+
+
+class AccessLevel(str, Enum):
+    private = "private"
+    course = "course"
+    assignment = "assignment"
+    public = "public"
+
+
+class Artifact(Base):
+    """A logical FAIR artifact with immutable versions and optional LMS scope."""
+
+    __tablename__ = "artifacts"
+
+    id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    artifact_type: Mapped[str] = mapped_column("type", Text, nullable=False)
+    meta: Mapped[Optional[dict[str, Any]]] = mapped_column(
+        json_document_type(), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now, onupdate=_utc_now
+    )
+    creator_id: Mapped[UUID] = mapped_column(
+        SAUUID, ForeignKey("users.id"), nullable=False
+    )
+    status: Mapped[ArtifactStatus] = mapped_column(
+        String, nullable=False, default=ArtifactStatus.pending
+    )
+    access_level: Mapped[AccessLevel] = mapped_column(
+        String, nullable=False, default=AccessLevel.private
+    )
+    course_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("courses.id"), nullable=True
+    )
+    assignment_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("assignments.id"), nullable=True
+    )
+    kind_uri: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    owner_user_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+    sensitivity: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    access_policy: Mapped[Optional[dict[str, Any]]] = mapped_column(
+        json_document_type(), nullable=True
+    )
+    current_version_id: Mapped[Optional[UUID]] = mapped_column(SAUUID, nullable=True)
+
+    creator = relationship(
+        "User", back_populates="created_artifacts", foreign_keys=[creator_id]
+    )
+    course = relationship("Course", back_populates="artifacts")
+    assignment = relationship("Assignment", back_populates="direct_artifacts")
+    owner = relationship("User", foreign_keys=[owner_user_id])
+    versions: Mapped[list["ArtifactVersion"]] = relationship(
+        "ArtifactVersion",
+        foreign_keys="ArtifactVersion.artifact_id",
+        back_populates="artifact",
+        cascade="all, delete-orphan",
+        order_by="ArtifactVersion.ordinal",
+    )
+    assignments = relationship(
+        "Assignment", secondary="assignment_artifacts", back_populates="artifacts"
+    )
+    submissions = relationship(
+        "Submission", secondary="submission_artifacts", back_populates="artifacts"
+    )
+    derivatives: Mapped[list["ArtifactDerivative"]] = relationship(
+        "ArtifactDerivative",
+        back_populates="artifact",
+        cascade="all, delete-orphan",
+        order_by="ArtifactDerivative.created_at",
+    )
+
+    def __init__(self, **kwargs: Any):
+        mime = kwargs.pop("mime", None)
+        storage_path = kwargs.pop("storage_path", None)
+        storage_type = kwargs.pop("storage_type", None)
+        super().__init__(**kwargs)
+        if storage_path:
+            self.derivatives.append(
+                ArtifactDerivative(
+                    id=uuid4(),
+                    derivative_type="original",
+                    storage_uri=f"{storage_type or 'local'}://{storage_path.lstrip('/')}",
+                    mime_type=mime or "application/octet-stream",
+                )
+            )
+
+    @property
+    def original_derivative(self) -> Optional["ArtifactDerivative"]:
+        return next(
+            (item for item in self.derivatives if item.derivative_type == "original"),
+            self.derivatives[0] if self.derivatives else None,
+        )
+
+    @property
+    def mime(self) -> str:
+        derivative = self.original_derivative
+        return derivative.mime_type if derivative else "application/octet-stream"
+
+    @property
+    def storage_path(self) -> Optional[str]:
+        derivative = self.original_derivative
+        return derivative.storage_path if derivative else None
+
+    @property
+    def storage_type(self) -> Optional[str]:
+        derivative = self.original_derivative
+        return derivative.storage_type if derivative else None
+
+
+class ArtifactDerivative(Base):
+    __tablename__ = "artifact_derivatives"
+
+    id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True)
+    artifact_id: Mapped[UUID] = mapped_column(
+        SAUUID, ForeignKey("artifacts.id", ondelete="CASCADE"), nullable=False
+    )
+    derivative_type: Mapped[str] = mapped_column(String, nullable=False)
+    storage_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now, onupdate=_utc_now
+    )
+
+    artifact: Mapped[Artifact] = relationship("Artifact", back_populates="derivatives")
+
+    @property
+    def storage_type(self) -> str:
+        return self.storage_uri.split("://", 1)[0]
+
+    @property
+    def storage_path(self) -> str:
+        return self.storage_uri.partition("://")[2]
 
 
 class ArtifactVersionState(str, Enum):

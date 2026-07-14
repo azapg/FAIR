@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from .course import Course
     from .submission import Submission
     from .artifact import Artifact
+    from .execution import Execution
 
 assignment_artifacts = Table(
     "assignment_artifacts",
@@ -54,6 +55,9 @@ class Assignment(Base):
     course: Mapped["Course"] = relationship("Course", back_populates="assignments")
     submissions: Mapped[List["Submission"]] = relationship(
         "Submission", back_populates="assignment", cascade="all, delete-orphan"
+    )
+    executions: Mapped[List["Execution"]] = relationship(
+        "Execution", back_populates="assignment"
     )
 
     direct_artifacts: Mapped[List["Artifact"]] = relationship(

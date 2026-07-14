@@ -23,6 +23,7 @@ from ..database import Base
 from .types import json_document_type
 
 if TYPE_CHECKING:
+    from .course import Course
     from .execution import Execution
 
 
@@ -65,6 +66,7 @@ class Flow(Base):
         cascade="all, delete-orphan",
         order_by="FlowVersion.ordinal",
     )
+    course: Mapped[Optional["Course"]] = relationship("Course", back_populates="flows")
 
 
 class FlowVersion(Base):
