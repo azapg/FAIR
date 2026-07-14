@@ -1,6 +1,6 @@
 from uuid import UUID, uuid4
 from datetime import datetime
-from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP, Table, Column, Float, Text
+from sqlalchemy import String, ForeignKey, UUID as SAUUID, TIMESTAMP, Table, Column, Float, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from enum import Enum
 from typing import Optional, List, TYPE_CHECKING
@@ -95,6 +95,8 @@ class Submission(Base):
     published_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     published_feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     returned_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
+    attempt_number: Mapped[int] = mapped_column(nullable=False, default=1)
+    is_late: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     assignment: Mapped["Assignment"] = relationship(
         "Assignment", back_populates="submissions"

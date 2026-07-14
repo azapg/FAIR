@@ -11,6 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DataTable, DataTableContent, DataTableEmpty } from "@/components/data-table";
+import {
+  EnrollmentSummary,
+  useCourseEnrollments,
+  useRemoveEnrollment,
+  useUpdateEnrollmentRole,
+} from "@/hooks/use-courses";
 
 type Instructor = {
   id: string;
@@ -19,15 +25,33 @@ type Instructor = {
   role: string;
 };
 
-type Student = {
-  id: string;
-  name: string;
-  email: string;
-};
-
-export function ParticipantsTab({ instructor }: { instructor?: Instructor }) {
+export function ParticipantsTab({
+  courseId,
+  instructor,
+  canManageRoles,
+}: {
+  courseId: string;
+  instructor?: Instructor;
+  canManageRoles: boolean;
+}) {
   const { t } = useTranslation();
-  const instructors = useMemo(() => (instructor ? [instructor] : []), [instructor]);
+  const { data: memberships = [], isLoading } = useCourseEnrollments(courseId);
+  const removeEnrollment = useRemoveEnrollment(courseId);
+  const updateRole = useUpdateEnrollmentRole(courseId);
+  const assistants = memberships.filter((membership) => membership.role === 'assistant');
+  const instructors = useMemo(
+    () => [
+      ...(instructor ? [instructor] : []),
+      ...assistants.map((membership) => ({
+        id: membership.userId,
+        name: membership.userName ?? 'Assistant',
+        email: membership.userEmail ?? '',
+        role: 'assistant',
+      })),
+    ],
+    [instructor, assistants],
+  );
+  const students = memberships.filter((membership) => membership.role === 'student');
 
   const instructorColumns = useMemo<ColumnDef<Instructor>[]>(
     () => [
@@ -79,26 +103,51 @@ export function ParticipantsTab({ instructor }: { instructor?: Instructor }) {
     [t],
   );
 
-  const studentColumns = useMemo<ColumnDef<Student>[]>(
+  const studentColumns = useMemo<ColumnDef<EnrollmentSummary>[]>(
     () => [
       {
-        accessorKey: "name",
+        accessorKey: "userName",
         header: t("participants.students"),
       },
       {
-        accessorKey: "email",
+        accessorKey: "userEmail",
         header: t("auth.email"),
       },
       {
         id: "description",
         header: t("courses.description"),
+        cell: ({ row }) => <span className="capitalize">{row.original.role}</span>,
       },
       {
         id: "actions",
         header: () => <div className="w-12 text-right">{t("actions.courseActions")}</div>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="ml-auto flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
+                <Ellipsis className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canManageRoles && (
+                  <DropdownMenuItem
+                    onClick={() => updateRole.mutate({ id: row.original.id, role: 'assistant' })}
+                  >
+                    Make assistant
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => removeEnrollment.mutate(row.original.id)}
+                >
+                  Remove from course
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ),
       },
     ],
-    [t],
+    [canManageRoles, removeEnrollment, t, updateRole],
   );
 
   return (
@@ -111,9 +160,11 @@ export function ParticipantsTab({ instructor }: { instructor?: Instructor }) {
       </DataTable>
 
       <h2 className="mb-2 text-xl font-semibold">{t("participants.students")}</h2>
-      <DataTable data={[]} columns={studentColumns}>
+      <DataTable data={students} columns={studentColumns}>
         <DataTableContent>
-          <DataTableEmpty>{t("participants.noStudents")}</DataTableEmpty>
+          <DataTableEmpty>
+            {isLoading ? t("common.loading") : t("participants.noStudents")}
+          </DataTableEmpty>
         </DataTableContent>
       </DataTable>
     </div>

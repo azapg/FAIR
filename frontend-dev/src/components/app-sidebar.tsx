@@ -36,6 +36,7 @@ import {
   MessageCircleQuestionMarkIcon,
   ClipboardList,
   Puzzle,
+  ListTodo,
 } from "lucide-react";
 import {
   Collapsible,
@@ -83,14 +84,52 @@ import {
 } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { Can } from "@/components/can";
+import {
+  useNotifications,
+  useReadAllNotifications,
+  useReadNotification,
+} from "@/hooks/use-communication";
 
 const languages = [
   { code: "en", name: "English" },
   { code: "es", name: "Español" },
 ];
 
-function InboxEmptyState() {
+function NotificationsInbox() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { data: notifications = [], isLoading } = useNotifications();
+  const readNotification = useReadNotification();
+  const readAll = useReadAllNotifications();
+
+  if (isLoading) return <div className="p-6 text-sm text-muted-foreground">Loading notifications…</div>;
+
+  if (notifications.length > 0) {
+    return (
+      <div className="p-3">
+        <div className="mb-2 flex justify-end">
+          <Button size="sm" variant="ghost" onClick={() => readAll.mutate()}>Mark all read</Button>
+        </div>
+        <div className="space-y-2">
+          {notifications.map((notification) => (
+            <button
+              type="button"
+              key={notification.id}
+              className={`w-full rounded-md border p-3 text-left ${notification.readAt ? 'opacity-70' : 'bg-sidebar-accent'}`}
+              onClick={() => {
+                if (!notification.readAt) readNotification.mutate(notification.id);
+                if (notification.link) navigate(notification.link);
+              }}
+            >
+              <div className="text-sm font-medium">{notification.title}</div>
+              {notification.body && <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{notification.body}</div>}
+              <div className="mt-2 text-xs text-muted-foreground">{new Date(notification.createdAt).toLocaleString()}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Empty className="h-full rounded-none border-0 p-6 md:p-8">
@@ -112,11 +151,13 @@ function NavMain({
   onInboxToggle,
   isSearchOpen,
   onSearchClick,
+  unreadCount,
 }: {
   isInboxOpen: boolean;
   onInboxToggle: () => void;
   isSearchOpen: boolean;
   onSearchClick: () => void;
+  unreadCount: number;
 }) {
   const { t } = useTranslation();
   return (
@@ -131,6 +172,15 @@ function NavMain({
       </SidebarMenuItem>
 
       {/*search*/}
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="To-do">
+          <Link to="/todo">
+            <ListTodo />
+            <span>To-do</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+
       <SidebarMenuItem>
         <SidebarMenuButton
           tooltip={t("nav.search")}
@@ -150,6 +200,9 @@ function NavMain({
         >
           <InboxIcon />
           <span>{t("nav.inbox")}</span>
+          {unreadCount > 0 && (
+            <span className="ml-auto rounded-full bg-primary px-1.5 text-xs text-primary-foreground">{unreadCount}</span>
+          )}
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
@@ -213,6 +266,8 @@ export function AppSidebar({
   const isMobile = useIsMobile();
   const { data: courses = [] } = useCourses();
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
+  const { data: notifications = [] } = useNotifications(isAuthenticated);
+  const unreadCount = notifications.filter((notification) => !notification.readAt).length;
   const { setOpen, state, isMobile: isSidebarMobile, openMobile } = useSidebar();
   const [showAllAssignments, setShowAllAssignments] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -297,7 +352,7 @@ export function AppSidebar({
             <SidebarSeparator className="mx-0" />
           </SidebarHeader>
           <ScrollArea className="h-full">
-            <InboxEmptyState />
+            <NotificationsInbox />
           </ScrollArea>
         </div>
       ) : (
@@ -340,6 +395,7 @@ export function AppSidebar({
                   setOpen(true);
                   setInboxOpen((current) => !current);
                 }}
+                unreadCount={unreadCount}
               />
             </SidebarGroupContent>
           </SidebarGroup>
@@ -616,7 +672,7 @@ export function AppSidebar({
             </div>
           </div>
           <ScrollArea className="h-full">
-            <InboxEmptyState />
+            <NotificationsInbox />
           </ScrollArea>
         </aside>
       )}

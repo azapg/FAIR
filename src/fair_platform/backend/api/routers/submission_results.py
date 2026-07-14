@@ -19,11 +19,39 @@ from fair_platform.backend.data.models import (
     SubmissionResult,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.core.security.permissions import has_capability_and_owner
+from fair_platform.backend.core.security.permissions import (
+    has_capability,
+    has_capability_and_owner,
+)
 from fair_platform.backend.data.models.user import User
 
 
 router = APIRouter()
+
+
+def _require_result_manager(
+    result: SubmissionResult,
+    db: Session,
+    current_user: User,
+) -> tuple[Submission, Course]:
+    submission = db.get(Submission, result.submission_id)
+    assignment = db.get(Assignment, submission.assignment_id) if submission else None
+    course = db.get(Course, assignment.course_id) if assignment else None
+    if not submission or not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Submission context not found",
+        )
+    if not has_capability_and_owner(
+        current_user,
+        "manage_submission",
+        course.instructor_id,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the course instructor or admin can view this result",
+        )
+    return submission, course
 
 
 @router.get("/{result_id}", response_model=SubmissionResultRead)
@@ -36,7 +64,7 @@ def get_result(
     result = db.get(SubmissionResult, result_id)
     if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    # TODO: Permission checks based on current_user and related submission
+    _require_result_manager(result, db, current_user)
     return result
 
 
@@ -50,7 +78,19 @@ def list_results(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    query = db.query(SubmissionResult)
+    query = (
+        db.query(SubmissionResult)
+        .join(Submission, Submission.id == SubmissionResult.submission_id)
+        .join(Assignment, Assignment.id == Submission.assignment_id)
+        .join(Course, Course.id == Assignment.course_id)
+    )
+    if not has_capability(current_user, "view_all_submissions"):
+        if not has_capability(current_user, "manage_submission"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to list submission results",
+            )
+        query = query.filter(Course.instructor_id == current_user.id)
     if submission_id:
         query = query.filter(SubmissionResult.submission_id == submission_id)
     if workflow_run_id:
@@ -70,11 +110,7 @@ def update_result(
     if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
-    submission = db.get(Submission, result.submission_id)
-    if not submission:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
-        )
+    submission, course = _require_result_manager(result, db, current_user)
     if not submission.official_run_id:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -86,9 +122,7 @@ def update_result(
             detail="Only the official result can be edited",
         )
 
-    assignment = db.get(Assignment, submission.assignment_id)
-    course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_and_owner(
+    if not has_capability_and_owner(
         current_user, "update_submission_results", course.instructor_id
     ):
         raise HTTPException(

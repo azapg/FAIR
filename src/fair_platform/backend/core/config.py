@@ -2,6 +2,7 @@ import os
 from typing import Literal
 
 DeploymentMode = Literal["COMMUNITY", "ENTERPRISE"]
+INSECURE_DEFAULT_SECRET_KEY = "fair-insecure-default-key"
 
 
 def _parse_bool_env(raw: str | None, *, default: bool = False) -> bool:
@@ -25,6 +26,22 @@ def get_deployment_mode() -> DeploymentMode:
     if mode not in {"COMMUNITY", "ENTERPRISE"}:
         return "COMMUNITY"
     return mode  # type: ignore[return-value]
+
+
+def get_secret_key() -> str:
+    return os.getenv("SECRET_KEY") or INSECURE_DEFAULT_SECRET_KEY
+
+
+def validate_security_configuration(secret_key: str | None = None) -> None:
+    """Reject development-only authentication defaults in institutional mode."""
+    resolved_secret = secret_key or get_secret_key()
+    if (
+        get_deployment_mode() == "ENTERPRISE"
+        and resolved_secret == INSECURE_DEFAULT_SECRET_KEY
+    ):
+        raise RuntimeError(
+            "SECRET_KEY must be configured when FAIR_DEPLOYMENT_MODE=ENTERPRISE"
+        )
 
 
 EMAIL_ENABLED = _parse_bool_env(

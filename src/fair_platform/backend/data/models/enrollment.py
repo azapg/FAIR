@@ -1,7 +1,9 @@
 from uuid import UUID
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, UUID as SAUUID, TIMESTAMP, UniqueConstraint
+from enum import Enum
+
+from sqlalchemy import ForeignKey, String, UUID as SAUUID, TIMESTAMP, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
@@ -10,6 +12,17 @@ from ..database import Base
 if TYPE_CHECKING:
     from .user import User
     from .course import Course
+
+
+class CourseMembershipRole(str, Enum):
+    owner = "owner"
+    assistant = "assistant"
+    student = "student"
+
+
+class EnrollmentStatus(str, Enum):
+    active = "active"
+    removed = "removed"
 
 
 class Enrollment(Base):
@@ -27,6 +40,15 @@ class Enrollment(Base):
     )
     enrolled_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, nullable=False, default=datetime.utcnow
+    )
+    role: Mapped[CourseMembershipRole] = mapped_column(
+        String(32), nullable=False, default=CourseMembershipRole.student
+    )
+    status: Mapped[EnrollmentStatus] = mapped_column(
+        String(32), nullable=False, default=EnrollmentStatus.active
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
     user: Mapped["User"] = relationship("User", back_populates="enrollments")
