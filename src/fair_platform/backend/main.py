@@ -9,6 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
 from fair_platform.backend.data.database import init_db
+from fair_platform.backend.core.config import validate_security_configuration
+from fair_platform.backend.api.routers.auth import SECRET_KEY
 from fair_platform.backend.data.migrations import run_migrations_to_head
 from fair_platform.backend.api.routers.users import router as users_router
 from fair_platform.backend.api.routers.courses import router as courses_router
@@ -23,6 +25,7 @@ from fair_platform.backend.api.routers.system import router as system_router
 from fair_platform.backend.api.routers.executions import router as executions_router
 from fair_platform.backend.api.routers.artifacts import router as artifacts_router
 from fair_platform.backend.api.routers.flows import router as flows_router
+from fair_platform.backend.api.routers.lms import router as lms_router
 from fair_platform.backend.services.execution_outbox_dispatcher import (
     ExecutionOutboxDispatcher,
 )
@@ -65,6 +68,7 @@ def _is_execution_dispatcher_enabled() -> bool:
 
 @asynccontextmanager
 async def lifespan(_ignored: FastAPI):
+    validate_security_configuration(SECRET_KEY)
     if _is_auto_migrate_enabled():
         run_migrations_to_head()
     elif _is_create_all_fallback_enabled():
@@ -114,6 +118,7 @@ app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(version_router, prefix="/api", tags=["version"])
 app.include_router(rubrics_router, prefix="/api/rubrics", tags=["rubrics"])
 app.include_router(enrollments_router, prefix="/api/enrollments", tags=["enrollments"])
+app.include_router(lms_router, prefix="/api/lms", tags=["lms"])
 app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
 app.include_router(executions_router, prefix="/api/v1", tags=["executions"])
 app.include_router(artifacts_router, prefix="/api/v1", tags=["artifacts"])

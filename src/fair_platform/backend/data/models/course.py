@@ -1,5 +1,6 @@
+from datetime import datetime
 from uuid import UUID
-from sqlalchemy import String, Text, ForeignKey, UUID as _UUID, Boolean, true
+from sqlalchemy import String, Text, ForeignKey, UUID as _UUID, Boolean, TIMESTAMP, true, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, List, TYPE_CHECKING
 
@@ -28,6 +29,17 @@ class Course(Base):
     )
     is_enrollment_enabled: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default=true(), nullable=False
+    )
+    section: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    term: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, nullable=False, default=datetime.utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
     instructor: Mapped["User"] = relationship("User", back_populates="courses")

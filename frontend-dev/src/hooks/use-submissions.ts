@@ -73,6 +73,8 @@ export type Submission = {
   publishedFeedback?: string | null
   returnedAt?: string | null
   artifacts: Artifact[]
+  attemptNumber: number
+  isLate: boolean
 }
 
 export type CreateSubmissionInput = {
@@ -80,6 +82,12 @@ export type CreateSubmissionInput = {
   submitter_name: string
   artifact_ids?: string[]  // Existing artifact IDs
   files?: File[]           // New files to upload
+}
+
+export type CreateStudentSubmissionInput = {
+  assignment_id: string
+  artifact_ids?: string[]
+  files?: File[]
 }
 
 export type UpdateSubmissionInput = {
@@ -154,10 +162,23 @@ const createSubmission = async (data: CreateSubmissionInput): Promise<Submission
     })
   }
 
-  const res = await api.post('/submissions', formData, {
+  const res = await api.post('/submissions/synthetic', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
+  })
+  return res.data
+}
+
+const createStudentSubmission = async (data: CreateStudentSubmissionInput): Promise<Submission> => {
+  const formData = new FormData()
+  formData.append('assignment_id', data.assignment_id)
+  if (data.artifact_ids?.length) {
+    formData.append('artifact_ids', JSON.stringify(data.artifact_ids))
+  }
+  data.files?.forEach((file) => formData.append('files', file))
+  const res = await api.post('/submissions', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   })
   return res.data
 }
@@ -223,6 +244,18 @@ export function useCreateSubmission() {
         description: error.message || 'Something went wrong'
       });
     }
+  })
+}
+
+export function useCreateStudentSubmission() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: createStudentSubmission,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Assignment submitted')
+    },
+    onError: (error: Error) => toast.error('Failed to submit assignment', { description: error.message }),
   })
 }
 

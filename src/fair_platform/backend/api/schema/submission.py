@@ -48,6 +48,8 @@ class SubmissionRead(SubmissionBase):
     published_score: Optional[float] = None
     published_feedback: Optional[str] = None
     returned_at: Optional[datetime] = None
+    attempt_number: int = 1
+    is_late: bool = False
 
 
 __all__ = [

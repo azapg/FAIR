@@ -38,6 +38,7 @@ import SubmissionTimeline from "@/components/submission-timeline";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArtifactAction } from "@/components/artifact-action";
+import { SubmissionComments } from "@/components/submission-comments";
 
 interface SubmissionSheetProps {
   submission: Submission | null;
@@ -148,12 +149,16 @@ export function SubmissionSheet({
                 <TabsTrigger value="timeline">
                   {t("submissions.timeline")}
                 </TabsTrigger>
+                <TabsTrigger value="comments">Private comments</TabsTrigger>
               </TabsList>
               <TabsContent value="attachments" className="py-3">
                 <SubmissionAttachments artifacts={submission.artifacts} />
               </TabsContent>
               <TabsContent value="timeline" className="py-3">
                 <SubmissionTimeline timeline={timeline} />
+              </TabsContent>
+              <TabsContent value="comments" className="py-3">
+                <SubmissionComments submissionId={submission.id} />
               </TabsContent>
             </Tabs>
           </div>

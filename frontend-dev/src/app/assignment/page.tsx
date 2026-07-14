@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { FileText, Hourglass, Plus } from "lucide-react";
+import { FileText, Hourglass, Plus, Send } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { SubmissionsTable } from "@/app/assignment/components/submissions/submissions-table";
 import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
 import {
@@ -18,17 +19,18 @@ import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 import { useParams } from "react-router-dom";
-import { useAssignment, Assignment } from "@/hooks/use-assignments";
+import { useAssignment, Assignment, useUpdateAssignmentStatus } from "@/hooks/use-assignments";
 import { useCourse } from "@/hooks/use-courses";
 import { useState } from "react";
 import { CreateSubmissionDialog } from "@/app/assignment/components/submissions/create-submission-dialog";
 import { useArtifacts } from "@/hooks/use-artifacts";
-import { useSubmissions, Submission } from "@/hooks/use-submissions";
+import { useCreateStudentSubmission, useSubmissions, Submission } from "@/hooks/use-submissions";
 import { useTranslation } from "react-i18next";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArtifactAction } from "@/components/artifact-action";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermission } from "@/hooks/use-permission";
+import { SubmissionComments } from "@/components/submission-comments";
 
 interface InstructorSubmissionsSectionProps {
   setIsCreateSubmissionOpen: (value: boolean) => void;
@@ -36,6 +38,57 @@ interface InstructorSubmissionsSectionProps {
   submissions: Submission[] | undefined;
   columns: any;
   assignment: Assignment;
+}
+
+function StudentSubmissionSection({
+  assignment,
+  submissions,
+}: {
+  assignment: Assignment;
+  submissions: Submission[] | undefined;
+}) {
+  const [files, setFiles] = useState<FileList | null>(null);
+  const submit = useCreateStudentSubmission();
+  const attempts = submissions ?? [];
+  const canSubmit = assignment.allowResubmissions || attempts.length === 0;
+
+  return (
+    <div className="mb-5 space-y-3 rounded-lg border p-4">
+      <div>
+        <h2 className="text-xl font-semibold">Your work</h2>
+        <p className="text-sm text-muted-foreground">
+          {attempts.length === 0
+            ? 'No submission yet.'
+            : `${attempts.length} attempt${attempts.length === 1 ? '' : 's'} submitted.`}
+        </p>
+      </div>
+      {attempts.map((attempt) => (
+        <details key={attempt.id} className="rounded-md bg-muted px-3 py-2 text-sm">
+          <summary className="flex cursor-pointer justify-between">
+            <span>Attempt {attempt.attemptNumber}</span>
+            <span>{attempt.isLate ? 'Late' : attempt.status}</span>
+          </summary>
+          <div className="mt-3 border-t pt-3">
+            <SubmissionComments submissionId={attempt.id} />
+          </div>
+        </details>
+      ))}
+      {canSubmit && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input type="file" multiple onChange={(event) => setFiles(event.target.files)} />
+          <Button
+            disabled={submit.isPending}
+            onClick={() => submit.mutate({
+              assignment_id: assignment.id,
+              files: files ? Array.from(files) : undefined,
+            })}
+          >
+            <Send /> {submit.isPending ? 'Submitting…' : 'Submit'}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function InstructorSubmissionsSection({
@@ -88,7 +141,9 @@ export default function AssignmentPage() {
     : undefined;
   const canManageUsers = usePermission("manage_users");
   const canManageAssignmentUi =
-    !!user && !!course && (instructorId === user.id || canManageUsers);
+    !!user && !!course && (
+      instructorId === user.id || canManageUsers || course.membershipRole === 'assistant'
+    );
   const {
     data: artifacts,
     isLoading: isLoadingArtifacts,
@@ -105,6 +160,7 @@ export default function AssignmentPage() {
   });
   const { t } = useTranslation();
   const [isCreateSubmissionOpen, setIsCreateSubmissionOpen] = useState(false);
+  const updateAssignmentStatus = useUpdateAssignmentStatus();
 
   const isOverallLoading =
     isLoading ||
@@ -128,7 +184,7 @@ export default function AssignmentPage() {
   }
 
   const isCourseOwner = !!user && instructorId === user.id;
-  const isInstructorView = isCourseOwner || canManageUsers;
+  const isInstructorView = isCourseOwner || canManageUsers || course.membershipRole === 'assistant';
 
   return (
     <FlowSidebarProvider
@@ -168,7 +224,20 @@ export default function AssignmentPage() {
           </div>
           <div className={"px-8 pt-2"}>
             <div className={"mb-5"}>
-              <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
+              <div className="flex items-center justify-between gap-3">
+                <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
+                {isInstructorView && (
+                  <Button
+                    variant={assignment.status === 'published' ? 'outline' : 'default'}
+                    onClick={() => updateAssignmentStatus.mutate({
+                      id: assignment.id,
+                      status: assignment.status === 'published' ? 'draft' : 'published',
+                    })}
+                  >
+                    {assignment.status === 'published' ? 'Unpublish' : 'Publish'}
+                  </Button>
+                )}
+              </div>
               {!assignment.description ||
               assignment.description.trim() === "" ? (
                 <p className="text-muted-foreground italic">
@@ -241,6 +310,9 @@ export default function AssignmentPage() {
                 columns={columns}
                 assignment={assignment}
               />
+            )}
+            {!isInstructorView && (
+              <StudentSubmissionSection assignment={assignment} submissions={submissions} />
             )}
           </div>
         </div>

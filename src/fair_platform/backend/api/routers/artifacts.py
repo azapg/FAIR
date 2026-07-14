@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-from pathlib import Path
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, status
@@ -35,6 +34,7 @@ from fair_platform.backend.data.models import (
 )
 from fair_platform.backend.data.models.artifact import (
     AccessLevel,
+    ArtifactDerivative,
     ArtifactLink,
     ArtifactPart,
     ArtifactStatus,
@@ -587,11 +587,22 @@ def cleanup_orphaned_artifacts(
 
 @router.get("/artifact-storage/local/{key:path}")
 def download_local_storage_object(
-    key: str, current_user: User = Depends(get_current_user)
+    key: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
 ):
-    del current_user
+    derivative = db.scalar(
+        select(ArtifactDerivative).where(
+            ArtifactDerivative.storage_uri == f"local://{key}"
+        )
+    )
+    if derivative is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Stored file not found"
+        )
+    get_artifact_manager(db).get_artifact(derivative.artifact_id, current_user)
     provider = LocalStorageProvider(uploads_dir=storage.uploads_dir)
-    file_path = provider.uploads_dir / Path(key)
+    file_path = provider._safe_path(key)
     if not file_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Stored file not found"

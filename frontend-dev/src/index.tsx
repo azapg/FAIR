@@ -14,6 +14,7 @@ import ExtensionsPage from "@/app/extensions/page";
 import ExtensionDetailPage from "@/app/extensions/extension/page";
 import ChatPage from "@/app/chat/page";
 import LiveChatPage from "@/app/chat/live-page";
+import TodoPage from "@/app/todo/page";
 
 export function App() {
   return (
@@ -23,6 +24,7 @@ export function App() {
       <Route path="chat/live" element={<LiveChatPage />} />
 
       <Route path={"courses"} element={<CoursesPage />} />
+      <Route path={"todo"} element={<TodoPage />} />
       <Route path={"courses/:courseId"} element={<CourseDetailPage />} />
       <Route path={"courses/:courseId/"} element={<CourseDetailPage />} />
       <Route path={"courses/:courseId/:tab"} element={<CourseDetailPage />} />

@@ -1,6 +1,10 @@
 import pytest
 
 import fair_platform.backend.main as backend_main
+from fair_platform.backend.core.config import (
+    INSECURE_DEFAULT_SECRET_KEY,
+    validate_security_configuration,
+)
 
 
 def test_auto_migrate_enabled_by_default(monkeypatch):
@@ -25,6 +29,19 @@ def test_execution_dispatcher_enabled_by_default(monkeypatch):
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.delenv("FAIR_ENABLE_EXECUTION_DISPATCHER", raising=False)
     assert backend_main._is_execution_dispatcher_enabled() is True
+
+
+def test_enterprise_mode_rejects_default_secret(monkeypatch):
+    monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "ENTERPRISE")
+
+    with pytest.raises(RuntimeError, match="SECRET_KEY must be configured"):
+        validate_security_configuration(INSECURE_DEFAULT_SECRET_KEY)
+
+
+def test_community_mode_allows_local_default_secret(monkeypatch):
+    monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "COMMUNITY")
+
+    validate_security_configuration(INSECURE_DEFAULT_SECRET_KEY)
 
 
 @pytest.mark.parametrize("value", ["1", "true", "yes", "on", " TRUE "])

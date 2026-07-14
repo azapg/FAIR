@@ -1,10 +1,11 @@
 from uuid import UUID, uuid4
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_, or_
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.submission import (
@@ -13,7 +14,7 @@ from fair_platform.backend.data.models.submission import (
     submission_artifacts,
 )
 from fair_platform.backend.data.models.submitter import Submitter
-from fair_platform.backend.data.models.assignment import Assignment
+from fair_platform.backend.data.models.assignment import Assignment, AssignmentStatus
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus, AccessLevel
@@ -27,18 +28,23 @@ from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 from fair_platform.backend.services.submission_manager import get_submission_manager
 from fair_platform.backend.data.models.submission_event import SubmissionEvent
-from fair_platform.backend.core.security.permissions import (
-    has_capability,
-    has_capability_and_owner,
+from fair_platform.backend.core.security.permissions import has_capability
+from fair_platform.backend.data.models.enrollment import (
+    CourseMembershipRole,
+    Enrollment,
+    EnrollmentStatus,
 )
+from fair_platform.backend.services.course_access import active_membership, can_manage_course
+from fair_platform.backend.data.models.lms_communication import Notification
 
 router = APIRouter()
 
 
 @router.post("/", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
+@router.post("/synthetic", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
 async def create_submission(
     assignment_id: UUID = Form(...),
-    submitter_name: str = Form(...),
+    submitter_name: Optional[str] = Form(None),
     artifact_ids: str = Form(None),
     files: List[UploadFile] = File(None),
     db: Session = Depends(session_dependency),
@@ -64,12 +70,20 @@ async def create_submission(
         )
 
     course = db.get(Course, assignment.course_id)
-    if not course or not has_capability_and_owner(
-        current_user, "create_submission", course.instructor_id
-    ):
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    is_staff_submission = can_manage_course(db, course, current_user)
+    membership = active_membership(db, course.id, current_user.id)
+    is_student_submission = bool(
+        membership
+        and membership.role == CourseMembershipRole.student
+        and assignment.status == AssignmentStatus.published
+        and not course.is_archived
+    )
+    if not is_staff_submission and not is_student_submission:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the course instructor or admin can create submissions for this assignment",
+            detail="Only course staff or an enrolled student can submit this assignment",
         )
 
 
@@ -86,24 +100,56 @@ async def create_submission(
                     detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}"
                 )
 
-        submitter = Submitter(
-            id=uuid4(),
-            name=submitter_name,
-            email=None,  # No email for synthetic submitters
-            user_id=None,  # Not linked to any user account
-            is_synthetic=True,
-            created_at=datetime.now(timezone.utc)
+        if is_staff_submission:
+            if not submitter_name or not submitter_name.strip():
+                raise HTTPException(status_code=422, detail="A synthetic submitter name is required")
+            submitter = Submitter(
+                id=uuid4(),
+                name=submitter_name.strip(),
+                email=None,
+                user_id=None,
+                is_synthetic=True,
+                created_at=datetime.now(timezone.utc),
+            )
+            db.add(submitter)
+            db.flush()
+        else:
+            submitter = db.query(Submitter).filter(Submitter.user_id == current_user.id).first()
+            if submitter is None:
+                submitter = Submitter(
+                    id=uuid4(),
+                    name=current_user.name,
+                    email=str(current_user.email),
+                    user_id=current_user.id,
+                    is_synthetic=False,
+                    created_at=datetime.now(timezone.utc),
+                )
+                db.add(submitter)
+                db.flush()
+
+        previous_attempt = (
+            db.query(Submission)
+            .filter(
+                Submission.assignment_id == assignment_id,
+                Submission.submitter_id == submitter.id,
+            )
+            .order_by(Submission.attempt_number.desc())
+            .first()
         )
-        db.add(submitter)
-        db.flush()
+        if previous_attempt and not assignment.allow_resubmissions:
+            raise HTTPException(status_code=409, detail="This assignment does not allow resubmissions")
+        attempt_number = (previous_attempt.attempt_number + 1) if previous_attempt else 1
+        submitted_at = datetime.now(timezone.utc)
 
         sub = Submission(
             id=uuid4(),
             assignment_id=assignment_id,
             submitter_id=submitter.id,
             created_by_id=current_user.id,  # Track who created this submission
-            submitted_at=datetime.now(timezone.utc),
+            submitted_at=submitted_at,
             status=SubmissionStatus.submitted,
+            attempt_number=attempt_number,
+            is_late=bool(assignment.deadline and submitted_at.replace(tzinfo=None) > assignment.deadline.replace(tzinfo=None)),
         )
         db.add(sub)
         db.flush()
@@ -164,17 +210,27 @@ def list_submissions(
 
     if has_capability(current_user, "view_all_submissions"):
         pass
-    elif has_capability(current_user, "create_submission"):
+    else:
         query = (
             query.join(Assignment, Submission.assignment_id == Assignment.id)
-                 .join(Course, Assignment.course_id == Course.id)
-                 .filter(
-                     (Course.instructor_id == current_user.id)
-                     | (Submission.created_by_id == current_user.id)
-                 )
+            .join(Course, Assignment.course_id == Course.id)
+            .join(Submitter, Submission.submitter_id == Submitter.id)
+            .outerjoin(
+                Enrollment,
+                and_(
+                    Enrollment.course_id == Course.id,
+                    Enrollment.user_id == current_user.id,
+                    Enrollment.status == EnrollmentStatus.active,
+                ),
+            )
+            .filter(
+                or_(
+                    Course.instructor_id == current_user.id,
+                    Enrollment.role == CourseMembershipRole.assistant,
+                    Submitter.user_id == current_user.id,
+                )
+            )
         )
-    else:
-        query = query.filter(Submission.created_by_id == current_user.id)
 
     if assignment_id is not None:
         if not db.get(Assignment, assignment_id):
@@ -208,8 +264,16 @@ def list_submissions(
             "published_score": sub.published_score,
             "published_feedback": sub.published_feedback,
             "returned_at": sub.returned_at,
+            "attempt_number": sub.attempt_number,
+            "is_late": sub.is_late,
         }
 
+        assignment = db.get(Assignment, sub.assignment_id)
+        course = db.get(Course, assignment.course_id) if assignment else None
+        manages_submission = bool(course and can_manage_course(db, course, current_user))
+        if not manages_submission:
+            sub_dict["draft_score"] = None
+            sub_dict["draft_feedback"] = None
         result.append(sub_dict)
 
     return result
@@ -229,20 +293,16 @@ def get_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
+    assignment = db.get(Assignment, sub.assignment_id)
+    course = db.get(Course, assignment.course_id) if assignment else None
+    can_manage = bool(course and can_manage_course(db, course, current_user))
+    submitter = db.get(Submitter, sub.submitter_id)
     if not has_capability(current_user, "view_all_submissions"):
-        assignment = db.get(Assignment, sub.assignment_id)
-        course = db.get(Course, assignment.course_id) if assignment else None
-        can_manage = bool(
-            course and has_capability_and_owner(current_user, "manage_submission", course.instructor_id)
-        )
-        if not can_manage and sub.created_by_id != current_user.id:
+        if not can_manage and (not submitter or submitter.user_id != current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized to view this submission",
             )
-
-    submitter = db.get(Submitter, sub.submitter_id)
-
 
     response = {
         "id": sub.id,
@@ -253,11 +313,13 @@ def get_submission(
         "submitted_at": sub.submitted_at,
         "status": sub.status,
         "artifacts": sub.artifacts,
-        "draft_score": sub.draft_score,
-        "draft_feedback": sub.draft_feedback,
+        "draft_score": sub.draft_score if can_manage else None,
+        "draft_feedback": sub.draft_feedback if can_manage else None,
         "published_score": sub.published_score,
         "published_feedback": sub.published_feedback,
         "returned_at": sub.returned_at,
+        "attempt_number": sub.attempt_number,
+        "is_late": sub.is_late,
     }
 
     return response
@@ -279,7 +341,7 @@ def update_submission(
 
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_and_owner(current_user, "manage_submission", course.instructor_id):
+    if not course or not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this submission",
@@ -322,7 +384,7 @@ def delete_submission(
 
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_and_owner(current_user, "manage_submission", course.instructor_id):
+    if not course or not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this submission",
@@ -349,7 +411,7 @@ def update_submission_draft(
 
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_and_owner(current_user, "manage_submission", course.instructor_id):
+    if not course or not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can edit drafts",
@@ -398,7 +460,7 @@ def return_submission(
 
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_and_owner(current_user, "manage_submission", course.instructor_id):
+    if not course or not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can return submissions",
@@ -407,6 +469,18 @@ def return_submission(
     try:
         mgr = get_submission_manager(db)
         mgr.return_to_student(submission_id=sub.id, actor=current_user)
+        submitter = db.get(Submitter, sub.submitter_id)
+        if submitter and submitter.user_id:
+            db.add(
+                Notification(
+                    id=uuid4(),
+                    user_id=submitter.user_id,
+                    kind="grade_returned",
+                    title=f"Grade returned: {assignment.title}",
+                    body=sub.published_feedback,
+                    link=f"/courses/{course.id}/assignments/{assignment.id}",
+                )
+            )
         db.commit()
         db.refresh(sub)
         return sub
@@ -435,9 +509,7 @@ def get_submission_timeline(
 
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
-    if not course or not has_capability_and_owner(
-        current_user, "view_submission_timeline", course.instructor_id
-    ):
+    if not course or not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this submission's timeline",

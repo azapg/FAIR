@@ -12,6 +12,10 @@ export type Course = {
   assignmentsCount: number
   enrollmentCode?: string | null
   isEnrollmentEnabled: boolean | null
+  section?: string | null
+  term?: string | null
+  isArchived: boolean
+  membershipRole?: 'owner' | 'assistant' | 'student' | null
 }
 
 export type CourseDetail = {
@@ -34,6 +38,10 @@ export type CourseDetail = {
   }
   enrollmentCode?: string | null
   isEnrollmentEnabled: boolean | null
+  section?: string | null
+  term?: string | null
+  isArchived: boolean
+  membershipRole?: 'owner' | 'assistant' | 'student' | null
 }
 
 export type CreateCourseInput = {
@@ -53,6 +61,10 @@ export type EnrollmentSummary = {
   enrolledAt: string
   userName?: string
   courseName?: string
+  userEmail?: string
+  role: 'owner' | 'assistant' | 'student'
+  status: 'active' | 'removed'
+  updatedAt: string
 }
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
@@ -63,6 +75,11 @@ export const coursesKeys = {
   list: (params?: ListParams) => [...coursesKeys.lists(), { params }] as const,
   details: () => [...coursesKeys.all, 'detail'] as const,
   detail: (id: string) => [...coursesKeys.details(), id] as const,
+}
+
+export const enrollmentsKeys = {
+  all: ['enrollments'] as const,
+  course: (courseId: string) => [...enrollmentsKeys.all, 'course', courseId] as const,
 }
 
 const fetchCourses = async (params?: ListParams): Promise<Course[]> => {
@@ -101,6 +118,23 @@ const updateCourseSettingsApi = async (id: string, data: CourseSettingsInput): P
 
 const joinCourseByCode = async (code: string): Promise<EnrollmentSummary> => {
   const res = await api.post('/enrollments/join', { code })
+  return res.data
+}
+
+const fetchCourseEnrollments = async (courseId: string): Promise<EnrollmentSummary[]> => {
+  const res = await api.get('/enrollments', { params: { course_id: courseId } })
+  return res.data
+}
+
+const removeEnrollment = async (id: string): Promise<void> => {
+  await api.delete(`/enrollments/${id}`)
+}
+
+const updateEnrollmentRole = async (
+  id: string,
+  role: 'assistant' | 'student',
+): Promise<EnrollmentSummary> => {
+  const res = await api.patch(`/enrollments/${id}`, { role })
   return res.data
 }
 
@@ -219,5 +253,38 @@ export function useJoinCourseByCode() {
         description: error.message || 'Please verify the class code and try again'
       });
     }
+  })
+}
+
+export function useCourseEnrollments(courseId?: string, enabled = true) {
+  return useQuery({
+    queryKey: enrollmentsKeys.course(courseId ?? 'unknown'),
+    queryFn: () => fetchCourseEnrollments(courseId as string),
+    enabled: enabled && Boolean(courseId),
+  })
+}
+
+export function useRemoveEnrollment(courseId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: removeEnrollment,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: enrollmentsKeys.course(courseId) })
+      toast.success('Participant removed')
+    },
+    onError: (error: Error) => toast.error('Failed to remove participant', { description: error.message }),
+  })
+}
+
+export function useUpdateEnrollmentRole(courseId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, role }: { id: string; role: 'assistant' | 'student' }) =>
+      updateEnrollmentRole(id, role),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: enrollmentsKeys.course(courseId) })
+      toast.success('Participant role updated')
+    },
+    onError: (error: Error) => toast.error('Failed to update participant', { description: error.message }),
   })
 }

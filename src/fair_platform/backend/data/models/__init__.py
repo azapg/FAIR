@@ -1,7 +1,7 @@
 from .user import User, UserRole
 from .course import Course
-from .assignment import Assignment
-from .enrollment import Enrollment
+from .assignment import Assignment, AssignmentStatus
+from .enrollment import Enrollment, CourseMembershipRole, EnrollmentStatus
 from .submitter import Submitter
 from .submission import Submission, SubmissionStatus
 from .submission_event import SubmissionEvent, SubmissionEventType
@@ -56,13 +56,23 @@ from .grade import (
     GradeProposal,
     GradeProposalStatus,
 )
+from .lms_communication import (
+    CourseComment,
+    CoursePost,
+    CoursePostKind,
+    Notification,
+    SubmissionComment,
+)
 
 __all__ = [
     "User",
     "UserRole",
     "Course",
     "Assignment",
+    "AssignmentStatus",
     "Enrollment",
+    "CourseMembershipRole",
+    "EnrollmentStatus",
     "Submitter",
     "Submission",
     "SubmissionStatus",
@@ -113,4 +123,9 @@ __all__ = [
     "GradeDecisionAction",
     "GradeProposal",
     "GradeProposalStatus",
+    "CourseComment",
+    "CoursePost",
+    "CoursePostKind",
+    "Notification",
+    "SubmissionComment",
 ]

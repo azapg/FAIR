@@ -8,9 +8,11 @@ from sqlalchemy import (
     TIMESTAMP,
     Table,
     Column,
+    Boolean,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, List, TYPE_CHECKING
+from enum import Enum
 
 from ..database import Base
 from .types import json_document_type
@@ -40,6 +42,12 @@ assignment_artifacts = Table(
 )
 
 
+class AssignmentStatus(str, Enum):
+    draft = "draft"
+    published = "published"
+    closed = "closed"
+
+
 class Assignment(Base):
     __tablename__ = "assignments"
 
@@ -51,6 +59,13 @@ class Assignment(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     deadline: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
     max_grade: Mapped[dict] = mapped_column(json_document_type(), nullable=False)
+    status: Mapped[AssignmentStatus] = mapped_column(
+        String(32), nullable=False, default=AssignmentStatus.published
+    )
+    published_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
+    allow_resubmissions: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
 
     course: Mapped["Course"] = relationship("Course", back_populates="assignments")
     submissions: Mapped[List["Submission"]] = relationship(

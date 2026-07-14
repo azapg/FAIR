@@ -54,6 +54,14 @@ If both are disabled, startup proceeds with a warning and no schema bootstrap (r
 - JSON document fields must use SQLAlchemy JSON with PostgreSQL JSONB variant.
 - Schema changes must be applied through Alembic migrations; avoid relying on runtime `create_all` for production schema evolution.
 
+## LMS deployment profiles
+
+- Researcher/local: SQLite (`DATABASE_URL=sqlite:///fair.db`) and `FAIR_STORAGE_BACKEND=local`.
+- Institution: PostgreSQL and `FAIR_STORAGE_BACKEND=s3` with `S3_BUCKET_NAME` plus provider credentials/endpoint as needed.
+- `FAIR_STORAGE_BACKENDS=local,s3` supports a staged storage migration while selecting the write backend with `FAIR_STORAGE_BACKEND`.
+
+See `docs/en/platform/lms-mvp.md` and the root `.env.example` for the complete MVP operations contract. The institutional target remains a modular monolith with durable external state; microservices and extreme-scale optimization are not required for this MVP.
+
 ### Execution/Extension communications
 
 The FAIR 1.0 boundary lives under `/api/v1`:
