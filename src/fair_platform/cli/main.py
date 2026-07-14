@@ -1,4 +1,6 @@
 import multiprocessing
+import os
+import signal
 import subprocess
 import tomllib
 import json
@@ -95,7 +97,12 @@ def _start_backend_process(port: int, headless: bool) -> multiprocessing.Process
 
 def _start_frontend_process(frontend_dir: Path) -> subprocess.Popen:
     try:
-        return subprocess.Popen(["bun", "dev"], cwd=frontend_dir)
+        process_options = (
+            {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+            if _is_windows()
+            else {"start_new_session": True}
+        )
+        return subprocess.Popen(["bun", "dev"], cwd=frontend_dir, **process_options)
     except FileNotFoundError as exc:
         typer.echo(
             "Error: bun is required to run the frontend dev server. Install Bun from https://bun.sh."
@@ -112,14 +119,38 @@ def _stop_backend(process: multiprocessing.Process) -> None:
         process.join(timeout=5)
 
 
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+
 def _stop_frontend(process: subprocess.Popen) -> None:
-    if process.poll() is None:
-        process.terminate()
+    if process.poll() is not None:
+        return
+
+    if _is_windows():
+        subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
+        return
+
+    try:
+        process_group = os.getpgid(process.pid)
+        os.killpg(process_group, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        os.killpg(process_group, signal.SIGKILL)
+        process.wait(timeout=5)
 
 
 def version_callback(value: bool):
