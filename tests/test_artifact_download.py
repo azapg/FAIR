@@ -76,3 +76,46 @@ def test_download_enforces_permissions(test_client, test_db, professor_user, stu
         assert response.status_code == 403
     finally:
         cleanup_file(file_path)
+
+
+def test_local_download_url_rechecks_artifact_permissions(
+    test_client,
+    test_db,
+    professor_user,
+    student_user,
+):
+    file_path = None
+    with test_db() as session:
+        artifact, file_path = create_artifact_with_file(
+            session,
+            professor_user.id,
+            access_level="private",
+        )
+
+    try:
+        owner_token = get_auth_token(test_client, professor_user.email)
+        owner_headers = {
+            "Authorization": f"Bearer {owner_token}",
+            "Accept": "application/json",
+        }
+        location_response = test_client.get(
+            f"/api/artifacts/{artifact.id}/download",
+            headers=owner_headers,
+        )
+
+        assert location_response.status_code == 200
+        content_url = location_response.json()["url"]
+        assert content_url.startswith(f"/api/artifacts/{artifact.id}/content")
+
+        owner_content = test_client.get(content_url, headers=owner_headers)
+        assert owner_content.status_code == 200
+        assert owner_content.content == b"example content"
+
+        student_token = get_auth_token(test_client, student_user.email)
+        student_content = test_client.get(
+            content_url,
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
+        assert student_content.status_code == 403
+    finally:
+        cleanup_file(file_path)

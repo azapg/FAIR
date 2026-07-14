@@ -2,13 +2,15 @@ from uuid import UUID, uuid4
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Form
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.assignment import (
     Assignment,
+    AssignmentStatus,
 )
 from fair_platform.backend.data.models.submission import Submission
 from fair_platform.backend.data.models.course import Course
@@ -16,15 +18,19 @@ from fair_platform.backend.data.models.artifact import ArtifactStatus, AccessLev
 from fair_platform.backend.api.schema.assignment import (
     AssignmentRead,
     AssignmentUpdate,
+    AssignmentStatusUpdate,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.core.security.permissions import (
-    has_capability,
-    has_capability_and_owner,
-)
+from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.models.user import User
-from fair_platform.backend.data.models.enrollment import Enrollment
+from fair_platform.backend.data.models.enrollment import (
+    CourseMembershipRole,
+    Enrollment,
+    EnrollmentStatus,
+)
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
+from fair_platform.backend.services.course_access import can_manage_course
+from fair_platform.backend.services.notifications import notify_course_members
 
 router = APIRouter()
 
@@ -37,6 +43,7 @@ async def create_assignment(
     max_grade: str = Form(None),
     artifact_ids: str = Form(None),
     files: List[UploadFile] = File(None),
+    allow_resubmissions: bool = Form(True),
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
@@ -61,7 +68,7 @@ async def create_assignment(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
-    if not has_capability_and_owner(current_user, "create_assignment", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can create assignments",
@@ -107,6 +114,8 @@ async def create_assignment(
             description=description,
             deadline=deadline_dt,
             max_grade=max_grade_dict,
+            status=AssignmentStatus.draft,
+            allow_resubmissions=allow_resubmissions,
         )
         db.add(assignment)
         db.flush()
@@ -168,28 +177,33 @@ def list_assignments(
 
     if has_capability(current_user, "view_all_assignments"):
         return query.all()
-    elif not has_capability(current_user, "create_assignment"):
-        # Students see assignments from courses they are enrolled in
-        assignments = (
-            query.join(Course)
-            .join(Enrollment, Enrollment.course_id == Course.id)
-            .filter(Enrollment.user_id == current_user.id)
-            .all()
+    assignments = (
+        query.join(Course)
+        .outerjoin(
+            Enrollment,
+            and_(
+                Enrollment.course_id == Course.id,
+                Enrollment.user_id == current_user.id,
+                Enrollment.status == EnrollmentStatus.active,
+            ),
         )
-        return assignments
-    else:
-        # Instructors in community mode can also see courses where they are enrolled.
-        assignments = (
-            query.join(Course)
-            .outerjoin(Enrollment, Enrollment.course_id == Course.id)
-            .filter(
-                (Course.instructor_id == current_user.id)
-                | (Enrollment.user_id == current_user.id)
+        .filter(
+            or_(
+                Course.instructor_id == current_user.id,
+                and_(
+                    Enrollment.role == CourseMembershipRole.assistant,
+                    Enrollment.user_id == current_user.id,
+                ),
+                and_(
+                    Enrollment.user_id == current_user.id,
+                    Assignment.status == AssignmentStatus.published,
+                ),
             )
-            .distinct()
-            .all()
         )
-        return assignments
+        .distinct()
+        .all()
+    )
+    return assignments
 
 @router.get("/{assignment_id}", response_model=AssignmentRead)
 def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
@@ -205,12 +219,13 @@ def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_and_owner(current_user, "manage_assignment", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         enrollment = (
             db.query(Enrollment)
             .filter(
                 Enrollment.user_id == current_user.id,
                 Enrollment.course_id == course.id,
+                Enrollment.status == EnrollmentStatus.active,
             )
             .first()
         )
@@ -219,6 +234,8 @@ def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only the course instructor, admin, or enrolled users can view this assignment",
             )
+        if assignment.status != AssignmentStatus.published:
+            raise HTTPException(status_code=404, detail="Assignment not found")
 
     return assignment
 
@@ -242,7 +259,7 @@ def update_assignment(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
 
-    if not has_capability_and_owner(current_user, "manage_assignment", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this assignment",
@@ -256,6 +273,8 @@ def update_assignment(
         assignment.deadline = payload.deadline
     if payload.max_grade is not None:
         assignment.max_grade = payload.max_grade
+    if payload.allow_resubmissions is not None:
+        assignment.allow_resubmissions = payload.allow_resubmissions
 
     db.add(assignment)
     db.commit()
@@ -284,7 +303,7 @@ def delete_assignment(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
 
-    if not has_capability_and_owner(current_user, "manage_assignment", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this assignment",
@@ -303,6 +322,38 @@ def delete_assignment(
     db.delete(assignment)
     db.commit()
     return None
+
+
+@router.patch("/{assignment_id}/status", response_model=AssignmentRead)
+def update_assignment_status(
+    assignment_id: UUID,
+    payload: AssignmentStatusUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    assignment = db.get(Assignment, assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    course = db.get(Course, assignment.course_id)
+    if not course or not can_manage_course(db, course, current_user):
+        raise HTTPException(status_code=403, detail="Only course staff can change publication status")
+    if course.is_archived and payload.status == AssignmentStatus.published:
+        raise HTTPException(status_code=400, detail="Assignments in archived courses cannot be published")
+    assignment.status = payload.status
+    if payload.status == AssignmentStatus.published and assignment.published_at is None:
+        assignment.published_at = datetime.now(timezone.utc)
+        notify_course_members(
+            db,
+            course_id=course.id,
+            kind="assignment_published",
+            title=f"New assignment: {assignment.title}",
+            body=assignment.description,
+            link=f"/courses/{course.id}/assignments/{assignment.id}",
+            exclude_user_id=current_user.id,
+        )
+    db.commit()
+    db.refresh(assignment)
+    return assignment
 
 
 __all__ = ["router"]

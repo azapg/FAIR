@@ -1,6 +1,10 @@
 import pytest
 
 import fair_platform.backend.main as backend_main
+from fair_platform.backend.core.config import (
+    INSECURE_DEFAULT_SECRET_KEY,
+    validate_security_configuration,
+)
 
 
 def test_auto_migrate_enabled_by_default(monkeypatch):
@@ -19,6 +23,19 @@ def test_configured_cors_origins_from_env(monkeypatch):
     monkeypatch.setenv("FAIR_CORS_ORIGINS", "https://a.example, https://b.example ")
     origins = backend_main._configured_cors_origins()
     assert origins == ["https://a.example", "https://b.example"]
+
+
+def test_enterprise_mode_rejects_default_secret(monkeypatch):
+    monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "ENTERPRISE")
+
+    with pytest.raises(RuntimeError, match="SECRET_KEY must be configured"):
+        validate_security_configuration(INSECURE_DEFAULT_SECRET_KEY)
+
+
+def test_community_mode_allows_local_default_secret(monkeypatch):
+    monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "COMMUNITY")
+
+    validate_security_configuration(INSECURE_DEFAULT_SECRET_KEY)
 
 
 def test_job_dispatcher_enabled_by_default(monkeypatch):

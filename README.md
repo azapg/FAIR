@@ -4,7 +4,7 @@
 <img width="1974" height="992" alt="showcase" src="https://github.com/user-attachments/assets/c88cc1ea-c30a-4c0e-9f35-955b92b1bf46" />
 
 
-FAIR (or _The Fair Platform_) is an open-source platform that makes it easy to experiment with automatic grading systems using AI. It provides a flexible and extensible environment for building, testing, and comparing grading approaches, from interpreters and rubrics to agent-based systems and research datasets.
+FAIR (or _The Fair Platform_) is an open-source, LMS-complete MVP for teaching and learning that also makes it easy to experiment with automatic grading systems using AI. Its LMS foundation works without AI: instructors can run courses, publish work, collect student submissions, grade, communicate, and share materials. The extension and agent surfaces remain an optional layer on top.
 
 The goal is to support researchers, educators, and students who want to explore how AI can improve assessment, reduce manual grading workload, and enable reproducible experiments in educational technology.
 ## Features
@@ -24,6 +24,8 @@ fair serve
 ```
 
 For detailed installation instructions, troubleshooting, and more, visit the [documentation](https://docs.fairgradeproject.org/) (available in English and Spanish).
+
+The supported LMS scope and deployment profiles are documented in [LMS MVP operations](docs/en/platform/lms-mvp.md). Copy [.env.example](.env.example) to `.env` to choose a profile.
 
 ### Development Requirements
 - Python 3.12+
@@ -76,3 +78,5 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for the f
 - The software is provided "as is", without warranty of any kind.
 
 **Questions about licensing?** Please open an issue or contact [allan.zapata@up.ac.pa](mailto:allan.zapata@up.ac.pa).
+- **LMS MVP** – Course rosters and assistants, class streams, assignments, student attempts, grading queues, gradebooks, comments, notifications, materials, and course archiving.
+- **Two deployment profiles** – SQLite plus local files for a single-node researcher setup; PostgreSQL plus S3-compatible object storage for institutions.

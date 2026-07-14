@@ -5,6 +5,8 @@ from fair_platform.backend.api.schema.user import UserRead
 from fair_platform.backend.api.schema.assignment import AssignmentRead
 from fair_platform.backend.api.schema.workflow import WorkflowRead
 from fair_platform.backend.api.schema.utils import schema_config
+from datetime import datetime
+from fair_platform.backend.data.models.enrollment import CourseMembershipRole
 
 
 class CourseBase(BaseModel):
@@ -13,6 +15,8 @@ class CourseBase(BaseModel):
     name: str
     description: Optional[str] = None
     instructor_id: UUID
+    section: Optional[str] = None
+    term: Optional[str] = None
 
 
 class CourseCreate(CourseBase):
@@ -25,6 +29,8 @@ class CourseUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     instructor_id: Optional[UUID] = None
+    section: Optional[str] = None
+    term: Optional[str] = None
 
 
 class CourseRead(CourseBase):
@@ -33,6 +39,10 @@ class CourseRead(CourseBase):
     assignments_count: int
     enrollment_code: Optional[str] = None
     is_enrollment_enabled: Optional[bool] = None
+    is_archived: bool
+    created_at: datetime
+    updated_at: datetime
+    membership_role: Optional[CourseMembershipRole] = None
 
 
 class CourseDetailRead(BaseModel):
@@ -46,6 +56,12 @@ class CourseDetailRead(BaseModel):
     workflows: List[WorkflowRead] = []
     enrollment_code: Optional[str] = None
     is_enrollment_enabled: Optional[bool] = None
+    section: Optional[str] = None
+    term: Optional[str] = None
+    is_archived: bool
+    created_at: datetime
+    updated_at: datetime
+    membership_role: Optional[CourseMembershipRole] = None
 
 
 class CourseSettingsUpdate(BaseModel):

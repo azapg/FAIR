@@ -17,7 +17,9 @@ import { EnrollmentControls } from "../components/enrollment-controls";
 import {useResetEnrollmentCode, useUpdateCourseSettings} from "@/hooks/use-courses";
 import {useAuth} from "@/contexts/auth-context";
 import {usePermission} from "@/hooks/use-permission";
-type CourseTab = "assignments" | "participants" | "runs" | "artifacts" | "workflows" | "plugins";
+import {GradebookTab} from "@/app/courses/tabs/gradebook-tab";
+import {StreamTab} from "@/app/courses/tabs/stream-tab";
+type CourseTab = "stream" | "assignments" | "gradebook" | "participants" | "runs" | "artifacts" | "workflows" | "plugins";
 
 export default function CourseDetailPage() {
   const params = useParams<{ courseId: string, tab: string }>()
@@ -40,10 +42,12 @@ export default function CourseDetailPage() {
   useEffect(() => {
     if (!courseId || isLoading || isError || !course) return;
     const instructorId = "instructorId" in course ? course.instructorId : course.instructor?.id;
-    const isInstructorView = !!user && (instructorId === user.id || canManageUsers);
+    const isInstructorView = !!user && (
+      instructorId === user.id || canManageUsers || course.membershipRole === 'assistant'
+    );
     const visibleTabs: CourseTab[] = isInstructorView
-      ? ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"]
-      : ["assignments", "artifacts"];
+      ? ["stream", "assignments", "gradebook", "participants", "runs", "artifacts", "workflows", "plugins"]
+      : ["stream", "assignments", "artifacts"];
     if (!tab || !visibleTabs.includes(tab as CourseTab)) {
       navigate(`assignments`);
     }
@@ -66,10 +70,11 @@ export default function CourseDetailPage() {
   const instructorId = "instructorId" in course ? course.instructorId : course.instructor?.id;
   const isCourseOwner = !!user && instructorId === user.id;
   const isCourseAdmin = !!user && canManageUsers;
-  const isInstructorView = isCourseOwner || isCourseAdmin;
+  const isCourseAssistant = course.membershipRole === 'assistant';
+  const isInstructorView = isCourseOwner || isCourseAdmin || isCourseAssistant;
   const visibleTabs: CourseTab[] = isInstructorView
-    ? ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"]
-    : ["assignments", "artifacts"];
+    ? ["stream", "assignments", "gradebook", "participants", "runs", "artifacts", "workflows", "plugins"]
+    : ["stream", "assignments", "artifacts"];
   const currentTab = (tab && visibleTabs.includes(tab as CourseTab) ? tab : "assignments") as CourseTab;
 
   const showEnrollmentControls =
@@ -129,7 +134,9 @@ export default function CourseDetailPage() {
       }}>
         <ScrollArea className={"w-full border-b"}>
           <TabsList className={"px-8 w-full"}>
+            <TabsTrigger value="stream">Stream</TabsTrigger>
             <TabsTrigger value="assignments">{t("tabs.assignments")}</TabsTrigger>
+            {isInstructorView && <TabsTrigger value="gradebook">Gradebook</TabsTrigger>}
             <TabsTrigger value="artifacts">{t("tabs.artifacts")}</TabsTrigger>
             {isInstructorView && <TabsTrigger value="participants">{t("tabs.participants")}</TabsTrigger>}
             {isInstructorView && <TabsTrigger value="runs">{t("tabs.runs")}</TabsTrigger>}
@@ -144,9 +151,21 @@ export default function CourseDetailPage() {
         <TabsContent value={"artifacts"} className={"px-8"}>
           <ArtifactsTab courseId={courseId} assignments={assignments}/>
         </TabsContent>
+        <TabsContent value={"stream"} className={"px-8"}>
+          <StreamTab courseId={courseId as string} canPost={isInstructorView}/>
+        </TabsContent>
+        {isInstructorView && (
+          <TabsContent value={"gradebook"} className={"px-8"}>
+            <GradebookTab courseId={courseId as string}/>
+          </TabsContent>
+        )}
         {isInstructorView && (
           <TabsContent value={"participants"} className={"px-8"}>
-            <ParticipantsTab instructor={"instructor" in course ? course.instructor : undefined}/>
+            <ParticipantsTab
+              courseId={courseId as string}
+              instructor={"instructor" in course ? course.instructor : undefined}
+              canManageRoles={isCourseOwner || isCourseAdmin}
+            />
           </TabsContent>
         )}
         {isInstructorView && (

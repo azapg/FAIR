@@ -17,10 +17,48 @@ from fair_platform.backend.core.security.dependencies import require_capability,
 from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
-from fair_platform.backend.storage.provider import LocalStorageProvider, MultiStorageProvider, parse_storage_uri
+from fair_platform.backend.storage.provider import MultiStorageProvider, parse_storage_uri
 from fair_platform.backend.data.storage import storage
 
 router = APIRouter()
+
+
+def _safe_local_file(key: str) -> Path:
+    root = storage.uploads_dir.resolve()
+    candidate = (root / Path(key)).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid storage key",
+        ) from exc
+    if not candidate.is_file():
+        raise HTTPException(status_code=404, detail="Stored file not found")
+    return candidate
+
+
+def _authorized_download_url(artifact_id: UUID, derivative_id: UUID) -> str:
+    return f"/api/artifacts/{artifact_id}/content?derivative_id={derivative_id}"
+
+
+def _download_location_response(
+    *,
+    artifact_id: UUID,
+    derivative,
+    request: Request,
+    manager,
+):
+    scheme, key = parse_storage_uri(derivative.storage_uri)
+    if scheme == "local":
+        url = _authorized_download_url(artifact_id, derivative.id)
+    elif isinstance(manager.storage_provider, MultiStorageProvider):
+        url = manager.storage_provider.get_provider(scheme).get_presigned_url(key)
+    else:
+        url = manager.storage_provider.get_presigned_url(key)
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"url": url})
+    return RedirectResponse(url=url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 @router.post(
     "/",
@@ -121,17 +159,11 @@ def download_artifact(
             detail="Artifact file not found",
         )
 
-    scheme, key = parse_storage_uri(derivative.storage_uri)
-    if isinstance(manager.storage_provider, MultiStorageProvider):
-        url = manager.storage_provider.get_provider(scheme).get_presigned_url(key)
-    else:
-        url = manager.storage_provider.get_presigned_url(key)
-    accept = request.headers.get("accept", "")
-    if "application/json" in accept:
-        return JSONResponse({"url": url})
-    return RedirectResponse(
-        url=url,
-        status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+    return _download_location_response(
+        artifact_id=artifact.id,
+        derivative=derivative,
+        request=request,
+        manager=manager,
     )
 
 
@@ -149,31 +181,38 @@ def download_artifact_derivative(
     if not derivative:
         raise HTTPException(status_code=404, detail="Artifact derivative not found")
 
+    return _download_location_response(
+        artifact_id=artifact.id,
+        derivative=derivative,
+        request=request,
+        manager=manager,
+    )
+
+
+@router.get("/{artifact_id}/content")
+def download_artifact_content(
+    artifact_id: UUID,
+    derivative_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_artifact_download_user),
+):
+    manager = get_artifact_manager(db)
+    artifact = manager.get_artifact(artifact_id, current_user)
+    derivative = next(
+        (item for item in artifact.derivatives if item.id == derivative_id),
+        None,
+    )
+    if derivative is None:
+        raise HTTPException(status_code=404, detail="Artifact derivative not found")
+
     scheme, key = parse_storage_uri(derivative.storage_uri)
+    if scheme == "local":
+        return FileResponse(_safe_local_file(key), media_type=derivative.mime_type)
     if isinstance(manager.storage_provider, MultiStorageProvider):
         url = manager.storage_provider.get_provider(scheme).get_presigned_url(key)
     else:
         url = manager.storage_provider.get_presigned_url(key)
-    accept = request.headers.get("accept", "")
-    if "application/json" in accept:
-        return JSONResponse({"url": url})
-    return RedirectResponse(
-        url=url,
-        status_code=status.HTTP_307_TEMPORARY_REDIRECT,
-    )
-
-
-@router.get("/storage/local/{key:path}")
-def download_local_storage_object(
-    key: str,
-    current_user: User = Depends(get_current_user),
-):
-    del current_user
-    provider = LocalStorageProvider(uploads_dir=storage.uploads_dir, api_prefix="/api/artifacts/storage/local")
-    file_path = provider.uploads_dir / Path(key)
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Stored file not found")
-    return FileResponse(file_path)
+    return RedirectResponse(url=url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 
 @router.put("/{artifact_id}", response_model=ArtifactRead)

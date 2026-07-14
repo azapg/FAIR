@@ -1,6 +1,5 @@
 import os
 from datetime import datetime, timedelta, timezone
-from secrets import token_urlsafe
 from uuid import UUID, uuid4
 
 from fair_platform.backend.api.schema.user import AuthUserRead, UserCreate
@@ -15,9 +14,11 @@ from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
 from fair_platform.backend.data.models.user import UserRole
 from fair_platform.backend.core.config import (
+    INSECURE_DEFAULT_SECRET_KEY,
     get_base_url,
     get_email_enabled,
     get_enforce_email_verification,
+    get_secret_key,
 )
 from fair_platform.backend.core.security.permissions import auth_user_payload
 from fair_platform.backend.api.schema.casing import to_camel_keys
@@ -28,8 +29,8 @@ load_dotenv()
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
-SECRET_KEY = os.getenv("SECRET_KEY") or "fair-insecure-default-key"
-if SECRET_KEY == "fair-insecure-default-key":
+SECRET_KEY = get_secret_key()
+if SECRET_KEY == INSECURE_DEFAULT_SECRET_KEY:
     print("WARNING: Using insecure default SECRET_KEY. Set SECRET_KEY environment variable for better security.")
 ALGORITHM = "HS256"
 DEFAULT_TOKEN_EXPIRE_HOURS = 24
