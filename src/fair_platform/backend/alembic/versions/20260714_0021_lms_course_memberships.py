@@ -20,7 +20,31 @@ branch_labels = None
 depends_on = None
 
 
+def _column_names(table_name: str) -> set[str]:
+    return {
+        column["name"] for column in sa.inspect(op.get_bind()).get_columns(table_name)
+    }
+
+
 def upgrade() -> None:
+    expected_course_columns = {
+        "section",
+        "term",
+        "is_archived",
+        "created_at",
+        "updated_at",
+    }
+    expected_enrollment_columns = {"role", "status", "updated_at"}
+    course_columns = _column_names("courses")
+    enrollment_columns = _column_names("enrollments")
+    present = (expected_course_columns & course_columns) | (
+        expected_enrollment_columns & enrollment_columns
+    )
+    if expected_course_columns <= course_columns and expected_enrollment_columns <= enrollment_columns:
+        return
+    if present:
+        raise RuntimeError("LMS course-membership migration is only partially applied")
+
     with op.batch_alter_table("courses") as batch_op:
         batch_op.add_column(sa.Column("section", sa.String(length=128), nullable=True))
         batch_op.add_column(sa.Column("term", sa.String(length=128), nullable=True))
