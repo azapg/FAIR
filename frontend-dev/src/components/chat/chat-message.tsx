@@ -15,7 +15,7 @@ import {
 } from "@/components/ai-elements/inline-citation"
 import { Code, FileText, FileCode2, Terminal, Pencil, ChevronRight, DownloadIcon, RotateCcw, BookIcon, CopyIcon, ThumbsUpIcon, ThumbsDownIcon, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Message, ChatEventBlock } from "@/store/chat-store"
+import type { ChatEventBlock, Message } from "@/lib/chat-contract"
 import { getRandomProcessingPhrase } from "@/lib/processing-phrases"
 
 // Maps tool name strings to specific Lucide tool icons
@@ -85,7 +85,7 @@ interface ChatMessageProps {
   hideActionsDefault?: boolean
 }
 
-export function ChatMessage({
+export const ChatMessage = React.memo(function ChatMessage({
   message,
   isUser,
   userRole,
@@ -179,6 +179,21 @@ export function ChatMessage({
   // Filter out text events to render only tools/thoughts/artifacts in the wrapper
   const nonTextEvents = message.events?.filter(e => e.type !== "text") || []
   const hasWorkingWrapper = nonTextEvents.length > 0
+  const phraseBucket = Math.floor(taskTimer.elapsed / 3)
+  const currentPhrase = React.useMemo(
+    () => taskTimer.completed ? "Worked for" : getRandomProcessingPhrase(phraseBucket * 3),
+    [phraseBucket, taskTimer.completed],
+  )
+  const formatTime = (elapsed: number, isCompleted: boolean) => {
+    const m = Math.floor(elapsed / 60)
+    const s = elapsed % 60
+    const timeStr = m > 0 ? `${m}m ${s}s` : `${s}s`
+    return isCompleted ? `Worked for ${timeStr}` : `${currentPhrase}... (${timeStr})`
+  }
+  const triggerTitle = formatTime(taskTimer.elapsed, taskTimer.completed)
+  const personaState = taskTimer.completed
+    ? "asleep"
+    : (nonTextEvents.some(e => e.type === "tool_call" && e.status === "running") ? "thinking" : "idle")
 
   return (
     <MessageScrollerItem messageId={message.id} scrollAnchor={isUser}>
@@ -187,45 +202,25 @@ export function ChatMessage({
 
           {hasWorkingWrapper && (
             <div className="mt-1 -mb-1 w-full select-none max-w-none z-10 relative">
-              {(() => {
-                const currentPhrase = React.useMemo(() => {
-                  if (taskTimer.completed) return "Worked for"
-                  return getRandomProcessingPhrase(taskTimer.elapsed)
-                }, [Math.floor(taskTimer.elapsed / 3), taskTimer.completed])
+              <Task open={isTaskOpen} onOpenChange={onTaskOpenChange}>
+                <TaskTrigger title={triggerTitle}>
+                  <div className="flex w-full cursor-pointer items-center text-sm font-semibold group/task hover:bg-muted/30 px-3 py-1.5 rounded-lg -mx-3 transition-all duration-200">
+                    <div className={cn(
+                      "transition-all duration-300 overflow-hidden flex items-center shrink-0",
+                      taskTimer.completed || !personaLoaded ? "w-0 opacity-0 mr-0" : "w-6 opacity-100 mr-2"
+                    )}>
+                      <Persona className="w-6 h-6 shrink-0" state={personaState} variant="opal" onLoad={onPersonaLoad} />
+                    </div>
+                    <p className={cn("text-xs font-semibold transition-colors duration-200", !taskTimer.completed ? "shimmer text-muted-foreground" : "text-muted-foreground")}>
+                      {triggerTitle}
+                    </p>
+                    <ChevronRight className="size-3.5 transition-transform group-data-[state=open]:rotate-90 text-muted-foreground/70 ml-2" />
+                  </div>
+                </TaskTrigger>
 
-                const formatTime = (elapsed: number, isCompleted: boolean) => {
-                  const m = Math.floor(elapsed / 60);
-                  const s = elapsed % 60;
-                  const timeStr = m > 0 ? `${m}m ${s}s` : `${s}s`;
-                  return isCompleted ? `Worked for ${timeStr}` : `${currentPhrase}... (${timeStr})`;
-                };
-                const triggerTitle = formatTime(taskTimer.elapsed, taskTimer.completed)
-
-                // Dynamic persona state
-                const personaState = taskTimer.completed 
-                  ? "asleep" 
-                  : (nonTextEvents.some(e => e.type === "tool_call" && e.status === "running") ? "thinking" : "idle")
-
-                return (
-                  <Task open={isTaskOpen} onOpenChange={onTaskOpenChange}>
-                    <TaskTrigger title={triggerTitle}>
-                      <div className="flex w-full cursor-pointer items-center text-sm font-semibold group/task hover:bg-muted/30 px-3 py-1.5 rounded-lg -mx-3 transition-all duration-200">
-                        <div className={cn(
-                          "transition-all duration-300 overflow-hidden flex items-center shrink-0",
-                          taskTimer.completed || !personaLoaded ? "w-0 opacity-0 mr-0" : "w-6 opacity-100 mr-2"
-                        )}>
-                          <Persona className="w-6 h-6 shrink-0" state={personaState} variant="opal" onLoad={onPersonaLoad} />
-                        </div>
-                        <p className={cn("text-xs font-semibold transition-colors duration-200", !taskTimer.completed ? "shimmer text-muted-foreground" : "text-muted-foreground")}>
-                          {triggerTitle}
-                        </p>
-                        <ChevronRight className="size-3.5 transition-transform group-data-[state=open]:rotate-90 text-muted-foreground/70 ml-2" />
-                      </div>
-                    </TaskTrigger>
-                    
-                    <TaskContent>
-                      <div className="flex flex-col gap-2.5 py-1">
-                        {nonTextEvents.map((ev, idx) => {
+                <TaskContent>
+                  <div className="flex flex-col gap-2.5 py-1">
+                    {nonTextEvents.map((ev, idx) => {
                           if (ev.type === "thought") {
                             return (
                               <div key={idx} className="text-[13px] text-muted-foreground/80 italic leading-relaxed py-0.5">
@@ -261,12 +256,10 @@ export function ChatMessage({
                               </div>
                             )
                           }
-                        })}
-                      </div>
-                    </TaskContent>
-                  </Task>
-                )
-              })()}
+                    })}
+                  </div>
+                </TaskContent>
+              </Task>
             </div>
           )}
 
@@ -346,4 +339,5 @@ export function ChatMessage({
       </UIMessage>
     </MessageScrollerItem>
   )
-}
+})
+ChatMessage.displayName = "ChatMessage"

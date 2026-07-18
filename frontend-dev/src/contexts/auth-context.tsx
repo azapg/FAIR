@@ -26,14 +26,13 @@ export type RegisterResult = {
 
 type AuthContextValue = {
   user: AuthUser | null
-  token: string | null
   isAuthenticated: boolean
   loading: boolean
   login: (input: LoginInput) => Promise<void>
   register: (input: RegisterInput) => Promise<RegisterResult>
-  logout: () => void
+  logout: () => Promise<void>
   hasCapability: (action: string) => boolean
-  setSession: (token: string, user: Partial<AuthUser> & { role?: string, isVerified?: boolean, is_verified?: boolean }) => void
+  setSession: (user: Partial<AuthUser> & { role?: string, isVerified?: boolean, is_verified?: boolean }) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -61,78 +60,42 @@ const normalizeUser = (raw: Partial<AuthUser> & { role?: string, isVerified?: bo
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const validateStoredSession = async () => {
+    let active = true
+    const validateSession = async () => {
       try {
-        const storedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-        const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null
-        
-        if (storedToken && storedUser) {
-          // Set the token temporarily to make the validation request
-          setToken(storedToken)
-          
-          try {
-            // Validate the token by making a request to the /auth/me endpoint
-            const userRes = await api.get('/auth/me')
-            const validatedUser: AuthUser = normalizeUser(userRes.data)
-            
-            // If validation succeeds, set both token and user
-            setUser(validatedUser)
-            persist(storedToken, validatedUser)
-          } catch (error) {
-            // If validation fails, clear the invalid session
-            console.log('Stored session is invalid, clearing...')
-            setToken(null)
-            setUser(null)
-            persist(null, null)
-          }
-        }
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        const userRes = await api.get('/auth/me')
+        if (active) setUser(normalizeUser(userRes.data))
       } catch {
-        // If any error occurs during validation, clear the session
-        setToken(null)
-        setUser(null)
-        persist(null, null)
+        if (active) setUser(null)
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
 
     // Listen for session expiry events from the API interceptor
     const handleSessionExpiry = () => {
-      setToken(null)
       setUser(null)
-      window.location.href = '/login'
+      setLoading(false)
+      if (window.location.pathname !== '/login') window.location.href = '/login'
     }
 
     if (typeof window !== 'undefined') {
       window.addEventListener('auth:session-expired', handleSessionExpiry)
     }
 
-    validateStoredSession()
+    void validateSession()
 
     // Cleanup event listener
     return () => {
+      active = false
       if (typeof window !== 'undefined') {
         window.removeEventListener('auth:session-expired', handleSessionExpiry)
       }
-    }
-  }, [])
-
-  const persist = useCallback((nextToken: string | null, nextUser: AuthUser | null) => {
-    if (typeof window === 'undefined') return
-    if (nextToken) {
-      localStorage.setItem('token', nextToken)
-    } else {
-      localStorage.removeItem('token')
-    }
-
-    if (nextUser) {
-      localStorage.setItem('user', JSON.stringify(nextUser))
-    } else {
-      localStorage.removeItem('user')
     }
   }, [])
 
@@ -146,61 +109,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // OAuth2 way to pass remember_me flag
       form.append('scope', input.remember_me ? 'remember_me' : '')
 
-      const loginRes = await api.post('/auth/login', form, {
+      await api.post('/auth/login', form, {
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       })
 
-      const accessToken = loginRes.data?.access_token
-
-      if (!accessToken) {
-        throw new Error('An error occurred during login')
+      try {
+        const userRes = await api.get('/auth/me')
+        setUser(normalizeUser(userRes.data))
+      } catch (error) {
+        await api.post('/auth/logout').catch(() => undefined)
+        throw error
       }
-
-      persist(accessToken, null)
-
-      const userRes = await api.get('/auth/me')
-
-      const nextUser: AuthUser = normalizeUser(userRes.data)
-      setToken(accessToken)
-      setUser(nextUser)
-      persist(accessToken, nextUser)
     } finally {
       setLoading(false)
     }
-  }, [persist])
+  }, [])
 
   const register = useCallback(async (input: RegisterInput) => {
     setLoading(true)
     try {
       const res = await api.post('/auth/register', input)
       const verificationRequired = Boolean(res.data?.verification_required)
-      const accessToken: string | undefined = res.data?.access_token
       const user = res.data?.user ? normalizeUser(res.data.user) : undefined
-      if (accessToken && user) {
-        setToken(accessToken)
+      if (user) {
         setUser(user)
-        persist(accessToken, user)
         return { verificationRequired: false, detail: res.data?.detail }
       }
       return { verificationRequired, detail: res.data?.detail }
     } finally {
       setLoading(false)
     }
-  }, [persist])
+  }, [])
 
-  const logout = useCallback(() => {
-    setToken(null)
+  const logout = useCallback(async () => {
     setUser(null)
-    persist(null, null)
-  }, [persist])
-
-  const setSession = useCallback((newToken: string, rawUser: Partial<AuthUser> & { role?: string, isVerified?: boolean, is_verified?: boolean }) => {
-    const newUser = normalizeUser(rawUser)
-    setToken(newToken)
-    setUser(newUser)
-    persist(newToken, newUser)
     setLoading(false)
-  }, [persist])
+    await api.post('/auth/logout').catch(() => undefined)
+  }, [])
+
+  const setSession = useCallback((rawUser: Partial<AuthUser> & { role?: string, isVerified?: boolean, is_verified?: boolean }) => {
+    const newUser = normalizeUser(rawUser)
+    setUser(newUser)
+    setLoading(false)
+  }, [])
 
   const hasCapability = useCallback((action: string) => {
     return !!user?.capabilities?.includes(action)
@@ -208,15 +159,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value = useMemo<AuthContextValue>(() => ({
     user,
-    token,
-    isAuthenticated: !!token,
+    isAuthenticated: !!user,
     loading,
     login,
     register,
     logout,
     hasCapability,
     setSession,
-  }), [user, token, loading, login, register, logout, hasCapability, setSession])
+  }), [user, loading, login, register, logout, hasCapability, setSession])
 
   return (
     <AuthContext.Provider value={value}>

@@ -29,8 +29,10 @@ export default function CoursesPage() {
   const [description, setDescription] = useState("");
 
   const courses: Course[] = data ?? [];
-  const canCreateCourses = isAuthenticated && usePermission("create_course");
-  const canJoinCourses = isAuthenticated && usePermission("join_course");
+  const hasCreateCoursePermission = usePermission("create_course");
+  const hasJoinCoursePermission = usePermission("join_course");
+  const canCreateCourses = isAuthenticated && hasCreateCoursePermission;
+  const canJoinCourses = isAuthenticated && hasJoinCoursePermission;
 
   const openCreateDialog = () => {
     setName("");

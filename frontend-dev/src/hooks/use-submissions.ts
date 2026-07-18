@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { Artifact } from "@/hooks/use-artifacts"
+import { LmsArtifact } from "@/hooks/use-artifacts"
 import { toast } from 'sonner'
 
 export type CanonicalSubmissionEventType =
@@ -72,7 +72,7 @@ export type Submission = {
   publishedScore?: number | null
   publishedFeedback?: string | null
   returnedAt?: string | null
-  artifacts: Artifact[]
+  artifacts: LmsArtifact[]
   attemptNumber: number
   isLate: boolean
 }

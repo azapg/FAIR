@@ -10,7 +10,7 @@ import {
   parseExecutionEvent,
 } from "@/lib/execution-contract";
 
-export type V2Thread = {
+export type Thread = {
   id: string;
   ownerUserId: string;
   title: string | null;
@@ -19,7 +19,7 @@ export type V2Thread = {
   updatedAt: string;
 };
 
-export type V2Turn = {
+export type Turn = {
   id: string;
   threadId: string;
   executionId: string;
@@ -31,16 +31,16 @@ export type V2Turn = {
   completedAt: string | null;
 };
 
-export async function createExecutionThread(title = "Live chat"): Promise<V2Thread> {
-  const response = await api.post<V2Thread>("/v1/threads", { title });
+export async function createExecutionThread(title = "Live chat"): Promise<Thread> {
+  const response = await api.post<Thread>("/v1/threads", { title });
   return response.data;
 }
 
 export async function createExecutionTurn(
   threadId: string,
   input: { content: string; target?: string; capabilityId?: string; clientRequestId?: string },
-): Promise<V2Turn> {
-  const response = await api.post<V2Turn>(
+): Promise<Turn> {
+  const response = await api.post<Turn>(
     `/v1/threads/${threadId}/turns`,
     input,
   );

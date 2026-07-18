@@ -12,10 +12,58 @@ import { ChatInput } from "@/components/chat/chat-input";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ElicitationPanel } from "@/components/chat/elicitation-panel";
 import { useExecutionChat } from "@/hooks/use-execution-chat";
+import type { Message } from "@/lib/chat-contract";
+
+const noop = () => undefined;
+
+function lastAssistantMessageId(messages: Message[]): string | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === "assistant") return messages[index].id;
+  }
+  return null;
+}
+
+const LiveMessageRow = React.memo(function LiveMessageRow({
+  message,
+  isActiveStream,
+}: {
+  message: Message;
+  isActiveStream: boolean;
+}) {
+  const taskTimer = React.useMemo(
+    () => ({ elapsed: message.events?.length || 1, completed: !isActiveStream }),
+    [isActiveStream, message.events?.length],
+  );
+
+  return (
+    <ChatMessage
+      message={message}
+      isUser={message.role === "user"}
+      userRole="complete"
+      isTaskOpen={false}
+      onTaskOpenChange={noop}
+      onOpenSources={noop}
+      taskTimer={taskTimer}
+      personaLoaded
+      onPersonaLoad={noop}
+      onOpenCanvas={noop}
+      onResolveInterrupt={noop}
+      isCompletedResponse={!isActiveStream}
+    />
+  );
+});
 
 export default function LiveChatPage() {
   const live = useExecutionChat();
   const pending = live.pendingInteraction;
+  const isStreaming = live.status === "streaming";
+  const activeStreamingMessageId = isStreaming
+    ? lastAssistantMessageId(live.messages)
+    : null;
+  const handleSend = React.useCallback(
+    (content: string) => void live.send(content),
+    [live.send],
+  );
   const elicitation = pending
     ? {
         id: pending.id,
@@ -61,24 +109,14 @@ export default function LiveChatPage() {
                   </MessageScrollerItem>
                 ) : (
                   live.messages.map((message) => (
-                    <ChatMessage
+                    <LiveMessageRow
                       key={message.id}
                       message={message}
-                      isUser={message.role === "user"}
-                      userRole="complete"
-                      isTaskOpen={false}
-                      onTaskOpenChange={() => undefined}
-                      onOpenSources={() => undefined}
-                      taskTimer={{ elapsed: message.events?.length || 1, completed: live.status !== "streaming" }}
-                      personaLoaded
-                      onPersonaLoad={() => undefined}
-                      onOpenCanvas={() => undefined}
-                      onResolveInterrupt={() => undefined}
-                      isCompletedResponse={live.status !== "streaming"}
+                      isActiveStream={message.id === activeStreamingMessageId}
                     />
                   ))
                 )}
-                {live.status === "streaming" && (
+                {isStreaming && (
                   <MessageScrollerItem messageId="live-streaming">
                     <div className="py-3 text-sm text-muted-foreground">Waiting for Execution events…</div>
                   </MessageScrollerItem>
@@ -102,8 +140,8 @@ export default function LiveChatPage() {
                   </div>
                 )}
                 <ChatInput
-                  onSend={(content) => void live.send(content)}
-                  disabled={live.status === "streaming" || Boolean(pending)}
+                  onSend={handleSend}
+                  disabled={isStreaming || Boolean(pending)}
                   placeholder={pending ? "Awaiting your response above…" : "Ask the Execution service…"}
                 />
               </div>

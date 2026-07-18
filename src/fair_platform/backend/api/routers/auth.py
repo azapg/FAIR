@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from fair_platform.backend.api.schema.user import AuthUserRead, UserCreate
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 import bcrypt
@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login", auto_error=False)
 
 SECRET_KEY = get_secret_key()
 if SECRET_KEY == INSECURE_DEFAULT_SECRET_KEY:
@@ -46,6 +46,47 @@ TOKEN_PURPOSE_EXT_JOB = "ext_job"
 PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60
 VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES = 30
 EXT_JOB_TOKEN_EXPIRE_HOURS = int(os.getenv("FAIR_EXT_JOB_TOKEN_EXPIRE_HOURS", "8"))
+SESSION_COOKIE_NAME = "fair_session"
+SESSION_COOKIE_PATH = "/api"
+
+
+def _session_cookie_secure() -> bool:
+    configured = os.getenv("FAIR_SESSION_COOKIE_SECURE")
+    if configured is not None:
+        return configured.strip().lower() in {"1", "true", "yes", "on"}
+    return get_base_url().lower().startswith("https://")
+
+
+def _set_session_cookie(
+    response: Response,
+    token: str,
+    *,
+    remember_me: bool,
+) -> None:
+    max_age = (
+        REMEMBER_ME_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+        if remember_me
+        else DEFAULT_TOKEN_EXPIRE_HOURS * 60 * 60
+    )
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        max_age=max_age,
+        httponly=True,
+        secure=_session_cookie_secure(),
+        samesite="lax",
+        path=SESSION_COOKIE_PATH,
+    )
+
+
+def _clear_session_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        httponly=True,
+        secure=_session_cookie_secure(),
+        samesite="lax",
+        path=SESSION_COOKIE_PATH,
+    )
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -155,10 +196,15 @@ def _build_verify_url(token: str) -> str:
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(session_dependency)
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
+    db: Session = Depends(session_dependency),
 ):
+    resolved_token = token or request.cookies.get(SESSION_COOKIE_NAME)
+    if not resolved_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(resolved_token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
@@ -174,6 +220,7 @@ def get_current_user(
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     user_in: UserCreate,
+    response: Response,
     db: Session = Depends(session_dependency),
     mailer: Mailer = Depends(get_mailer),
 ):
@@ -218,6 +265,7 @@ async def register(
     )
     auth_user = auth_user_payload(user)
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
+    _set_session_cookie(response, access_token, remember_me=False)
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -227,6 +275,7 @@ async def register(
 
 @router.post("/login")
 def login(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(session_dependency),
 ):
@@ -250,7 +299,14 @@ def login(
         {"sub": str(user.id), "role": user.role},
         remember_me=remember_me
     )
+    _set_session_cookie(response, access_token, remember_me=remember_me)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/logout")
+def logout(response: Response):
+    _clear_session_cookie(response)
+    return {"detail": "Logged out"}
 
 
 @router.get("/me", response_model=AuthUserRead)
@@ -345,6 +401,7 @@ async def resend_verification_request(
 @router.post("/verify-email/confirm")
 async def verify_email_confirm(
     payload: TokenConfirmRequest,
+    response: Response,
     db: Session = Depends(session_dependency),
 ):
     token_data = _decode_action_token(
@@ -372,6 +429,7 @@ async def verify_email_confirm(
     )
     auth_user = auth_user_payload(user)
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
+    _set_session_cookie(response, access_token, remember_me=False)
 
     return {
         "detail": detail,

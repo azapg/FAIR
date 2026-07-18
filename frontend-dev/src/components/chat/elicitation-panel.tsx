@@ -32,6 +32,24 @@ export function ElicitationPanel({
   const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0)
   const [customInputValue, setCustomInputValue] = React.useState("")
   const [answers, setAnswers] = React.useState<Record<string, string>>({})
+  const headingId = React.useId()
+  const headingRef = React.useRef<HTMLHeadingElement | null>(null)
+  const previousFocusRef = React.useRef<HTMLElement | null>(null)
+
+  React.useEffect(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+
+    return () => {
+      const previousFocus = previousFocusRef.current
+      if (previousFocus?.isConnected) previousFocus.focus()
+    }
+  }, [])
+
+  React.useEffect(() => {
+    headingRef.current?.focus()
+  }, [currentQuestionIndex])
   
   if (!elicitation || elicitation.resolved) return null
 
@@ -91,9 +109,17 @@ export function ElicitationPanel({
   }
 
   return (
-    <div className={cn("bg-card shadow-xl border rounded-2xl p-2.5 text-card-foreground flex flex-col w-full mb-3 select-none", className)}>
+    <section
+      aria-labelledby={headingId}
+      className={cn("bg-card shadow-xl border rounded-2xl p-2.5 text-card-foreground flex flex-col w-full mb-3 select-none", className)}
+    >
       <div className="flex items-start justify-between mb-2 mt-1 px-2">
-        <h3 className="text-[14px] font-bold text-foreground max-w-[80%] leading-snug">
+        <h3
+          ref={headingRef}
+          id={headingId}
+          tabIndex={-1}
+          className="text-[14px] font-bold text-foreground max-w-[80%] leading-snug outline-none"
+        >
           {currentQuestion.title}
         </h3>
         
@@ -101,16 +127,20 @@ export function ElicitationPanel({
           {questions.length > 1 && (
             <div className="flex items-center">
               <button 
+                type="button"
+                aria-label="Previous question"
                 onClick={handlePrev} 
                 disabled={currentQuestionIndex === 0}
                 className="p-1 hover:text-foreground disabled:opacity-30 transition-colors"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
-              <span className="min-w-[4ch] text-center">
+              <span aria-live="polite" className="min-w-[4ch] text-center">
                 {currentQuestionIndex + 1} of {questions.length}
               </span>
               <button 
+                type="button"
+                aria-label="Next question"
                 onClick={handleNext} 
                 disabled={currentQuestionIndex === questions.length - 1}
                 className="p-1 hover:text-foreground disabled:opacity-30 transition-colors"
@@ -119,7 +149,12 @@ export function ElicitationPanel({
               </button>
             </div>
           )}
-          <button onClick={onDismiss} className="p-1 hover:text-foreground transition-colors ml-1">
+          <button
+            type="button"
+            aria-label="Dismiss question"
+            onClick={onDismiss}
+            className="p-1 hover:text-foreground transition-colors ml-1"
+          >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -150,6 +185,7 @@ export function ElicitationPanel({
           </div>
           <input
             type="text"
+            aria-label="Custom response"
             value={customInputValue}
             onChange={(e) => setCustomInputValue(e.target.value)}
             placeholder="Something else..."
@@ -178,6 +214,6 @@ export function ElicitationPanel({
           </div>
         </form>
       </div>
-    </div>
+    </section>
   )
 }

@@ -1,9 +1,23 @@
 import * as React from "react"
 import { mockScenarios, Scenario } from "@/app/chat/mock-chat-scenarios"
-import { useChatStore, Message, ChatEventBlock } from "@/store/chat-store"
+import { useChatStore } from "@/store/chat-store"
+import type { ChatEventBlock, Message } from "@/lib/chat-contract"
+import { useShallow } from "zustand/react/shallow"
 
 export function useScenarioPlayback() {
-  const store = useChatStore()
+  const store = useChatStore(useShallow((state) => ({
+    activeElicitation: state.activeElicitation,
+    clearChat: state.clearChat,
+    appendMessage: state.appendMessage,
+    updateMessage: state.updateMessage,
+    addMessageEvent: state.addMessageEvent,
+    updateLastMessageEvent: state.updateLastMessageEvent,
+    setAgentState: state.setAgentState,
+    setStreamingMessageId: state.setStreamingMessageId,
+    setActiveElicitation: state.setActiveElicitation,
+    setActiveCanvasContent: state.setActiveCanvasContent,
+    setCanvasOpen: state.setCanvasOpen,
+  })))
   
   // Role view state: simplified or complete
   const [userRole, setUserRole] = React.useState<"simplified" | "complete">("complete")
@@ -23,15 +37,8 @@ export function useScenarioPlayback() {
   // State to track loaded Rive persona contexts to prevent blank flashes
   const [personaLoaded, setPersonaLoaded] = React.useState<Record<string, boolean>>({})
 
-  // Handle changing scenarios
-  React.useEffect(() => {
-    const scenario = mockScenarios.find((s) => s.id === selectedScenarioId) || mockScenarios[0]
-    setActiveScenario(scenario)
-    resetSimulation(scenario)
-  }, [selectedScenarioId])
-
   // Reset the chat
-  const resetSimulation = (scenario = activeScenario) => {
+  const resetSimulation = React.useCallback(() => {
     setIsStreaming(false)
     store.clearChat()
     setPlaybackIndex(0)
@@ -39,10 +46,17 @@ export function useScenarioPlayback() {
     store.setCanvasOpen(false)
     setOpenStates({})
     setPersonaLoaded({})
-  }
+  }, [store])
+
+  // Handle changing scenarios
+  React.useEffect(() => {
+    const scenario = mockScenarios.find((s) => s.id === selectedScenarioId) || mockScenarios[0]
+    setActiveScenario(scenario)
+    resetSimulation()
+  }, [resetSimulation, selectedScenarioId])
 
   // Play next turn in the scenario with realistic tool-calling sequence
-  const playNextTurn = async () => {
+  const playNextTurn = React.useCallback(async () => {
     if (playbackIndex >= activeScenario.messages.length) return
     setIsStreaming(true)
 
@@ -153,7 +167,7 @@ export function useScenarioPlayback() {
     setIsStreaming(false)
     store.setStreamingMessageId(null)
     setPlaybackIndex((prev) => prev + 1)
-  }
+  }, [activeScenario, playbackIndex, store])
 
   // Auto play the scenario (only if not interrupted by a pending elicitation)
   React.useEffect(() => {
@@ -171,13 +185,14 @@ export function useScenarioPlayback() {
       }, 1000)
     }
     return () => clearTimeout(timeout)
-  }, [playbackIndex, isStreaming, store.messages, activeScenario])
+  }, [activeScenario, isStreaming, playNextTurn, playbackIndex, store.activeElicitation])
 
   // Resolve an elicitation
-  const handleResolveElicitation = async (messageId: string, optionLabel: string) => {
+  const handleResolveElicitation = React.useCallback(async (messageId: string, optionLabel: string) => {
     store.setActiveElicitation(null)
-    store.updateMessage(messageId, { 
-      elicitation: { ...store.messages.find(m => m.id === messageId)!.elicitation!, resolved: true, selectedOption: optionLabel }
+    const message = useChatStore.getState().messages.find(m => m.id === messageId)
+    store.updateMessage(messageId, {
+      elicitation: { ...message!.elicitation!, resolved: true, selectedOption: optionLabel }
     })
 
     const userMsgId = `user-decision-${Date.now()}`
@@ -234,16 +249,17 @@ export function useScenarioPlayback() {
         }
       })
       
-      store.setActiveCanvasContent(store.messages.find(m => m.id === followUpMsgId)!.canvasContent!)
+      const followUpMessage = useChatStore.getState().messages.find(m => m.id === followUpMsgId)
+      store.setActiveCanvasContent(followUpMessage!.canvasContent!)
       store.setCanvasOpen(true)
       
       setIsStreaming(false)
       store.setStreamingMessageId(null)
       store.setAgentState("idle")
     }
-  }
+  }, [activeScenario.id, store, userRole])
 
-  const handleSend = (inputValue: string, uploadedFiles: any[]) => {
+  const handleSend = React.useCallback((inputValue: string, uploadedFiles: any[]) => {
     if (!inputValue.trim() && uploadedFiles.length === 0) return
 
     const newMsg: Message = {
@@ -256,10 +272,10 @@ export function useScenarioPlayback() {
     }
 
     store.appendMessage(newMsg)
-  }
+  }, [store])
 
   // Simulate a custom message (mocks times and steps)
-  const simulateMessage = async (msg: Message) => {
+  const simulateMessage = React.useCallback(async (msg: Message) => {
     if (isStreaming) return
     setIsStreaming(true)
     store.setAgentState("working")
@@ -323,7 +339,7 @@ export function useScenarioPlayback() {
 
     setIsStreaming(false)
     store.setStreamingMessageId(null)
-  }
+  }, [isStreaming, store])
 
   return {
     userRole,
@@ -331,14 +347,12 @@ export function useScenarioPlayback() {
     selectedScenarioId,
     setSelectedScenarioId,
     activeScenario,
-    messages: store.messages,
     isStreaming,
     playbackIndex,
     openStates,
     setOpenStates,
     personaLoaded,
     setPersonaLoaded,
-    streamingMessageId: store.streamingMessageId,
     resetSimulation,
     playNextTurn,
     handleResolveElicitation,

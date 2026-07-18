@@ -18,15 +18,33 @@ interface SourcesSidebarProps {
 }
 
 export function SourcesSidebar({ sources, onClose }: SourcesSidebarProps) {
+  const titleId = React.useId()
+  const closeButtonRef = React.useRef<HTMLButtonElement | null>(null)
+  const previousFocusRef = React.useRef<HTMLElement | null>(null)
+
+  React.useEffect(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+    closeButtonRef.current?.focus()
+
+    return () => {
+      const previousFocus = previousFocusRef.current
+      if (previousFocus?.isConnected) previousFocus.focus()
+    }
+  }, [])
+
   return (
-    <div className="w-80 border-l bg-card/40 flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out">
+    <aside aria-labelledby={titleId} className="w-80 border-l bg-card/40 flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out">
       <div className="p-4 border-b shrink-0 flex items-center justify-between">
-        <h2 className="text-sm font-bold text-foreground/80 tracking-wide uppercase flex items-center gap-2">
+        <h2 id={titleId} className="text-sm font-bold text-foreground/80 tracking-wide uppercase flex items-center gap-2">
           <BookIcon className="w-4 h-4 text-primary" /> Sources
         </h2>
         <Button
+          ref={closeButtonRef}
           variant="ghost"
           size="icon"
+          aria-label="Close sources"
           onClick={onClose}
           className="h-7 w-7 rounded-lg hover:bg-muted cursor-pointer shrink-0"
           title="Close sources"
@@ -59,6 +77,7 @@ export function SourcesSidebar({ sources, onClose }: SourcesSidebarProps) {
                       href={src.url} 
                       target="_blank" 
                       rel="noreferrer"
+                      aria-label={`Open ${src.title} in a new tab`}
                       className="text-muted-foreground hover:text-primary transition-colors mt-0.5 shrink-0"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -79,6 +98,6 @@ export function SourcesSidebar({ sources, onClose }: SourcesSidebarProps) {
           })}
         </div>
       </ScrollArea>
-    </div>
+    </aside>
   )
 }

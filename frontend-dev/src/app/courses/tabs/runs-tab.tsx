@@ -93,7 +93,7 @@ export function RunsTab({ courseId }: { courseId?: string }) {
     () => [
       {
         id: "execution",
-        header: t("runs.workflow"),
+        header: t("runs.flow"),
         cell: ({ row }) => (
           <span className="font-medium">
             {row.original.capabilityId ?? row.original.kind}

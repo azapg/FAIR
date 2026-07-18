@@ -393,13 +393,14 @@ export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] 
           if (!canManage) {
             return (
               <p className="block max-w-[240px] truncate">
-                {feedback || <p className="italic text-muted-foreground">{t("submissions.feedbackPlaceholder")}</p>}
+                {feedback || <span className="italic text-muted-foreground">{t("submissions.feedbackPlaceholder")}</span>}
               </p>
             );
           }
           return (
-            <p
-              className="block max-w-[240px] truncate cursor-pointer hover:underline hover:decoration-dotted hover:decoration-gray-500 hover:underline-offset-3"
+            <button
+              type="button"
+              className="block w-full max-w-[240px] truncate cursor-pointer text-left hover:underline hover:decoration-dotted hover:decoration-gray-500 hover:underline-offset-3"
               onClick={(e) => {
                 e.stopPropagation();
                 (info.table.options.meta as any)?.onFeedbackClick?.(
@@ -407,8 +408,8 @@ export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] 
                 );
               }}
             >
-              {feedback || <p className="italic text-muted-foreground">{t("submissions.feedbackPlaceholder")}</p>}
-            </p>
+              {feedback || <span className="italic text-muted-foreground">{t("submissions.feedbackPlaceholder")}</span>}
+            </button>
           );
         },
       },

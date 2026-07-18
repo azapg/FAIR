@@ -33,7 +33,7 @@ export default function VerifyEmailPage() {
         const response = await api.post('/auth/verify-email/confirm', { token })
         if (!active) return
         if (response.data?.access_token && response.data?.user) {
-          setSession(response.data.access_token, response.data.user)
+          setSession(response.data.user)
         }
         setStatus('success')
       } catch (err) {
