@@ -19,6 +19,7 @@ import {
 
 import { useScenarioPlayback } from "@/hooks/use-scenario-playback"
 import { useChatStore } from "@/store/chat-store"
+import type { CanvasPayload, Message } from "@/lib/chat-contract"
 import { ChatSidebar } from "@/components/chat/chat-sidebar"
 import { ChatInput } from "@/components/chat/chat-input"
 import { ChatMessage } from "@/components/chat/chat-message"
@@ -109,6 +110,80 @@ const WORK_IDEAS = [
   }
 ]
 
+const MockMessageRow = React.memo(function MockMessageRow({
+  message,
+  nextRole,
+  userRole,
+  isStreaming,
+  streamingMessageId,
+  openState,
+  timerElapsed,
+  personaLoaded,
+  setOpenStates,
+  setPersonaLoaded,
+  setActiveSourcesMessageId,
+  setActiveCanvasContent,
+  setCanvasOpen,
+  onResolveInterrupt,
+}: {
+  message: Message
+  nextRole?: Message["role"]
+  userRole: "simplified" | "complete"
+  isStreaming: boolean
+  streamingMessageId: string | null
+  openState?: boolean
+  timerElapsed: number
+  personaLoaded: boolean
+  setOpenStates: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+  setPersonaLoaded: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+  setActiveSourcesMessageId: (id: string | null) => void
+  setActiveCanvasContent: (content: CanvasPayload | null) => void
+  setCanvasOpen: (open: boolean) => void
+  onResolveInterrupt: (messageId: string, optionLabel: string) => void
+}) {
+  const isCurrentStream = message.id === streamingMessageId
+  const isActivelyWorking = isCurrentStream && isStreaming && !message.content
+  const isTaskOpen = openState ?? (userRole === "complete" && isCurrentStream)
+  const taskTimer = React.useMemo(
+    () => ({ elapsed: timerElapsed, completed: !isActivelyWorking }),
+    [isActivelyWorking, timerElapsed],
+  )
+  const onTaskOpenChange = React.useCallback(
+    (open: boolean) => setOpenStates((prev) => ({ ...prev, [`${message.id}-working`]: open })),
+    [message.id, setOpenStates],
+  )
+  const onOpenSources = React.useCallback(
+    () => setActiveSourcesMessageId(message.id),
+    [message.id, setActiveSourcesMessageId],
+  )
+  const onPersonaLoad = React.useCallback(
+    () => setPersonaLoaded((prev) => ({ ...prev, [`${message.id}-persona`]: true })),
+    [message.id, setPersonaLoaded],
+  )
+  const onOpenCanvas = React.useCallback((content: CanvasPayload) => {
+    setActiveCanvasContent(content)
+    setCanvasOpen(true)
+  }, [setActiveCanvasContent, setCanvasOpen])
+
+  return (
+    <ChatMessage
+      message={message}
+      isUser={message.role === "user"}
+      userRole={userRole}
+      isTaskOpen={isTaskOpen}
+      onTaskOpenChange={onTaskOpenChange}
+      onOpenSources={onOpenSources}
+      taskTimer={taskTimer}
+      personaLoaded={personaLoaded}
+      onPersonaLoad={onPersonaLoad}
+      onOpenCanvas={onOpenCanvas}
+      onResolveInterrupt={onResolveInterrupt}
+      isCompletedResponse={!(isStreaming && isCurrentStream)}
+      hideActionsDefault={message.role !== "user" && nextRole !== undefined && nextRole !== "user"}
+    />
+  )
+})
+
 export default function ChatPage() {
   return (
     <MessageScrollerProvider autoScroll>
@@ -118,8 +193,17 @@ export default function ChatPage() {
 }
 
 function ChatDashboard() {
-  // Global Store State
-  const store = useChatStore()
+  const messages = useChatStore((state) => state.messages)
+  const streamingMessageId = useChatStore((state) => state.streamingMessageId)
+  const agentState = useChatStore((state) => state.agentState)
+  const isCanvasOpen = useChatStore((state) => state.isCanvasOpen)
+  const activeCanvasContent = useChatStore((state) => state.activeCanvasContent)
+  const activeSourcesMessageId = useChatStore((state) => state.activeSourcesMessageId)
+  const selectedModel = useChatStore((state) => state.selectedModel)
+  const setActiveSourcesMessageId = useChatStore((state) => state.setActiveSourcesMessageId)
+  const setActiveCanvasContent = useChatStore((state) => state.setActiveCanvasContent)
+  const setCanvasOpen = useChatStore((state) => state.setCanvasOpen)
+  const setSelectedModel = useChatStore((state) => state.setSelectedModel)
   
   // Local UI State
   const [inputPlaceholder, setInputPlaceholder] = React.useState("Write a message...")
@@ -151,25 +235,25 @@ function ChatDashboard() {
     return GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
   }, [selectedScenarioId])
 
-  const isCanvasVisible = store.isCanvasOpen && store.activeCanvasContent
-  const lastMsg = store.messages[store.messages.length - 1]
-  const isThinking = store.agentState === "thinking"
+  const isCanvasVisible = isCanvasOpen && activeCanvasContent
+  const lastMsg = messages[messages.length - 1]
+  const isThinking = agentState === "thinking"
   
-  const hasUnresolvedElicitation = store.agentState === "waiting_for_user"
-  const activeElicitationMessage = store.messages.find(
+  const hasUnresolvedElicitation = agentState === "waiting_for_user"
+  const activeElicitationMessage = messages.find(
     (msg) => msg.elicitation && !msg.elicitation.resolved
   )
   
   const activeSourcesMessage = React.useMemo(() => {
-    return store.messages.find(m => m.id === store.activeSourcesMessageId)
-  }, [store.messages, store.activeSourcesMessageId])
+    return messages.find(m => m.id === activeSourcesMessageId)
+  }, [messages, activeSourcesMessageId])
 
   const activeIdea = WORK_IDEAS.find(i => i.id === activeIdeaId)
 
   // Track task timers safely whenever streaming starts/stops
   React.useEffect(() => {
-    if (store.streamingMessageId && isStreaming) {
-      const id = store.streamingMessageId
+    if (streamingMessageId && isStreaming) {
+      const id = streamingMessageId
       setTaskTimers(prev => ({ ...prev, [id]: { elapsed: 0, completed: false } }))
       const timer = setInterval(() => {
         const currentMsg = useChatStore.getState().messages.find(m => m.id === id)
@@ -182,16 +266,16 @@ function ChatDashboard() {
         })
       }, 1000)
       return () => clearInterval(timer)
-    } else if (store.streamingMessageId) {
+    } else if (streamingMessageId) {
       setTaskTimers(prev => ({
         ...prev,
-        [store.streamingMessageId!]: { 
-          elapsed: prev[store.streamingMessageId!]?.elapsed || 1, 
+        [streamingMessageId]: {
+          elapsed: prev[streamingMessageId]?.elapsed || 1,
           completed: true 
         }
       }))
     }
-  }, [store.streamingMessageId, isStreaming])
+  }, [streamingMessageId, isStreaming])
 
   return (
     <div className="h-screen w-full flex bg-background overflow-hidden border-t">
@@ -222,22 +306,22 @@ function ChatDashboard() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1.5 px-3 py-1.5 text-base font-bold text-foreground hover:bg-muted rounded-xl transition-all cursor-pointer select-none">
-                  <span>{store.selectedModel === "feynman" ? "Feynman" : "Einstein"}</span>
+                  <span>{selectedModel === "feynman" ? "Feynman" : "Einstein"}</span>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-72 p-2 rounded-2xl bg-card border shadow-xl z-50">
-                <DropdownMenuItem onClick={() => store.setSelectedModel("feynman")} className={cn("flex flex-col items-start gap-0.5 p-3 rounded-xl cursor-pointer", store.selectedModel === "feynman" && "bg-muted")}>
+                <DropdownMenuItem onClick={() => setSelectedModel("feynman")} className={cn("flex flex-col items-start gap-0.5 p-3 rounded-xl cursor-pointer", selectedModel === "feynman" && "bg-muted")}>
                   <div className="flex items-center justify-between w-full">
                     <span className="font-bold text-sm">Feynman</span>
-                    {store.selectedModel === "feynman" && <Check className="w-4 h-4 text-foreground" />}
+                    {selectedModel === "feynman" && <Check className="w-4 h-4 text-foreground" />}
                   </div>
                   <span className="text-[11px] text-muted-foreground">Great for everyday tasks</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => store.setSelectedModel("einstein")} className={cn("flex flex-col items-start gap-0.5 p-3 rounded-xl cursor-pointer", store.selectedModel === "einstein" && "bg-muted")}>
+                <DropdownMenuItem onClick={() => setSelectedModel("einstein")} className={cn("flex flex-col items-start gap-0.5 p-3 rounded-xl cursor-pointer", selectedModel === "einstein" && "bg-muted")}>
                   <div className="flex items-center justify-between w-full">
                     <span className="font-bold text-sm">Einstein</span>
-                    {store.selectedModel === "einstein" && <Check className="w-4 h-4 text-foreground" />}
+                    {selectedModel === "einstein" && <Check className="w-4 h-4 text-foreground" />}
                   </div>
                   <span className="text-[11px] text-muted-foreground">Great for complex work</span>
                 </DropdownMenuItem>
@@ -247,7 +331,7 @@ function ChatDashboard() {
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden relative">
-            {store.messages.length === 0 ? (
+            {messages.length === 0 ? (
               /* Empty State */
               <div className="flex-1 flex flex-col items-center justify-center p-6 h-full relative pb-28">
                 <div className="w-full max-w-xl flex items-center justify-center gap-3 select-none mb-8">
@@ -321,46 +405,25 @@ function ChatDashboard() {
                 <MessageScrollerViewport>
                   <MessageScrollerContent className="pb-36 max-w-3xl mx-auto px-4 w-full">
                     
-                    {store.messages.map((message, index) => {
-                      const nextMessage = store.messages[index + 1]
-                      const isNextAlsoAgent = nextMessage && nextMessage.role !== "user"
-                      const hideActionsDefault = message.role !== "user" && isNextAlsoAgent
-
-                      const isCurrentStream = message.id === store.streamingMessageId
-                      const isActiveStream = isCurrentStream && isStreaming
-                      const hasStartedReplying = (message.content?.length || 0) > 0
-                      const isActivelyWorking = isActiveStream && !hasStartedReplying
-                      const isUser = message.role === "user"
-
-                      let isTaskOpen = openStates[`${message.id}-working`] ?? isCurrentStream
-                      if (userRole === "simplified") {
-                        isTaskOpen = openStates[`${message.id}-working`] ?? false
-                      }
-
-                      const baseTimer = taskTimers[message.id] || { elapsed: message.events?.filter(e => e.type !== "text")?.length || 1, completed: true }
-
-                      return (
-                        <ChatMessage
-                          key={message.id}
-                          message={message}
-                          isUser={isUser}
-                          userRole={userRole}
-                          isTaskOpen={isTaskOpen}
-                          onTaskOpenChange={(open: boolean) => setOpenStates((prev) => ({ ...prev, [`${message.id}-working`]: open }))}
-                          onOpenSources={() => store.setActiveSourcesMessageId(message.id)}
-                          taskTimer={{ elapsed: baseTimer.elapsed, completed: !isActivelyWorking }}
-                          personaLoaded={personaLoaded[`${message.id}-persona`] || false}
-                          onPersonaLoad={() => setPersonaLoaded((prev) => ({ ...prev, [`${message.id}-persona`]: true }))}
-                          onOpenCanvas={(content) => {
-                            store.setActiveCanvasContent(content)
-                            store.setCanvasOpen(true)
-                          }}
-                          onResolveInterrupt={handleResolveElicitation}
-                          isCompletedResponse={!(isStreaming && isCurrentStream)}
-                          hideActionsDefault={hideActionsDefault}
-                        />
-                      )
-                    })}
+                    {messages.map((message, index) => (
+                      <MockMessageRow
+                        key={message.id}
+                        message={message}
+                        nextRole={messages[index + 1]?.role}
+                        userRole={userRole}
+                        isStreaming={isStreaming}
+                        streamingMessageId={streamingMessageId}
+                        openState={openStates[`${message.id}-working`]}
+                        timerElapsed={taskTimers[message.id]?.elapsed ?? message.events?.filter(e => e.type !== "text").length ?? 1}
+                        personaLoaded={personaLoaded[`${message.id}-persona`] || false}
+                        setOpenStates={setOpenStates}
+                        setPersonaLoaded={setPersonaLoaded}
+                        setActiveSourcesMessageId={setActiveSourcesMessageId}
+                        setActiveCanvasContent={setActiveCanvasContent}
+                        setCanvasOpen={setCanvasOpen}
+                        onResolveInterrupt={handleResolveElicitation}
+                      />
+                    ))}
 
                     {/* Naked Shimmer Thinking Indicator with animated Persona blob next to it */}
                     {isThinking && (
@@ -386,7 +449,7 @@ function ChatDashboard() {
                   </MessageScrollerContent>
                 </MessageScrollerViewport>
 
-                {store.messages.length > 0 && <MessageScrollerButton className="bottom-32" />}
+                {messages.length > 0 && <MessageScrollerButton className="bottom-32" />}
 
                 {/* Chat Input Container */}
                 <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-background via-background to-transparent flex justify-center pb-6 z-10 select-none">
@@ -412,18 +475,18 @@ function ChatDashboard() {
         </div>
 
         {/* Canva (Side Panel) */}
-        {store.isCanvasOpen && (
+        {isCanvasOpen && (
           <ChatCanvas 
-            activeCanvasContent={store.activeCanvasContent}
-            setCanvaOpen={store.setCanvasOpen}
+            activeCanvasContent={activeCanvasContent}
+            setCanvaOpen={setCanvasOpen}
           />
         )}
       </div>
 
-      {store.activeSourcesMessageId && activeSourcesMessage?.sources && (
+      {activeSourcesMessageId && activeSourcesMessage?.sources && (
         <SourcesSidebar
           sources={activeSourcesMessage.sources as any}
-          onClose={() => store.setActiveSourcesMessageId(null)}
+          onClose={() => setActiveSourcesMessageId(null)}
         />
       )}
     </div>

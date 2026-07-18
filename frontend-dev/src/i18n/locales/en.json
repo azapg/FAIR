@@ -564,7 +564,7 @@
   },
   "runs": {
     "title": "Workflow runs",
-    "workflow": "Workflow",
+    "flow": "Flow",
     "submissions": "Submissions",
     "status": "Status",
     "runId": "Run ID",

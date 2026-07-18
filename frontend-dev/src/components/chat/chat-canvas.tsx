@@ -13,15 +13,37 @@ export function ChatCanvas({
   activeCanvasContent,
   setCanvaOpen
 }: ChatCanvasProps) {
+  const titleId = React.useId()
+  const closeButtonRef = React.useRef<HTMLButtonElement | null>(null)
+  const previousFocusRef = React.useRef<HTMLElement | null>(null)
+
+  React.useEffect(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+    closeButtonRef.current?.focus()
+
+    return () => {
+      const previousFocus = previousFocusRef.current
+      if (previousFocus?.isConnected) previousFocus.focus()
+    }
+  }, [])
+
   if (!activeCanvasContent) return null
 
   return (
-    <div className="w-[45%] border-l bg-card flex flex-col h-full shrink-0 shadow-xl z-20 relative animate-in slide-in-from-right duration-300">
+    <aside
+      aria-labelledby={titleId}
+      className="w-[45%] border-l bg-card flex flex-col h-full shrink-0 shadow-xl z-20 relative animate-in slide-in-from-right duration-300"
+    >
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0 bg-background/95 backdrop-blur">
-        <div className="flex items-center gap-2 font-semibold text-xs text-foreground flex-1 pr-4 truncate uppercase tracking-wider">
+        <h2 id={titleId} className="flex items-center gap-2 font-semibold text-xs text-foreground flex-1 pr-4 truncate uppercase tracking-wider">
           <Sparkles className="w-3.5 h-3.5 text-primary" /> {activeCanvasContent.title}
-        </div>
+        </h2>
         <button
+          ref={closeButtonRef}
+          type="button"
+          aria-label="Close canvas"
           onClick={() => setCanvaOpen(false)}
           className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors shrink-0 outline-hidden cursor-pointer"
         >
@@ -129,6 +151,6 @@ export function ChatCanvas({
           )}
         </div>
       </ScrollArea>
-    </div>
+    </aside>
   )
 }

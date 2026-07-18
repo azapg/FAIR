@@ -1,4 +1,4 @@
-import { Message } from "@/store/chat-store"
+import type { Message } from "@/lib/chat-contract"
 
 export interface Scenario {
   id: string

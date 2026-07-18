@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Assignment } from "@/hooks/use-assignments";
-import { Artifact, useArtifacts, useDeleteArtifact } from "@/hooks/use-artifacts";
+import { LmsArtifact, useArtifacts, useDeleteArtifact } from "@/hooks/use-artifacts";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -32,7 +32,7 @@ export function ArtifactsTab({
     return map;
   }, [assignments]);
 
-  const columns = useMemo<ColumnDef<Artifact>[]>(
+  const columns = useMemo<ColumnDef<LmsArtifact>[]>(
     () => [
       {
         accessorKey: "title",
@@ -82,7 +82,7 @@ export function ArtifactsTab({
     [assignmentNames, t],
   );
 
-  const archivedColumns = useMemo<ColumnDef<Artifact>[]>(
+  const archivedColumns = useMemo<ColumnDef<LmsArtifact>[]>(
     () => [
       {
         accessorKey: "title",

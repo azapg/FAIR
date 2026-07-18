@@ -121,6 +121,7 @@ export function ChatInput({ onSend, disabled, placeholder = "Write a message..."
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Add attachments or tools"
               className="rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer h-9 w-9 shrink-0 mb-0.5"
               disabled={disabled}
             >
@@ -178,7 +179,13 @@ export function ChatInput({ onSend, disabled, placeholder = "Write a message..."
         {selectedCourse && (
           <div className="bg-primary/10 border border-primary/20 text-primary rounded-xl px-2.5 py-1 text-[10px] font-bold flex items-center gap-1 shrink-0 mb-1 max-w-[120px] truncate select-none">
             <span className="truncate">{selectedCourse}</span>
-            <button onClick={() => setSelectedCourse(null)} className="hover:text-primary-foreground cursor-pointer shrink-0" disabled={disabled}>
+            <button
+              type="button"
+              aria-label={`Remove ${selectedCourse} course context`}
+              onClick={() => setSelectedCourse(null)}
+              className="hover:text-primary-foreground cursor-pointer shrink-0"
+              disabled={disabled}
+            >
               <X className="w-3 h-3" />
             </button>
           </div>
@@ -187,6 +194,7 @@ export function ChatInput({ onSend, disabled, placeholder = "Write a message..."
         {/* Textarea */}
         <textarea
           ref={textareaRef}
+          aria-label="Message"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={(e) => {
@@ -208,6 +216,7 @@ export function ChatInput({ onSend, disabled, placeholder = "Write a message..."
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Dictate message"
             onClick={toggleSpeech}
             className={cn(
               "h-9 w-9 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors",
@@ -222,6 +231,7 @@ export function ChatInput({ onSend, disabled, placeholder = "Write a message..."
           {/* Send or Voice Mode Button */}
           {inputValue.trim().length > 0 || uploadedFiles.length > 0 ? (
             <Button
+              aria-label="Send message"
               className={cn(
                 "p-2 h-9 w-9 rounded-xl transition-all flex items-center justify-center shadow-xs cursor-pointer bg-foreground text-background hover:opacity-90 shrink-0"
               )}
@@ -234,6 +244,7 @@ export function ChatInput({ onSend, disabled, placeholder = "Write a message..."
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Start voice conversation"
               className="h-9 w-9 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors shrink-0"
               onClick={() => alert("Starting voice conversation...")}
               disabled={disabled}

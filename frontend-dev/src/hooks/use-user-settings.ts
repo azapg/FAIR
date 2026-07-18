@@ -1,4 +1,9 @@
-import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQueryClient,
+} from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
@@ -18,6 +23,13 @@ export const userSettingsKeys = {
   me: () => [...userSettingsKeys.all, "me"] as const,
   authMe: () => [...userSettingsKeys.all, "auth-me"] as const,
 };
+
+const userSettingsMutationScope = { id: "user-settings" } as const;
+
+type SettingsUpdate =
+  | { kind: "replace"; settings: UserSettings }
+  | { kind: "path"; path: string; value: unknown }
+  | { kind: "patch"; patch: UserSettings };
 
 const fetchMySettings = async (): Promise<UserSettings> => {
   const res = await api.get<UserSettingsResponse>("/users/me/settings");
@@ -195,7 +207,12 @@ export function useUpdateUserSettings() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (settings: UserSettings) => patchMySettings(settings),
+    scope: userSettingsMutationScope,
+    mutationFn: (settings: UserSettings) =>
+      persistSettingsUpdate(queryClient, settings, {
+        kind: "replace",
+        settings,
+      }),
     onSuccess: (settings) => {
       queryClient.setQueryData(userSettingsKeys.me(), settings);
       queryClient.invalidateQueries({ queryKey: userSettingsKeys.authMe() });
@@ -205,20 +222,52 @@ export function useUpdateUserSettings() {
 
 export function useUpdateUserSetting() {
   const { settings } = useUserSettings();
-  const updateSettings = useUpdateUserSettings();
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ path, value }: { path: string; value: unknown }) =>
-      updateSettings.mutateAsync(setValueAtPath(settings, path, value)),
+    scope: userSettingsMutationScope,
+    mutationFn: ({ path, value }: { path: string; value: unknown }) =>
+      persistSettingsUpdate(queryClient, settings, { kind: "path", path, value }),
+    onSuccess: (nextSettings) => {
+      queryClient.setQueryData(userSettingsKeys.me(), nextSettings);
+      queryClient.invalidateQueries({ queryKey: userSettingsKeys.authMe() });
+    },
   });
 }
 
 export function usePatchUserSettings() {
   const { settings } = useUserSettings();
-  const updateSettings = useUpdateUserSettings();
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (patch: UserSettings) =>
-      updateSettings.mutateAsync(mergeSettings(settings, patch)),
+    scope: userSettingsMutationScope,
+    mutationFn: (patch: UserSettings) =>
+      persistSettingsUpdate(queryClient, settings, { kind: "patch", patch }),
+    onSuccess: (nextSettings) => {
+      queryClient.setQueryData(userSettingsKeys.me(), nextSettings);
+      queryClient.invalidateQueries({ queryKey: userSettingsKeys.authMe() });
+    },
   });
+}
+
+async function persistSettingsUpdate(
+  queryClient: QueryClient,
+  fallbackSettings: UserSettings,
+  update: SettingsUpdate,
+): Promise<UserSettings> {
+  const previousSettings =
+    queryClient.getQueryData<UserSettings>(userSettingsKeys.me()) ?? fallbackSettings;
+  const nextSettings = update.kind === "replace"
+    ? update.settings
+    : update.kind === "path"
+      ? setValueAtPath(previousSettings, update.path, update.value)
+      : mergeSettings(previousSettings, update.patch);
+
+  queryClient.setQueryData(userSettingsKeys.me(), nextSettings);
+  try {
+    return await patchMySettings(nextSettings);
+  } catch (error) {
+    queryClient.setQueryData(userSettingsKeys.me(), previousSettings);
+    throw error;
+  }
 }

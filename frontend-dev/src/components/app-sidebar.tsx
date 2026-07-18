@@ -16,7 +16,7 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { ComponentProps } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -277,6 +277,8 @@ export function AppSidebar({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [coursesOpen, setCoursesOpen] = useState(true);
   const [assignmentsOpen, setAssignmentsOpen] = useState(false);
+  const coursesContentId = useId();
+  const assignmentsContentId = useId();
 
   const handleSearchInputDebounced = (query: string) => {
     void query;
@@ -362,10 +364,7 @@ export function AppSidebar({
             <SidebarMenuItem>
               <Link to="/" aria-label={displayTitle}>
                 <div className="flex items-center justify-center">
-                  <h1
-                    className="text-2xl font-serif font-semibold text-foreground cursor-pointer"
-                    onClick={() => navigate("/")}
-                  >
+                  <h1 className="text-2xl font-serif font-semibold text-foreground cursor-pointer">
                     <span className="transition-[opacity,transform,margin] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:hidden">
                       {displayTitle}
                     </span>
@@ -407,6 +406,8 @@ export function AppSidebar({
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       tooltip={t("sidebar.courses.title")}
+                      aria-expanded={coursesOpen}
+                      aria-controls={coursesContentId}
                       onClick={() => {
                         if (state === "collapsed") {
                           setOpen(true);
@@ -422,7 +423,7 @@ export function AppSidebar({
                         className={`ml-auto transition-transform duration-200 ${coursesOpen ? "rotate-90" : ""}`}
                       />
                     </SidebarMenuButton>
-                    <CollapsibleContent>
+                    <CollapsibleContent id={coursesContentId}>
                       <SidebarMenuSub>
                         {courses.slice(0, 3).map((course) => (
                           <SidebarMenuSubItem key={course.id}>
@@ -460,6 +461,8 @@ export function AppSidebar({
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       tooltip={t("sidebar.assignments.title")}
+                      aria-expanded={assignmentsOpen}
+                      aria-controls={assignmentsContentId}
                       onClick={() => {
                         if (state === "collapsed") {
                           setOpen(true);
@@ -475,7 +478,7 @@ export function AppSidebar({
                         className={`ml-auto transition-transform duration-200 ${assignmentsOpen ? "rotate-90" : ""}`}
                       />
                     </SidebarMenuButton>
-                    <CollapsibleContent>
+                    <CollapsibleContent id={assignmentsContentId}>
                       <SidebarMenuSub>
                         {(showAllAssignments
                           ? assignments
@@ -678,6 +681,8 @@ export function AppSidebar({
       )}
       </div>
       <CommandDialog
+        title={t("nav.search")}
+        description={t("common.searchDescription", { defaultValue: "Search navigation and available commands." })}
         open={searchOpen}
         onOpenChange={(open) => {
           setSearchOpen(open);

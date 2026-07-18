@@ -9,7 +9,7 @@ import {
 import { ArrowUpRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Artifact } from "@/hooks/use-artifacts";
+import { LmsArtifact } from "@/hooks/use-artifacts";
 import api, { getApiBaseUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -18,7 +18,7 @@ import { PdfPreview } from "@/components/pdf-preview";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ArtifactActionProps = Omit<ComponentProps<typeof Button>, "onClick"> & {
-  artifact: Artifact;
+  artifact: LmsArtifact;
   icon?: ComponentType<{ className?: string; size?: number }>;
   label?: ReactNode;
 };

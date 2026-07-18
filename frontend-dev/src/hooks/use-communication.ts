@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { Artifact } from '@/hooks/use-artifacts'
+import { LmsArtifact } from '@/hooks/use-artifacts'
 import { toast } from 'sonner'
 
 export type CoursePost = {
@@ -11,7 +11,7 @@ export type CoursePost = {
   kind: 'announcement' | 'material'
   title: string
   body?: string | null
-  artifacts: Artifact[]
+  artifacts: LmsArtifact[]
   commentsCount: number
   createdAt: string
   updatedAt: string

@@ -8,7 +8,6 @@ export type SseEvent = {
 
 export type SseStreamOptions = {
   signal?: AbortSignal;
-  token?: string | null;
   timeoutMs?: number;
   onEvent?: (event: SseEvent) => void;
 };
@@ -72,17 +71,14 @@ export async function streamSse(
 
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const token = options.token ?? localStorage.getItem("token");
     const headers: Record<string, string> = {
       Accept: "text/event-stream",
       "Cache-Control": "no-cache",
     };
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
     const response = await fetch(`${resolveApiOrigin()}${path}`, {
       method: "GET",
       headers,
+      credentials: "include",
       signal: controller.signal,
     });
 

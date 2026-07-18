@@ -4,7 +4,13 @@ import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 function Command({
   className,
@@ -22,13 +28,22 @@ function Command({
   );
 }
 
-function CommandDialog({ children, ...props }: DialogProps) {
+function CommandDialog({
+  children,
+  title = "Search commands",
+  description = "Search navigation and available commands.",
+  ...props
+}: DialogProps & { title?: string; description?: string }) {
   return (
     <Dialog {...props}>
       <DialogContent
         className="top-[45%] translate-y-[-45%] overflow-hidden p-0 sm:max-w-md"
         showCloseButton={false}
       >
+        <DialogHeader className="sr-only">
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
         <Command className="[&_[cmdk-input-wrapper]]:h-12 [&_[cmdk-input]]:h-12 [&_[cmdk-input-wrapper]]:border-b [&_[cmdk-list]]:max-h-[320px] [&_[cmdk-list]]:overflow-y-auto">
           {children}
         </Command>

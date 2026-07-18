@@ -564,7 +564,7 @@
   },
   "runs": {
     "title": "Ejecuciones de flujo",
-    "workflow": "Flujo de trabajo",
+    "flow": "Flujo",
     "submissions": "Entregas",
     "status": "Estado",
     "runId": "ID de ejecución",

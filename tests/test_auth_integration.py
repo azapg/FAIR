@@ -77,6 +77,59 @@ class TestAuthenticationFlow:
         )
         assert "Invalid credentials" in login_response.json()["detail"]
 
+    def test_login_sets_httponly_cookie_and_cookie_authenticates_me(
+        self, test_client: TestClient, student_user
+    ):
+        response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+
+        assert response.status_code == 200
+        cookie = response.headers["set-cookie"]
+        assert "fair_session=" in cookie
+        assert "HttpOnly" in cookie
+        assert "SameSite=lax" in cookie
+        assert "Path=/api" in cookie
+
+        me_response = test_client.get("/api/auth/me")
+        assert me_response.status_code == 200
+        assert me_response.json()["email"] == student_user.email
+
+    def test_login_cookie_is_secure_for_https_base_url(
+        self, test_client: TestClient, student_user, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_BASE_URL", "https://fair.example.edu")
+        response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+
+        assert response.status_code == 200
+        assert "Secure" in response.headers["set-cookie"]
+
+    def test_logout_clears_cookie_while_bearer_auth_still_works(
+        self, test_client: TestClient, student_user
+    ):
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        token = login_response.json()["access_token"]
+
+        logout_response = test_client.post("/api/auth/logout")
+        assert logout_response.status_code == 200
+        assert "fair_session=\"\"" in logout_response.headers["set-cookie"]
+        assert "Max-Age=0" in logout_response.headers["set-cookie"]
+        assert test_client.get("/api/auth/me").status_code == 401
+
+        bearer_response = test_client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert bearer_response.status_code == 200
+        assert bearer_response.json()["email"] == student_user.email
+
     def test_login_with_nonexistent_user_fails(self, test_client: TestClient):
         """
         Test that login fails for non-existent users.

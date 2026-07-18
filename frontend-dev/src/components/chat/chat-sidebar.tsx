@@ -4,7 +4,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Sparkles, Play, RotateCcw, Info, ChevronLeft, ChevronRight, MessageSquare, Bug, Settings, Trash2, Plus, X } from "lucide-react"
 import { mockScenarios } from "@/app/chat/mock-chat-scenarios"
-import { useChatStore, AgentState, Message, ChatEventBlock } from "@/store/chat-store"
+import { useChatStore } from "@/store/chat-store"
+import type { AgentState, ChatEventBlock, Message } from "@/lib/chat-contract"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
+import { useShallow } from "zustand/react/shallow"
 
 interface ChatSidebarProps {
   userRole: "simplified" | "complete"
@@ -45,13 +47,23 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState<Tab>("scenarios")
-  const store = useChatStore()
+  const store = useChatStore(useShallow((state) => ({
+    agentState: state.agentState,
+    messages: state.messages,
+    streamingMessageId: state.streamingMessageId,
+    setAgentState: state.setAgentState,
+    appendMessage: state.appendMessage,
+    setMessages: state.setMessages,
+    updateMessage: state.updateMessage,
+  })))
   
   const [autoDebug, setAutoDebug] = React.useState(true)
 
   // Robust Auto-play logic using effect to avoid closure staleness
   const previousActiveScenarioIdRef = React.useRef(activeScenario.id)
   React.useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+
     if (
       autoDebug && 
       activeScenario.id !== previousActiveScenarioIdRef.current && 
@@ -60,9 +72,13 @@ export function ChatSidebar({
       !isStreaming
     ) {
       previousActiveScenarioIdRef.current = activeScenario.id
-      setTimeout(() => playNextTurn(), 50)
+      timeoutId = setTimeout(() => playNextTurn(), 50)
     } else {
       previousActiveScenarioIdRef.current = activeScenario.id
+    }
+
+    return () => {
+      if (timeoutId !== undefined) clearTimeout(timeoutId)
     }
   }, [activeScenario.id, autoDebug, playNextTurn, playbackIndex, isStreaming])
 

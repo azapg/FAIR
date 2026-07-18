@@ -178,6 +178,8 @@ function MobileSettingsContent() {
 }
 
 export function SettingsDialog({ open, onOpenChange, isMobile }: SettingsDialogProps) {
+  const { t } = useTranslation();
+
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
@@ -191,6 +193,10 @@ export function SettingsDialog({ open, onOpenChange, isMobile }: SettingsDialogP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!flex h-[90vh] !w-[calc(100vw-2rem)] !max-w-[calc(100vw-2rem)] !flex-col gap-0 overflow-hidden p-0 sm:!w-[1200px] sm:!max-w-[1200px]">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{t("settings.title")}</DialogTitle>
+          <DialogDescription>{t("settings.description")}</DialogDescription>
+        </DialogHeader>
         <DesktopSettingsContent />
       </DialogContent>
     </Dialog>
