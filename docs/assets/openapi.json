@@ -321,6 +321,16 @@
               ],
               "title": "Instructor Id"
             }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Archived"
+            }
           }
         ],
         "responses": {
@@ -618,6 +628,102 @@
         }
       }
     },
+    "/api/courses/{course_id}/archive": {
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Archive Course",
+        "operationId": "archive_course_api_courses__course_id__archive_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/courses/{course_id}/reopen": {
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "Reopen Course",
+        "operationId": "reopen_course_api_courses__course_id__reopen_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/assignments/": {
       "post": {
         "tags": [
@@ -865,6 +971,111 @@
             }
           }
         }
+      }
+    },
+    "/api/assignments/{assignment_id}/status": {
+      "patch": {
+        "tags": [
+          "assignments"
+        ],
+        "summary": "Update Assignment Status",
+        "operationId": "update_assignment_status_api_assignments__assignment_id__status_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Assignment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/submissions/synthetic": {
+      "post": {
+        "tags": [
+          "submissions"
+        ],
+        "summary": "Create Submission",
+        "description": "Create a submission with optional file uploads and/or existing artifact references.\n\nThis endpoint supports both multipart/form-data (for file uploads) and can reference\nexisting artifacts by ID. All operations are atomic - if any step fails, everything\nis rolled back.\n\nForm fields:\n- assignment_id: UUID of the assignment (required)\n- submitter_name: Name of the submitter (required)\n- artifact_ids: Optional JSON array of existing artifact UUIDs: [\"uuid1\", \"uuid2\"]\n- files: Optional list of files to upload as new artifacts",
+        "operationId": "create_submission_api_submissions_synthetic_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_submission_api_submissions_synthetic_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
     "/api/submissions/": {
@@ -1888,6 +2099,18 @@
               "title": "User Id"
             },
             "description": "Filter by user ID"
+          },
+          {
+            "name": "include_removed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include removed memberships",
+              "default": false,
+              "title": "Include Removed"
+            },
+            "description": "Include removed memberships"
           }
         ],
         "responses": {
@@ -2017,6 +2240,62 @@
       }
     },
     "/api/enrollments/{enrollment_id}": {
+      "patch": {
+        "tags": [
+          "enrollments"
+        ],
+        "summary": "Update Enrollment",
+        "operationId": "update_enrollment_api_enrollments__enrollment_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "enrollment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Enrollment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "enrollments"
@@ -2058,6 +2337,620 @@
         }
       }
     },
+    "/api/lms/courses/{course_id}/gradebook": {
+      "get": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "Get Course Gradebook",
+        "operationId": "get_course_gradebook_api_lms_courses__course_id__gradebook_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseGradebook"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/grading-queue": {
+      "get": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "Get Grading Queue",
+        "operationId": "get_grading_queue_api_lms_courses__course_id__grading_queue_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GradingQueueItem"
+                  },
+                  "title": "Response Get Grading Queue Api Lms Courses  Course Id  Grading Queue Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/todo": {
+      "get": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "Get Student Todo",
+        "operationId": "get_student_todo_api_lms_todo_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StudentTodoItem"
+                  },
+                  "type": "array",
+                  "title": "Response Get Student Todo Api Lms Todo Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/lms/submissions/{submission_id}/comments": {
+      "get": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "List Submission Comments",
+        "operationId": "list_submission_comments_api_lms_submissions__submission_id__comments_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "submission_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Submission Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubmissionCommentRead"
+                  },
+                  "title": "Response List Submission Comments Api Lms Submissions  Submission Id  Comments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "Create Submission Comment",
+        "operationId": "create_submission_comment_api_lms_submissions__submission_id__comments_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "submission_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Submission Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionCommentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionCommentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/posts": {
+      "get": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "List Course Posts",
+        "operationId": "list_course_posts_api_lms_courses__course_id__posts_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoursePostRead"
+                  },
+                  "title": "Response List Course Posts Api Lms Courses  Course Id  Posts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "Create Course Post",
+        "operationId": "create_course_post_api_lms_courses__course_id__posts_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoursePostCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoursePostRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/posts/{post_id}": {
+      "delete": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "Delete Course Post",
+        "operationId": "delete_course_post_api_lms_posts__post_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Post Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/posts/{post_id}/comments": {
+      "get": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "List Post Comments",
+        "operationId": "list_post_comments_api_lms_posts__post_id__comments_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Post Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CourseCommentRead"
+                  },
+                  "title": "Response List Post Comments Api Lms Posts  Post Id  Comments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "Create Post Comment",
+        "operationId": "create_post_comment_api_lms_posts__post_id__comments_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Post Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseCommentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseCommentRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/notifications": {
+      "get": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "List Notifications",
+        "operationId": "list_notifications_api_lms_notifications_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "unread_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Unread Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationRead"
+                  },
+                  "title": "Response List Notifications Api Lms Notifications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/notifications/read-all": {
+      "post": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "Read All Notifications",
+        "operationId": "read_all_notifications_api_lms_notifications_read_all_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/lms/notifications/{notification_id}/read": {
+      "post": {
+        "tags": [
+          "lms"
+        ],
+        "summary": "Read Notification",
+        "operationId": "read_notification_api_lms_notifications__notification_id__read_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Notification Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/system/config": {
       "get": {
         "tags": [
@@ -2065,6 +2958,26 @@
         ],
         "summary": "Get System Config",
         "operationId": "get_system_config_api_v1_system_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/signing-keys": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get Signing Keys",
+        "description": "Public keys used to verify FAIR-signed Extension commands.",
+        "operationId": "get_signing_keys_api_v1_system_signing_keys_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2212,6 +3125,220 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ExecutionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/executions/{execution_id}/cancel": {
+      "post": {
+        "tags": [
+          "executions"
+        ],
+        "summary": "Cancel Execution",
+        "operationId": "cancel_execution_api_v1_executions__execution_id__cancel_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "execution_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Execution Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/executions/{execution_id}/authorization/refresh": {
+      "post": {
+        "tags": [
+          "executions"
+        ],
+        "summary": "Refresh Execution Authorization",
+        "description": "Rotate short-lived authority without expanding its original scopes.",
+        "operationId": "refresh_execution_authorization_api_v1_executions__execution_id__authorization_refresh_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "execution_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Execution Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DelegatedExecutionAuthorization"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/executions/{execution_id}/tools": {
+      "post": {
+        "tags": [
+          "executions"
+        ],
+        "summary": "Invoke Platform Tool",
+        "description": "Create one durable child Execution for an explicitly allowed tool.",
+        "operationId": "invoke_platform_tool_api_v1_executions__execution_id__tools_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "execution_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Execution Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolInvocationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolInvocationRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/executions/{execution_id}/tools/{tool_execution_id}": {
+      "get": {
+        "tags": [
+          "executions"
+        ],
+        "summary": "Read Platform Tool",
+        "operationId": "read_platform_tool_api_v1_executions__execution_id__tools__tool_execution_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "execution_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Execution Id"
+            }
+          },
+          {
+            "name": "tool_execution_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Tool Execution Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolInvocationRead"
                 }
               }
             }
@@ -2550,22 +3677,6 @@
               "type": "string",
               "format": "uuid",
               "title": "Execution Id"
-            }
-          },
-          {
-            "name": "X-FAIR-Extension-Id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Fair-Extension-Id"
             }
           }
         ],
@@ -2981,22 +4092,6 @@
               "format": "uuid",
               "title": "Execution Id"
             }
-          },
-          {
-            "name": "X-FAIR-Extension-Id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Fair-Extension-Id"
-            }
           }
         ],
         "requestBody": {
@@ -3017,6 +4112,120 @@
                 "schema": {
                   "$ref": "#/components/schemas/ArtifactRead"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/executions/{execution_id}/artifacts/{artifact_id}": {
+      "get": {
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "Read Execution Input Artifact",
+        "operationId": "read_execution_input_artifact_api_v1_executions__execution_id__artifacts__artifact_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "execution_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Execution Id"
+            }
+          },
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/executions/{execution_id}/artifacts/{artifact_id}/download": {
+      "get": {
+        "tags": [
+          "artifacts"
+        ],
+        "summary": "Download Execution Input Artifact",
+        "operationId": "download_execution_input_artifact_api_v1_executions__execution_id__artifacts__artifact_id__download_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "execution_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Execution Id"
+            }
+          },
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Artifact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -4554,6 +5763,137 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/extensions/runner/commands/claim": {
+      "post": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "Claim Runner Command",
+        "description": "Long-poll one durable command for a runner behind NAT.",
+        "operationId": "claim_runner_command_api_v1_extensions_runner_commands_claim_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-FAIR-Extension-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fair-Extension-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunnerClaimRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/extensions/runner/commands/{dispatch_id}/ack": {
+      "post": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "Acknowledge Runner Command",
+        "description": "Acknowledge only the exact lease a runner durably accepted.",
+        "operationId": "acknowledge_runner_command_api_v1_extensions_runner_commands__dispatch_id__ack_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dispatch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Dispatch Id"
+            }
+          },
+          {
+            "name": "X-FAIR-Extension-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fair-Extension-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunnerCommandAck"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -6235,6 +7575,27 @@
             ],
             "title": "Maxgrade"
           },
+          "status": {
+            "$ref": "#/components/schemas/AssignmentStatus",
+            "default": "published"
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedat"
+          },
+          "allowResubmissions": {
+            "type": "boolean",
+            "title": "Allowresubmissions",
+            "default": true
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -6248,6 +7609,27 @@
           "id"
         ],
         "title": "AssignmentRead"
+      },
+      "AssignmentStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "published",
+          "closed"
+        ],
+        "title": "AssignmentStatus"
+      },
+      "AssignmentStatusUpdate": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/AssignmentStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "AssignmentStatusUpdate"
       },
       "AssignmentUpdate": {
         "properties": {
@@ -6396,6 +7778,11 @@
             },
             "type": "array",
             "title": "Files"
+          },
+          "allow_resubmissions": {
+            "type": "boolean",
+            "title": "Allow Resubmissions",
+            "default": true
           }
         },
         "type": "object",
@@ -6413,7 +7800,14 @@
             "title": "Assignment Id"
           },
           "submitter_name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Submitter Name"
           },
           "artifact_ids": {
@@ -6431,10 +7825,46 @@
         },
         "type": "object",
         "required": [
-          "assignment_id",
-          "submitter_name"
+          "assignment_id"
         ],
         "title": "Body_create_submission_api_submissions__post"
+      },
+      "Body_create_submission_api_submissions_synthetic_post": {
+        "properties": {
+          "assignment_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignment Id"
+          },
+          "submitter_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitter Name"
+          },
+          "artifact_ids": {
+            "type": "string",
+            "title": "Artifact Ids"
+          },
+          "files": {
+            "items": {
+              "type": "string",
+              "contentMediaType": "application/octet-stream"
+            },
+            "type": "array",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assignment_id"
+        ],
+        "title": "Body_create_submission_api_submissions_synthetic_post"
       },
       "Body_login_api_auth_login_post": {
         "properties": {
@@ -6567,6 +7997,13 @@
             "type": "array",
             "title": "Declaredeffects"
           },
+          "toolCapabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Toolcapabilities"
+          },
           "supportsStreaming": {
             "type": "boolean",
             "title": "Supportsstreaming",
@@ -6588,6 +8025,7 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "capabilityId",
@@ -6653,6 +8091,13 @@
             "type": "array",
             "title": "Declaredeffects"
           },
+          "toolCapabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Toolcapabilities"
+          },
           "supportsStreaming": {
             "type": "boolean",
             "title": "Supportsstreaming",
@@ -6689,6 +8134,7 @@
             "title": "Createdat"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "capabilityId",
@@ -6701,6 +8147,68 @@
           "createdAt"
         ],
         "title": "CapabilityRead"
+      },
+      "CourseCommentCreate": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "CourseCommentCreate"
+      },
+      "CourseCommentRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "postId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Postid"
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Authorid"
+          },
+          "authorName": {
+            "type": "string",
+            "title": "Authorname"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "postId",
+          "authorId",
+          "authorName",
+          "body",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "CourseCommentRead"
       },
       "CourseCreate": {
         "properties": {
@@ -6723,6 +8231,28 @@
             "type": "string",
             "format": "uuid",
             "title": "Instructorid"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
           }
         },
         "type": "object",
@@ -6794,15 +8324,224 @@
               }
             ],
             "title": "Isenrollmentenabled"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          },
+          "isArchived": {
+            "type": "boolean",
+            "title": "Isarchived"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "membershipRole": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CourseMembershipRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
           "id",
           "name",
-          "instructor"
+          "instructor",
+          "isArchived",
+          "createdAt",
+          "updatedAt"
         ],
         "title": "CourseDetailRead"
+      },
+      "CourseGradebook": {
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "assignments": {
+            "items": {
+              "$ref": "#/components/schemas/GradebookAssignment"
+            },
+            "type": "array",
+            "title": "Assignments"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/GradebookRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "courseId",
+          "assignments",
+          "rows"
+        ],
+        "title": "CourseGradebook"
+      },
+      "CourseMembershipRole": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "assistant",
+          "student"
+        ],
+        "title": "CourseMembershipRole"
+      },
+      "CoursePostCreate": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/CoursePostKind",
+            "default": "announcement"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "artifactIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Artifactids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "CoursePostCreate"
+      },
+      "CoursePostKind": {
+        "type": "string",
+        "enum": [
+          "announcement",
+          "material"
+        ],
+        "title": "CoursePostKind"
+      },
+      "CoursePostRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Authorid"
+          },
+          "authorName": {
+            "type": "string",
+            "title": "Authorname"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CoursePostKind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRead"
+            },
+            "type": "array",
+            "title": "Artifacts"
+          },
+          "commentsCount": {
+            "type": "integer",
+            "title": "Commentscount",
+            "default": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "courseId",
+          "authorId",
+          "authorName",
+          "kind",
+          "title",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "CoursePostRead"
       },
       "CourseRead": {
         "properties": {
@@ -6825,6 +8564,28 @@
             "type": "string",
             "format": "uuid",
             "title": "Instructorid"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
           },
           "id": {
             "type": "string",
@@ -6860,6 +8621,30 @@
               }
             ],
             "title": "Isenrollmentenabled"
+          },
+          "isArchived": {
+            "type": "boolean",
+            "title": "Isarchived"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "membershipRole": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CourseMembershipRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -6868,7 +8653,10 @@
           "instructorId",
           "id",
           "instructorName",
-          "assignmentsCount"
+          "assignmentsCount",
+          "isArchived",
+          "createdAt",
+          "updatedAt"
         ],
         "title": "CourseRead"
       },
@@ -6924,10 +8712,67 @@
               }
             ],
             "title": "Instructorid"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
           }
         },
         "type": "object",
         "title": "CourseUpdate"
+      },
+      "DelegatedExecutionAuthorization": {
+        "properties": {
+          "tokenType": {
+            "type": "string",
+            "const": "Bearer",
+            "title": "Tokentype",
+            "default": "Bearer"
+          },
+          "accessToken": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Accesstoken"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expiresat"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scopes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "accessToken",
+          "expiresAt"
+        ],
+        "title": "DelegatedExecutionAuthorization",
+        "description": "Short-lived authority for calls made while handling one Execution."
       },
       "EnrollmentBulkCreate": {
         "properties": {
@@ -6943,6 +8788,10 @@
             "type": "string",
             "format": "uuid",
             "title": "Courseid"
+          },
+          "role": {
+            "$ref": "#/components/schemas/CourseMembershipRole",
+            "default": "student"
           }
         },
         "type": "object",
@@ -6963,6 +8812,10 @@
             "type": "string",
             "format": "uuid",
             "title": "Courseid"
+          },
+          "role": {
+            "$ref": "#/components/schemas/CourseMembershipRole",
+            "default": "student"
           }
         },
         "type": "object",
@@ -7007,6 +8860,17 @@
             "format": "date-time",
             "title": "Enrolledat"
           },
+          "role": {
+            "$ref": "#/components/schemas/CourseMembershipRole"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EnrollmentStatus"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
           "userName": {
             "anyOf": [
               {
@@ -7017,6 +8881,17 @@
               }
             ],
             "title": "Username"
+          },
+          "userEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Useremail"
           },
           "courseName": {
             "anyOf": [
@@ -7035,9 +8910,32 @@
           "id",
           "userId",
           "courseId",
-          "enrolledAt"
+          "enrolledAt",
+          "role",
+          "status",
+          "updatedAt"
         ],
         "title": "EnrollmentRead"
+      },
+      "EnrollmentStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "removed"
+        ],
+        "title": "EnrollmentStatus"
+      },
+      "EnrollmentUpdate": {
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/CourseMembershipRole"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "EnrollmentUpdate"
       },
       "ExecutionArtifactCreate": {
         "properties": {
@@ -7119,6 +9017,12 @@
       },
       "ExecutionEventBatch": {
         "properties": {
+          "contract": {
+            "type": "string",
+            "const": "fair.execution-event.v1",
+            "title": "Contract",
+            "default": "fair.execution-event.v1"
+          },
           "events": {
             "items": {
               "$ref": "#/components/schemas/ExecutionEventCreate"
@@ -7129,6 +9033,7 @@
             "title": "Events"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "events"
@@ -7236,6 +9141,7 @@
             "title": "Spanid"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "producerSource",
@@ -7367,6 +9273,7 @@
             "title": "Receivedat"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "producerSource",
@@ -7489,6 +9396,17 @@
             "type": "integer",
             "title": "Attempt"
           },
+          "idempotencyKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotencykey"
+          },
           "kind": {
             "type": "string",
             "title": "Kind"
@@ -7514,6 +9432,18 @@
               }
             ],
             "title": "Capabilityversion"
+          },
+          "capabilityDefinitionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilitydefinitionid"
           },
           "flowVersionId": {
             "anyOf": [
@@ -7653,9 +9583,11 @@
           "rootExecutionId",
           "retryOfExecutionId",
           "attempt",
+          "idempotencyKey",
           "kind",
           "capabilityId",
           "capabilityVersion",
+          "capabilityDefinitionId",
           "flowVersionId",
           "initiatedByUserId",
           "extensionInstallationId",
@@ -7692,7 +9624,8 @@
           },
           "scopes": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "const": "runner:commands"
             },
             "type": "array",
             "title": "Scopes"
@@ -7780,7 +9713,8 @@
         "properties": {
           "scopes": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "const": "runner:commands"
             },
             "type": "array",
             "title": "Scopes"
@@ -7822,11 +9756,27 @@
             "minLength": 1,
             "title": "Version"
           },
-          "dispatchUrl": {
+          "deliveryMode": {
             "type": "string",
-            "maxLength": 2083,
-            "minLength": 1,
-            "format": "uri",
+            "enum": [
+              "webhook",
+              "runner"
+            ],
+            "title": "Deliverymode",
+            "default": "webhook"
+          },
+          "dispatchUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Dispatchurl"
           },
           "healthUrl": {
@@ -7852,12 +9802,12 @@
             "title": "Capabilities"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "extensionId",
           "displayName",
           "version",
-          "dispatchUrl",
           "capabilities"
         ],
         "title": "ExtensionManifest"
@@ -7888,11 +9838,27 @@
             "minLength": 1,
             "title": "Version"
           },
-          "dispatchUrl": {
+          "deliveryMode": {
             "type": "string",
-            "maxLength": 2083,
-            "minLength": 1,
-            "format": "uri",
+            "enum": [
+              "webhook",
+              "runner"
+            ],
+            "title": "Deliverymode",
+            "default": "webhook"
+          },
+          "dispatchUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Dispatchurl"
           },
           "healthUrl": {
@@ -7918,12 +9884,12 @@
             "title": "Capabilities"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "extensionId",
           "displayName",
           "version",
-          "dispatchUrl",
           "capabilities"
         ],
         "title": "ExtensionManifest"
@@ -8358,6 +10324,214 @@
         ],
         "title": "ForgotPasswordRequest"
       },
+      "GradebookAssignment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "maxGrade": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxgrade"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "GradebookAssignment"
+      },
+      "GradebookCell": {
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignmentid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "submitted",
+              "returned",
+              "excused"
+            ],
+            "title": "State"
+          },
+          "submissionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submissionid"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "submittedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submittedat"
+          },
+          "isLate": {
+            "type": "boolean",
+            "title": "Islate",
+            "default": false
+          },
+          "attemptCount": {
+            "type": "integer",
+            "title": "Attemptcount",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "assignmentId",
+          "state"
+        ],
+        "title": "GradebookCell"
+      },
+      "GradebookRow": {
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/GradebookCell"
+            },
+            "type": "array",
+            "title": "Cells"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId",
+          "name",
+          "email",
+          "cells"
+        ],
+        "title": "GradebookRow"
+      },
+      "GradingQueueItem": {
+        "properties": {
+          "submissionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Submissionid"
+          },
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignmentid"
+          },
+          "assignmentTitle": {
+            "type": "string",
+            "title": "Assignmenttitle"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          },
+          "studentName": {
+            "type": "string",
+            "title": "Studentname"
+          },
+          "submittedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submittedat"
+          },
+          "isLate": {
+            "type": "boolean",
+            "title": "Islate"
+          },
+          "attemptNumber": {
+            "type": "integer",
+            "title": "Attemptnumber"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "submissionId",
+          "assignmentId",
+          "assignmentTitle",
+          "userId",
+          "studentName",
+          "isLate",
+          "attemptNumber",
+          "status"
+        ],
+        "title": "GradingQueueItem"
+      },
       "GrantCreate": {
         "properties": {
           "installationId": {
@@ -8605,6 +10779,10 @@
             ],
             "title": "Version"
           },
+          "deliveryMode": {
+            "type": "string",
+            "title": "Deliverymode"
+          },
           "dispatchUrl": {
             "anyOf": [
               {
@@ -8676,6 +10854,7 @@
           "extensionId",
           "displayName",
           "version",
+          "deliveryMode",
           "dispatchUrl",
           "healthUrl",
           "manifestVersion",
@@ -8911,6 +11090,9 @@
                   "type": "string"
                 },
                 "type": "array"
+              },
+              {
+                "type": "null"
               }
             ],
             "title": "Type"
@@ -8965,12 +11147,74 @@
             "title": "Additionalproperties"
           }
         },
+        "additionalProperties": true,
         "type": "object",
-        "required": [
-          "type"
-        ],
         "title": "JsonSchemaDocument",
         "description": "A JSON Schema embedded in an extension manifest."
+      },
+      "NotificationRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "readAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "createdAt"
+        ],
+        "title": "NotificationRead"
       },
       "ResendVerificationRequest": {
         "properties": {
@@ -9021,6 +11265,7 @@
             "title": "Criteria"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "levels",
@@ -9063,6 +11308,7 @@
             "title": "Levels"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "name",
@@ -9132,6 +11378,187 @@
         },
         "type": "object",
         "title": "RubricUpdate"
+      },
+      "RunnerClaimRequest": {
+        "properties": {
+          "runnerId": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Runnerid"
+          },
+          "waitSeconds": {
+            "type": "integer",
+            "maximum": 30.0,
+            "minimum": 0.0,
+            "title": "Waitseconds",
+            "default": 20
+          },
+          "leaseSeconds": {
+            "type": "integer",
+            "maximum": 300.0,
+            "minimum": 10.0,
+            "title": "Leaseseconds",
+            "default": 30
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "runnerId"
+        ],
+        "title": "RunnerClaimRequest",
+        "description": "Long-poll parameters for an outbound runner."
+      },
+      "RunnerCommandAck": {
+        "properties": {
+          "leaseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Leaseid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "leaseId"
+        ],
+        "title": "RunnerCommandAck"
+      },
+      "StudentTodoItem": {
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignmentid"
+          },
+          "assignmentTitle": {
+            "type": "string",
+            "title": "Assignmenttitle"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "courseName": {
+            "type": "string",
+            "title": "Coursename"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "submitted"
+            ],
+            "title": "State"
+          },
+          "submissionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submissionid"
+          },
+          "attemptCount": {
+            "type": "integer",
+            "title": "Attemptcount",
+            "default": 0
+          },
+          "isLate": {
+            "type": "boolean",
+            "title": "Islate",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "assignmentId",
+          "assignmentTitle",
+          "courseId",
+          "courseName",
+          "state"
+        ],
+        "title": "StudentTodoItem"
+      },
+      "SubmissionCommentCreate": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "SubmissionCommentCreate"
+      },
+      "SubmissionCommentRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "submissionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Submissionid"
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Authorid"
+          },
+          "authorName": {
+            "type": "string",
+            "title": "Authorname"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "submissionId",
+          "authorId",
+          "authorName",
+          "body",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "SubmissionCommentRead"
       },
       "SubmissionDraftUpdate": {
         "properties": {
@@ -9284,6 +11711,16 @@
               }
             ],
             "title": "Returnedat"
+          },
+          "attemptNumber": {
+            "type": "integer",
+            "title": "Attemptnumber",
+            "default": 1
+          },
+          "isLate": {
+            "type": "boolean",
+            "title": "Islate",
+            "default": false
           }
         },
         "type": "object",
@@ -9658,6 +12095,88 @@
         ],
         "title": "TokenConfirmRequest"
       },
+      "ToolInvocationRead": {
+        "properties": {
+          "executionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Executionid"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "errorCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errorcode"
+          },
+          "errorSummary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errorsummary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "executionId",
+          "status"
+        ],
+        "title": "ToolInvocationRead"
+      },
+      "ToolInvocationRequest": {
+        "properties": {
+          "capabilityDefinitionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Capabilitydefinitionid"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Idempotencykey"
+          },
+          "input": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "capabilityDefinitionId",
+          "idempotencyKey"
+        ],
+        "title": "ToolInvocationRequest",
+        "description": "Invoke one platform-linked tool allowed by the parent capability pin."
+      },
       "TurnCreate": {
         "properties": {
           "content": {
@@ -9678,24 +12197,28 @@
             ],
             "title": "Clientrequestid"
           },
-          "capabilityId": {
+          "capabilityDefinitionId": {
             "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Capabilityid",
-            "default": "agent.default"
+            "format": "uuid",
+            "title": "Capabilitydefinitionid"
           },
-          "target": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Target",
-            "default": "agent.default"
+          "input": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
           }
         },
         "type": "object",
         "required": [
-          "content"
+          "content",
+          "capabilityDefinitionId"
         ],
         "title": "TurnCreate"
       },

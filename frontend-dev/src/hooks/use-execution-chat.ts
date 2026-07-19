@@ -204,7 +204,7 @@ export function projectExecutionEvent(
   return current;
 }
 
-export function useExecutionChat() {
+export function useExecutionChat(capabilityDefinitionId?: string) {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
   const [projection, setProjection] = useState<ExecutionChatProjection>(initialExecutionChatProjection);
@@ -258,11 +258,18 @@ export function useExecutionChat() {
 
   const send = useCallback(async (content: string) => {
     if (!content.trim() || projection.status === "streaming") return;
+    if (!capabilityDefinitionId) {
+      setError("Select an installed agent capability before sending a message.");
+      return;
+    }
     setError(null);
     try {
       const activeThreadId = threadId ?? (await createExecutionThread()).id;
       if (!threadId) setThreadId(activeThreadId);
-      const turn = await createExecutionTurn(activeThreadId, { content: content.trim() });
+      const turn = await createExecutionTurn(activeThreadId, {
+        content: content.trim(),
+        capabilityDefinitionId,
+      });
       setExecutionId(turn.executionId);
       setProjection((current) => ({
         ...current,
@@ -282,7 +289,7 @@ export function useExecutionChat() {
       setProjection((current) => ({ ...current, status: "error" }));
       setError(sendError instanceof Error ? sendError.message : "Unable to start Execution");
     }
-  }, [projection.status, streamExecution, threadId]);
+  }, [capabilityDefinitionId, projection.status, streamExecution, threadId]);
 
   const resolve = useCallback(async (interactionId: string, response: string) => {
     const resolved = await resolveInteractionRequest(interactionId, {

@@ -9,7 +9,9 @@ FAIR is intentionally useful without AI. With no Extensions installed, it behave
 
 ## Extensions add behavior
 
-Installed Extensions add custom behavior such as:
+When you want to add custom behavior to FAIR, you install an **Extension**. An Extension exposes one or more **Capabilities**: versioned functions FAIR can call.
+
+Examples include:
 
 - AI-assisted graders and feedback tools;
 - course-aware teaching assistants;
@@ -17,9 +19,9 @@ Installed Extensions add custom behavior such as:
 - transcription and document processing;
 - deterministic analysis tools and external LMS connectors.
 
-The platform does not embed those implementations or a global AI provider. It authenticates and authorizes an installed Extension, creates an observable Execution, records ordered events and Artifacts, and preserves the provenance needed for review and research.
+FAIR handles authorization, Executions, Events, Artifacts, and final decisions. The Extension owns its models, prompts, tools, provider credentials, and custom code.
 
-Read [Core and Extensions](/en/platform/extension-architecture) for the foundational boundary.
+Start with the [Extensions overview](/en/extensions/overview).
 
 ## Reproducible research through Flows
 
@@ -37,8 +39,8 @@ Extensions may analyze, explain, recommend, and propose. Completing an Execution
   <Card title="Quickstart" icon="rocket" href="/en/quickstart">
     Run FAIR and create your first course.
   </Card>
-  <Card title="Core and Extensions" icon="blocks" href="/en/platform/extension-architecture">
-    Understand the boundary for every custom capability.
+  <Card title="Extensions Reference" icon="blocks" href="/en/extensions/overview">
+    Find Capabilities, Executions, streaming, tools, and SDK status.
   </Card>
   <Card title="Flows and Executions" icon="workflow" href="/en/platform/flows">
     Learn how reproducible procedures share one execution substrate.

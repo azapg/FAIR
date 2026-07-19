@@ -36,6 +36,7 @@ class InstallationRead(BaseModel):
     extension_id: str
     display_name: str | None
     version: str | None
+    delivery_mode: str
     dispatch_url: str | None
     health_url: str | None
     manifest_version: str | None
@@ -52,7 +53,9 @@ class GrantCreate(BaseModel):
     capability_definition_id: UUID | None = None
     course_id: UUID | None = None
     assignment_id: UUID | None = None
-    effect: str = Field(min_length=1, max_length=128, pattern=r"^[a-z][a-z0-9._-]*:[a-z][a-z0-9._-]*$")
+    effect: str = Field(
+        min_length=1, max_length=128, pattern=r"^[a-z][a-z0-9._-]*:[a-z][a-z0-9._-]*$"
+    )
     decision: Literal["allow", "deny"]
     reason: str | None = Field(default=None, max_length=2000)
 
@@ -68,7 +71,7 @@ class GrantRead(GrantCreate):
 class ExtensionClientIssueRequest(BaseModel):
     model_config = schema_config
     extension_id: str = Field(min_length=1)
-    scopes: list[str] = Field(default_factory=list)
+    scopes: list[Literal["runner:commands"]] = Field(default_factory=list)
     enabled: bool = True
 
 
@@ -91,7 +94,7 @@ class ExtensionClientRead(BaseModel):
 
 class ExtensionClientUpdateRequest(BaseModel):
     model_config = schema_config
-    scopes: list[str] = Field(default_factory=list)
+    scopes: list[Literal["runner:commands"]] = Field(default_factory=list)
     enabled: bool
 
 

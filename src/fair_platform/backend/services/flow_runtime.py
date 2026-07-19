@@ -65,7 +65,9 @@ def _definition(version: FlowVersion) -> FlowDefinition:
     try:
         return FlowDefinition.model_validate(version.definition)
     except ValueError as exc:
-        raise FlowRuntimeError("FlowVersion contains an invalid ordered definition") from exc
+        raise FlowRuntimeError(
+            "FlowVersion contains an invalid ordered definition"
+        ) from exc
 
 
 def _pin(version: FlowVersion, node_id: str) -> dict:
@@ -97,7 +99,9 @@ def validate_flow_runtime(
             course_id=course_id,
             assignment_id=assignment_id,
         )
-        denied = [effect for effect, result in resolutions.items() if not result.allowed]
+        denied = [
+            effect for effect, result in resolutions.items() if not result.allowed
+        ]
         if denied:
             raise FlowRuntimeError(
                 f"Flow node {node.id!r} is not granted effects: {', '.join(denied)}"
@@ -146,6 +150,7 @@ def _create_step(
         flow_node_id=node.id,
         capability_id=pin["capabilityId"],
         capability_version=pin["capabilityVersion"],
+        capability_definition_id=UUID(pin["capabilityDefinitionId"]),
         extension_installation_id=UUID(pin["extensionInstallationId"]),
         deadline_at=_now() + timedelta(seconds=node.timeout_seconds),
         input=_step_input(root, version, node, previous_output),
@@ -207,7 +212,9 @@ def _terminal_root(
     return FlowAdvanceResult(root=root)
 
 
-def advance_flow_execution(session: Session, root_execution_id: UUID) -> FlowAdvanceResult:
+def advance_flow_execution(
+    session: Session, root_execution_id: UUID
+) -> FlowAdvanceResult:
     root = session.get(Execution, root_execution_id)
     if root is None or _value(root.kind) != ExecutionKind.flow.value:
         raise FlowRuntimeError(f"Execution {root_execution_id} is not a Flow root")

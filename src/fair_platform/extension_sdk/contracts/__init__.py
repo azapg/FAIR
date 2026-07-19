@@ -12,6 +12,19 @@ from fair_platform.extension_sdk.contracts.rubric import (
     RubricContent,
     RubricCriterion,
 )
+from fair_platform.extension_sdk.contracts.protocol import (
+    CapabilityPin,
+    DelegatedExecutionAuthorization,
+    ExecutionArtifactReference,
+    ExecutionCommand,
+    ExecutionDescriptor,
+    ExecutionScope,
+    RunnerClaimRequest,
+    RunnerCommandAck,
+    RunnerCommandLease,
+    ToolInvocationRead,
+    ToolInvocationRequest,
+)
 
 __all__ = [
     "CapabilityManifest",
@@ -22,4 +35,15 @@ __all__ = [
     "ExecutionEventRead",
     "RubricCriterion",
     "RubricContent",
+    "CapabilityPin",
+    "DelegatedExecutionAuthorization",
+    "ExecutionArtifactReference",
+    "ExecutionCommand",
+    "ExecutionDescriptor",
+    "ExecutionScope",
+    "RunnerClaimRequest",
+    "RunnerCommandAck",
+    "RunnerCommandLease",
+    "ToolInvocationRead",
+    "ToolInvocationRequest",
 ]

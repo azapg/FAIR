@@ -9,10 +9,17 @@ import httpx
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.services.execution_outbox import (
+    DispatchStateError,
     claim_dispatch,
     mark_dispatch_failed,
     mark_dispatched,
 )
+from fair_platform.backend.services.dispatch_signing import get_dispatch_signer
+from fair_platform.backend.services.execution_protocol import (
+    ExecutionProtocolError,
+    build_execution_command,
+)
+from fair_platform.backend.services.execution_lifecycle import expire_due_executions
 from fair_platform.backend.data.models import (
     Execution,
     ExecutionDispatchOutbox,
@@ -80,13 +87,18 @@ class ExecutionOutboxDispatcher:
 
     async def run_once(self) -> ExecutionDispatchResult | None:
         with self._session_factory() as session:
+            expired_count = expire_due_executions(session)
             dispatch = claim_dispatch(
                 session,
                 worker_id=self._worker_id,
                 lease_seconds=self._lease_seconds,
+                delivery_mode="webhook",
             )
             if dispatch is None:
-                session.rollback()
+                if expired_count:
+                    session.commit()
+                else:
+                    session.rollback()
                 return None
 
             execution = session.get(Execution, dispatch.execution_id)
@@ -97,11 +109,9 @@ class ExecutionOutboxDispatcher:
             )
             dispatch_id = str(dispatch.id)
             dispatch_uuid = dispatch.id
+            lease_id = dispatch.lease_id
             idempotency_key = dispatch.job_id
             attempt_count = dispatch.attempt_count
-            command_kind = getattr(
-                dispatch.command_kind, "value", dispatch.command_kind
-            )
             if (
                 execution is None
                 or installation is None
@@ -113,6 +123,7 @@ class ExecutionOutboxDispatcher:
                 mark_dispatch_failed(
                     session,
                     dispatch.id,
+                    lease_id=lease_id,
                     error=reason,
                     dead_letter=True,
                 )
@@ -124,28 +135,38 @@ class ExecutionOutboxDispatcher:
                     error=reason,
                 )
             dispatch_url = installation.dispatch_url
-            body = {
-                "commandId": dispatch_id,
-                "idempotencyKey": idempotency_key,
-                "command": command_kind,
-                "execution": {
-                    "id": str(execution.id),
-                    "rootExecutionId": str(execution.root_execution_id),
-                    "capabilityId": execution.capability_id,
-                    "capabilityVersion": execution.capability_version,
-                    "deadlineAt": execution.deadline_at.isoformat()
-                    if execution.deadline_at
-                    else None,
-                },
-                "payload": dict(dispatch.payload or {}),
-            }
+            try:
+                command = build_execution_command(session, dispatch)
+            except ExecutionProtocolError as exc:
+                mark_dispatch_failed(
+                    session,
+                    dispatch.id,
+                    lease_id=lease_id,
+                    error=str(exc),
+                    dead_letter=True,
+                )
+                session.commit()
+                return ExecutionDispatchResult(
+                    dispatch_id=dispatch_id,
+                    idempotency_key=idempotency_key,
+                    delivered=False,
+                    error=str(exc),
+                )
+            body = command.model_dump_json(by_alias=True).encode("utf-8")
+            signature_headers = get_dispatch_signer().sign(
+                method="POST",
+                target_uri=dispatch_url,
+                body=body,
+                expires=int(command.expires_at.timestamp()),
+            )
             session.commit()
 
         try:
             response = await self._http.post(
                 dispatch_url,
-                json=body,
+                content=body,
                 headers={
+                    **signature_headers,
                     "X-FAIR-Dispatch-Id": dispatch_id,
                     "Idempotency-Key": idempotency_key,
                 },
@@ -158,14 +179,18 @@ class ExecutionOutboxDispatcher:
             with self._session_factory() as session:
                 failed = session.get(ExecutionDispatchOutbox, dispatch_uuid)
                 if failed is not None:
-                    mark_dispatch_failed(
-                        session,
-                        failed.id,
-                        error=str(exc),
-                        retry_at=None if dead_letter else retry_at,
-                        dead_letter=dead_letter,
-                    )
-                    session.commit()
+                    try:
+                        mark_dispatch_failed(
+                            session,
+                            failed.id,
+                            lease_id=lease_id,
+                            error=str(exc),
+                            retry_at=None if dead_letter else retry_at,
+                            dead_letter=dead_letter,
+                        )
+                        session.commit()
+                    except DispatchStateError:
+                        session.rollback()
             return ExecutionDispatchResult(
                 dispatch_id=dispatch_id,
                 idempotency_key=idempotency_key,
@@ -176,8 +201,11 @@ class ExecutionOutboxDispatcher:
         with self._session_factory() as session:
             current = session.get(ExecutionDispatchOutbox, dispatch_uuid)
             if current is not None:
-                mark_dispatched(session, current.id)
-                session.commit()
+                try:
+                    mark_dispatched(session, current.id, lease_id=lease_id)
+                    session.commit()
+                except DispatchStateError:
+                    session.rollback()
         return ExecutionDispatchResult(
             dispatch_id=dispatch_id,
             idempotency_key=idempotency_key,

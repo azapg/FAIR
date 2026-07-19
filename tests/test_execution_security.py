@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
@@ -6,6 +5,7 @@ from fastapi.testclient import TestClient
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.data.models import (
     CapabilityDefinition,
+    ExecutionDispatchOutbox,
     ExtensionGrant,
     ExtensionInstallation,
     ExtensionInstallationStatus,
@@ -15,12 +15,13 @@ from fair_platform.backend.data.models import (
 )
 from fair_platform.backend.main import app
 from fair_platform.backend.services.extension_grants import resolve_extension_effects
-from fair_platform.backend.services.extension_auth import hash_extension_secret
-from fair_platform.backend.data.models import ExtensionClient
 from fair_platform.backend.services.execution_projection import append_and_project_event
+from tests.execution_protocol_helpers import add_agent_capability, execution_headers
 
 
-def test_turn_rejects_unknown_and_disabled_targets_and_user_events_cannot_spoof(test_db):
+def test_turn_rejects_unknown_and_disabled_targets_and_user_events_cannot_spoof(
+    test_db,
+):
     user = User(
         id=uuid4(),
         name="Boundary user",
@@ -28,14 +29,17 @@ def test_turn_rejects_unknown_and_disabled_targets_and_user_events_cannot_spoof(
         role=UserRole.student,
     )
     with test_db() as session:
-        session.add_all([
-            user,
+        session.add(user)
+        disabled_capability = add_agent_capability(
+            session,
             ExtensionInstallation(
                 extension_id="disabled.extension",
                 status=ExtensionInstallationStatus.disabled,
             ),
-            ExtensionInstallation(extension_id="enabled.extension"),
-        ])
+        )
+        enabled_capability = add_agent_capability(
+            session, ExtensionInstallation(extension_id="enabled.extension")
+        )
         session.commit()
 
     app.dependency_overrides[get_current_user] = lambda: user
@@ -44,42 +48,56 @@ def test_turn_rejects_unknown_and_disabled_targets_and_user_events_cannot_spoof(
         thread = client.post("/api/v1/threads", json={"title": "Boundary"}).json()
         unknown = client.post(
             f"/api/v1/threads/{thread['id']}/turns",
-            json={"content": "no", "target": "unknown.extension"},
+            json={"content": "no", "capabilityDefinitionId": str(uuid4())},
         )
         assert unknown.status_code == 404, unknown.text
         disabled = client.post(
             f"/api/v1/threads/{thread['id']}/turns",
-            json={"content": "no", "target": "disabled.extension"},
+            json={
+                "content": "no",
+                "capabilityDefinitionId": str(disabled_capability.id),
+            },
         )
         assert disabled.status_code == 409, disabled.text
 
         turn = client.post(
             f"/api/v1/threads/{thread['id']}/turns",
-            json={"content": "yes", "target": "enabled.extension"},
+            json={
+                "content": "yes",
+                "capabilityDefinitionId": str(enabled_capability.id),
+            },
         ).json()
         execution_id = turn["executionId"]
         spoof = client.post(
             f"/api/v1/executions/{execution_id}/events",
-            json={"events": [{
-                "producerSource": "fair.platform",
-                "producerEventId": "spoof-complete",
-                "type": "execution.completed",
-                "schemaUri": "urn:fair:event:execution.completed:v1",
-                "payload": {},
-            }]},
+            json={
+                "events": [
+                    {
+                        "producerSource": "fair.platform",
+                        "producerEventId": "spoof-complete",
+                        "type": "execution.completed",
+                        "schemaUri": "urn:fair:event:execution.completed:v1",
+                        "payload": {},
+                    }
+                ]
+            },
         )
         assert spoof.status_code == 403, spoof.text
 
         feedback = client.post(
             f"/api/v1/executions/{execution_id}/events",
-            json={"events": [{
-                "producerSource": "spoofed.extension",
-                "producerEventId": "feedback-1",
-                "type": "user.feedback",
-                "schemaUri": "urn:fair:event:user.feedback:v1",
-                "visibility": "private",
-                "payload": {"rating": 1},
-            }]},
+            json={
+                "events": [
+                    {
+                        "producerSource": "spoofed.extension",
+                        "producerEventId": "feedback-1",
+                        "type": "user.feedback",
+                        "schemaUri": "urn:fair:event:user.feedback:v1",
+                        "visibility": "private",
+                        "payload": {"rating": 1},
+                    }
+                ]
+            },
         )
         assert feedback.status_code == 202, feedback.text
         assert feedback.json()[0]["producerSource"] == f"user:{user.id}"
@@ -170,7 +188,9 @@ def test_extension_grants_are_deny_by_default_and_deny_wins(test_db):
         assert revoked["grade:write"].allowed is False
 
 
-def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events(test_db):
+def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events(
+    test_db,
+):
     user = User(
         id=uuid4(),
         name="Security API user",
@@ -179,36 +199,31 @@ def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events
     )
     with test_db() as session:
         session.add(user)
-        now = datetime.now(timezone.utc)
-        session.add_all([
-            ExtensionClient(
-                extension_id="security.extension",
-                secret_hash=hash_extension_secret("security-secret"),
-                scopes=["executions:events"],
-                enabled=True,
-                created_at=now,
-                updated_at=now,
-            ),
-            ExtensionInstallation(extension_id="security.extension"),
-        ])
+        capability = add_agent_capability(
+            session, ExtensionInstallation(extension_id="security.extension")
+        )
         session.commit()
+        capability_definition_id = capability.id
 
     app.dependency_overrides[get_current_user] = lambda: user
     try:
         client = TestClient(app)
-        thread = client.post("/api/v1/threads", json={"title": "Security thread"}).json()
+        thread = client.post(
+            "/api/v1/threads", json={"title": "Security thread"}
+        ).json()
         turn = client.post(
             f"/api/v1/threads/{thread['id']}/turns",
-            json={"content": "security", "target": "security.extension"},
+            json={
+                "content": "security",
+                "capabilityDefinitionId": str(capability_definition_id),
+            },
         ).json()
         execution_id = turn["executionId"]
+        authority_headers = execution_headers(test_db, execution_id)
 
         response = client.post(
             f"/api/v1/executions/{execution_id}/events/ingest",
-            headers={
-                "X-FAIR-Extension-Id": "security.extension",
-                "Authorization": "Bearer security-secret",
-            },
+            headers=authority_headers,
             json={
                 "events": [
                     {
@@ -234,10 +249,7 @@ def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events
 
         completed = client.post(
             f"/api/v1/executions/{execution_id}/events/ingest",
-            headers={
-                "X-FAIR-Extension-Id": "security.extension",
-                "Authorization": "Bearer security-secret",
-            },
+            headers=authority_headers,
             json={
                 "events": [
                     {
@@ -253,10 +265,7 @@ def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events
         assert completed.status_code == 202, completed.text
         terminal = client.post(
             f"/api/v1/executions/{execution_id}/events/ingest",
-            headers={
-                "X-FAIR-Extension-Id": "security.extension",
-                "Authorization": "Bearer security-secret",
-            },
+            headers=authority_headers,
             json={
                 "events": [
                     {
@@ -269,7 +278,7 @@ def test_invalid_event_batch_is_atomic_and_terminal_execution_rejects_new_events
                 ]
             },
         )
-        assert terminal.status_code == 422, terminal.text
+        assert terminal.status_code == 401, terminal.text
     finally:
         app.dependency_overrides.pop(get_current_user, None)
 
@@ -281,41 +290,36 @@ def test_interaction_resolution_is_user_owned_and_extension_cannot_finalize_it(t
         email=f"{uuid4()}@example.test",
         role=UserRole.student,
     )
-    now = datetime.now(timezone.utc)
     with test_db() as session:
-        session.add_all(
-            [
-                user,
-                ExtensionClient(
-                    extension_id="interaction.extension",
-                    secret_hash=hash_extension_secret("interaction-secret"),
-                    scopes=["executions:events"],
-                    enabled=True,
-                    created_at=now,
-                    updated_at=now,
-                ),
-                ExtensionInstallation(extension_id="interaction.extension"),
-            ]
+        session.add(user)
+        capability = add_agent_capability(
+            session,
+            ExtensionInstallation(extension_id="interaction.extension"),
+            supports_resume=True,
         )
         session.commit()
+        capability_definition_id = capability.id
 
     app.dependency_overrides[get_current_user] = lambda: user
     try:
         client = TestClient(app)
-        thread = client.post("/api/v1/threads", json={"title": "Interaction thread"}).json()
+        thread = client.post(
+            "/api/v1/threads", json={"title": "Interaction thread"}
+        ).json()
         turn = client.post(
             f"/api/v1/threads/{thread['id']}/turns",
-            json={"content": "ask me", "target": "interaction.extension"},
+            json={
+                "content": "ask me",
+                "capabilityDefinitionId": str(capability_definition_id),
+            },
         ).json()
         execution_id = turn["executionId"]
+        authority_headers = execution_headers(test_db, execution_id)
         interaction_id = str(uuid4())
 
         requested = client.post(
             f"/api/v1/executions/{execution_id}/events/ingest",
-            headers={
-                "X-FAIR-Extension-Id": "interaction.extension",
-                "Authorization": "Bearer interaction-secret",
-            },
+            headers=authority_headers,
             json={
                 "events": [
                     {
@@ -341,10 +345,7 @@ def test_interaction_resolution_is_user_owned_and_extension_cannot_finalize_it(t
 
         extension_resolution = client.post(
             f"/api/v1/executions/{execution_id}/events/ingest",
-            headers={
-                "X-FAIR-Extension-Id": "interaction.extension",
-                "Authorization": "Bearer interaction-secret",
-            },
+            headers=authority_headers,
             json={
                 "events": [
                     {
@@ -379,5 +380,27 @@ def test_interaction_resolution_is_user_owned_and_extension_cannot_finalize_it(t
             },
         )
         assert repeated.status_code == 200, repeated.text
+        conflicting = client.post(
+            f"/api/v1/interactions/{interaction_id}/resolve",
+            json={
+                "status": "resolved",
+                "response": {"approved": False},
+                "clientRequestId": "resolve-1",
+            },
+        )
+        assert conflicting.status_code == 409
+        with test_db() as session:
+            resume_commands = list(
+                session.query(ExecutionDispatchOutbox).filter(
+                    ExecutionDispatchOutbox.execution_id == UUID(execution_id),
+                    ExecutionDispatchOutbox.command_kind == "resume",
+                )
+            )
+            assert len(resume_commands) == 1
+            assert resume_commands[0].payload == {
+                "interactionId": interaction_id,
+                "status": "resolved",
+                "response": {"approved": True},
+            }
     finally:
         app.dependency_overrides.pop(get_current_user, None)

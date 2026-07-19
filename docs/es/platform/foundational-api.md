@@ -23,11 +23,9 @@ FAIR 1.0 tiene un solo límite para comportamiento personalizado: una **capacida
 
 1. **Autorización del usuario.** Las solicitudes llevan un token bearer de FAIR. Las capacidades del rol y la propiedad del recurso controlan quién puede crear, leer, modificar o ejecutar un Flow y quién puede ver una Ejecución o Artefacto.
 2. **Autorización de instalación y permisos.** Una capacidad solo puede ejecutarse mediante una instalación habilitada. Los permisos contextuales restringen los efectos declarados por curso, asignación o alcance de plataforma.
-3. **Autorización del cliente de Extensión.** Las Extensiones autentican sus llamadas a FAIR con un secreto emitido y scopes como `executions:events` o `artifacts:write`. Los secretos solo se muestran al emitirlos o rotarlos.
+3. **Autorización del runner.** Un runner local usa su secreto de instalación solo para reclamar y confirmar comandos con `runner:commands`. Las APIs de eventos, Artefactos y herramientas usan el token de corta duración de una Ejecución exacta. Los secretos solo se muestran al emitirlos o rotarlos.
 
-<Warning>
-El despacho saliente usa HTTP directo y durable con encabezados estables de despacho e idempotencia. La firma criptográfica de la plataforma hacia la Extensión sigue en endurecimiento; protege los endpoints con transporte y red confiables hasta que exista despacho firmado.
-</Warning>
+El despacho saliente usa comandos durables e idempotentes. Los webhooks HTTPS llevan una firma Ed25519 de mensaje HTTP; los programas en computadores locales usan un runner saliente sin abrir puertos de entrada. Ambos transportes reciben el mismo `ExecutionCommand`.
 
 ## Contrato de una capacidad
 

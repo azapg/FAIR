@@ -24,6 +24,7 @@ from fair_platform.backend.core.security.permissions import auth_user_payload
 from fair_platform.backend.api.schema.casing import to_camel_keys
 from fair_platform.backend.services.mailer import Mailer, get_mailer
 from dotenv import load_dotenv
+
 load_dotenv()
 
 router = APIRouter()
@@ -31,7 +32,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login", auto_error=False
 
 SECRET_KEY = get_secret_key()
 if SECRET_KEY == INSECURE_DEFAULT_SECRET_KEY:
-    print("WARNING: Using insecure default SECRET_KEY. Set SECRET_KEY environment variable for better security.")
+    print(
+        "WARNING: Using insecure default SECRET_KEY. Set SECRET_KEY environment variable for better security."
+    )
 ALGORITHM = "HS256"
 DEFAULT_TOKEN_EXPIRE_HOURS = 24
 REMEMBER_ME_TOKEN_EXPIRE_DAYS = 31
@@ -43,6 +46,9 @@ RESEND_VERIFICATION_REQUEST_SENT_MESSAGE = (
 TOKEN_PURPOSE_PASSWORD_RESET = "password_reset"
 TOKEN_PURPOSE_VERIFY_EMAIL = "verify_email"
 TOKEN_PURPOSE_EXT_JOB = "ext_job"
+USER_SESSION_TOKEN_TYPE = "fair-user-session+jwt"
+ACTION_TOKEN_TYPE = "fair-action+jwt"
+EXTENSION_JOB_TOKEN_TYPE = "fair-extension-job+jwt"
 PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60
 VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES = 30
 EXT_JOB_TOKEN_EXPIRE_HOURS = int(os.getenv("FAIR_EXT_JOB_TOKEN_EXPIRE_HOURS", "8"))
@@ -107,16 +113,16 @@ class ResetPasswordConfirmRequest(TokenConfirmRequest):
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
-    password_bytes = password.encode('utf-8')
+    password_bytes = password.encode("utf-8")
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password_bytes, salt)
-    return hashed.decode('utf-8')
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""
-    password_bytes = plain_password.encode('utf-8')
-    hashed_bytes = hashed_password.encode('utf-8')
+    password_bytes = plain_password.encode("utf-8")
+    hashed_bytes = hashed_password.encode("utf-8")
     return bcrypt.checkpw(password_bytes, hashed_bytes)
 
 
@@ -127,10 +133,15 @@ def create_access_token(data: dict, remember_me: bool = False):
         expires_delta = timedelta(days=REMEMBER_ME_TOKEN_EXPIRE_DAYS)
     else:
         expires_delta = timedelta(hours=DEFAULT_TOKEN_EXPIRE_HOURS)
-    
+
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        to_encode,
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+        headers={"typ": USER_SESSION_TOKEN_TYPE},
+    )
 
 
 def _create_action_token(
@@ -145,7 +156,12 @@ def _create_action_token(
         "purpose": purpose,
         "exp": datetime.now(timezone.utc) + expires_delta,
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+        headers={"typ": ACTION_TOKEN_TYPE},
+    )
 
 
 def create_extension_job_token(*, user_id: str, job_id: str, extension_id: str) -> str:
@@ -162,7 +178,12 @@ def create_extension_job_token(*, user_id: str, job_id: str, extension_id: str) 
         "purpose": TOKEN_PURPOSE_EXT_JOB,
         "exp": datetime.now(timezone.utc) + timedelta(hours=EXT_JOB_TOKEN_EXPIRE_HOURS),
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+        headers={"typ": EXTENSION_JOB_TOKEN_TYPE},
+    )
 
 
 def _decode_action_token(token: str, *, expected_purpose: str) -> dict:
@@ -204,11 +225,16 @@ def get_current_user(
     if not resolved_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
+        header = jwt.get_unverified_header(resolved_token)
+        if header.get("typ") != USER_SESSION_TOKEN_TYPE:
+            raise HTTPException(status_code=401, detail="Invalid token")
         payload = jwt.decode(resolved_token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("purpose") is not None:
+            raise HTTPException(status_code=401, detail="Invalid token")
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-    except JWTError:
+    except (JWTError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user = db.get(User, UUID(user_id))
@@ -230,7 +256,7 @@ async def register(
         raise HTTPException(status_code=400, detail="Email already registered")
 
     password_hash = hash_password(user_in.password)
-    
+
     user = User(
         id=uuid4(),
         name=user_in.name,
@@ -260,8 +286,7 @@ async def register(
             }
 
     access_token = create_access_token(
-        {"sub": str(user.id), "role": user.role},
-        remember_me=False
+        {"sub": str(user.id), "role": user.role}, remember_me=False
     )
     auth_user = auth_user_payload(user)
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
@@ -284,7 +309,9 @@ def login(
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not user.password_hash or not verify_password(form_data.password, user.password_hash):
+    if not user.password_hash or not verify_password(
+        form_data.password, user.password_hash
+    ):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     if get_enforce_email_verification() and not user.is_verified:
@@ -296,8 +323,7 @@ def login(
     remember_me = "remember_me" in form_data.scopes
 
     access_token = create_access_token(
-        {"sub": str(user.id), "role": user.role},
-        remember_me=remember_me
+        {"sub": str(user.id), "role": user.role}, remember_me=remember_me
     )
     _set_session_cookie(response, access_token, remember_me=remember_me)
     return {"access_token": access_token, "token_type": "bearer"}
@@ -343,7 +369,9 @@ async def forgot_password(
             reset_url=_build_reset_url(reset_token),
         )
 
-    return {"detail": "If an account exists for this email, a reset message has been sent"}
+    return {
+        "detail": "If an account exists for this email, a reset message has been sent"
+    }
 
 
 @router.post("/resend-verification")
@@ -424,8 +452,7 @@ async def verify_email_confirm(
         detail = "Email verified successfully"
 
     access_token = create_access_token(
-        {"sub": str(user.id), "role": user.role},
-        remember_me=False
+        {"sub": str(user.id), "role": user.role}, remember_me=False
     )
     auth_user = auth_user_payload(user)
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))

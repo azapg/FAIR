@@ -51,12 +51,12 @@ Once you've created a course, you can click on it to start adding content:
     </Card>
     
     <Card
-      title="Workflows and Plugins"
+      title="Assignment Extensions"
       icon="bolt"
-      href="/en/platform/workflows"
+      href="/en/extensions/assignments-and-grading"
       arrow="true"
       cta="Learn more"
     >
-      Discover how to automate your grading using AI.
+      See how agents and graders connect to assignments.
     </Card>
 </Columns>

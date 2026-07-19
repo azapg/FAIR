@@ -9,16 +9,16 @@ from fair_platform.backend.data.models import (
     CapabilityDefinition,
     Execution,
     ExecutionDispatchOutbox,
-    ExtensionClient,
     ExtensionInstallation,
     FlowVersion,
 )
 from fair_platform.backend.data.models.user import User, UserRole
 from fair_platform.backend.main import app
 from fair_platform.backend.services.flow_service import _flow_allocation_lock_statement
-from fair_platform.backend.services.execution_projection import rebuild_execution_projection
-from fair_platform.backend.services.extension_auth import hash_extension_secret
-from tests.conftest import extension_auth_headers
+from fair_platform.backend.services.execution_projection import (
+    rebuild_execution_projection,
+)
+from tests.execution_protocol_helpers import execution_headers
 
 
 def _user(test_db, email: str) -> User:
@@ -58,20 +58,15 @@ def _capability(
             kind="action",
             version="1.0.0",
             declared_effects=[],
+            manifest_snapshot={
+                "capabilityId": "test.transform",
+                "kind": "action",
+                "version": "1.0.0",
+                "inputSchema": {"type": "object"},
+                "outputSchema": {"type": "object"},
+            },
         )
-        session.add_all(
-            [
-                capability,
-                ExtensionClient(
-                    extension_id=resolved_extension_id,
-                    secret_hash=hash_extension_secret("flow-test-secret"),
-                    scopes=["executions:events"],
-                    enabled=True,
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
-                ),
-            ]
-        )
+        session.add(capability)
         session.commit()
         return capability, resolved_extension_id
 
@@ -110,7 +105,10 @@ def test_flow_crud_is_owner_scoped(test_db):
 
     _as_user(stranger)
     assert client.get(f"/api/v1/flows/{flow_id}").status_code == 404
-    assert client.patch(f"/api/v1/flows/{flow_id}", json={"name": "Mine"}).status_code == 404
+    assert (
+        client.patch(f"/api/v1/flows/{flow_id}", json={"name": "Mine"}).status_code
+        == 404
+    )
 
     _as_user(owner)
     archived = client.delete(f"/api/v1/flows/{flow_id}")
@@ -148,18 +146,31 @@ def test_flow_versions_are_ordered_and_have_explicit_lifecycle(test_db):
     )
     assert same_definition_with_config.status_code == 201
     assert same_definition_with_config.json()["ordinal"] == 3
-    assert same_definition_with_config.json()["definitionHash"] != first.json()["definitionHash"]
+    assert (
+        same_definition_with_config.json()["definitionHash"]
+        != first.json()["definitionHash"]
+    )
 
     version_id = first.json()["id"]
     published = client.post(f"/api/v1/flows/{flow_id}/versions/{version_id}/publish")
     assert published.status_code == 200
     assert published.json()["state"] == "published"
-    assert client.post(f"/api/v1/flows/{flow_id}/versions/{version_id}/publish").status_code == 409
+    assert (
+        client.post(
+            f"/api/v1/flows/{flow_id}/versions/{version_id}/publish"
+        ).status_code
+        == 409
+    )
 
     archived = client.post(f"/api/v1/flows/{flow_id}/versions/{version_id}/archive")
     assert archived.status_code == 200
     assert archived.json()["state"] == "archived"
-    assert client.post(f"/api/v1/flows/{flow_id}/versions/{version_id}/archive").status_code == 409
+    assert (
+        client.post(
+            f"/api/v1/flows/{flow_id}/versions/{version_id}/archive"
+        ).status_code
+        == 409
+    )
 
     with test_db() as session:
         stored = session.get(FlowVersion, UUID(version_id))
@@ -190,7 +201,9 @@ def test_start_flow_creates_pinned_root_execution_and_outbox(test_db):
         json={"definition": _definition(capability, "step")},
     ).json()
 
-    assert client.post(f"/api/v1/flows/{flow_id}/executions", json={}).status_code == 409
+    assert (
+        client.post(f"/api/v1/flows/{flow_id}/executions", json={}).status_code == 409
+    )
     client.post(f"/api/v1/flows/{flow_id}/versions/{draft['id']}/publish")
     started = client.post(
         f"/api/v1/flows/{flow_id}/executions",
@@ -232,22 +245,20 @@ def test_two_step_flow_advances_from_events_and_replays_deterministically(test_d
         json={"definition": _definition(capability, "first", "second")},
     ).json()
     assert (
-        client.post(f"/api/v1/flows/{flow_id}/versions/{version['id']}/publish").status_code
+        client.post(
+            f"/api/v1/flows/{flow_id}/versions/{version['id']}/publish"
+        ).status_code
         == 200
     )
     started = client.post(f"/api/v1/flows/{flow_id}/executions", json={})
     assert started.status_code == 202, started.text
     root_id = UUID(started.json()["executionId"])
     first_id = UUID(started.json()["stepExecutionId"])
-    credentials = {
-        "extension_id": extension_id,
-        "extension_secret": "flow-test-secret",
-    }
 
     def complete(execution_id: UUID, event_id: str, output: dict) -> None:
         response = client.post(
             f"/api/v1/executions/{execution_id}/events/ingest",
-            headers=extension_auth_headers(credentials),
+            headers=execution_headers(test_db, execution_id),
             json={
                 "events": [
                     {
@@ -286,10 +297,13 @@ def test_two_step_flow_advances_from_events_and_replays_deterministically(test_d
         snapshot = rebuild_execution_projection(session, root.id)
         session.commit()
         assert snapshot.projection["status"] == "completed"
-        assert len(
-            list(
-                session.query(Execution).filter(
-                    Execution.parent_execution_id == root_id
+        assert (
+            len(
+                list(
+                    session.query(Execution).filter(
+                        Execution.parent_execution_id == root_id
+                    )
                 )
             )
-        ) == 2
+            == 2
+        )

@@ -13,6 +13,11 @@ from fair_platform.extension_sdk.contracts.extension import (
     ExtensionManifest,
     JsonSchemaDocument,
 )
+from fair_platform.extension_sdk.signatures import (
+    RequestSignatureError,
+    public_key_from_jwk,
+    verify_request_signature,
+)
 
 __all__ = [
     "ExtensionCredentials",
@@ -24,4 +29,7 @@ __all__ = [
     "CapabilityManifest",
     "ExtensionManifest",
     "JsonSchemaDocument",
+    "RequestSignatureError",
+    "public_key_from_jwk",
+    "verify_request_signature",
 ]
