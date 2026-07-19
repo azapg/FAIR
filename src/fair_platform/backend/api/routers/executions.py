@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.sse import EventSourceResponse, format_sse_event
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from fair_platform.backend.api.routers.auth import get_current_user
@@ -18,7 +19,15 @@ from fair_platform.backend.core.security.permissions import (
     has_capability,
     has_capability_and_owner,
 )
-from fair_platform.backend.core.security.dependencies import require_extension_client
+from fair_platform.backend.services.execution_authorization import (
+    ExecutionAuthorization,
+    issue_execution_token,
+    require_execution_authorization,
+)
+from fair_platform.backend.services.capability_validation import (
+    CapabilityOutputError,
+    validate_capability_output,
+)
 from fair_platform.backend.api.schema.execution import (
     ExecutionEventBatch,
     ExecutionEventRead,
@@ -32,10 +41,11 @@ from fair_platform.backend.api.schema.execution import (
 )
 from fair_platform.backend.data.database import SessionLocal, session_dependency
 from fair_platform.backend.data.models import (
+    Assignment,
     Execution,
     ExecutionEvent,
+    CapabilityDefinition,
     Course,
-    ExtensionClient,
     ExtensionInstallation,
     ExtensionInstallationStatus,
     InteractionRequest,
@@ -43,14 +53,31 @@ from fair_platform.backend.data.models import (
     MessagePart,
     MessageRole,
     MessageStatus,
+    Submission,
     Thread,
     Turn,
     TurnStatus,
     User,
 )
+from fair_platform.backend.services.course_access import (
+    can_manage_course,
+    can_view_course,
+)
 from fair_platform.backend.data.models.execution import MessageAuthorType
 from fair_platform.backend.data.models.execution import EventVisibility
+from fair_platform.backend.data.models.execution import DispatchCommandKind
+from fair_platform.backend.data.models.execution import ExecutionKind
+from fair_platform.extension_sdk.contracts.protocol import (
+    DelegatedExecutionAuthorization,
+    ToolInvocationRead,
+    ToolInvocationRequest,
+)
 from fair_platform.backend.services.execution_outbox import enqueue_dispatch
+from fair_platform.backend.services.capability_validation import (
+    CapabilityInputError,
+    validate_capability_input,
+)
+from fair_platform.backend.services.extension_grants import resolve_extension_effects
 from fair_platform.backend.services.execution_projection import (
     ExecutionProjectionError,
     append_and_project_event,
@@ -92,10 +119,68 @@ def _enum_value(value: object) -> str:
 
 def _assert_thread_access(thread: Thread | None, user: User) -> Thread:
     if thread is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found"
+        )
     if thread.owner_user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Thread access denied")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Thread access denied"
+        )
     return thread
+
+
+def _resolve_thread_scope(
+    db: Session,
+    payload: ThreadCreate,
+    user: User,
+) -> tuple[UUID | None, UUID | None, UUID | None]:
+    """Resolve and authorize typed educational context before it reaches a token."""
+
+    course_id = payload.course_id
+    assignment_id = payload.assignment_id
+    submission_id = payload.submission_id
+    submission = db.get(Submission, submission_id) if submission_id else None
+    if submission_id is not None and submission is None:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    if submission is not None:
+        if assignment_id is not None and assignment_id != submission.assignment_id:
+            raise HTTPException(
+                status_code=422,
+                detail="Submission does not belong to the requested assignment",
+            )
+        assignment_id = submission.assignment_id
+
+    assignment = db.get(Assignment, assignment_id) if assignment_id else None
+    if assignment_id is not None and assignment is None:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    if assignment is not None:
+        if course_id is not None and course_id != assignment.course_id:
+            raise HTTPException(
+                status_code=422,
+                detail="Assignment does not belong to the requested course",
+            )
+        course_id = assignment.course_id
+
+    course = db.get(Course, course_id) if course_id else None
+    if course_id is not None and course is None:
+        raise HTTPException(status_code=404, detail="Course not found")
+    if course is not None and not can_view_course(db, course, user):
+        raise HTTPException(status_code=403, detail="Course access denied")
+    can_manage = course is not None and can_manage_course(db, course, user)
+    if (
+        assignment is not None
+        and not can_manage
+        and _enum_value(assignment.status) == "draft"
+    ):
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    if (
+        submission is not None
+        and course is not None
+        and not can_manage
+        and submission.submitter.user_id != user.id
+    ):
+        raise HTTPException(status_code=403, detail="Submission access denied")
+    return course_id, assignment_id, submission_id
 
 
 def _assert_execution_access(execution: Execution | None, user: User) -> Execution:
@@ -113,7 +198,9 @@ def _assert_execution_access(execution: Execution | None, user: User) -> Executi
         execution.course.instructor_id,
     ):
         return execution
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Execution access denied")
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN, detail="Execution access denied"
+    )
 
 
 def _event_read(event) -> ExecutionEventRead:
@@ -161,9 +248,11 @@ def _execution_read(execution: Execution) -> ExecutionRead:
         root_execution_id=execution.root_execution_id,
         retry_of_execution_id=execution.retry_of_execution_id,
         attempt=execution.attempt,
+        idempotency_key=execution.idempotency_key,
         kind=_enum_value(execution.kind),
         capability_id=execution.capability_id,
         capability_version=execution.capability_version,
+        capability_definition_id=execution.capability_definition_id,
         flow_version_id=execution.flow_version_id,
         initiated_by_user_id=execution.initiated_by_user_id,
         extension_installation_id=execution.extension_installation_id,
@@ -181,7 +270,9 @@ def _execution_read(execution: Execution) -> ExecutionRead:
 
 def _turn_read(session: Session, turn: Turn) -> TurnRead:
     execution = session.scalar(
-        select(Execution).where(Execution.turn_id == turn.id).order_by(Execution.created_at)
+        select(Execution)
+        .where(Execution.turn_id == turn.id)
+        .order_by(Execution.created_at)
     )
     user_message = session.scalar(
         select(Message)
@@ -228,18 +319,31 @@ def _interaction_read(interaction: InteractionRequest) -> InteractionRead:
     )
 
 
+def _tool_invocation_read(execution: Execution) -> ToolInvocationRead:
+    return ToolInvocationRead(
+        execution_id=execution.id,
+        status=_enum_value(execution.status),
+        output=execution.output_summary,
+        error_code=execution.error_code,
+        error_summary=execution.error_summary,
+    )
+
+
 @router.post("/threads", response_model=ThreadRead, status_code=status.HTTP_201_CREATED)
 def create_thread(
     payload: ThreadCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> ThreadRead:
+    course_id, assignment_id, submission_id = _resolve_thread_scope(
+        db, payload, current_user
+    )
     thread = Thread(
         owner_user_id=current_user.id,
         title=payload.title,
-        course_id=payload.course_id,
-        assignment_id=payload.assignment_id,
-        submission_id=payload.submission_id,
+        course_id=course_id,
+        assignment_id=assignment_id,
+        submission_id=submission_id,
     )
     db.add(thread)
     db.flush()
@@ -258,8 +362,14 @@ def create_turn(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ) -> TurnRead:
-    thread = _assert_thread_access(db.get(Thread, thread_id), current_user)
+    thread = _assert_thread_access(
+        db.scalar(select(Thread).where(Thread.id == thread_id).with_for_update()),
+        current_user,
+    )
     client_request_id = payload.client_request_id or str(uuid4())
+    execution_input = (
+        payload.input if payload.input is not None else {"content": payload.content}
+    )
     existing_turn = db.scalar(
         select(Turn).where(
             Turn.thread_id == thread.id,
@@ -267,11 +377,41 @@ def create_turn(
         )
     )
     if existing_turn is not None:
+        existing_execution = db.scalar(
+            select(Execution)
+            .where(Execution.turn_id == existing_turn.id)
+            .order_by(Execution.created_at)
+        )
+        existing_text = db.scalar(
+            select(MessagePart.text_content)
+            .join(Message, Message.id == MessagePart.message_id)
+            .where(
+                Message.turn_id == existing_turn.id,
+                Message.author_type == MessageAuthorType.user,
+                Message.author_user_id == current_user.id,
+                MessagePart.ordinal == 1,
+            )
+        )
+        if (
+            existing_execution is None
+            or existing_execution.capability_definition_id
+            != payload.capability_definition_id
+            or existing_execution.input != execution_input
+            or existing_text != payload.content
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="clientRequestId was already used for a different Turn request",
+            )
         return _turn_read(db, existing_turn)
 
-    ordinal = int(
-        db.scalar(select(func.max(Turn.ordinal)).where(Turn.thread_id == thread.id)) or 0
-    ) + 1
+    ordinal = (
+        int(
+            db.scalar(select(func.max(Turn.ordinal)).where(Turn.thread_id == thread.id))
+            or 0
+        )
+        + 1
+    )
     turn = Turn(
         thread_id=thread.id,
         ordinal=ordinal,
@@ -306,20 +446,51 @@ def create_turn(
         )
     )
 
-    installation = db.scalar(
-        select(ExtensionInstallation).where(
-            ExtensionInstallation.extension_id == payload.target
-        )
-    )
-    if installation is None:
+    capability = db.get(CapabilityDefinition, payload.capability_definition_id)
+    if capability is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Target extension installation not found",
+            detail="Capability definition not found",
+        )
+    if capability.kind != ExecutionKind.agent.value:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A conversational Turn requires an agent capability",
+        )
+    installation = db.get(ExtensionInstallation, capability.installation_id)
+    if installation is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Capability installation is missing",
         )
     if _enum_value(installation.status) != ExtensionInstallationStatus.enabled.value:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Target extension installation is not enabled",
+            detail="Capability installation is not enabled",
+        )
+
+    try:
+        validate_capability_input(capability, execution_input)
+    except CapabilityInputError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    resolutions = resolve_extension_effects(
+        db,
+        installation_id=installation.id,
+        capability_definition_id=capability.id,
+        effects=tuple(capability.declared_effects or ()),
+        course_id=thread.course_id,
+        assignment_id=thread.assignment_id,
+    )
+    denied_effects = sorted(
+        effect for effect, resolution in resolutions.items() if not resolution.allowed
+    )
+    if denied_effects:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Capability is not granted effects: {', '.join(denied_effects)}",
         )
 
     execution = create_execution(
@@ -329,8 +500,10 @@ def create_turn(
         turn_id=turn.id,
         initiated_by_user_id=current_user.id,
         extension_installation_id=installation.id,
-        capability_id=payload.capability_id,
-        input={"content": payload.content},
+        capability_id=capability.capability_id,
+        capability_version=capability.version,
+        capability_definition_id=capability.id,
+        input=execution_input,
     )
     append_and_project_event(
         db,
@@ -343,20 +516,16 @@ def create_turn(
             "thread_id": str(thread.id),
             "turn_id": str(turn.id),
             "user_message_id": str(user_message.id),
-            "capability_id": payload.capability_id,
+            "capability_definition_id": str(capability.id),
+            "capability_id": capability.capability_id,
+            "capability_version": capability.version,
         },
     )
     enqueue_dispatch(
         db,
         execution_id=execution.id,
-        target=payload.target,
-        payload={
-            "execution_id": str(execution.id),
-            "thread_id": str(thread.id),
-            "turn_id": str(turn.id),
-            "input": {"content": payload.content},
-            "capability_id": payload.capability_id,
-        },
+        target=installation.extension_id,
+        payload=execution_input,
     )
     db.commit()
     return _turn_read(db, turn)
@@ -370,6 +539,261 @@ def read_execution(
 ) -> ExecutionRead:
     execution = _assert_execution_access(db.get(Execution, execution_id), current_user)
     return _execution_read(execution)
+
+
+@router.post(
+    "/executions/{execution_id}/cancel",
+    response_model=ExecutionRead,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def cancel_execution(
+    execution_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ExecutionRead:
+    execution = _assert_execution_access(db.get(Execution, execution_id), current_user)
+    if _enum_value(execution.status) in {"completed", "failed", "cancelled", "expired"}:
+        return _execution_read(execution)
+    if execution.cancellation_requested_at is not None:
+        return _execution_read(execution)
+
+    capability = db.get(CapabilityDefinition, execution.capability_definition_id)
+    installation = (
+        db.get(ExtensionInstallation, execution.extension_installation_id)
+        if execution.extension_installation_id is not None
+        else None
+    )
+    requested_at = _now()
+    execution.cancellation_requested_at = requested_at
+    if (
+        capability is not None
+        and installation is not None
+        and _enum_value(installation.status)
+        == ExtensionInstallationStatus.enabled.value
+        and capability.supports_cancellation
+    ):
+        enqueue_dispatch(
+            db,
+            execution_id=execution.id,
+            target=installation.extension_id,
+            command_kind=DispatchCommandKind.cancel,
+            job_id=f"execution:{execution.id}:cancel",
+            payload={"reason": "user_requested"},
+        )
+    else:
+        append_and_project_event(
+            db,
+            execution_id=execution.id,
+            producer_source="fair.platform",
+            producer_event_id=f"execution:{execution.id}:cancelled",
+            event_type="execution.cancelled",
+            schema_uri="urn:fair:event:execution.cancelled:v1",
+            payload={"reason": "user_requested"},
+        )
+    db.commit()
+    db.refresh(execution)
+    return _execution_read(execution)
+
+
+@router.post(
+    "/executions/{execution_id}/authorization/refresh",
+    response_model=DelegatedExecutionAuthorization,
+)
+def refresh_execution_authorization(
+    execution_id: UUID,
+    authority: ExecutionAuthorization = Depends(require_execution_authorization()),
+) -> DelegatedExecutionAuthorization:
+    """Rotate short-lived authority without expanding its original scopes."""
+
+    execution = authority.execution
+    if execution.id != execution_id:
+        raise HTTPException(
+            status_code=403, detail="Execution token is not valid for this Execution"
+        )
+    if execution.cancellation_requested_at is not None:
+        raise HTTPException(
+            status_code=409, detail="Execution cancellation has been requested"
+        )
+    issued = issue_execution_token(
+        execution=execution,
+        installation=authority.installation,
+        capability=authority.capability,
+        scopes=set(authority.scopes),
+        submission_ids=[item.id for item in execution.submissions],
+        artifact_ids=[item.artifact_id for item in execution.input_artifacts],
+    )
+    return DelegatedExecutionAuthorization(
+        access_token=issued.token,
+        expires_at=issued.expires_at,
+        scopes=list(issued.scopes),
+    )
+
+
+@router.post(
+    "/executions/{execution_id}/tools",
+    response_model=ToolInvocationRead,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def invoke_platform_tool(
+    execution_id: UUID,
+    payload: ToolInvocationRequest,
+    authority: ExecutionAuthorization = Depends(
+        require_execution_authorization(("tools:invoke",))
+    ),
+    db: Session = Depends(session_dependency),
+) -> ToolInvocationRead:
+    """Create one durable child Execution for an explicitly allowed tool."""
+
+    parent = authority.execution
+    if parent.id != execution_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Execution token is not valid for this Execution",
+        )
+    if parent.cancellation_requested_at is not None:
+        raise HTTPException(
+            status_code=409, detail="Execution cancellation has been requested"
+        )
+
+    existing = db.scalar(
+        select(Execution).where(
+            Execution.parent_execution_id == parent.id,
+            Execution.idempotency_key == payload.idempotency_key,
+        )
+    )
+    if existing is not None:
+        if (
+            existing.capability_definition_id != payload.capability_definition_id
+            or existing.input != payload.input
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="idempotencyKey was already used for a different tool request",
+            )
+        return _tool_invocation_read(existing)
+
+    target = db.get(CapabilityDefinition, payload.capability_definition_id)
+    installation = (
+        db.get(ExtensionInstallation, target.installation_id)
+        if target is not None
+        else None
+    )
+    if target is None or installation is None:
+        raise HTTPException(status_code=404, detail="Tool capability not found")
+    if _enum_value(installation.status) != ExtensionInstallationStatus.enabled.value:
+        raise HTTPException(status_code=409, detail="Tool capability is not enabled")
+    if target.kind != "tool":
+        raise HTTPException(status_code=422, detail="Target capability is not a tool")
+    if target.capability_id not in set(authority.capability.tool_capabilities or []):
+        raise HTTPException(
+            status_code=403,
+            detail="Tool is not allowed by the parent capability pin",
+        )
+    try:
+        validate_capability_input(target, payload.input)
+    except CapabilityInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    resolutions = resolve_extension_effects(
+        db,
+        installation_id=installation.id,
+        capability_definition_id=target.id,
+        effects=tuple(target.declared_effects or ()),
+        course_id=parent.course_id,
+        assignment_id=parent.assignment_id,
+    )
+    denied_effects = sorted(
+        effect for effect, resolution in resolutions.items() if not resolution.allowed
+    )
+    if denied_effects:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Tool is not granted effects: {', '.join(denied_effects)}",
+        )
+
+    try:
+        child = create_execution(
+            db,
+            kind=ExecutionKind.tool.value,
+            thread_id=parent.thread_id,
+            turn_id=parent.turn_id,
+            parent_execution_id=parent.id,
+            initiated_by_user_id=parent.initiated_by_user_id,
+            idempotency_key=payload.idempotency_key,
+            capability_id=target.capability_id,
+            capability_version=target.version,
+            capability_definition_id=target.id,
+            extension_installation_id=installation.id,
+            input=payload.input,
+            deadline_at=parent.deadline_at,
+        )
+        event_identity = hashlib.sha256(
+            payload.idempotency_key.encode("utf-8")
+        ).hexdigest()
+        append_and_project_event(
+            db,
+            execution_id=parent.id,
+            producer_source="fair.platform",
+            producer_event_id=f"tool-invocation:{parent.id}:{event_identity}",
+            event_type="tool.invocation.created",
+            schema_uri="urn:fair:event:tool.invocation.created:v1",
+            payload={
+                "toolExecutionId": str(child.id),
+                "capabilityDefinitionId": str(target.id),
+            },
+        )
+        enqueue_dispatch(
+            db,
+            execution_id=child.id,
+            target=installation.extension_id,
+            job_id=f"tool:{parent.id}:{payload.idempotency_key}",
+            payload=payload.input,
+        )
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        child = db.scalar(
+            select(Execution).where(
+                Execution.parent_execution_id == parent.id,
+                Execution.idempotency_key == payload.idempotency_key,
+            )
+        )
+        if child is None:
+            raise
+        if (
+            child.capability_definition_id != payload.capability_definition_id
+            or child.input != payload.input
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="idempotencyKey was already used for a different tool request",
+            )
+    return _tool_invocation_read(child)
+
+
+@router.get(
+    "/executions/{execution_id}/tools/{tool_execution_id}",
+    response_model=ToolInvocationRead,
+)
+def read_platform_tool(
+    execution_id: UUID,
+    tool_execution_id: UUID,
+    authority: ExecutionAuthorization = Depends(
+        require_execution_authorization(("tools:invoke",))
+    ),
+    db: Session = Depends(session_dependency),
+) -> ToolInvocationRead:
+    if authority.execution.id != execution_id:
+        raise HTTPException(
+            status_code=403, detail="Execution token is not valid for this Execution"
+        )
+    child = db.get(Execution, tool_execution_id)
+    if (
+        child is None
+        or child.parent_execution_id != execution_id
+        or _enum_value(child.kind) != "tool"
+    ):
+        raise HTTPException(status_code=404, detail="Tool invocation not found")
+    return _tool_invocation_read(child)
 
 
 @router.get("/executions", response_model=list[ExecutionRead])
@@ -414,13 +838,19 @@ def list_executions(
             )
         )
 
-    executions = db.scalars(
-        query.order_by(Execution.created_at.desc()).offset(offset).limit(limit)
-    ).unique().all()
+    executions = (
+        db.scalars(
+            query.order_by(Execution.created_at.desc()).offset(offset).limit(limit)
+        )
+        .unique()
+        .all()
+    )
     return [_execution_read(execution) for execution in executions]
 
 
-@router.get("/executions/{execution_id}/events", response_model=list[ExecutionEventRead])
+@router.get(
+    "/executions/{execution_id}/events", response_model=list[ExecutionEventRead]
+)
 def read_execution_events(
     execution_id: UUID,
     after_sequence: int = Query(default=0, ge=0),
@@ -481,10 +911,14 @@ def append_execution_events(
         db.commit()
     except EventIdentityConflict as exc:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     except (ExecutionStoreError, ExecutionProjectionError) as exc:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
     return accepted
 
 
@@ -496,26 +930,40 @@ def append_execution_events(
 def ingest_extension_events(
     execution_id: UUID,
     batch: ExecutionEventBatch,
-    extension_client: ExtensionClient = Depends(
-        require_extension_client(("executions:events",))
+    authority: ExecutionAuthorization = Depends(
+        require_execution_authorization(
+            ("executions:events",), allow_terminal_retry=True
+        )
     ),
     db: Session = Depends(session_dependency),
 ) -> list[ExecutionEventRead]:
-    execution = db.get(Execution, execution_id)
-    if execution is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Execution not found"
-        )
-    installation = db.get(ExtensionInstallation, execution.extension_installation_id)
-    if (
-        installation is None
-        or installation.extension_id != extension_client.extension_id
-        or _enum_value(installation.status) != ExtensionInstallationStatus.enabled.value
-    ):
+    execution = authority.execution
+    installation = authority.installation
+    if execution.id != execution_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Extension is not the producing installation for this Execution",
+            detail="Execution token is not valid for this Execution",
         )
+
+    terminal_retry = _enum_value(execution.status) in {
+        "completed",
+        "failed",
+        "cancelled",
+        "expired",
+    }
+    if terminal_retry:
+        for event in batch.events:
+            existing = db.scalar(
+                select(ExecutionEvent).where(
+                    ExecutionEvent.producer_source == installation.extension_id,
+                    ExecutionEvent.producer_event_id == event.producer_event_id,
+                )
+            )
+            if existing is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Execution authority has been revoked",
+                )
 
     accepted = []
     try:
@@ -526,16 +974,42 @@ def ingest_extension_events(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Extensions cannot resolve user interactions",
                 )
-            if event.producer_source != extension_client.extension_id:
+            if (
+                event.type == "interaction.requested"
+                and not authority.capability.supports_resume
+            ):
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Capability must declare supportsResume to request interactions",
+                )
+            if execution.cancellation_requested_at is not None and event.type not in {
+                "execution.cancelled",
+                "execution.failed",
+            }:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Execution is cancelling and only a terminal cancellation result is accepted",
+                )
+            if event.producer_source != installation.extension_id:
                 db.rollback()
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="producer_source must match the authenticated extension",
                 )
+            if event.type == "execution.completed":
+                output = event.payload.get(
+                    "outputSummary",
+                    event.payload.get(
+                        "output_summary", event.payload.get("output", {})
+                    ),
+                )
+                validate_capability_output(authority.capability, output)
             result = append_and_project_event(
                 db,
                 execution_id=execution.id,
-                producer_source=extension_client.extension_id,
+                producer_source=installation.extension_id,
                 producer_event_id=event.producer_event_id,
                 producer_sequence=event.producer_sequence,
                 event_type=event.type,
@@ -548,11 +1022,9 @@ def ingest_extension_events(
                 span_id=event.span_id,
             )
             accepted.append(_event_read(result.event))
-        if (
-            _enum_value(execution.kind) == "flow_step"
-            and _enum_value(execution.status)
-            in {"completed", "failed", "cancelled", "expired"}
-        ):
+        if _enum_value(execution.kind) == "flow_step" and _enum_value(
+            execution.status
+        ) in {"completed", "failed", "cancelled", "expired"}:
             try:
                 advance_flow_execution(db, execution.root_execution_id)
             except FlowRuntimeError as exc:
@@ -563,10 +1035,18 @@ def ingest_extension_events(
         raise
     except EventIdentityConflict as exc:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    except (ExecutionStoreError, ExecutionProjectionError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    except (
+        CapabilityOutputError,
+        ExecutionStoreError,
+        ExecutionProjectionError,
+    ) as exc:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
     return accepted
 
 
@@ -605,10 +1085,23 @@ def resolve_interaction(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Interaction not found"
         )
-    execution = _assert_execution_access(db.get(Execution, interaction.execution_id), current_user)
+    execution = _assert_execution_access(
+        db.get(Execution, interaction.execution_id), current_user
+    )
+    if execution.cancellation_requested_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Execution cancellation has already been requested",
+        )
     request_id = payload.client_request_id or str(uuid4())
     request_fingerprint = hashlib.sha256(request_id.encode("utf-8")).hexdigest()
     producer_event_id = f"interaction-resolve:{interaction.id}:{request_fingerprint}"
+    event_payload = {
+        "interaction_id": str(interaction.id),
+        "status": payload.status,
+        "response": payload.response,
+        "resolved_by_user_id": str(current_user.id),
+    }
     if _enum_value(interaction.status) != "pending":
         existing = db.scalar(
             select(ExecutionEvent).where(
@@ -617,6 +1110,14 @@ def resolve_interaction(
             )
         )
         if existing is not None:
+            if existing.payload != event_payload:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=(
+                        "clientRequestId was already used for a different "
+                        "interaction response"
+                    ),
+                )
             return _interaction_read(interaction)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -631,20 +1132,33 @@ def resolve_interaction(
             producer_event_id=producer_event_id,
             event_type="interaction.resolved",
             schema_uri="urn:fair:event:interaction.resolved:v1",
-            payload={
-                "interaction_id": str(interaction.id),
-                "status": payload.status,
-                "response": payload.response,
-                "resolved_by_user_id": str(current_user.id),
-            },
+            payload=event_payload,
         )
+        capability = db.get(CapabilityDefinition, execution.capability_definition_id)
+        if capability is not None and capability.supports_resume:
+            enqueue_dispatch(
+                db,
+                execution_id=execution.id,
+                target=capability.installation.extension_id,
+                command_kind=DispatchCommandKind.resume,
+                job_id=f"interaction:{interaction.id}:resume",
+                payload={
+                    "interactionId": str(interaction.id),
+                    "status": payload.status,
+                    "response": payload.response,
+                },
+            )
         db.commit()
     except EventIdentityConflict as exc:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     except (ExecutionStoreError, ExecutionProjectionError) as exc:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
     db.refresh(interaction)
     return _interaction_read(interaction)
 
@@ -690,26 +1204,36 @@ async def stream_execution_events(
                 for event in events:
                     cursor = event.sequence
                     heartbeat_count = 0
-                    payload = jsonable_encoder(_event_read(event).model_dump(by_alias=True))
+                    payload = jsonable_encoder(
+                        _event_read(event).model_dump(by_alias=True)
+                    )
                     yield format_sse_event(
                         id=str(event.sequence),
                         event=event.type,
                         data_str=json.dumps(payload, separators=(",", ":")),
                     )
 
-                if stream_status in {
-                    "completed",
-                    "failed",
-                    "cancelled",
-                    "expired",
-                }:
+                if (
+                    stream_status
+                    in {
+                        "completed",
+                        "failed",
+                        "cancelled",
+                        "expired",
+                    }
+                    and len(events) < 500
+                ):
                     return
+
+                if events:
+                    # Drain an existing backlog without adding polling latency.
+                    continue
 
                 heartbeat_count += 1
                 if heartbeat_count >= 15:
                     heartbeat_count = 0
                     yield format_sse_event(comment="keep-alive")
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.5)
         except asyncio.CancelledError:
             return
 

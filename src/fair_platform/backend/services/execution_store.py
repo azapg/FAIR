@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.data.models.execution import (
@@ -14,13 +14,16 @@ from fair_platform.backend.data.models.execution import (
     EventVisibility,
     Execution,
     ExecutionEvent,
+    ExecutionInputArtifact,
     ExecutionStatus,
     Turn,
     Thread,
 )
+from fair_platform.backend.data.models.artifact import Artifact
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.submission import Submission
+from fair_platform.backend.data.models.user import User
 
 
 class ExecutionStoreError(ValueError):
@@ -113,7 +116,9 @@ def create_execution(
         if thread is None:
             raise ExecutionStoreError(f"Thread {thread_id} does not exist")
         if course_id is not None and thread.course_id not in {None, course_id}:
-            raise ExecutionStoreError("Execution course scope conflicts with its Thread")
+            raise ExecutionStoreError(
+                "Execution course scope conflicts with its Thread"
+            )
         if assignment_id is not None and thread.assignment_id not in {
             None,
             assignment_id,
@@ -143,7 +148,9 @@ def create_execution(
             )
         )
         found_ids = {item.id for item in submissions}
-        missing_ids = [item for item in resolved_submission_ids if item not in found_ids]
+        missing_ids = [
+            item for item in resolved_submission_ids if item not in found_ids
+        ]
         if missing_ids:
             raise ExecutionStoreError(
                 f"Submission scope contains unknown IDs: {missing_ids}"
@@ -192,6 +199,67 @@ def create_execution(
     )
     execution.submissions = submissions
     session.add(execution)
+    session.flush()
+    if lineage_source is not None:
+        inherited_artifacts = list(
+            session.scalars(
+                select(ExecutionInputArtifact).where(
+                    ExecutionInputArtifact.execution_id == lineage_source.id
+                )
+            )
+        )
+        for item in inherited_artifacts:
+            session.add(
+                ExecutionInputArtifact(
+                    execution_id=execution.id,
+                    artifact_id=item.artifact_id,
+                    artifact_version_id=item.artifact_version_id,
+                )
+            )
+    else:
+        artifact_filters = []
+        if execution.assignment_id is not None:
+            artifact_filters.extend(
+                [
+                    Artifact.assignment_id == execution.assignment_id,
+                    Artifact.assignments.any(id=execution.assignment_id),
+                ]
+            )
+        if execution.submissions:
+            artifact_filters.append(
+                Artifact.submissions.any(
+                    Submission.id.in_(
+                        [submission.id for submission in execution.submissions]
+                    )
+                )
+            )
+        if artifact_filters:
+            initiating_user = (
+                session.get(User, execution.initiated_by_user_id)
+                if execution.initiated_by_user_id is not None
+                else None
+            )
+            if initiating_user is None:
+                raise ExecutionStoreError(
+                    "Artifact-scoped Executions require an initiating user"
+                )
+            from fair_platform.backend.services.artifact_manager import (
+                get_artifact_manager,
+            )
+
+            artifact_manager = get_artifact_manager(session)
+            for artifact in session.scalars(
+                select(Artifact).where(or_(*artifact_filters))
+            ):
+                if not artifact_manager.can_view(initiating_user, artifact):
+                    continue
+                session.add(
+                    ExecutionInputArtifact(
+                        execution_id=execution.id,
+                        artifact_id=artifact.id,
+                        artifact_version_id=artifact.current_version_id,
+                    )
+                )
     session.flush()
     return execution
 

@@ -228,13 +228,22 @@ class Execution(Base):
     __tablename__ = "executions"
     __table_args__ = (
         CheckConstraint("attempt >= 1", name="ck_executions_attempt_positive"),
-        CheckConstraint("id != parent_execution_id", name="ck_executions_no_self_parent"),
-        CheckConstraint("id != retry_of_execution_id", name="ck_executions_no_self_retry"),
+        CheckConstraint(
+            "id != parent_execution_id", name="ck_executions_no_self_parent"
+        ),
+        CheckConstraint(
+            "id != retry_of_execution_id", name="ck_executions_no_self_retry"
+        ),
         UniqueConstraint(
             "root_execution_id",
             "flow_node_id",
             "attempt",
             name="uq_executions_flow_node_attempt",
+        ),
+        UniqueConstraint(
+            "parent_execution_id",
+            "idempotency_key",
+            name="uq_executions_parent_idempotency_key",
         ),
         Index("ix_executions_thread_created", "thread_id", "created_at"),
         Index("ix_executions_root_created", "root_execution_id", "created_at"),
@@ -266,10 +275,16 @@ class Execution(Base):
         SAUUID, ForeignKey("executions.id", ondelete="RESTRICT"), nullable=True
     )
     attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     kind: Mapped[ExecutionKind] = mapped_column(String(32), nullable=False)
     capability_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     capability_version: Mapped[Optional[str]] = mapped_column(
         String(128), nullable=True
+    )
+    capability_definition_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID,
+        ForeignKey("capability_definitions.id", ondelete="RESTRICT"),
+        nullable=True,
     )
     flow_version_id: Mapped[Optional[UUID]] = mapped_column(
         SAUUID, ForeignKey("flow_versions.id", ondelete="RESTRICT"), nullable=True
@@ -312,7 +327,9 @@ class Execution(Base):
     error_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     error_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    thread: Mapped[Optional[Thread]] = relationship("Thread", back_populates="executions")
+    thread: Mapped[Optional[Thread]] = relationship(
+        "Thread", back_populates="executions"
+    )
     turn: Mapped[Optional[Turn]] = relationship("Turn", back_populates="executions")
     course: Mapped[Optional["Course"]] = relationship(
         "Course", back_populates="executions"
@@ -333,6 +350,7 @@ class Execution(Base):
         "Execution", foreign_keys=[retry_of_execution_id], remote_side=[id]
     )
     flow_version = relationship("FlowVersion", back_populates="executions")
+    capability_definition = relationship("CapabilityDefinition")
     events: Mapped[list["ExecutionEvent"]] = relationship(
         "ExecutionEvent", back_populates="execution", cascade="all, delete-orphan"
     )
@@ -349,8 +367,43 @@ class Execution(Base):
         "Message", back_populates="producing_execution"
     )
     dispatches: Mapped[list["ExecutionDispatchOutbox"]] = relationship(
-        "ExecutionDispatchOutbox", back_populates="execution", cascade="all, delete-orphan"
+        "ExecutionDispatchOutbox",
+        back_populates="execution",
+        cascade="all, delete-orphan",
     )
+    input_artifacts: Mapped[list["ExecutionInputArtifact"]] = relationship(
+        "ExecutionInputArtifact",
+        back_populates="execution",
+        cascade="all, delete-orphan",
+    )
+
+
+class ExecutionInputArtifact(Base):
+    """An Artifact resource frozen into one Execution's delegated authority."""
+
+    __tablename__ = "execution_input_artifacts"
+
+    execution_id: Mapped[UUID] = mapped_column(
+        SAUUID,
+        ForeignKey("executions.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    artifact_id: Mapped[UUID] = mapped_column(
+        SAUUID,
+        ForeignKey("artifacts.id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+    artifact_version_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID,
+        ForeignKey("artifact_versions.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+
+    execution: Mapped[Execution] = relationship(
+        "Execution", back_populates="input_artifacts"
+    )
+    artifact = relationship("Artifact")
+    artifact_version = relationship("ArtifactVersion")
 
 
 class ExecutionEvent(Base):
@@ -377,9 +430,7 @@ class ExecutionEvent(Base):
     sequence: Mapped[int] = mapped_column(BigInteger, nullable=False)
     producer_source: Mapped[str] = mapped_column(String(255), nullable=False)
     producer_event_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    producer_sequence: Mapped[Optional[int]] = mapped_column(
-        BigInteger, nullable=True
-    )
+    producer_sequence: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     type: Mapped[str] = mapped_column(String(255), nullable=False)
     schema_uri: Mapped[str] = mapped_column(String(2048), nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(
@@ -506,6 +557,7 @@ class ExecutionDispatchOutbox(Base):
         DateTime(timezone=True), nullable=True
     )
     claimed_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    lease_id: Mapped[Optional[UUID]] = mapped_column(SAUUID, nullable=True)
     dispatched_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -544,9 +596,7 @@ class Message(Base):
         SAUUID, ForeignKey("messages.id", ondelete="RESTRICT"), nullable=True
     )
     role: Mapped[MessageRole] = mapped_column(String(32), nullable=False)
-    author_type: Mapped[MessageAuthorType] = mapped_column(
-        String(32), nullable=False
-    )
+    author_type: Mapped[MessageAuthorType] = mapped_column(String(32), nullable=False)
     author_user_id: Mapped[Optional[UUID]] = mapped_column(
         SAUUID, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
@@ -575,7 +625,9 @@ class Message(Base):
         "Execution", back_populates="messages"
     )
     parts: Mapped[list["MessagePart"]] = relationship(
-        "MessagePart", back_populates="message", cascade="all, delete-orphan",
+        "MessagePart",
+        back_populates="message",
+        cascade="all, delete-orphan",
         order_by="MessagePart.ordinal",
     )
 
@@ -583,7 +635,9 @@ class Message(Base):
 class MessagePart(Base):
     __tablename__ = "message_parts"
     __table_args__ = (
-        UniqueConstraint("message_id", "ordinal", name="uq_message_parts_message_ordinal"),
+        UniqueConstraint(
+            "message_id", "ordinal", name="uq_message_parts_message_ordinal"
+        ),
         CheckConstraint("ordinal >= 1", name="ck_message_parts_ordinal_positive"),
     )
 
@@ -620,6 +674,7 @@ __all__ = [
     "Execution",
     "ExecutionDispatchOutbox",
     "ExecutionEvent",
+    "ExecutionInputArtifact",
     "ExecutionKind",
     "ExecutionSnapshot",
     "ExecutionStatus",

@@ -15,6 +15,7 @@ from .execution import (
     Execution,
     ExecutionDispatchOutbox,
     ExecutionEvent,
+    ExecutionInputArtifact,
     ExecutionKind,
     ExecutionSnapshot,
     ExecutionStatus,
@@ -33,6 +34,7 @@ from .execution import (
 )
 from .extension import (
     CapabilityDefinition,
+    ExtensionDeliveryMode,
     ExtensionGrant,
     ExtensionInstallation,
     ExtensionInstallationStatus,
@@ -89,6 +91,7 @@ __all__ = [
     "Execution",
     "ExecutionDispatchOutbox",
     "ExecutionEvent",
+    "ExecutionInputArtifact",
     "ExecutionKind",
     "ExecutionSnapshot",
     "ExecutionStatus",
@@ -105,6 +108,7 @@ __all__ = [
     "Turn",
     "TurnStatus",
     "CapabilityDefinition",
+    "ExtensionDeliveryMode",
     "ExtensionGrant",
     "ExtensionInstallation",
     "ExtensionInstallationStatus",

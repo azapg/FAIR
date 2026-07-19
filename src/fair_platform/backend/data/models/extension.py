@@ -32,6 +32,11 @@ class ExtensionInstallationStatus(str, Enum):
     revoked = "revoked"
 
 
+class ExtensionDeliveryMode(str, Enum):
+    webhook = "webhook"
+    runner = "runner"
+
+
 class GrantDecision(str, Enum):
     allow = "allow"
     deny = "deny"
@@ -49,6 +54,9 @@ class ExtensionInstallation(Base):
     extension_id: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     version: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    delivery_mode: Mapped[ExtensionDeliveryMode] = mapped_column(
+        String(32), nullable=False, default=ExtensionDeliveryMode.webhook
+    )
     dispatch_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     health_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     manifest_version: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
@@ -110,6 +118,9 @@ class CapabilityDefinition(Base):
         json_document_type(), nullable=False, default=list
     )
     declared_effects: Mapped[list[str]] = mapped_column(
+        json_document_type(), nullable=False, default=list
+    )
+    tool_capabilities: Mapped[list[str]] = mapped_column(
         json_document_type(), nullable=False, default=list
     )
     supports_streaming: Mapped[bool] = mapped_column(
@@ -222,6 +233,7 @@ class ExtensionGrant(Base):
 __all__ = [
     "CapabilityDefinition",
     "ExtensionGrant",
+    "ExtensionDeliveryMode",
     "ExtensionInstallation",
     "ExtensionInstallationStatus",
     "GrantDecision",

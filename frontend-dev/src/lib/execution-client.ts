@@ -38,7 +38,12 @@ export async function createExecutionThread(title = "Live chat"): Promise<Thread
 
 export async function createExecutionTurn(
   threadId: string,
-  input: { content: string; target?: string; capabilityId?: string; clientRequestId?: string },
+  input: {
+    content: string;
+    capabilityDefinitionId: string;
+    clientRequestId?: string;
+    input?: Record<string, unknown>;
+  },
 ): Promise<Turn> {
   const response = await api.post<Turn>(
     `/v1/threads/${threadId}/turns`,

@@ -38,7 +38,7 @@ If your assignment requires specific files—like a template, a reading list, or
 
 Once the assignment is live, you can click on its name to see the **Submissions** table.
 - **View Work:** See a list of all students and the files they have turned in.
-- **AI Assistance:** If you have workflows set up, you can use AI to help transcribe, analyze, or draft grades for these submissions.
+- **AI Extensions:** Assignment agents and graders use Capabilities and Executions. See the current [assignments and grading status](/en/extensions/assignments-and-grading).
 - **Feedback:** Provide comments and finalize grades for your students to see.
 
 <Warning>Deleting an assignment will also delete all student work and grades associated with it. This action cannot be undone.</Warning>
@@ -46,13 +46,13 @@ Once the assignment is live, you can click on its name to see the **Submissions*
 ## Next Steps
 <Columns cols={2}>
     <Card
-      title="Workflows and Plugins"
+      title="Agents and Grading"
       icon="bolt"
-      href="/en/platform/workflows"
+      href="/en/extensions/assignments-and-grading"
       arrow="true"
       cta="Learn more"
     >
-      Learn how to automate the grading process for your new assignment.
+      See how Extensions connect agents and graders to assignments.
     </Card>
     
     <Card

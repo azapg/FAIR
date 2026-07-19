@@ -162,13 +162,13 @@ def test_execution_list_filters_by_typed_scope_and_course_owner(
         owned_execution = create_execution(
             session,
             kind="flow",
-            initiated_by_user_id=None,
+            initiated_by_user_id=instructor.id,
             submission_ids=[submission.id],
         )
         create_execution(
             session,
             kind="flow",
-            initiated_by_user_id=None,
+            initiated_by_user_id=other_instructor.id,
             submission_ids=[other_submission.id],
         )
         session.commit()

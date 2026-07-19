@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -31,6 +31,7 @@ from fair_platform.backend.services.artifact_version_service import (
     sha256_hex,
 )
 from fair_platform.backend.services.execution_outbox import (
+    DispatchStateError,
     claim_dispatch,
     enqueue_dispatch,
     mark_dispatched,
@@ -235,9 +236,60 @@ def test_outbox_claims_and_completes_a_dispatch(test_db):
         assert claimed.attempt_count == 1
         assert claimed.status is DispatchStatus.leased
 
-        completed = mark_dispatched(session, claimed.id)
+        completed = mark_dispatched(
+            session,
+            claimed.id,
+            lease_id=claimed.lease_id,
+        )
         session.commit()
         assert completed.status is DispatchStatus.dispatched
+
+
+def test_stale_webhook_worker_cannot_complete_a_reclaimed_dispatch(test_db):
+    with test_db() as session:
+        user = _user()
+        session.add(user)
+        session.flush()
+        execution = _execution(session, user)
+        dispatch = enqueue_dispatch(
+            session,
+            execution_id=execution.id,
+            target="mock.extension",
+            payload={},
+        )
+        session.commit()
+
+        now = datetime.now(timezone.utc)
+        first = claim_dispatch(
+            session,
+            worker_id="worker-1",
+            lease_seconds=10,
+            now=now,
+        )
+        first_lease_id = first.lease_id
+        session.commit()
+        second = claim_dispatch(
+            session,
+            worker_id="worker-2",
+            lease_seconds=10,
+            now=now + timedelta(seconds=11),
+        )
+        session.commit()
+
+        assert second.id == dispatch.id
+        assert second.lease_id != first_lease_id
+        with pytest.raises(DispatchStateError, match="lease does not match"):
+            mark_dispatched(
+                session,
+                dispatch.id,
+                lease_id=first_lease_id,
+                dispatched_at=now + timedelta(seconds=12),
+            )
+        session.rollback()
+        assert (
+            session.get(type(dispatch), dispatch.id).status
+            == DispatchStatus.leased.value
+        )
 
 
 def test_message_projection_keeps_ordered_typed_parts(test_db):
@@ -299,7 +351,7 @@ def test_event_projection_and_rebuild_are_replayable(test_db):
             payload={
                 "message_id": str(message_id),
                 "role": "assistant",
-                "author_type": "platform",
+                "author_type": "extension",
                 "ordinal": 1,
             },
         )
@@ -344,7 +396,9 @@ def test_event_projection_and_rebuild_are_replayable(test_db):
         assert _enum_value(message.status) == "completed"
         assert _enum_value(execution.status) == "completed"
         assert execution.snapshot.projection["event_count"] == 4
-        assert len(replay_execution_events(session, execution.id, after_sequence=2)) == 2
+        assert (
+            len(replay_execution_events(session, execution.id, after_sequence=2)) == 2
+        )
 
         snapshot = rebuild_execution_projection(session, execution.id)
         session.commit()

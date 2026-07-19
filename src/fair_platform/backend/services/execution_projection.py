@@ -34,6 +34,30 @@ TERMINAL_STATUSES = {
     ExecutionStatus.cancelled.value,
     ExecutionStatus.expired.value,
 }
+ALLOWED_STATUS_TRANSITIONS = {
+    ExecutionStatus.queued.value: {
+        ExecutionStatus.running.value,
+        ExecutionStatus.waiting.value,
+        ExecutionStatus.completed.value,
+        ExecutionStatus.failed.value,
+        ExecutionStatus.cancelled.value,
+        ExecutionStatus.expired.value,
+    },
+    ExecutionStatus.running.value: {
+        ExecutionStatus.waiting.value,
+        ExecutionStatus.completed.value,
+        ExecutionStatus.failed.value,
+        ExecutionStatus.cancelled.value,
+        ExecutionStatus.expired.value,
+    },
+    ExecutionStatus.waiting.value: {
+        ExecutionStatus.running.value,
+        ExecutionStatus.completed.value,
+        ExecutionStatus.failed.value,
+        ExecutionStatus.cancelled.value,
+        ExecutionStatus.expired.value,
+    },
+}
 
 
 class ExecutionProjectionError(ValueError):
@@ -64,7 +88,9 @@ def _uuid(payload: dict[str, Any], field: str, *, required: bool = True) -> UUID
     try:
         return UUID(str(raw))
     except (TypeError, ValueError) as exc:
-        raise ExecutionProjectionError(f"event payload field {field} must be a UUID") from exc
+        raise ExecutionProjectionError(
+            f"event payload field {field} must be a UUID"
+        ) from exc
 
 
 def _datetime(payload: dict[str, Any], field: str) -> datetime | None:
@@ -76,11 +102,15 @@ def _datetime(payload: dict[str, Any], field: str) -> datetime | None:
     try:
         return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
     except ValueError as exc:
-        raise ExecutionProjectionError(f"event payload field {field} must be an ISO datetime") from exc
+        raise ExecutionProjectionError(
+            f"event payload field {field} must be an ISO datetime"
+        ) from exc
 
 
 def _next_message_ordinal(session: Session, execution: Execution) -> int:
-    query = select(func.max(Message.ordinal)).where(Message.thread_id == execution.thread_id)
+    query = select(func.max(Message.ordinal)).where(
+        Message.thread_id == execution.thread_id
+    )
     if execution.turn_id is not None:
         query = query.where(Message.turn_id == execution.turn_id)
     return int(session.scalar(query) or 0) + 1
@@ -108,22 +138,48 @@ def _ensure_message(
     session: Session,
     execution: Execution,
     payload: dict[str, Any],
+    *,
+    producer_source: str,
 ) -> Message:
     message_id = _uuid(payload, "message_id")
     message = session.get(Message, message_id)
     if message is not None:
+        if message.producing_execution_id != execution.id:
+            raise ExecutionProjectionError(
+                "message_id must belong to the producing Execution"
+            )
         return message
 
     role_raw = _payload_value(payload, "role", MessageRole.assistant.value)
-    author_raw = _payload_value(payload, "author_type", MessageAuthorType.platform.value)
+    author_raw = _payload_value(
+        payload, "author_type", MessageAuthorType.platform.value
+    )
     try:
         role = MessageRole(role_raw)
         author_type = MessageAuthorType(author_raw)
     except ValueError as exc:
-        raise ExecutionProjectionError("message role/author_type is not supported") from exc
+        raise ExecutionProjectionError(
+            "message role/author_type is not supported"
+        ) from exc
 
-    message_thread_id = _uuid(payload, "thread_id", required=False) or execution.thread_id
-    message_turn_id = _uuid(payload, "turn_id", required=False) or execution.turn_id
+    if (
+        author_type is not MessageAuthorType.extension
+        and not producer_source.startswith("fair.")
+    ):
+        raise ExecutionProjectionError(
+            "Extension-produced messages must use author_type 'extension'"
+        )
+    if execution.thread_id is None:
+        raise ExecutionProjectionError("message events require an Execution Thread")
+
+    supplied_thread_id = _uuid(payload, "thread_id", required=False)
+    supplied_turn_id = _uuid(payload, "turn_id", required=False)
+    if supplied_thread_id is not None and supplied_thread_id != execution.thread_id:
+        raise ExecutionProjectionError("message thread_id must match its Execution")
+    if supplied_turn_id is not None and supplied_turn_id != execution.turn_id:
+        raise ExecutionProjectionError("message turn_id must match its Execution")
+    message_thread_id = execution.thread_id
+    message_turn_id = execution.turn_id
     requested_ordinal = int(_payload_value(payload, "ordinal") or 1)
     ordinal = requested_ordinal
     if _message_ordinal_is_taken(
@@ -157,6 +213,10 @@ def _ensure_part(
     part_id = _uuid(payload, "part_id")
     part = session.get(MessagePart, part_id)
     if part is not None:
+        if part.message_id != message.id:
+            raise ExecutionProjectionError(
+                "part_id must belong to the event's message_id"
+            )
         return part
 
     part = MessagePart(
@@ -211,6 +271,8 @@ def _ensure_interaction(
 def _apply_execution_lifecycle(
     execution: Execution,
     event: ExecutionEvent,
+    *,
+    force: bool = False,
 ) -> None:
     suffix = event.type.removeprefix("execution.")
     payload = event.payload or {}
@@ -233,6 +295,31 @@ def _apply_execution_lifecycle(
     if next_status not in allowed:
         raise ExecutionProjectionError(f"unsupported Execution status {next_status!r}")
 
+    current_status = _value(execution.status)
+    if not force and next_status == current_status:
+        raise ExecutionProjectionError(
+            f"Execution is already in status {current_status!r}"
+        )
+    if not force and next_status not in ALLOWED_STATUS_TRANSITIONS.get(
+        current_status, set()
+    ):
+        raise ExecutionProjectionError(
+            f"Execution cannot transition from {current_status!r} to {next_status!r}"
+        )
+    if (
+        not force
+        and execution.cancellation_requested_at is not None
+        and next_status
+        not in {
+            ExecutionStatus.cancelled.value,
+            ExecutionStatus.failed.value,
+            ExecutionStatus.expired.value,
+        }
+    ):
+        raise ExecutionProjectionError(
+            "Execution may only cancel or fail after cancellation is requested"
+        )
+
     execution.status = next_status
     if next_status == ExecutionStatus.running.value and execution.started_at is None:
         execution.started_at = event.occurred_at
@@ -245,14 +332,14 @@ def _apply_execution_lifecycle(
     if next_status in TERMINAL_STATUSES:
         execution.finished_at = execution.finished_at or event.received_at
     if next_status == ExecutionStatus.completed.value:
-        execution.output_summary = _payload_value(payload, "output_summary") or _payload_value(
-            payload, "output"
-        )
+        execution.output_summary = _payload_value(
+            payload, "output_summary"
+        ) or _payload_value(payload, "output")
     if next_status == ExecutionStatus.failed.value:
         execution.error_code = _payload_value(payload, "error_code")
-        execution.error_summary = _payload_value(payload, "error_summary") or _payload_value(
-            payload, "error"
-        )
+        execution.error_summary = _payload_value(
+            payload, "error_summary"
+        ) or _payload_value(payload, "error")
 
 
 def apply_execution_event(
@@ -276,24 +363,34 @@ def apply_execution_event(
     if snapshot is not None and not force and snapshot.last_sequence >= event.sequence:
         return snapshot
 
-    _apply_execution_lifecycle(execution, event)
+    _apply_execution_lifecycle(execution, event, force=force)
     payload = event.payload or {}
 
     if event.type == "message.started":
-        _ensure_message(session, execution, payload)
+        _ensure_message(
+            session, execution, payload, producer_source=event.producer_source
+        )
     elif event.type in {"message.part.created", "message.delta"}:
-        message = _ensure_message(session, execution, payload)
+        message = _ensure_message(
+            session, execution, payload, producer_source=event.producer_source
+        )
         if event.type == "message.delta":
             part_payload = dict(payload)
             part_payload.pop("text", None)
             part_payload.pop("delta", None)
             part = _ensure_part(session, message, part_payload)
-            delta = _payload_value(payload, "text") or _payload_value(payload, "delta") or ""
+            delta = (
+                _payload_value(payload, "text")
+                or _payload_value(payload, "delta")
+                or ""
+            )
             part.text_content = (part.text_content or "") + str(delta)
         else:
             _ensure_part(session, message, payload)
     elif event.type in {"message.completed", "message.failed", "message.cancelled"}:
-        message = _ensure_message(session, execution, payload)
+        message = _ensure_message(
+            session, execution, payload, producer_source=event.producer_source
+        )
         message.status = {
             "message.completed": MessageStatus.completed,
             "message.failed": MessageStatus.failed,
@@ -314,7 +411,9 @@ def apply_execution_event(
                 _payload_value(payload, "status") or InteractionStatus.resolved.value
             )
         except ValueError as exc:
-            raise ExecutionProjectionError("interaction status is not supported") from exc
+            raise ExecutionProjectionError(
+                "interaction status is not supported"
+            ) from exc
         interaction.response = _payload_value(payload, "response")
         interaction.resolved_by_user_id = _uuid(
             payload, "resolved_by_user_id", required=False
@@ -397,6 +496,14 @@ def rebuild_execution_projection(
         session.delete(snapshot)
         session.flush()
 
+    execution.status = ExecutionStatus.queued
+    execution.waiting_reason = None
+    execution.started_at = None
+    execution.finished_at = None
+    execution.output_summary = None
+    execution.error_code = None
+    execution.error_summary = None
+
     # Message projections produced by this Execution are derived state. Clear
     # them before replay so message.delta events do not append their text a
     # second time. User-authored messages are not owned by the Execution and
@@ -413,7 +520,9 @@ def rebuild_execution_projection(
 
     produced_interactions = list(
         session.scalars(
-            select(InteractionRequest).where(InteractionRequest.execution_id == execution_id)
+            select(InteractionRequest).where(
+                InteractionRequest.execution_id == execution_id
+            )
         )
     )
     for interaction in produced_interactions:

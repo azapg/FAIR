@@ -13,6 +13,14 @@ import { ChatMessage } from "@/components/chat/chat-message";
 import { ElicitationPanel } from "@/components/chat/elicitation-panel";
 import { useExecutionChat } from "@/hooks/use-execution-chat";
 import type { Message } from "@/lib/chat-contract";
+import { useCapabilities } from "@/hooks/use-extensions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const noop = () => undefined;
 
@@ -54,7 +62,17 @@ const LiveMessageRow = React.memo(function LiveMessageRow({
 });
 
 export default function LiveChatPage() {
-  const live = useExecutionChat();
+  const capabilities = useCapabilities();
+  const agentCapabilities = (capabilities.data ?? []).filter(
+    (capability) => capability.kind === "agent",
+  );
+  const [capabilityDefinitionId, setCapabilityDefinitionId] = React.useState("");
+  React.useEffect(() => {
+    if (!capabilityDefinitionId && agentCapabilities[0]) {
+      setCapabilityDefinitionId(agentCapabilities[0].id);
+    }
+  }, [agentCapabilities, capabilityDefinitionId]);
+  const live = useExecutionChat(capabilityDefinitionId || undefined);
   const pending = live.pendingInteraction;
   const isStreaming = live.status === "streaming";
   const activeStreamingMessageId = isStreaming
@@ -91,10 +109,34 @@ export default function LiveChatPage() {
               {live.executionId ? `Execution ${live.executionId.slice(0, 8)} · ${live.status}` : "No active Execution"}
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={live.reset}>
-            <RotateCcw className="mr-2 size-4" />
-            Reset
-          </Button>
+          <div className="flex items-center gap-2">
+            <Select
+              value={capabilityDefinitionId}
+              onValueChange={setCapabilityDefinitionId}
+              disabled={live.status === "streaming" || agentCapabilities.length === 0}
+            >
+              <SelectTrigger size="sm" className="max-w-72">
+                <SelectValue
+                  placeholder={
+                    capabilities.isLoading
+                      ? "Loading agents…"
+                      : "No installed agent capability"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {agentCapabilities.map((capability) => (
+                  <SelectItem key={capability.id} value={capability.id}>
+                    {capability.capabilityId} · {capability.version}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" size="sm" onClick={live.reset}>
+              <RotateCcw className="mr-2 size-4" />
+              Reset
+            </Button>
+          </div>
         </header>
 
         <main className="min-h-0 flex-1">
@@ -141,8 +183,18 @@ export default function LiveChatPage() {
                 )}
                 <ChatInput
                   onSend={handleSend}
-                  disabled={isStreaming || Boolean(pending)}
-                  placeholder={pending ? "Awaiting your response above…" : "Ask the Execution service…"}
+                  disabled={
+                    isStreaming ||
+                    Boolean(pending) ||
+                    !capabilityDefinitionId
+                  }
+                  placeholder={
+                    pending
+                      ? "Awaiting your response above…"
+                      : capabilityDefinitionId
+                        ? "Ask the selected agent…"
+                        : "Install or select an agent capability…"
+                  }
                 />
               </div>
             </div>

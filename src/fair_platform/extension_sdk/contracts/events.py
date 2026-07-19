@@ -60,6 +60,7 @@ class ExecutionEventRead(ExecutionEventCreate):
 class ExecutionEventBatch(BaseModel):
     model_config = contract_model_config
 
+    contract: Literal["fair.execution-event.v1"] = "fair.execution-event.v1"
     events: list[ExecutionEventCreate] = Field(min_length=1, max_length=100)
 
 

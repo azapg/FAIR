@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import asyncio
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
@@ -25,6 +26,8 @@ from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import (
     CapabilityDefinition,
+    Execution,
+    ExecutionDispatchOutbox,
     ExtensionClient,
     ExtensionGrant,
     ExtensionInstallation,
@@ -33,10 +36,48 @@ from fair_platform.backend.data.models import (
     User,
 )
 from fair_platform.backend.services.extension_auth import issue_extension_secret
-from fair_platform.extension_sdk.contracts.extension import CapabilityManifest, ExtensionManifest
+from fair_platform.backend.core.security.dependencies import require_extension_client
+from fair_platform.backend.services.execution_outbox import (
+    DispatchStateError,
+    acknowledge_dispatch,
+    claim_dispatch,
+    mark_dispatch_failed,
+)
+from fair_platform.backend.services.execution_protocol import (
+    ExecutionProtocolError,
+    build_execution_command,
+)
+from fair_platform.backend.services.execution_lifecycle import expire_due_executions
+from fair_platform.extension_sdk.contracts.extension import (
+    CapabilityManifest,
+    ExtensionManifest,
+)
+from fair_platform.extension_sdk.contracts.protocol import (
+    RunnerClaimRequest,
+    RunnerCommandAck,
+    RunnerCommandLease,
+)
 
 
 router = APIRouter()
+
+
+def _runner_installation(db: Session, client: ExtensionClient) -> ExtensionInstallation:
+    installation = db.scalar(
+        select(ExtensionInstallation).where(
+            ExtensionInstallation.extension_id == client.extension_id
+        )
+    )
+    if (
+        installation is None
+        or _value(installation.status) != ExtensionInstallationStatus.enabled.value
+        or _value(installation.delivery_mode) != "runner"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Extension has no enabled runner installation",
+        )
+    return installation
 
 
 def _value(value: object) -> str:
@@ -76,6 +117,7 @@ def _installation_read(row: ExtensionInstallation) -> InstallationRead:
         extension_id=row.extension_id,
         display_name=row.display_name,
         version=row.version,
+        delivery_mode=_value(row.delivery_mode),
         dispatch_url=row.dispatch_url,
         health_url=row.health_url,
         manifest_version=row.manifest_version,
@@ -113,7 +155,11 @@ def _client_read(row: ExtensionClient) -> ExtensionClientRead:
     )
 
 
-@router.post("/installations", response_model=InstallationRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/installations",
+    response_model=InstallationRead,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_installation(
     payload: InstallationCreate,
     current_user: User = Depends(get_current_user),
@@ -125,7 +171,8 @@ def create_installation(
         extension_id=manifest.extension_id,
         display_name=manifest.display_name,
         version=manifest.version,
-        dispatch_url=str(manifest.dispatch_url),
+        delivery_mode=manifest.delivery_mode,
+        dispatch_url=str(manifest.dispatch_url) if manifest.dispatch_url else None,
         health_url=str(manifest.health_url) if manifest.health_url else None,
         manifest_version=manifest.manifest_version,
         manifest=manifest.model_dump(by_alias=True, mode="json"),
@@ -136,35 +183,131 @@ def create_installation(
     for capability in manifest.capabilities:
         raw = capability.model_dump(by_alias=True, mode="json")
         base = f"urn:fair:extension:{manifest.extension_id}:capability:{capability.capability_id}:{capability.version}"
-        db.add(CapabilityDefinition(
-            installation_id=row.id,
-            capability_id=capability.capability_id,
-            kind=capability.kind,
-            version=capability.version,
-            input_schema_uri=_schema_uri(raw["inputSchema"], f"{base}:input"),
-            output_schema_uri=_schema_uri(raw["outputSchema"], f"{base}:output"),
-            config_schema_uri=(
-                _schema_uri(raw["configSchema"], f"{base}:config")
-                if raw.get("configSchema") else None
-            ),
-            requested_scopes=capability.requested_scopes,
-            declared_effects=capability.declared_effects,
-            supports_streaming=capability.supports_streaming,
-            supports_cancellation=capability.supports_cancellation,
-            supports_resume=capability.supports_resume,
-            supports_batch=capability.supports_batch,
-            manifest_snapshot=raw,
-        ))
+        db.add(
+            CapabilityDefinition(
+                installation_id=row.id,
+                capability_id=capability.capability_id,
+                kind=capability.kind,
+                version=capability.version,
+                input_schema_uri=_schema_uri(raw["inputSchema"], f"{base}:input"),
+                output_schema_uri=_schema_uri(raw["outputSchema"], f"{base}:output"),
+                config_schema_uri=(
+                    _schema_uri(raw["configSchema"], f"{base}:config")
+                    if raw.get("configSchema")
+                    else None
+                ),
+                requested_scopes=capability.requested_scopes,
+                declared_effects=capability.declared_effects,
+                tool_capabilities=capability.tool_capabilities,
+                supports_streaming=capability.supports_streaming,
+                supports_cancellation=capability.supports_cancellation,
+                supports_resume=capability.supports_resume,
+                supports_batch=capability.supports_batch,
+                manifest_snapshot=raw,
+            )
+        )
     try:
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Extension installation already exists") from exc
-    return _installation_read(db.scalar(
-        select(ExtensionInstallation)
-        .options(selectinload(ExtensionInstallation.capabilities))
-        .where(ExtensionInstallation.id == row.id)
-    ))
+        raise HTTPException(
+            status_code=409, detail="Extension installation already exists"
+        ) from exc
+    return _installation_read(
+        db.scalar(
+            select(ExtensionInstallation)
+            .options(selectinload(ExtensionInstallation.capabilities))
+            .where(ExtensionInstallation.id == row.id)
+        )
+    )
+
+
+@router.post("/runner/commands/claim", response_model=None)
+async def claim_runner_command(
+    payload: RunnerClaimRequest,
+    extension_client: ExtensionClient = Depends(
+        require_extension_client(("runner:commands",))
+    ),
+    db: Session = Depends(session_dependency),
+) -> RunnerCommandLease | Response:
+    """Long-poll one durable command for a runner behind NAT."""
+
+    installation = _runner_installation(db, extension_client)
+    stop_at = datetime.now(timezone.utc) + timedelta(seconds=payload.wait_seconds)
+    while True:
+        expired_count = expire_due_executions(db)
+        dispatch = claim_dispatch(
+            db,
+            worker_id=f"runner:{installation.id}:{payload.runner_id}",
+            lease_seconds=payload.lease_seconds,
+            delivery_mode="runner",
+            installation_id=installation.id,
+        )
+        if dispatch is not None:
+            try:
+                command = build_execution_command(db, dispatch)
+            except ExecutionProtocolError as exc:
+                mark_dispatch_failed(
+                    db,
+                    dispatch.id,
+                    lease_id=dispatch.lease_id,
+                    error=str(exc),
+                    dead_letter=True,
+                )
+                db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=str(exc),
+                ) from exc
+            lease = RunnerCommandLease(
+                lease_id=dispatch.lease_id,
+                lease_expires_at=dispatch.lease_expires_at,
+                command=command,
+            )
+            db.commit()
+            return lease
+        if expired_count:
+            db.commit()
+        else:
+            db.rollback()
+        remaining = (stop_at - datetime.now(timezone.utc)).total_seconds()
+        if remaining <= 0:
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        await asyncio.sleep(min(0.25, remaining))
+
+
+@router.post(
+    "/runner/commands/{dispatch_id}/ack",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def acknowledge_runner_command(
+    dispatch_id: UUID,
+    payload: RunnerCommandAck,
+    extension_client: ExtensionClient = Depends(
+        require_extension_client(("runner:commands",))
+    ),
+    db: Session = Depends(session_dependency),
+) -> Response:
+    """Acknowledge only the exact lease a runner durably accepted."""
+
+    installation = _runner_installation(db, extension_client)
+    dispatch = db.get(ExecutionDispatchOutbox, dispatch_id)
+    execution = (
+        db.get(Execution, dispatch.execution_id) if dispatch is not None else None
+    )
+    if dispatch is None or execution is None:
+        raise HTTPException(status_code=404, detail="Runner command not found")
+    if execution.extension_installation_id != installation.id:
+        raise HTTPException(
+            status_code=403, detail="Runner command is owned by another installation"
+        )
+    try:
+        acknowledge_dispatch(db, dispatch.id, lease_id=payload.lease_id)
+        db.commit()
+    except DispatchStateError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/installations", response_model=list[InstallationRead])
@@ -174,9 +317,11 @@ def list_installations(
     db: Session = Depends(session_dependency),
 ) -> list[InstallationRead]:
     _require_discovery(current_user)
-    statement = select(ExtensionInstallation).options(
-        selectinload(ExtensionInstallation.capabilities)
-    ).order_by(ExtensionInstallation.extension_id)
+    statement = (
+        select(ExtensionInstallation)
+        .options(selectinload(ExtensionInstallation.capabilities))
+        .order_by(ExtensionInstallation.extension_id)
+    )
     if include_disabled:
         _require_admin(current_user)
     else:
@@ -193,9 +338,11 @@ def get_installation(
     db: Session = Depends(session_dependency),
 ) -> InstallationRead:
     _require_discovery(current_user)
-    row = db.scalar(select(ExtensionInstallation).options(
-        selectinload(ExtensionInstallation.capabilities)
-    ).where(ExtensionInstallation.id == installation_id))
+    row = db.scalar(
+        select(ExtensionInstallation)
+        .options(selectinload(ExtensionInstallation.capabilities))
+        .where(ExtensionInstallation.id == installation_id)
+    )
     if row is None:
         raise HTTPException(status_code=404, detail="Extension installation not found")
     if _value(row.status) != "enabled":
@@ -228,11 +375,16 @@ def list_capabilities(
     db: Session = Depends(session_dependency),
 ) -> list[CapabilityRead]:
     _require_discovery(current_user)
-    statement = select(CapabilityDefinition).join(ExtensionInstallation).where(
-        ExtensionInstallation.status == ExtensionInstallationStatus.enabled
-    ).order_by(CapabilityDefinition.capability_id, CapabilityDefinition.version)
+    statement = (
+        select(CapabilityDefinition)
+        .join(ExtensionInstallation)
+        .where(ExtensionInstallation.status == ExtensionInstallationStatus.enabled)
+        .order_by(CapabilityDefinition.capability_id, CapabilityDefinition.version)
+    )
     if installation_id:
-        statement = statement.where(CapabilityDefinition.installation_id == installation_id)
+        statement = statement.where(
+            CapabilityDefinition.installation_id == installation_id
+        )
     return [_capability_read(row) for row in db.scalars(statement)]
 
 
@@ -243,10 +395,14 @@ def get_capability(
     db: Session = Depends(session_dependency),
 ) -> CapabilityRead:
     _require_discovery(current_user)
-    row = db.scalar(select(CapabilityDefinition).join(ExtensionInstallation).where(
-        CapabilityDefinition.id == capability_id,
-        ExtensionInstallation.status == ExtensionInstallationStatus.enabled,
-    ))
+    row = db.scalar(
+        select(CapabilityDefinition)
+        .join(ExtensionInstallation)
+        .where(
+            CapabilityDefinition.id == capability_id,
+            ExtensionInstallation.status == ExtensionInstallationStatus.enabled,
+        )
+    )
     if row is None:
         raise HTTPException(status_code=404, detail="Capability not found")
     return _capability_read(row)
@@ -265,9 +421,13 @@ def create_grant(
     if payload.capability_definition_id:
         capability = db.get(CapabilityDefinition, payload.capability_definition_id)
         if capability is None or capability.installation_id != installation.id:
-            raise HTTPException(status_code=422, detail="Capability does not belong to installation")
+            raise HTTPException(
+                status_code=422, detail="Capability does not belong to installation"
+            )
         if payload.effect not in (capability.declared_effects or []):
-            raise HTTPException(status_code=422, detail="Effect is not declared by capability")
+            raise HTTPException(
+                status_code=422, detail="Effect is not declared by capability"
+            )
     values = payload.model_dump()
     values["decision"] = GrantDecision(payload.decision)
     row = ExtensionGrant(
@@ -279,7 +439,9 @@ def create_grant(
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Grant already exists for this scope") from exc
+        raise HTTPException(
+            status_code=409, detail="Grant already exists for this scope"
+        ) from exc
     db.refresh(row)
     return _grant_read(row)
 
@@ -291,7 +453,9 @@ def list_grants(
     db: Session = Depends(session_dependency),
 ) -> list[GrantRead]:
     _require_admin(current_user)
-    statement = select(ExtensionGrant).order_by(ExtensionGrant.created_at, ExtensionGrant.id)
+    statement = select(ExtensionGrant).order_by(
+        ExtensionGrant.created_at, ExtensionGrant.id
+    )
     if installation_id:
         statement = statement.where(ExtensionGrant.installation_id == installation_id)
     return [_grant_read(row) for row in db.scalars(statement)]

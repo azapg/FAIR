@@ -670,7 +670,7 @@ class ArtifactManager:
         # Students can view artifacts from their own submissions
         if artifact.submissions:
             for submission in artifact.submissions:
-                if submission.submitter_id == user.id:
+                if submission.submitter.user_id == user.id:
                     return True
 
         # Enrolled users can view course and assignment scoped artifacts.

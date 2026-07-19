@@ -38,8 +38,8 @@ class TurnCreate(BaseModel):
 
     content: str = Field(min_length=1, max_length=100_000)
     client_request_id: str | None = Field(default=None, max_length=255)
-    capability_id: str = Field(default="agent.default", min_length=1, max_length=255)
-    target: str = Field(default="agent.default", min_length=1, max_length=255)
+    capability_definition_id: UUID
+    input: dict[str, Any] | None = None
 
 
 class TurnRead(BaseModel):
@@ -70,9 +70,11 @@ class ExecutionRead(BaseModel):
     root_execution_id: UUID
     retry_of_execution_id: UUID | None
     attempt: int
+    idempotency_key: str | None
     kind: str
     capability_id: str | None
     capability_version: str | None
+    capability_definition_id: UUID | None
     flow_version_id: UUID | None
     initiated_by_user_id: UUID | None
     extension_installation_id: UUID | None

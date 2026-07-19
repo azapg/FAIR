@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Iterator
 
@@ -23,9 +24,12 @@ from fair_platform.backend.data.models.submission_event import (
 from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.services.execution_store import (
+    ExecutionStoreError,
     append_execution_event,
     create_execution,
 )
+from fair_platform.backend.services.execution_projection import append_and_project_event
+from fair_platform.backend.data.models.execution import Execution, ExecutionEvent
 
 
 def _normalize_postgres_url(raw_url: str) -> str:
@@ -83,7 +87,9 @@ def postgres_database_url() -> Iterator[str]:
         test_engine = create_engine(test_url, future=True)
         test_engine.dispose()
 
-        admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT", future=True)
+        admin_engine = create_engine(
+            admin_url, isolation_level="AUTOCOMMIT", future=True
+        )
         with admin_engine.connect() as conn:
             conn.execute(
                 text(
@@ -111,6 +117,7 @@ def test_postgres_json_columns_are_jsonb(postgres_database_url: str) -> None:
         ("executions", "input"),
         ("execution_events", "payload"),
         ("extension_installations", "manifest"),
+        ("capability_definitions", "tool_capabilities"),
         ("artifact_versions", "provenance"),
         ("submission_events", "details"),
         ("rubrics", "content"),
@@ -134,6 +141,68 @@ def test_postgres_json_columns_are_jsonb(postgres_database_url: str) -> None:
             assert row[0] == "jsonb"
 
     engine.dispose()
+
+
+def test_postgres_serializes_competing_terminal_outcomes(
+    postgres_database_url: str,
+) -> None:
+    """The Execution row lock permits exactly one terminal outcome."""
+
+    engine = create_engine(postgres_database_url, future=True)
+    with Session(engine) as session:
+        user = User(
+            id=uuid.uuid4(),
+            name="Terminal Race User",
+            email=f"terminal-race-{uuid.uuid4()}@example.test",
+            role="admin",
+            password_hash=None,
+        )
+        session.add(user)
+        session.flush()
+        execution = create_execution(
+            session,
+            kind="agent",
+            initiated_by_user_id=user.id,
+        )
+        execution_id = execution.id
+        session.commit()
+
+    def terminate(event_type: str) -> str:
+        with Session(engine) as session:
+            try:
+                append_and_project_event(
+                    session,
+                    execution_id=execution_id,
+                    producer_source="postgres-race",
+                    producer_event_id=event_type,
+                    event_type=event_type,
+                    schema_uri=f"urn:fair:event:{event_type}:v1",
+                    payload={},
+                )
+                session.commit()
+                return "accepted"
+            except ExecutionStoreError:
+                session.rollback()
+                return "rejected"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(
+            pool.map(terminate, ("execution.completed", "execution.failed"))
+        )
+    assert sorted(outcomes) == ["accepted", "rejected"]
+
+    with Session(engine) as session:
+        execution = session.get(Execution, execution_id)
+        events = list(
+            session.query(ExecutionEvent).filter(
+                ExecutionEvent.execution_id == execution_id
+            )
+        )
+        assert execution.status in {"completed", "failed"}
+        assert len(events) == 1
+        assert events[0].type == f"execution.{execution.status}"
+    engine.dispose()
+
 
 def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
     engine = create_engine(postgres_database_url, future=True)

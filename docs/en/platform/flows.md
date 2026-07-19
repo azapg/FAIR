@@ -32,4 +32,4 @@ The runtime executes nodes in definition order. Each step is a child Execution w
 
 The removed `/api/workflows` and `/api/workflow-runs` resources have no compatibility aliases.
 
-See [Core and Extensions](/en/platform/extension-architecture) for the shared lifecycle and API boundary.
+See [Capabilities](/en/extensions/capabilities) and [Executions](/en/extensions/executions) for the shared runtime.
