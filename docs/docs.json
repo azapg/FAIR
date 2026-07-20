@@ -84,6 +84,7 @@
                 "group": "Start here",
                 "pages": [
                   "en/extensions/overview",
+                  "en/extensions/quickstart",
                   "en/extensions/manifests",
                   "en/extensions/capabilities"
                 ]
@@ -96,7 +97,6 @@
                   "en/extensions/delivery",
                   "en/extensions/events",
                   "en/extensions/artifacts",
-                  "en/extensions/tools",
                   "en/extensions/security"
                 ]
               },

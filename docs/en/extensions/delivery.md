@@ -41,7 +41,7 @@ An expired lease may be delivered again. Its `leaseId` changes; its logical comm
 
 - Webhooks verify FAIR's request signature.
 - Runners use the Installation credential only to claim and acknowledge commands.
-- Both use the command's execution token for Events, Artifacts, interactions, and tools.
+- Both use the command's execution token for Events, Artifacts, and interactions.
 
 See [Security](/en/extensions/security) before deploying either mode.
 
