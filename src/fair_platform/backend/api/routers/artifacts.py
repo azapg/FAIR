@@ -366,6 +366,9 @@ def create_execution_artifact(
         for index, part in enumerate(payload.version.parts, start=1)
     ]
     db.add_all([artifact, version])
+    # The app's session runs with autoflush=False, so these rows are invisible
+    # to the SELECT inside finalize_artifact_version until flushed explicitly.
+    db.flush()
     try:
         if payload.finalize:
             finalize_artifact_version(db, version.id)
