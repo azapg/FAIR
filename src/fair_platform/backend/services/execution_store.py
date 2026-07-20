@@ -264,6 +264,33 @@ def create_execution(
     return execution
 
 
+# Event types whose payload shape FAIR defines (and therefore may normalize).
+# Anything else -- including custom research events -- is author data.
+_STANDARD_EVENT_PREFIXES = ("execution.", "message.", "interaction.", "artifact.")
+
+
+def _to_camel(key: str) -> str:
+    head, *rest = key.split("_")
+    return head + "".join(part[:1].upper() + part[1:] for part in rest)
+
+
+def normalize_standard_event_payload(
+    event_type: str, payload: dict[str, Any]
+) -> dict[str, Any]:
+    """Rewrite snake_case keys to camelCase for FAIR-defined event types."""
+
+    if not event_type.startswith(_STANDARD_EVENT_PREFIXES):
+        return payload
+    normalized: dict[str, Any] = {}
+    for key, value in payload.items():
+        camel = _to_camel(key)
+        # An explicit camel key already present always wins over a converted one.
+        if camel in normalized and key != camel:
+            continue
+        normalized[camel] = value
+    return normalized
+
+
 def append_execution_event(
     session: Session,
     *,

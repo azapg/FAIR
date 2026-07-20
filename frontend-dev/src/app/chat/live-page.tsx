@@ -64,7 +64,7 @@ const LiveMessageRow = React.memo(function LiveMessageRow({
 export default function LiveChatPage() {
   const capabilities = useCapabilities();
   const agentCapabilities = (capabilities.data ?? []).filter(
-    (capability) => capability.kind === "agent",
+    (capability) => capability.surface === "chat.agent",
   );
   const [capabilityDefinitionId, setCapabilityDefinitionId] = React.useState("");
   React.useEffect(() => {
@@ -127,7 +127,7 @@ export default function LiveChatPage() {
               <SelectContent>
                 {agentCapabilities.map((capability) => (
                   <SelectItem key={capability.id} value={capability.id}>
-                    {capability.capabilityId} · {capability.version}
+                    {capability.displayName ?? capability.capabilityId} · {capability.version}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -133,7 +133,7 @@ def create_flow_version(
                 "extensionVersion": installation.version,
                 "capabilityId": capability.capability_id,
                 "capabilityVersion": capability.version,
-                "kind": capability.kind,
+                "surface": capability.surface,
                 "declaredEffects": list(capability.declared_effects or []),
                 "manifestSnapshot": capability.manifest_snapshot,
             }

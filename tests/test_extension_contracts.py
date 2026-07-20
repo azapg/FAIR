@@ -88,7 +88,12 @@ def test_admin_installs_manifest_and_manages_declared_grant(test_db):
     )
     assert created.status_code == 201, created.text
     installation = created.json()
-    capability = installation["capabilities"][0]
+    capability = next(
+        item
+        for item in installation["capabilities"]
+        if item["capabilityId"] == "review.assignment"
+    )
+    assert capability["surface"] == "chat.agent"
     assert capability["inputSchema"]["$id"] == "urn:fair:example:review-input"
 
     grant = client.post(
@@ -136,7 +141,11 @@ def test_non_admin_can_discover_enabled_capabilities_but_not_mutate(test_db):
     user_client = _client(test_db, user)
     capabilities = user_client.get("/api/v1/extensions/capabilities")
     assert capabilities.status_code == 200
-    assert capabilities.json()[0]["capabilityId"] == "review.assignment"
+    assert {item["capabilityId"] for item in capabilities.json()} == {
+        "review.assignment",
+        "rubric.generate",
+        "grade.essay",
+    }
     denied = user_client.post(
         "/api/v1/extensions/installations", json={"manifest": manifest}
     )

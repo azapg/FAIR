@@ -11,7 +11,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.sse import EventSourceResponse, format_sse_event
 from sqlalchemy import func, or_, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from fair_platform.backend.api.routers.auth import get_current_user
@@ -30,6 +29,7 @@ from fair_platform.backend.services.capability_validation import (
 )
 from fair_platform.backend.api.schema.execution import (
     ExecutionEventBatch,
+    FunctionInvoke,
     ExecutionEventRead,
     ExecutionRead,
     InteractionRead,
@@ -66,11 +66,8 @@ from fair_platform.backend.services.course_access import (
 from fair_platform.backend.data.models.execution import MessageAuthorType
 from fair_platform.backend.data.models.execution import EventVisibility
 from fair_platform.backend.data.models.execution import DispatchCommandKind
-from fair_platform.backend.data.models.execution import ExecutionKind
 from fair_platform.extension_sdk.contracts.protocol import (
     DelegatedExecutionAuthorization,
-    ToolInvocationRead,
-    ToolInvocationRequest,
 )
 from fair_platform.backend.services.execution_outbox import enqueue_dispatch
 from fair_platform.backend.services.capability_validation import (
@@ -87,6 +84,7 @@ from fair_platform.backend.services.execution_store import (
     EventIdentityConflict,
     ExecutionStoreError,
     create_execution,
+    normalize_standard_event_payload,
 )
 from fair_platform.backend.services.flow_runtime import (
     FlowRuntimeError,
@@ -204,6 +202,11 @@ def _assert_execution_access(execution: Execution | None, user: User) -> Executi
 
 
 def _event_read(event) -> ExecutionEventRead:
+    # Protocol 1 §2 makes camel-case the wire contract. Extensions and FAIR's
+    # own services both write standard payloads in their native casing, so
+    # normalize on the way out: every client then reads one shape, and the
+    # durable log still records exactly what the producer sent.
+    payload = normalize_standard_event_payload(event.type, event.payload)
     return ExecutionEventRead(
         id=event.id,
         execution_id=event.execution_id,
@@ -217,7 +220,7 @@ def _event_read(event) -> ExecutionEventRead:
         received_at=event.received_at,
         visibility=_enum_value(event.visibility),
         durability="durable",
-        payload=event.payload,
+        payload=payload,
         parent_event_id=event.parent_event_id,
         trace_id=event.trace_id,
         span_id=event.span_id,
@@ -316,16 +319,6 @@ def _interaction_read(interaction: InteractionRequest) -> InteractionRead:
         response=interaction.response,
         resolved_at=interaction.resolved_at,
         created_at=interaction.created_at,
-    )
-
-
-def _tool_invocation_read(execution: Execution) -> ToolInvocationRead:
-    return ToolInvocationRead(
-        execution_id=execution.id,
-        status=_enum_value(execution.status),
-        output=execution.output_summary,
-        error_code=execution.error_code,
-        error_summary=execution.error_summary,
     )
 
 
@@ -452,10 +445,10 @@ def create_turn(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Capability definition not found",
         )
-    if capability.kind != ExecutionKind.agent.value:
+    if capability.surface != "chat.agent":
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="A conversational Turn requires an agent capability",
+            detail="A conversational Turn requires a chat.agent capability",
         )
     installation = db.get(ExtensionInstallation, capability.installation_id)
     if installation is None:
@@ -529,6 +522,121 @@ def create_turn(
     )
     db.commit()
     return _turn_read(db, turn)
+
+
+@router.post(
+    "/functions/invoke",
+    response_model=ExecutionRead,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def invoke_function(
+    payload: FunctionInvoke,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ExecutionRead:
+    """Run the capability that implements a FAIR contract.
+
+    Callers name a *contract* ("fair.rubric.generate@1"), not an extension.
+    That is what lets one generic button work wherever a contract declares a
+    placement, and lets a different Extension take over the contract without
+    the UI changing.
+    """
+
+    capability = db.scalar(
+        select(CapabilityDefinition)
+        .join(ExtensionInstallation)
+        .where(
+            CapabilityDefinition.contract == payload.contract,
+            CapabilityDefinition.surface == "function",
+            ExtensionInstallation.status == ExtensionInstallationStatus.enabled,
+        )
+        .order_by(CapabilityDefinition.created_at.desc())
+    )
+    if capability is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No enabled Extension implements {payload.contract}",
+        )
+    installation = db.get(ExtensionInstallation, capability.installation_id)
+
+    course_id, assignment_id = _resolve_function_scope(db, payload, current_user)
+
+    try:
+        validate_capability_input(capability, payload.input)
+    except CapabilityInputError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    resolutions = resolve_extension_effects(
+        db,
+        installation_id=installation.id,
+        capability_definition_id=capability.id,
+        effects=tuple(capability.declared_effects or ()),
+        course_id=course_id,
+        assignment_id=assignment_id,
+    )
+    denied = sorted(
+        effect for effect, resolution in resolutions.items() if not resolution.allowed
+    )
+    if denied:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Capability is not granted effects: {', '.join(denied)}",
+        )
+
+    execution = create_execution(
+        db,
+        kind="action",
+        initiated_by_user_id=current_user.id,
+        extension_installation_id=installation.id,
+        capability_id=capability.capability_id,
+        capability_version=capability.version,
+        capability_definition_id=capability.id,
+        course_id=course_id,
+        assignment_id=assignment_id,
+        input=payload.input,
+    )
+    append_and_project_event(
+        db,
+        execution_id=execution.id,
+        producer_source="fair.platform",
+        producer_event_id=f"function:{execution.id}:accepted",
+        event_type="execution.created",
+        schema_uri="urn:fair:event:execution.created:v1",
+        payload={
+            "contract": payload.contract,
+            "capabilityDefinitionId": str(capability.id),
+            "capabilityId": capability.capability_id,
+            "capabilityVersion": capability.version,
+        },
+    )
+    enqueue_dispatch(
+        db,
+        execution_id=execution.id,
+        target=installation.extension_id,
+        payload=payload.input,
+    )
+    db.commit()
+    db.refresh(execution)
+    return _execution_read(execution)
+
+
+def _resolve_function_scope(
+    db: Session, payload: FunctionInvoke, user: User
+) -> tuple[UUID | None, UUID | None]:
+    """Authorize the course/assignment a function run claims to act in."""
+
+    assignment = db.get(Assignment, payload.assignment_id) if payload.assignment_id else None
+    if payload.assignment_id is not None and assignment is None:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    course_id = assignment.course_id if assignment else payload.course_id
+    course = db.get(Course, course_id) if course_id else None
+    if course_id is not None and course is None:
+        raise HTTPException(status_code=404, detail="Course not found")
+    if course is not None and not can_view_course(db, course, user):
+        raise HTTPException(status_code=403, detail="Course access denied")
+    return course_id, (assignment.id if assignment else None)
 
 
 @router.get("/executions/{execution_id}", response_model=ExecutionRead)
@@ -627,173 +735,6 @@ def refresh_execution_authorization(
         expires_at=issued.expires_at,
         scopes=list(issued.scopes),
     )
-
-
-@router.post(
-    "/executions/{execution_id}/tools",
-    response_model=ToolInvocationRead,
-    status_code=status.HTTP_202_ACCEPTED,
-)
-def invoke_platform_tool(
-    execution_id: UUID,
-    payload: ToolInvocationRequest,
-    authority: ExecutionAuthorization = Depends(
-        require_execution_authorization(("tools:invoke",))
-    ),
-    db: Session = Depends(session_dependency),
-) -> ToolInvocationRead:
-    """Create one durable child Execution for an explicitly allowed tool."""
-
-    parent = authority.execution
-    if parent.id != execution_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Execution token is not valid for this Execution",
-        )
-    if parent.cancellation_requested_at is not None:
-        raise HTTPException(
-            status_code=409, detail="Execution cancellation has been requested"
-        )
-
-    existing = db.scalar(
-        select(Execution).where(
-            Execution.parent_execution_id == parent.id,
-            Execution.idempotency_key == payload.idempotency_key,
-        )
-    )
-    if existing is not None:
-        if (
-            existing.capability_definition_id != payload.capability_definition_id
-            or existing.input != payload.input
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="idempotencyKey was already used for a different tool request",
-            )
-        return _tool_invocation_read(existing)
-
-    target = db.get(CapabilityDefinition, payload.capability_definition_id)
-    installation = (
-        db.get(ExtensionInstallation, target.installation_id)
-        if target is not None
-        else None
-    )
-    if target is None or installation is None:
-        raise HTTPException(status_code=404, detail="Tool capability not found")
-    if _enum_value(installation.status) != ExtensionInstallationStatus.enabled.value:
-        raise HTTPException(status_code=409, detail="Tool capability is not enabled")
-    if target.kind != "tool":
-        raise HTTPException(status_code=422, detail="Target capability is not a tool")
-    if target.capability_id not in set(authority.capability.tool_capabilities or []):
-        raise HTTPException(
-            status_code=403,
-            detail="Tool is not allowed by the parent capability pin",
-        )
-    try:
-        validate_capability_input(target, payload.input)
-    except CapabilityInputError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    resolutions = resolve_extension_effects(
-        db,
-        installation_id=installation.id,
-        capability_definition_id=target.id,
-        effects=tuple(target.declared_effects or ()),
-        course_id=parent.course_id,
-        assignment_id=parent.assignment_id,
-    )
-    denied_effects = sorted(
-        effect for effect, resolution in resolutions.items() if not resolution.allowed
-    )
-    if denied_effects:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Tool is not granted effects: {', '.join(denied_effects)}",
-        )
-
-    try:
-        child = create_execution(
-            db,
-            kind=ExecutionKind.tool.value,
-            thread_id=parent.thread_id,
-            turn_id=parent.turn_id,
-            parent_execution_id=parent.id,
-            initiated_by_user_id=parent.initiated_by_user_id,
-            idempotency_key=payload.idempotency_key,
-            capability_id=target.capability_id,
-            capability_version=target.version,
-            capability_definition_id=target.id,
-            extension_installation_id=installation.id,
-            input=payload.input,
-            deadline_at=parent.deadline_at,
-        )
-        event_identity = hashlib.sha256(
-            payload.idempotency_key.encode("utf-8")
-        ).hexdigest()
-        append_and_project_event(
-            db,
-            execution_id=parent.id,
-            producer_source="fair.platform",
-            producer_event_id=f"tool-invocation:{parent.id}:{event_identity}",
-            event_type="tool.invocation.created",
-            schema_uri="urn:fair:event:tool.invocation.created:v1",
-            payload={
-                "toolExecutionId": str(child.id),
-                "capabilityDefinitionId": str(target.id),
-            },
-        )
-        enqueue_dispatch(
-            db,
-            execution_id=child.id,
-            target=installation.extension_id,
-            job_id=f"tool:{parent.id}:{payload.idempotency_key}",
-            payload=payload.input,
-        )
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        child = db.scalar(
-            select(Execution).where(
-                Execution.parent_execution_id == parent.id,
-                Execution.idempotency_key == payload.idempotency_key,
-            )
-        )
-        if child is None:
-            raise
-        if (
-            child.capability_definition_id != payload.capability_definition_id
-            or child.input != payload.input
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="idempotencyKey was already used for a different tool request",
-            )
-    return _tool_invocation_read(child)
-
-
-@router.get(
-    "/executions/{execution_id}/tools/{tool_execution_id}",
-    response_model=ToolInvocationRead,
-)
-def read_platform_tool(
-    execution_id: UUID,
-    tool_execution_id: UUID,
-    authority: ExecutionAuthorization = Depends(
-        require_execution_authorization(("tools:invoke",))
-    ),
-    db: Session = Depends(session_dependency),
-) -> ToolInvocationRead:
-    if authority.execution.id != execution_id:
-        raise HTTPException(
-            status_code=403, detail="Execution token is not valid for this Execution"
-        )
-    child = db.get(Execution, tool_execution_id)
-    if (
-        child is None
-        or child.parent_execution_id != execution_id
-        or _enum_value(child.kind) != "tool"
-    ):
-        raise HTTPException(status_code=404, detail="Tool invocation not found")
-    return _tool_invocation_read(child)
 
 
 @router.get("/executions", response_model=list[ExecutionRead])

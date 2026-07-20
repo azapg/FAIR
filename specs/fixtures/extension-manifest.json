@@ -8,20 +8,16 @@
   "capabilities": [
     {
       "capabilityId": "review.assignment",
-      "kind": "agent",
+      "surface": "chat.agent",
       "version": "1.0.0",
+      "displayName": "Assignment Reviewer",
+      "description": "Reviews a submission and streams feedback.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": "urn:fair:example:review-input",
         "type": "object",
         "properties": {"submissionId": {"type": "string", "format": "uuid"}},
         "required": ["submissionId"],
-        "additionalProperties": false
-      },
-      "configSchema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": {"tone": {"type": "string", "enum": ["concise", "detailed"]}},
         "additionalProperties": false
       },
       "outputSchema": {
@@ -31,10 +27,35 @@
         "required": ["feedback"],
         "additionalProperties": false
       },
-      "requestedScopes": ["artifacts:read"],
       "declaredEffects": ["feedback:write"],
       "supportsStreaming": true,
       "supportsCancellation": true
+    },
+    {
+      "capabilityId": "rubric.generate",
+      "surface": "function",
+      "version": "1.0.0",
+      "contract": "fair.rubric.generate@1",
+      "displayName": "Generate a rubric"
+    },
+    {
+      "capabilityId": "grade.essay",
+      "surface": "flow.step",
+      "version": "1.0.0",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {"text": {"type": "string"}},
+        "required": ["text"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {"score": {"type": "number"}},
+        "required": ["score"],
+        "additionalProperties": false
+      }
     }
   ]
 }

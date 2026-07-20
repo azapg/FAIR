@@ -51,22 +51,58 @@ class JsonSchemaDocument(BaseModel):
         return self
 
 
+SURFACES = ("chat.agent", "function", "flow.step")
+
+# Schemas a Surface owns on the author's behalf. FAIR still freezes a concrete
+# schema onto every CapabilityDefinition; the author simply does not write it.
+_ANY_OBJECT: dict[str, Any] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+}
+SURFACE_DEFAULT_SCHEMAS: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {
+    "chat.agent": (
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {"content": {"type": "string"}},
+            "required": ["content"],
+        },
+        _ANY_OBJECT,
+    ),
+    "function": (_ANY_OBJECT, _ANY_OBJECT),
+    "flow.step": (_ANY_OBJECT, _ANY_OBJECT),
+}
+
+# Scopes a Surface implies. Authors declare consequential *effects*, not the
+# plumbing scopes needed to report their own work.
+SURFACE_IMPLIED_SCOPES: dict[str, tuple[str, ...]] = {
+    "chat.agent": ("executions:events", "artifacts:read", "artifacts:write"),
+    "function": ("executions:events",),
+    "flow.step": ("executions:events", "artifacts:read", "artifacts:write"),
+}
+
+CONTRACT_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*@\d+$")
+
+
 class CapabilityManifest(BaseModel):
     model_config = contract_model_config
 
     capability_id: str = Field(min_length=1, max_length=255)
-    kind: Literal["agent", "grader", "transformer", "tool", "integration"]
+    surface: Literal["chat.agent", "function", "flow.step"]
     version: str = Field(min_length=1, max_length=128)
-    input_schema: JsonSchemaDocument
-    output_schema: JsonSchemaDocument
+    # A FAIR-owned contract id such as "fair.rubric.generate@1". Required for
+    # the `function` surface, which is where the contract defines both schemas
+    # and the UI placements that render a button for it.
+    contract: str | None = None
+    display_name: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None, max_length=2048)
+    input_schema: JsonSchemaDocument | None = None
+    output_schema: JsonSchemaDocument | None = None
     config_schema: JsonSchemaDocument | None = None
-    requested_scopes: list[str] = Field(default_factory=list)
     declared_effects: list[str] = Field(default_factory=list)
-    tool_capabilities: list[str] = Field(default_factory=list)
     supports_streaming: bool = False
     supports_cancellation: bool = False
     supports_resume: bool = False
-    supports_batch: bool = False
 
     @field_validator("capability_id")
     @classmethod
@@ -75,7 +111,7 @@ class CapabilityManifest(BaseModel):
             raise ValueError("capability_id must be a lowercase dotted identifier")
         return value
 
-    @field_validator("requested_scopes", "declared_effects", "tool_capabilities")
+    @field_validator("declared_effects")
     @classmethod
     def normalized_unique_values(cls, values: list[str]) -> list[str]:
         normalized = [value.strip() for value in values]
@@ -85,20 +121,32 @@ class CapabilityManifest(BaseModel):
             raise ValueError("values must be non-blank and unique")
         return normalized
 
-    @field_validator("tool_capabilities")
-    @classmethod
-    def valid_tool_capability_ids(cls, values: list[str]) -> list[str]:
-        if any(not IDENTIFIER_PATTERN.fullmatch(value) for value in values):
-            raise ValueError(
-                "tool_capabilities must contain lowercase dotted identifiers"
-            )
-        return values
-
     @model_validator(mode="after")
-    def tools_require_scope(self) -> "CapabilityManifest":
-        if self.tool_capabilities and "tools:invoke" not in self.requested_scopes:
-            raise ValueError("tool_capabilities require the tools:invoke scope")
+    def apply_surface_defaults(self) -> "CapabilityManifest":
+        """Let a Surface supply the schemas and scopes the author did not write."""
+
+        if self.surface == "function":
+            if not self.contract:
+                raise ValueError("the function surface requires a contract id")
+            if not CONTRACT_PATTERN.fullmatch(self.contract):
+                raise ValueError(
+                    "contract must look like 'fair.rubric.generate@1'"
+                )
+        elif self.contract is not None:
+            raise ValueError(f"the {self.surface} surface does not take a contract")
+
+        default_input, default_output = SURFACE_DEFAULT_SCHEMAS[self.surface]
+        if self.input_schema is None:
+            self.input_schema = JsonSchemaDocument.model_validate(default_input)
+        if self.output_schema is None:
+            self.output_schema = JsonSchemaDocument.model_validate(default_output)
         return self
+
+    @property
+    def requested_scopes(self) -> list[str]:
+        """Scopes are implied by the Surface, never hand-declared."""
+
+        return list(SURFACE_IMPLIED_SCOPES[self.surface])
 
 
 class ExtensionManifest(BaseModel):

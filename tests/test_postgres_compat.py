@@ -117,7 +117,6 @@ def test_postgres_json_columns_are_jsonb(postgres_database_url: str) -> None:
         ("executions", "input"),
         ("execution_events", "payload"),
         ("extension_installations", "manifest"),
-        ("capability_definitions", "tool_capabilities"),
         ("artifact_versions", "provenance"),
         ("submission_events", "details"),
         ("rubrics", "content"),
@@ -161,7 +160,7 @@ def test_postgres_serializes_competing_terminal_outcomes(
         session.flush()
         execution = create_execution(
             session,
-            kind="agent",
+            surface="chat.agent",
             initiated_by_user_id=user.id,
         )
         execution_id = execution.id

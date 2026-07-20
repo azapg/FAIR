@@ -23,7 +23,12 @@ export function CapabilitiesTab() {
           <span className="font-medium">{row.original.capabilityId}</span>
         ),
       },
-      { accessorKey: "kind", header: "Kind" },
+      { accessorKey: "surface", header: "Surface" },
+      {
+        id: "contract",
+        header: "Contract",
+        cell: ({ row }) => row.original.contract ?? "—",
+      },
       { accessorKey: "version", header: "Version" },
       {
         id: "effects",
@@ -38,7 +43,6 @@ export function CapabilitiesTab() {
             row.original.supportsStreaming && "streaming",
             row.original.supportsCancellation && "cancellation",
             row.original.supportsResume && "resume",
-            row.original.supportsBatch && "batch",
           ]
             .filter(Boolean)
             .join(", ") || "basic",

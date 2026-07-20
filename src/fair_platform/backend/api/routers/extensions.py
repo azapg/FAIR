@@ -35,6 +35,9 @@ from fair_platform.backend.data.models import (
     GrantDecision,
     User,
 )
+from fair_platform.backend.data.models.extension import ExtensionDeliveryMode
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
 from fair_platform.backend.services.extension_auth import issue_extension_secret
 from fair_platform.backend.core.security.dependencies import require_extension_client
 from fair_platform.backend.services.execution_outbox import (
@@ -155,6 +158,140 @@ def _client_read(row: ExtensionClient) -> ExtensionClientRead:
     )
 
 
+def _sync_capabilities(
+    db: Session,
+    installation: ExtensionInstallation,
+    manifest: ExtensionManifest,
+) -> None:
+    """Add any capability versions the manifest declares that we do not have.
+
+    Existing rows are never mutated or removed. A CapabilityDefinition id is
+    what Executions and Flow versions pin, so an Extension that ships a new
+    version adds a row rather than rewriting the one older work depends on.
+    """
+
+    existing = {
+        (item.capability_id, item.version) for item in installation.capabilities
+    }
+    for capability in manifest.capabilities:
+        identity = (capability.capability_id, capability.version)
+        if identity in existing:
+            continue
+        raw = capability.model_dump(by_alias=True, mode="json", exclude_none=True)
+        # Freeze only schemas that actually validate. Catching this at
+        # registration turns "your first chat message 422s" into a startup
+        # error naming the capability.
+        for field in ("inputSchema", "outputSchema"):
+            try:
+                Draft202012Validator.check_schema(raw[field])
+            except SchemaError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=(
+                        f"Capability {capability.capability_id!r} has an invalid "
+                        f"{field}: {exc.message}"
+                    ),
+                ) from exc
+        base = (
+            f"urn:fair:extension:{manifest.extension_id}"
+            f":capability:{capability.capability_id}:{capability.version}"
+        )
+        # Append to the loaded collection rather than only db.add()-ing: this
+        # function reads installation.capabilities above, so the collection is
+        # already populated and (with expire_on_commit=False) would otherwise
+        # stay stale for the caller that serializes the response.
+        installation.capabilities.append(
+            CapabilityDefinition(
+                installation_id=installation.id,
+                capability_id=capability.capability_id,
+                surface=capability.surface,
+                contract=capability.contract,
+                display_name=capability.display_name,
+                description=capability.description,
+                version=capability.version,
+                input_schema_uri=_schema_uri(raw["inputSchema"], f"{base}:input"),
+                output_schema_uri=_schema_uri(raw["outputSchema"], f"{base}:output"),
+                config_schema_uri=(
+                    _schema_uri(raw["configSchema"], f"{base}:config")
+                    if raw.get("configSchema")
+                    else None
+                ),
+                requested_scopes=capability.requested_scopes,
+                declared_effects=capability.declared_effects,
+                supports_streaming=capability.supports_streaming,
+                supports_cancellation=capability.supports_cancellation,
+                supports_resume=capability.supports_resume,
+                manifest_snapshot=raw,
+            )
+        )
+
+
+@router.put("/self/manifest", response_model=InstallationRead)
+def sync_own_manifest(
+    payload: InstallationCreate,
+    extension_client: ExtensionClient = Depends(
+        require_extension_client(("extensions:self",))
+    ),
+    db: Session = Depends(session_dependency),
+) -> InstallationRead:
+    """Let a running Extension publish its own manifest.
+
+    This is what makes `createExtension(...).start()` a one-command developer
+    experience: the SDK derives the manifest from the code and syncs it on
+    boot, instead of a human hand-writing JSON Schema and an admin pasting it.
+
+    The credential fixes the identity -- an Extension can only ever describe
+    itself, never register or modify another one.
+    """
+
+    manifest = payload.manifest
+    if manifest.extension_id != extension_client.extension_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Manifest extensionId does not match the authenticated client",
+        )
+    if manifest.delivery_mode != "runner":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Self-registration supports runner delivery only",
+        )
+
+    installation = db.scalar(
+        select(ExtensionInstallation)
+        .options(selectinload(ExtensionInstallation.capabilities))
+        .where(ExtensionInstallation.extension_id == manifest.extension_id)
+    )
+    if installation is None:
+        installation = ExtensionInstallation(
+            extension_id=manifest.extension_id,
+            delivery_mode=ExtensionDeliveryMode.runner,
+            status=ExtensionInstallationStatus.enabled,
+        )
+        db.add(installation)
+        db.flush()
+
+    if _value(installation.status) == ExtensionInstallationStatus.revoked.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This Extension installation was revoked",
+        )
+
+    installation.display_name = manifest.display_name
+    installation.version = manifest.version
+    installation.manifest_version = manifest.manifest_version
+    installation.manifest = manifest.model_dump(by_alias=True, mode="json", exclude_none=True)
+    _sync_capabilities(db, installation, manifest)
+    db.commit()
+
+    return _installation_read(
+        db.scalar(
+            select(ExtensionInstallation)
+            .options(selectinload(ExtensionInstallation.capabilities))
+            .where(ExtensionInstallation.id == installation.id)
+        )
+    )
+
+
 @router.post(
     "/installations",
     response_model=InstallationRead,
@@ -175,37 +312,12 @@ def create_installation(
         dispatch_url=str(manifest.dispatch_url) if manifest.dispatch_url else None,
         health_url=str(manifest.health_url) if manifest.health_url else None,
         manifest_version=manifest.manifest_version,
-        manifest=manifest.model_dump(by_alias=True, mode="json"),
+        manifest=manifest.model_dump(by_alias=True, mode="json", exclude_none=True),
         status=ExtensionInstallationStatus.enabled,
     )
     db.add(row)
     db.flush()
-    for capability in manifest.capabilities:
-        raw = capability.model_dump(by_alias=True, mode="json")
-        base = f"urn:fair:extension:{manifest.extension_id}:capability:{capability.capability_id}:{capability.version}"
-        db.add(
-            CapabilityDefinition(
-                installation_id=row.id,
-                capability_id=capability.capability_id,
-                kind=capability.kind,
-                version=capability.version,
-                input_schema_uri=_schema_uri(raw["inputSchema"], f"{base}:input"),
-                output_schema_uri=_schema_uri(raw["outputSchema"], f"{base}:output"),
-                config_schema_uri=(
-                    _schema_uri(raw["configSchema"], f"{base}:config")
-                    if raw.get("configSchema")
-                    else None
-                ),
-                requested_scopes=capability.requested_scopes,
-                declared_effects=capability.declared_effects,
-                tool_capabilities=capability.tool_capabilities,
-                supports_streaming=capability.supports_streaming,
-                supports_cancellation=capability.supports_cancellation,
-                supports_resume=capability.supports_resume,
-                supports_batch=capability.supports_batch,
-                manifest_snapshot=raw,
-            )
-        )
+    _sync_capabilities(db, row, manifest)
     try:
         db.commit()
     except IntegrityError as exc:

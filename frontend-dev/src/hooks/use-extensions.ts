@@ -22,13 +22,17 @@ export type CapabilityDefinition = {
   id: string;
   installationId: string;
   capabilityId: string;
-  kind: string;
+  /** Where this capability plugs into FAIR. */
+  surface: "chat.agent" | "function" | "flow.step";
+  /** FAIR-owned contract id, present only on the `function` surface. */
+  contract: string | null;
+  displayName: string | null;
+  description: string | null;
   version: string;
   declaredEffects: string[];
   supportsStreaming: boolean;
   supportsCancellation: boolean;
   supportsResume: boolean;
-  supportsBatch: boolean;
 };
 
 export type CreateExtensionInput = {

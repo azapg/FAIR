@@ -38,7 +38,7 @@ def _seed(test_db):
         id=uuid4(),
         installation_id=installation.id,
         capability_id="agent.chat",
-        kind="agent",
+        surface="chat.agent",
         version="1.0.0",
         requested_scopes=["artifacts:read"],
         declared_effects=[],

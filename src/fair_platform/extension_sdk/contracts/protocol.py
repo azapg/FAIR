@@ -124,26 +124,6 @@ class RunnerCommandAck(BaseModel):
     lease_id: UUID
 
 
-class ToolInvocationRequest(BaseModel):
-    """Invoke one platform-linked tool allowed by the parent capability pin."""
-
-    model_config = contract_model_config
-
-    capability_definition_id: UUID
-    idempotency_key: str = Field(min_length=1, max_length=128)
-    input: dict[str, Any] = Field(default_factory=dict)
-
-
-class ToolInvocationRead(BaseModel):
-    model_config = contract_model_config
-
-    execution_id: UUID
-    status: str
-    output: dict[str, Any] | None = None
-    error_code: str | None = None
-    error_summary: str | None = None
-
-
 __all__ = [
     "CapabilityPin",
     "DelegatedExecutionAuthorization",
@@ -156,6 +136,4 @@ __all__ = [
     "RunnerClaimRequest",
     "RunnerCommandAck",
     "RunnerCommandLease",
-    "ToolInvocationRead",
-    "ToolInvocationRequest",
 ]
