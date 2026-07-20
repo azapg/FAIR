@@ -1,0 +1,9 @@
+{
+  "name": "fair-platform-workspace",
+  "private": true,
+  "workspaces": ["sdk/typescript", "extensions/*"],
+  "scripts": {
+    "build:sdk": "cd sdk/typescript && bun run build",
+    "typecheck": "cd sdk/typescript && bun run typecheck && cd ../../extensions/core && bun run typecheck"
+  }
+}

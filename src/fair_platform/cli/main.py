@@ -163,8 +163,94 @@ def version_callback(value: bool):
 app = typer.Typer()
 db_app = typer.Typer(help="Manage database migrations")
 users_app = typer.Typer(help="Manage users")
+ext_app = typer.Typer(help="Manage extensions")
 app.add_typer(db_app, name="db")
 app.add_typer(users_app, name="users")
+app.add_typer(ext_app, name="ext")
+
+
+@ext_app.command("bootstrap")
+def ext_bootstrap(
+    extension_id: Annotated[str, typer.Argument(help="e.g. fair.demo.tutor")],
+    effects: Annotated[
+        str,
+        typer.Option(
+            "--allow",
+            help="Comma-separated effects to grant platform-wide, e.g. feedback:write",
+        ),
+    ] = "",
+):
+    """Issue a runner credential for an Extension and allow its effects.
+
+    This is the one-time step before `bun run dev` in an extension project.
+    It prints the secret once -- FAIR only stores its hash.
+    """
+    from fair_platform.backend.services.extension_auth import issue_extension_secret
+    from fair_platform.backend.data.models.extension import (
+        ExtensionGrant,
+        GrantDecision,
+    )
+
+    requested = [item.strip() for item in effects.split(",") if item.strip()]
+    with SessionLocal() as session:
+        issued = issue_extension_secret(
+            session,
+            extension_id=extension_id,
+            # Exactly two powers: claim its own work, and describe itself.
+            # Educational data is never reachable with this credential.
+            scopes=["runner:commands", "extensions:self"],
+            enabled=True,
+        )
+
+        installation = _find_installation(session, extension_id)
+        for effect in requested:
+            if installation is None:
+                break
+            exists = any(
+                grant.effect == effect
+                and grant.capability_definition_id is None
+                and grant.course_id is None
+                and grant.assignment_id is None
+                for grant in installation.grants
+            )
+            if not exists:
+                session.add(
+                    ExtensionGrant(
+                        installation_id=installation.id,
+                        effect=effect,
+                        decision=GrantDecision.allow,
+                        reason="granted by `fair ext bootstrap`",
+                    )
+                )
+        session.commit()
+
+    typer.echo(f"Extension:  {issued.extension_id}")
+    typer.echo(f"Secret:     {issued.secret}")
+    typer.echo(f"Scopes:     {', '.join(issued.scopes)}")
+    if requested:
+        if installation is None:
+            typer.echo(
+                "Effects:    deferred -- start the Extension once so it can "
+                "sync its manifest, then re-run this command to grant them."
+            )
+        else:
+            typer.echo(f"Effects:    {', '.join(requested)} (allowed platform-wide)")
+    typer.echo("")
+    typer.echo("Add these to your extension's .env:")
+    typer.echo("  FAIR_PLATFORM_URL=http://127.0.0.1:8000")
+    typer.echo(f"  FAIR_EXTENSION_SECRET={issued.secret}")
+
+
+def _find_installation(session, extension_id: str):
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from fair_platform.backend.data.models import ExtensionInstallation
+
+    return session.scalar(
+        select(ExtensionInstallation)
+        .options(selectinload(ExtensionInstallation.grants))
+        .where(ExtensionInstallation.extension_id == extension_id)
+    )
 
 
 @app.callback()
