@@ -160,7 +160,7 @@ def test_postgres_serializes_competing_terminal_outcomes(
         session.flush()
         execution = create_execution(
             session,
-            surface="chat.agent",
+            kind="agent",
             initiated_by_user_id=user.id,
         )
         execution_id = execution.id
