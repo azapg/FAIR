@@ -19,6 +19,7 @@ def _build_submission_graph(session):
         email=f"prof-{uuid4()}@test.com",
         role=UserRole.professor,
         password_hash=hash_password("test_password_123"),
+        is_verified=True,
     )
     session.add(professor)
 

@@ -14,6 +14,7 @@ def _user(session, name: str, role: UserRole) -> User:
         email=f"{name.lower()}-{uuid4().hex[:6]}@test.com",
         role=role,
         password_hash=hash_password("test_password_123"),
+        is_verified=True,
     )
     session.add(user)
     session.commit()

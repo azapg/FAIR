@@ -35,7 +35,8 @@ class TestArtifactAPIPermissions:
                 name="Professor One",
                 email="prof1@test.com",
                 role=UserRole.professor,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
 
             prof2_id = uuid4()
@@ -44,7 +45,8 @@ class TestArtifactAPIPermissions:
                 name="Professor Two",
                 email="prof2@test.com",
                 role=UserRole.professor,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
 
             student1_id = uuid4()
@@ -53,7 +55,8 @@ class TestArtifactAPIPermissions:
                 name="Student One",
                 email="student1@test.com",
                 role=UserRole.student,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
 
             student2_id = uuid4()
@@ -62,7 +65,8 @@ class TestArtifactAPIPermissions:
                 name="Student Two",
                 email="student2@test.com",
                 role=UserRole.student,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
 
             admin_id = uuid4()
@@ -71,7 +75,8 @@ class TestArtifactAPIPermissions:
                 name="Admin User",
                 email="admin@test.com",
                 role=UserRole.admin,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
             
             session.add_all([prof1, prof2, student1, student2, admin])
