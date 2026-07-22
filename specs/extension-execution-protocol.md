@@ -7,7 +7,7 @@ This document is normative for Protocol 1. The public reference starts in
 are in `fair_platform.extension_sdk.contracts`.
 
 The protocol is the only external execution boundary between FAIR and custom
-behavior. Agents, tools, graders, actions, and Flow steps receive the same
+behavior. Chat agents, functions, and Flow steps receive the same
 `ExecutionCommand`, append to the same Execution event log, and use the same
 authorization and Artifact APIs.
 
@@ -32,7 +32,14 @@ machinery. They MUST NOT become required concepts in product or Extension APIs.
 - `protocolVersion` MUST be the string `"1"`.
 - Wire JSON MUST use camel-case field aliases.
 - FAIR protocol envelopes MUST reject unknown fields.
-- Capability input and output schemas MUST be valid JSON Schema Draft 2020-12.
+- Every Capability MUST declare a `surface` of `chat.agent`, `function`, or
+  `flow.step`. A `function` MUST declare a FAIR-owned `contract` id; every
+  other surface MUST NOT.
+- Capability input and output schemas MUST be valid JSON Schema Draft 2020-12,
+  and MUST be validated at registration rather than at first dispatch. A
+  Surface or contract MAY supply them so authors do not write them.
+- Requested scopes are implied by the Surface. Authors declare only
+  consequential effects, which Grants authorize.
 - The exact installed CapabilityDefinition ID, semantic capability ID, and
   version MUST be frozen onto an Execution before dispatch.
 - FAIR MUST validate initial input and successful output against the schemas in
@@ -107,7 +114,7 @@ internally: a worker whose lease expired or was reclaimed MUST NOT mark the
 new lease delivered or failed.
 
 The installation credential MUST NOT authorize event, Artifact, interaction,
-or tool APIs. Those calls use only the command's execution token.
+APIs. Those calls use only the command's execution token.
 
 ## 4. Execution authority
 
@@ -195,7 +202,6 @@ Interaction and lineage events:
 - `interaction.requested`
 - platform-authored `interaction.resolved`
 - `artifact.created`
-- platform-authored `tool.invocation.created`
 
 FAIR MUST validate the semantics of standard events before projection.
 Extension messages MUST use `authorType="extension"`; all message, part,
@@ -261,8 +267,7 @@ the result. An Extension cannot resolve its own request.
 
 Input access MUST be represented by `ExecutionInputArtifact`, not an arbitrary
 path or resource ID embedded only in JSON. FAIR freezes assignment- and
-submission-linked Artifacts before dispatch. Child tool Executions inherit the
-parent's frozen inputs. Before freezing, FAIR MUST verify that the initiating
+submission-linked Artifacts before dispatch. Before freezing, FAIR MUST verify that the initiating
 user can read each Artifact. Course, assignment, and submission identifiers
 MUST be resolved and authorized from their database relationships; arbitrary
 client combinations are not authority.
@@ -288,31 +293,18 @@ created later. Protocol 1 output creation accepts `inlineJson` content and MUST
 reject Extension-supplied `storageUri` values until FAIR provides a managed
 upload capability.
 
-## 8. Tools
+## 8. Platform-linked tools (removed)
 
-Internal tools that run entirely inside an Extension remain private
-implementation details. A platform-linked tool is used only when FAIR must
-authorize or preserve the call.
+Protocol 1 has no extension-to-extension tool invocation. Tools that run inside
+an Extension are private implementation details.
 
-Platform-linked invocation requires all of:
+The need that survives is an Extension calling *FAIR* -- searching course
+materials, reading a pinned Artifact, creating an output. That is the
+execution-scoped API in sections 5 and 7, reached through the SDK's `ctx`, and
+it needs no allowlist, child Execution, or second idempotency scope.
 
-- parent token scope `tools:invoke`;
-- target semantic capability ID in the parent's frozen `toolCapabilities`;
-- target kind `tool` and enabled installation;
-- valid input against the target's frozen schema;
-- allowed declared effects in current course/assignment scope;
-- a caller-provided idempotency key.
-
-```text
-POST /api/v1/executions/{parentExecutionId}/tools
-GET  /api/v1/executions/{parentExecutionId}/tools/{toolExecutionId}
-```
-
-The first call creates a durable child tool Execution and a parent lineage
-event. `(parentExecutionId, idempotencyKey)` is unique. The child uses the same
-command, authorization, event, output validation, cancellation, and deadline
-rules as every other capability. Reusing that key for different input or a
-different target capability MUST return `409`.
+Cross-extension calls may return as an additive change once a second-party
+Extension actually needs one.
 
 ## 9. Product replay and SSE
 
@@ -358,7 +350,6 @@ The following tests are part of the protocol evidence:
 | Cancellation, deadline, exactly-once terminal behavior | `tests/test_execution_lifecycle_protocol.py` |
 | Interaction ownership and resume dispatch | `tests/test_execution_security.py` |
 | Frozen Artifact inputs and execution-scoped access | `tests/test_artifact_api.py` |
-| Authorized, idempotent child tool Execution | `tests/test_tool_invocation_protocol.py` |
 | SQLite upgrade rehearsal | `tests/test_migration_rehearsal_files.py` |
 | PostgreSQL JSONB, FK/cascade, and concurrent terminal race | `tests/test_postgres_compat.py` |
 

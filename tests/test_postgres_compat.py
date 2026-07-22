@@ -117,7 +117,6 @@ def test_postgres_json_columns_are_jsonb(postgres_database_url: str) -> None:
         ("executions", "input"),
         ("execution_events", "payload"),
         ("extension_installations", "manifest"),
-        ("capability_definitions", "tool_capabilities"),
         ("artifact_versions", "provenance"),
         ("submission_events", "details"),
         ("rubrics", "content"),

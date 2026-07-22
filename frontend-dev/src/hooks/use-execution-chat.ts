@@ -28,14 +28,10 @@ export const initialExecutionChatProjection: ExecutionChatProjection = {
   status: "idle",
 };
 
+// FAIR normalizes standard event payloads to camel-case before serving them,
+// so clients read one shape regardless of what an Extension emitted.
 function payloadValue(payload: JsonRecord, field: string): unknown {
-  if (field in payload) return payload[field];
-  const camel = field.split("_")[0] + field
-    .split("_")
-    .slice(1)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("");
-  return payload[camel];
+  return payload[field];
 }
 
 function asString(value: unknown, fallback = ""): string {
@@ -67,16 +63,16 @@ function interactionFromEvent(event: ExecutionEvent): Interaction {
     : null;
 
   return {
-    id: asString(payloadValue(payload, "interaction_id")),
+    id: asString(payloadValue(payload, "interactionId")),
     executionId: event.executionId,
     kind: asString(payloadValue(payload, "kind"), "interaction"),
     schema: asRecord(payloadValue(payload, "schema")),
     message: asString(payloadValue(payload, "message"), "Please provide a response."),
     choices,
-    targetUrl: payloadValue(payload, "target_url") as string | null,
+    targetUrl: payloadValue(payload, "targetUrl") as string | null,
     status: "pending",
     requestedByExtensionInstallationId: null,
-    expiresAt: (payloadValue(payload, "expires_at") as string | null) ?? null,
+    expiresAt: (payloadValue(payload, "expiresAt") as string | null) ?? null,
     resolvedByUserId: null,
     response: null,
     resolvedAt: null,
@@ -100,7 +96,7 @@ export function projectExecutionEvent(
   }
 
   if (event.type === "message.started") {
-    const id = asString(payloadValue(payload, "message_id"));
+    const id = asString(payloadValue(payload, "messageId"));
     if (current.messages.some((message) => message.id === id)) return current;
     const role = asString(payloadValue(payload, "role"), "assistant");
     return {
@@ -110,7 +106,7 @@ export function projectExecutionEvent(
         {
           id,
           role: role === "user" ? "user" : "assistant",
-          senderName: asString(payloadValue(payload, "sender_name"), "Assistant"),
+          senderName: asString(payloadValue(payload, "senderName"), "Assistant"),
           timestamp: messageTimestamp(event),
           content: "",
           events: [],
@@ -120,7 +116,7 @@ export function projectExecutionEvent(
   }
 
   if (event.type === "message.delta") {
-    const id = asString(payloadValue(payload, "message_id"));
+    const id = asString(payloadValue(payload, "messageId"));
     const delta = asString(payloadValue(payload, "text"), asString(payloadValue(payload, "delta")));
     const messageIndex = current.messages.findIndex((message) => message.id === id);
     if (messageIndex < 0) {
@@ -158,7 +154,7 @@ export function projectExecutionEvent(
   }
 
   if (event.type === "interaction.resolved") {
-    const id = asString(payloadValue(payload, "interaction_id"));
+    const id = asString(payloadValue(payload, "interactionId"));
     const resolvedStatus = asString(payloadValue(payload, "status"), "resolved");
     const interactions = current.interactions.map((interaction) =>
       interaction.id === id
@@ -176,7 +172,7 @@ export function projectExecutionEvent(
   }
 
   if (event.type === "artifact.created") {
-    const artifactId = asString(payloadValue(payload, "artifact_version_id"));
+    const artifactId = asString(payloadValue(payload, "artifactVersionId"));
     let messageIndex = -1;
     for (let index = current.messages.length - 1; index >= 0; index -= 1) {
       if (current.messages[index].role === "assistant") {

@@ -113,11 +113,11 @@ def test_execution_reporter_emits_shared_event_contract():
             "mock.extension",
             "mock.extension",
         ]
-        assert received[1]["payload"]["message_id"] == str(message_id)
-        assert received[1]["payload"]["part_id"] == str(part_id)
+        assert received[1]["payload"]["messageId"] == str(message_id)
+        assert received[1]["payload"]["partId"] == str(part_id)
         assert received[2]["type"] == "artifact.created"
-        assert received[2]["payload"]["artifact_version_id"] == str(artifact_version_id)
-        assert received[3]["payload"]["interaction_id"] == str(interaction_id)
+        assert received[2]["payload"]["artifactVersionId"] == str(artifact_version_id)
+        assert received[3]["payload"]["interactionId"] == str(interaction_id)
 
     import asyncio
 

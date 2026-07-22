@@ -39,7 +39,8 @@ class TestAtomicSubmissionCreation:
                 name="Professor",
                 email="prof@test.com",
                 role=UserRole.professor,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
             
             student_id = uuid4()
@@ -48,7 +49,8 @@ class TestAtomicSubmissionCreation:
                 name="Student",
                 email="student@test.com",
                 role=UserRole.student,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
             
             session.add_all([professor, student])
@@ -252,7 +254,8 @@ class TestAtomicSubmissionCreation:
                 name="Other Professor",
                 email="other_prof@test.com",
                 role=UserRole.professor,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
             
             session.add(other_prof)
@@ -313,7 +316,8 @@ class TestAtomicSubmissionCreation:
                 name="Professor",
                 email="prof@test.com",
                 role=UserRole.professor,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
             
             session.add(professor)

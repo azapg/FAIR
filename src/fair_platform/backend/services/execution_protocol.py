@@ -134,7 +134,11 @@ def build_execution_command(
             expires_at=issued.expires_at,
             scopes=list(issued.scopes),
         ),
-        payload=dict(dispatch.payload or {}),
+        # The command envelope carries the run's input under `input`, matching
+        # specs/fixtures/execution-command.json. Keeping the input namespaced
+        # leaves room for future per-command fields (resume results, cancel
+        # reasons) without colliding with an Extension's own input keys.
+        payload={"input": dict(dispatch.payload or {})},
         traceparent=execution.trace_id,
     )
 

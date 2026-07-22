@@ -16,8 +16,6 @@ from fair_platform.extension_sdk.contracts.events import (
 from fair_platform.extension_sdk.contracts.protocol import (
     DelegatedExecutionAuthorization,
     ExecutionCommand,
-    ToolInvocationRead,
-    ToolInvocationRequest,
 )
 
 
@@ -152,7 +150,7 @@ class ExecutionReporter:
     ) -> ExecutionEventRead:
         return await self.emit(
             "execution.completed",
-            payload={"output_summary": output_summary}
+            payload={"outputSummary": output_summary}
             if output_summary is not None
             else {},
         )
@@ -162,7 +160,7 @@ class ExecutionReporter:
     ) -> ExecutionEventRead:
         payload: dict[str, Any] = {"error": error}
         if error_code is not None:
-            payload["error_code"] = error_code
+            payload["errorCode"] = error_code
         return await self.emit("execution.failed", payload=payload)
 
     async def message_started(
@@ -175,9 +173,9 @@ class ExecutionReporter:
         return await self.emit(
             "message.started",
             payload={
-                "message_id": str(message_id),
+                "messageId": str(message_id),
                 "role": role,
-                "author_type": "extension",
+                "authorType": "extension",
                 "ordinal": ordinal,
             },
         )
@@ -194,17 +192,17 @@ class ExecutionReporter:
         return await self.emit(
             "message.delta",
             payload={
-                "message_id": str(message_id),
-                "part_id": str(part_id),
+                "messageId": str(message_id),
+                "partId": str(part_id),
                 "ordinal": ordinal,
-                "part_type": part_type,
+                "partType": part_type,
                 "text": text,
             },
         )
 
     async def message_completed(self, message_id: UUID | str) -> ExecutionEventRead:
         return await self.emit(
-            "message.completed", payload={"message_id": str(message_id)}
+            "message.completed", payload={"messageId": str(message_id)}
         )
 
     async def artifact_created(
@@ -222,15 +220,15 @@ class ExecutionReporter:
         """Announce a durable ArtifactVersion produced by this Execution."""
 
         payload: dict[str, Any] = {
-            "artifact_id": str(artifact_id),
-            "artifact_version_id": str(artifact_version_id),
-            "kind_uri": kind_uri,
+            "artifactId": str(artifact_id),
+            "artifactVersionId": str(artifact_version_id),
+            "kindUri": kind_uri,
         }
         optional = {
             "title": title,
-            "media_type": media_type,
-            "content_hash": content_hash,
-            "size_bytes": size_bytes,
+            "mediaType": media_type,
+            "contentHash": content_hash,
+            "sizeBytes": size_bytes,
             "uri": uri,
         }
         payload.update(
@@ -281,7 +279,7 @@ class ExecutionReporter:
         """Create a durable user interaction request through the event log."""
 
         payload: dict[str, Any] = {
-            "interaction_id": str(interaction_id),
+            "interactionId": str(interaction_id),
             "kind": kind,
             "schema": schema,
             "message": message,
@@ -289,42 +287,10 @@ class ExecutionReporter:
         if choices is not None:
             payload["choices"] = choices
         if target_url is not None:
-            payload["target_url"] = target_url
+            payload["targetUrl"] = target_url
         if expires_at is not None:
-            payload["expires_at"] = expires_at.isoformat()
+            payload["expiresAt"] = expires_at.isoformat()
         return await self.emit("interaction.requested", payload=payload)
-
-    async def invoke_tool(
-        self,
-        *,
-        capability_definition_id: UUID | str,
-        input: dict[str, Any],
-        idempotency_key: str,
-    ) -> ToolInvocationRead:
-        """Invoke a platform-linked tool allowed by this capability pin."""
-
-        await self._ensure_authorization()
-        request = ToolInvocationRequest(
-            capability_definition_id=capability_definition_id,
-            input=input,
-            idempotency_key=idempotency_key,
-        )
-        response = await self._client.post(
-            f"/api/v1/executions/{self.execution_id}/tools",
-            headers=self._authorization_headers,
-            json=request.model_dump(by_alias=True, mode="json"),
-        )
-        response.raise_for_status()
-        return ToolInvocationRead.model_validate(response.json())
-
-    async def read_tool(self, tool_execution_id: UUID | str) -> ToolInvocationRead:
-        await self._ensure_authorization()
-        response = await self._client.get(
-            f"/api/v1/executions/{self.execution_id}/tools/{tool_execution_id}",
-            headers=self._authorization_headers,
-        )
-        response.raise_for_status()
-        return ToolInvocationRead.model_validate(response.json())
 
     async def stream_text(
         self,

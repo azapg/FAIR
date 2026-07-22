@@ -105,7 +105,14 @@ class CapabilityDefinition(Base):
         nullable=False,
     )
     capability_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Where this capability plugs into FAIR and whose schema governs its I/O.
+    # One of: chat.agent, function, flow.step.
+    surface: Mapped[str] = mapped_column(String(64), nullable=False)
+    # FAIR-owned contract id for the `function` surface, e.g.
+    # "fair.rubric.generate@1". Null for every other surface.
+    contract: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     version: Mapped[str] = mapped_column(String(128), nullable=False)
     input_schema_uri: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     output_schema_uri: Mapped[Optional[str]] = mapped_column(
@@ -120,9 +127,6 @@ class CapabilityDefinition(Base):
     declared_effects: Mapped[list[str]] = mapped_column(
         json_document_type(), nullable=False, default=list
     )
-    tool_capabilities: Mapped[list[str]] = mapped_column(
-        json_document_type(), nullable=False, default=list
-    )
     supports_streaming: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
@@ -132,7 +136,6 @@ class CapabilityDefinition(Base):
     supports_resume: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
-    supports_batch: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     manifest_snapshot: Mapped[Optional[dict[str, Any]]] = mapped_column(
         json_document_type(), nullable=True
     )

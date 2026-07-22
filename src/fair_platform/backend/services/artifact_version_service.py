@@ -131,6 +131,12 @@ def finalize_artifact_version(
         part.hash_algorithm = SHA256
         total_size += int(part.size_bytes or 0)
 
+    # Persist part hashes while the version is still a draft. In a single
+    # flush SQLAlchemy writes the parent ArtifactVersion before its parts, so
+    # marking the version terminal first would make these part updates trip
+    # the "parts of terminal ArtifactVersion are immutable" guard.
+    session.flush()
+
     version.hash_algorithm = SHA256
     version.content_hash = _hash_part_manifest(parts)
     version.size_bytes = total_size

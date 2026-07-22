@@ -20,7 +20,6 @@ def add_agent_capability(
     requested_scopes: list[str] | None = None,
     supports_resume: bool = False,
     supports_cancellation: bool = False,
-    tool_capabilities: list[str] | None = None,
 ) -> CapabilityDefinition:
     session.add(installation)
     session.flush()
@@ -28,17 +27,16 @@ def add_agent_capability(
         id=uuid4(),
         installation_id=installation.id,
         capability_id=capability_id,
-        kind="agent",
+        surface="chat.agent",
         version="1.0.0",
         requested_scopes=requested_scopes or [],
         declared_effects=[],
-        tool_capabilities=tool_capabilities or [],
         supports_streaming=True,
         supports_resume=supports_resume,
         supports_cancellation=supports_cancellation,
         manifest_snapshot={
             "capabilityId": capability_id,
-            "kind": "agent",
+            "surface": "chat.agent",
             "version": "1.0.0",
             "inputSchema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -53,7 +51,6 @@ def add_agent_capability(
             },
             "requestedScopes": requested_scopes or [],
             "declaredEffects": [],
-            "toolCapabilities": tool_capabilities or [],
             "supportsStreaming": True,
             "supportsResume": supports_resume,
             "supportsCancellation": supports_cancellation,

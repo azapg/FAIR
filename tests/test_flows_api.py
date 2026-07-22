@@ -55,7 +55,7 @@ def _capability(
         capability = CapabilityDefinition(
             installation_id=installation.id,
             capability_id="test.transform",
-            kind="action",
+            surface="function",
             version="1.0.0",
             declared_effects=[],
             manifest_snapshot={
@@ -231,7 +231,10 @@ def test_start_flow_creates_pinned_root_execution_and_outbox(test_db):
         assert dispatch is not None
         assert dispatch.execution_id == step.id
         assert dispatch.target.startswith("execution-extension.")
-        assert dispatch.payload["capability_id"] == "test.transform"
+        # The dispatch payload is the step's input; identity and capability pin
+        # travel in the ExecutionCommand envelope, not duplicated in here.
+        assert dispatch.payload["flow"]["nodeId"] == "step"
+        assert dispatch.payload == step.input
 
 
 def test_two_step_flow_advances_from_events_and_replays_deterministically(test_db):

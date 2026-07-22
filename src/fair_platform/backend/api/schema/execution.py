@@ -128,3 +128,14 @@ __all__ = [
     "TurnCreate",
     "TurnRead",
 ]
+
+
+class FunctionInvoke(BaseModel):
+    """Run whichever installed capability implements a FAIR contract."""
+
+    model_config = schema_config
+
+    contract: str = Field(min_length=1, max_length=255)
+    input: dict[str, Any] = Field(default_factory=dict)
+    course_id: UUID | None = None
+    assignment_id: UUID | None = None

@@ -137,7 +137,7 @@ def test_extension_grants_are_deny_by_default_and_deny_wins(test_db):
             id=capability_id,
             installation_id=installation_id,
             capability_id="grading.v1",
-            kind="grader",
+            surface="flow.step",
             version="1.0.0",
         )
         session.add_all(

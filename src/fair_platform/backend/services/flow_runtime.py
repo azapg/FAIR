@@ -171,12 +171,10 @@ def _create_step(
         session,
         execution_id=step.id,
         target=pin["extensionId"],
-        payload={
-            "execution_id": str(step.id),
-            "capability_id": pin["capabilityId"],
-            "capability_version": pin["capabilityVersion"],
-            "input": step.input,
-        },
+        # Every dispatch path enqueues the run's input and nothing else; the
+        # command envelope already carries execution id and capability pin, so
+        # repeating them here only created a second, divergent shape.
+        payload=step.input,
         job_id=str(step.id),
     )
     _runtime_event(

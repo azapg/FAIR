@@ -74,3 +74,7 @@ docs/dist
 
 # misc
 docs/.DS_Store
+
+# Extension SDK workspace (bun)
+node_modules/
+sdk/typescript/dist

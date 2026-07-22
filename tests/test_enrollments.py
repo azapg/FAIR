@@ -21,13 +21,13 @@ from tests.conftest import get_auth_token
 def _make_users(session):
     """Create admin, professor and two students."""
     admin = User(id=uuid4(), name="Admin", email="admin@test.com",
-                 role=UserRole.admin, password_hash=hash_password("test_password_123"))
+                 role=UserRole.admin, password_hash=hash_password("test_password_123"), is_verified=True)
     prof = User(id=uuid4(), name="Professor", email="prof@test.com",
-                role=UserRole.professor, password_hash=hash_password("test_password_123"))
+                role=UserRole.professor, password_hash=hash_password("test_password_123"), is_verified=True)
     stu1 = User(id=uuid4(), name="Student One", email="stu1@test.com",
-                role=UserRole.student, password_hash=hash_password("test_password_123"))
+                role=UserRole.student, password_hash=hash_password("test_password_123"), is_verified=True)
     stu2 = User(id=uuid4(), name="Student Two", email="stu2@test.com",
-                role=UserRole.student, password_hash=hash_password("test_password_123"))
+                role=UserRole.student, password_hash=hash_password("test_password_123"), is_verified=True)
     session.add_all([admin, prof, stu1, stu2])
     session.commit()
     return admin, prof, stu1, stu2

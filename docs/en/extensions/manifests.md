@@ -32,7 +32,7 @@ Use `webhook` when FAIR can reach your service. Use `runner` when your code runs
   "capabilities": [
     {
       "capabilityId": "chat.assignment",
-      "kind": "agent",
+      "surface": "chat.agent",
       "version": "1.0.0",
       "inputSchema": {"type": "object"},
       "outputSchema": {"type": "object"}

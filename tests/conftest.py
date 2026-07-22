@@ -34,7 +34,11 @@ def test_db():
         cursor.close()
 
     Base.metadata.create_all(bind=engine)
-    TestingSessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+    # Match the application session (autoflush=False) so tests cannot pass on
+    # implicit flushes that never happen in production.
+    TestingSessionLocal = sessionmaker(
+        bind=engine, autoflush=False, expire_on_commit=False
+    )
 
     def override_get_db():
         try:
@@ -78,7 +82,8 @@ def admin_user(test_db):
             name=fake.name(),
             email="admin@test.com",
             role=UserRole.admin,
-            password_hash=hash_password("test_password_123")
+            password_hash=hash_password("test_password_123"),
+            is_verified=True,
         )
         session.add(user)
         session.commit()
@@ -96,7 +101,8 @@ def professor_user(test_db):
             name=fake.name(),
             email="professor@test.com",
             role=UserRole.professor,
-            password_hash=hash_password("test_password_123")
+            password_hash=hash_password("test_password_123"),
+            is_verified=True,
         )
         session.add(user)
         session.commit()
@@ -114,7 +120,8 @@ def student_user(test_db):
             name=fake.name(),
             email="student@test.com",
             role=UserRole.student,
-            password_hash=hash_password("test_password_123")
+            password_hash=hash_password("test_password_123"),
+            is_verified=True,
         )
         session.add(user)
         session.commit()

@@ -22,8 +22,6 @@ from fair_platform.extension_sdk.contracts.protocol import (
     RunnerClaimRequest,
     RunnerCommandAck,
     RunnerCommandLease,
-    ToolInvocationRead,
-    ToolInvocationRequest,
 )
 
 __all__ = [
@@ -44,6 +42,4 @@ __all__ = [
     "RunnerClaimRequest",
     "RunnerCommandAck",
     "RunnerCommandLease",
-    "ToolInvocationRead",
-    "ToolInvocationRequest",
 ]
