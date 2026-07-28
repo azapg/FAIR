@@ -20,6 +20,7 @@ import {
 
 type Instructor = {
   id: string;
+  enrollmentId?: string;
   name: string;
   email: string;
   role: string;
@@ -44,6 +45,7 @@ export function ParticipantsTab({
       ...(instructor ? [instructor] : []),
       ...assistants.map((membership) => ({
         id: membership.userId,
+        enrollmentId: membership.id,
         name: membership.userName ?? 'Assistant',
         email: membership.userEmail ?? '',
         role: 'assistant',
@@ -85,22 +87,43 @@ export function ParticipantsTab({
       {
         id: "actions",
         header: () => <div className="w-12 text-right">{t("actions.courseActions")}</div>,
-        cell: () => (
+        cell: ({ row }) => (
           <div className="text-right">
             <DropdownMenu>
               <DropdownMenuTrigger className="ml-auto flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
                 <Ellipsis className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled>View profile</DropdownMenuItem>
-                <DropdownMenuItem disabled>{t("common.edit")}</DropdownMenuItem>
+                {row.original.enrollmentId && canManageRoles ? (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => updateRole.mutate({
+                        id: row.original.enrollmentId!,
+                        role: 'student',
+                      })}
+                    >
+                      Make student
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => removeEnrollment.mutate(row.original.enrollmentId!)}
+                    >
+                      Remove from course
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem disabled>View profile</DropdownMenuItem>
+                    <DropdownMenuItem disabled>{t("common.edit")}</DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         ),
       },
     ],
-    [t],
+    [canManageRoles, removeEnrollment, t, updateRole],
   );
 
   const studentColumns = useMemo<ColumnDef<EnrollmentSummary>[]>(
