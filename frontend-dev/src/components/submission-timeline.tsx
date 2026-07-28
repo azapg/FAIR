@@ -96,10 +96,9 @@ const TimelineItem = ({
       <div className="min-w-0 pt-1">
         <div className="flex items-start gap-2">
           <UserAvatar
-            size="sm"
+            avatarSrc={null}
             username={actorName}
-            circular
-            className="mt-0.5"
+            className="mt-0.5 h-8 w-8 rounded-lg"
           />
           <div className="min-w-0 text-sm leading-5 text-muted-foreground">
             <p>
