@@ -1,5 +1,6 @@
 from uuid import UUID, uuid4
 from datetime import datetime
+import math
 from sqlalchemy import (
     String,
     Text,
@@ -10,8 +11,8 @@ from sqlalchemy import (
     Column,
     Boolean,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Optional, List, TYPE_CHECKING
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from typing import Any, Optional, List, TYPE_CHECKING
 from enum import Enum
 
 from ..database import Base
@@ -84,6 +85,24 @@ class Assignment(Base):
         secondary="assignment_artifacts",
         back_populates="assignments",
     )
+
+    @validates("max_grade")
+    def validate_max_grade(self, _key: str, value: Any) -> dict[str, float | str]:
+        if not isinstance(value, dict):
+            raise ValueError("max_grade must be a points grading object")
+        if set(value) != {"type", "value"} or value.get("type") != "points":
+            raise ValueError(
+                'max_grade must have exactly {"type": "points", "value": <positive number>}'
+            )
+        points = value.get("value")
+        if (
+            isinstance(points, bool)
+            or not isinstance(points, (int, float))
+            or not math.isfinite(points)
+            or points <= 0
+        ):
+            raise ValueError("max_grade.value must be a positive number of points")
+        return {"type": "points", "value": points}
 
     def __repr__(self) -> str:
         return (

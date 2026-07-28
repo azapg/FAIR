@@ -28,7 +28,7 @@ def test_get_submission_timeline_populates_fields(test_client: TestClient, test_
             id=uuid4(),
             course_id=course.id,
             title="Timeline Assignment",
-            max_grade={"points": 100},
+            max_grade={"type": "points", "value": 100},
         )
         session.add(assignment)
         

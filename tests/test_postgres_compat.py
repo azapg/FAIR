@@ -234,7 +234,7 @@ def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
             title="A1",
             description=None,
             deadline=None,
-            max_grade={"value": 100},
+            max_grade={"type": "points", "value": 100},
         )
         session.add(assignment)
         session.flush()

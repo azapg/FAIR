@@ -71,7 +71,7 @@ class TestAtomicSubmissionCreation:
                 title="Test Assignment",
                 description="Assignment for submission testing",
                 deadline=datetime.now() + timedelta(days=7),
-                max_grade={"points": 100}
+                max_grade={"type": "points", "value": 100}
             )
             session.add(assignment)
             session.commit()
@@ -338,7 +338,7 @@ class TestAtomicSubmissionCreation:
                 title="Past Due Assignment",
                 description="Assignment with past deadline",
                 deadline=datetime.now() - timedelta(days=1),  # Past deadline
-                max_grade={"points": 100}
+                max_grade={"type": "points", "value": 100}
             )
             session.add(assignment)
             session.commit()

@@ -18,14 +18,14 @@ To create a new assignment, you must first be inside a course:
 
 You can set an optional **Due Date** for the assignment. This helps students keep track of their schedule. If you leave it blank, there will be no official deadline.
 
-## Grading Options
+## Grading
 
-FAIR allows you to choose how you want to grade each assignment. When creating or editing an assignment, you can select from these types:
+FAIR stores every grade as points. When creating or editing an assignment, set
+the maximum number of points available.
 
-- **Points:** Set a maximum score (e.g., 100 points).
-- **Percentage:** Grade based on a scale of 0 to 100%.
-- **Letter Grade:** Use traditional marks like A, B, C, or F.
-- **Pass/Fail:** A simple way to mark completion or basic competence.
+Percentages, letter grades, and pass/fail labels may be added later as display
+views calculated from the stored point values. They are not separate grading
+types and do not change the underlying grade.
 
 ## Adding Resources
 

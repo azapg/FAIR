@@ -108,7 +108,7 @@ class TestArtifactAPIPermissions:
                 title="Assignment One",
                 description="Assignment in course1",
                 deadline=datetime.now() + timedelta(days=7),
-                max_grade={"points": 100}
+                max_grade={"type": "points", "value": 100}
             )
             
             session.add(assignment1)

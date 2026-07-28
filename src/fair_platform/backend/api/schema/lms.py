@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import Any, Literal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
 
+from fair_platform.backend.api.schema.assignment import PointsGrade
 from fair_platform.backend.api.schema.utils import schema_config
 
 
@@ -13,7 +14,7 @@ class GradebookAssignment(BaseModel):
     id: UUID
     title: str
     deadline: datetime | None = None
-    max_grade: dict[str, Any] | None = None
+    max_grade: PointsGrade
 
 
 class GradebookCell(BaseModel):

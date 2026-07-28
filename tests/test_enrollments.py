@@ -265,7 +265,7 @@ class TestEnrollmentVisibility:
             assignment = Assignment(
                 id=uuid4(), course_id=course.id, title="HW1",
                 description="Homework", deadline=datetime.now() + timedelta(days=7),
-                max_grade={"points": 100},
+                max_grade={"type": "points", "value": 100},
             )
             s.add(assignment)
             # Only enroll stu1
@@ -394,6 +394,7 @@ class TestLimitedViewsAndOwnership:
             "course_id": str(course.id),
             "title": "New Assignment",
             "description": "desc",
+            "max_grade": '{"type": "points", "value": 100}',
         }
         resp = test_client.post("/api/assignments/", data=payload, headers=headers)
         assert resp.status_code == 403

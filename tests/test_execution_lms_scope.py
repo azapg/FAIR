@@ -42,7 +42,7 @@ def _course_assignment_submission(session, *, instructor: User, suffix: str):
         id=uuid4(),
         course_id=course.id,
         title=f"Assignment {suffix}",
-        max_grade={"value": 100},
+        max_grade={"type": "points", "value": 100},
     )
     submitter = Submitter(
         id=uuid4(),

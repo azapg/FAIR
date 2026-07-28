@@ -730,7 +730,7 @@
           "assignments"
         ],
         "summary": "Create Assignment",
-        "description": "Create an assignment with optional file uploads and/or existing artifact references.\n\nThis endpoint supports both multipart/form-data (for file uploads) and can reference\nexisting artifacts by ID. All operations are atomic - if any step fails, everything\nis rolled back.\n\nForm fields:\n- course_id: UUID of the course (required)\n- title: Assignment title (required)\n- description: Optional description text\n- deadline: Optional deadline in ISO format (YYYY-MM-DDTHH:MM:SS)\n- max_grade: Optional JSON object with grade structure: {\"type\": \"points\", \"value\": 100}\n- artifact_ids: Optional JSON array of existing artifact UUIDs: [\"uuid1\", \"uuid2\"]\n- files: Optional list of files to upload as new artifacts",
+        "description": "Create an assignment with optional file uploads and/or existing artifact references.\n\nThis endpoint supports both multipart/form-data (for file uploads) and can reference\nexisting artifacts by ID. All operations are atomic - if any step fails, everything\nis rolled back.\n\nForm fields:\n- course_id: UUID of the course (required)\n- title: Assignment title (required)\n- description: Optional description text\n- deadline: Optional deadline in ISO format (YYYY-MM-DDTHH:MM:SS)\n- max_grade: JSON object with point scale: {\"type\": \"points\", \"value\": 100}\n- artifact_ids: Optional JSON array of existing artifact UUIDs: [\"uuid1\", \"uuid2\"]\n- files: Optional list of files to upload as new artifacts",
         "operationId": "create_assignment_api_assignments__post",
         "security": [
           {
@@ -1553,6 +1553,25 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -3094,6 +3113,53 @@
         }
       }
     },
+    "/api/v1/functions/invoke": {
+      "post": {
+        "tags": [
+          "executions"
+        ],
+        "summary": "Invoke Function",
+        "description": "Run the capability that implements a FAIR contract.\n\nCallers name a *contract* (\"fair.rubric.generate@1\"), not an extension.\nThat is what lets one generic button work wherever a contract declares a\nplacement, and lets a different Extension take over the contract without\nthe UI changing.",
+        "operationId": "invoke_function_api_v1_functions_invoke_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FunctionInvoke"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/executions/{execution_id}": {
       "get": {
         "tags": [
@@ -3222,123 +3288,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DelegatedExecutionAuthorization"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/executions/{execution_id}/tools": {
-      "post": {
-        "tags": [
-          "executions"
-        ],
-        "summary": "Invoke Platform Tool",
-        "description": "Create one durable child Execution for an explicitly allowed tool.",
-        "operationId": "invoke_platform_tool_api_v1_executions__execution_id__tools_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "execution_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Execution Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ToolInvocationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolInvocationRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/executions/{execution_id}/tools/{tool_execution_id}": {
-      "get": {
-        "tags": [
-          "executions"
-        ],
-        "summary": "Read Platform Tool",
-        "operationId": "read_platform_tool_api_v1_executions__execution_id__tools__tool_execution_id__get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "execution_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Execution Id"
-            }
-          },
-          {
-            "name": "tool_execution_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Tool Execution Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolInvocationRead"
                 }
               }
             }
@@ -5681,6 +5630,71 @@
         }
       }
     },
+    "/api/v1/extensions/self/manifest": {
+      "put": {
+        "tags": [
+          "extensions"
+        ],
+        "summary": "Sync Own Manifest",
+        "description": "Let a running Extension publish its own manifest.\n\nThis is what makes `createExtension(...).start()` a one-command developer\nexperience: the SDK derives the manifest from the code and syncs it on\nboot, instead of a human hand-writing JSON Schema and an admin pasting it.\n\nThe credential fixes the identity -- an Extension can only ever describe\nitself, never register or modify another one.",
+        "operationId": "sync_own_manifest_api_v1_extensions_self_manifest_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-FAIR-Extension-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fair-Extension-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallationRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/extensions/installations": {
       "post": {
         "tags": [
@@ -7564,16 +7578,7 @@
             "title": "Deadline"
           },
           "maxGrade": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Maxgrade"
+            "$ref": "#/components/schemas/PointsGrade"
           },
           "status": {
             "$ref": "#/components/schemas/AssignmentStatus",
@@ -7606,6 +7611,7 @@
         "required": [
           "courseId",
           "title",
+          "maxGrade",
           "id"
         ],
         "title": "AssignmentRead"
@@ -7670,14 +7676,12 @@
           "maxGrade": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/PointsGrade"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Maxgrade"
+            ]
           },
           "artifacts": {
             "anyOf": [
@@ -7788,7 +7792,8 @@
         "type": "object",
         "required": [
           "course_id",
-          "title"
+          "title",
+          "max_grade"
         ],
         "title": "Body_create_assignment_api_assignments__post"
       },
@@ -7950,16 +7955,14 @@
             "minLength": 1,
             "title": "Capabilityid"
           },
-          "kind": {
+          "surface": {
             "type": "string",
             "enum": [
-              "agent",
-              "grader",
-              "transformer",
-              "tool",
-              "integration"
+              "chat.agent",
+              "function",
+              "flow.step"
             ],
-            "title": "Kind"
+            "title": "Surface"
           },
           "version": {
             "type": "string",
@@ -7967,11 +7970,60 @@
             "minLength": 1,
             "title": "Version"
           },
+          "contract": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract"
+          },
+          "displayName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displayname"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "inputSchema": {
-            "$ref": "#/components/schemas/JsonSchemaDocument"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonSchemaDocument"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "outputSchema": {
-            "$ref": "#/components/schemas/JsonSchemaDocument"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonSchemaDocument"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "configSchema": {
             "anyOf": [
@@ -7983,26 +8035,12 @@
               }
             ]
           },
-          "requestedScopes": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Requestedscopes"
-          },
           "declaredEffects": {
             "items": {
               "type": "string"
             },
             "type": "array",
             "title": "Declaredeffects"
-          },
-          "toolCapabilities": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Toolcapabilities"
           },
           "supportsStreaming": {
             "type": "boolean",
@@ -8018,21 +8056,14 @@
             "type": "boolean",
             "title": "Supportsresume",
             "default": false
-          },
-          "supportsBatch": {
-            "type": "boolean",
-            "title": "Supportsbatch",
-            "default": false
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "capabilityId",
-          "kind",
-          "version",
-          "inputSchema",
-          "outputSchema"
+          "surface",
+          "version"
         ],
         "title": "CapabilityManifest"
       },
@@ -8044,16 +8075,14 @@
             "minLength": 1,
             "title": "Capabilityid"
           },
-          "kind": {
+          "surface": {
             "type": "string",
             "enum": [
-              "agent",
-              "grader",
-              "transformer",
-              "tool",
-              "integration"
+              "chat.agent",
+              "function",
+              "flow.step"
             ],
-            "title": "Kind"
+            "title": "Surface"
           },
           "version": {
             "type": "string",
@@ -8061,11 +8090,60 @@
             "minLength": 1,
             "title": "Version"
           },
+          "contract": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract"
+          },
+          "displayName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displayname"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "inputSchema": {
-            "$ref": "#/components/schemas/JsonSchemaDocument"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonSchemaDocument"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "outputSchema": {
-            "$ref": "#/components/schemas/JsonSchemaDocument"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonSchemaDocument"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "configSchema": {
             "anyOf": [
@@ -8077,26 +8155,12 @@
               }
             ]
           },
-          "requestedScopes": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Requestedscopes"
-          },
           "declaredEffects": {
             "items": {
               "type": "string"
             },
             "type": "array",
             "title": "Declaredeffects"
-          },
-          "toolCapabilities": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Toolcapabilities"
           },
           "supportsStreaming": {
             "type": "boolean",
@@ -8111,11 +8175,6 @@
           "supportsResume": {
             "type": "boolean",
             "title": "Supportsresume",
-            "default": false
-          },
-          "supportsBatch": {
-            "type": "boolean",
-            "title": "Supportsbatch",
             "default": false
           },
           "id": {
@@ -8138,10 +8197,8 @@
         "type": "object",
         "required": [
           "capabilityId",
-          "kind",
+          "surface",
           "version",
-          "inputSchema",
-          "outputSchema",
           "id",
           "installationId",
           "createdAt"
@@ -10324,6 +10381,51 @@
         ],
         "title": "ForgotPasswordRequest"
       },
+      "FunctionInvoke": {
+        "properties": {
+          "contract": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Contract"
+          },
+          "input": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input"
+          },
+          "courseId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Courseid"
+          },
+          "assignmentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignmentid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contract"
+        ],
+        "title": "FunctionInvoke",
+        "description": "Run whichever installed capability implements a FAIR contract."
+      },
       "GradebookAssignment": {
         "properties": {
           "id": {
@@ -10348,22 +10450,14 @@
             "title": "Deadline"
           },
           "maxGrade": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Maxgrade"
+            "$ref": "#/components/schemas/PointsGrade"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "title"
+          "title",
+          "maxGrade"
         ],
         "title": "GradebookAssignment"
       },
@@ -11215,6 +11309,28 @@
           "createdAt"
         ],
         "title": "NotificationRead"
+      },
+      "PointsGrade": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "points",
+            "title": "Type",
+            "default": "points"
+          },
+          "value": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "PointsGrade",
+        "description": "The canonical grading scale persisted by FAIR."
       },
       "ResendVerificationRequest": {
         "properties": {
@@ -12094,88 +12210,6 @@
           "token"
         ],
         "title": "TokenConfirmRequest"
-      },
-      "ToolInvocationRead": {
-        "properties": {
-          "executionId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Executionid"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output"
-          },
-          "errorCode": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Errorcode"
-          },
-          "errorSummary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Errorsummary"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "executionId",
-          "status"
-        ],
-        "title": "ToolInvocationRead"
-      },
-      "ToolInvocationRequest": {
-        "properties": {
-          "capabilityDefinitionId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Capabilitydefinitionid"
-          },
-          "idempotencyKey": {
-            "type": "string",
-            "maxLength": 128,
-            "minLength": 1,
-            "title": "Idempotencykey"
-          },
-          "input": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Input"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "capabilityDefinitionId",
-          "idempotencyKey"
-        ],
-        "title": "ToolInvocationRequest",
-        "description": "Invoke one platform-linked tool allowed by the parent capability pin."
       },
       "TurnCreate": {
         "properties": {
