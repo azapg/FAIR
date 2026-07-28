@@ -3,6 +3,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import {
   Select,
@@ -207,6 +208,7 @@ export function WorkflowsSidebar({
           onShowLogs={() => setShowLogs(true)}
         />
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

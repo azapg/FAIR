@@ -33,6 +33,9 @@ function MainLayout() {
       defaultOpen={false}
       width="20rem"
       widthMobile="20rem"
+      resizable
+      minWidth={256}
+      maxWidth={448}
     >
         <div className="h-full flex">
           <AppSidebar />
