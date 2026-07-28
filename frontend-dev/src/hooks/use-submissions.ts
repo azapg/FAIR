@@ -99,6 +99,19 @@ export type UpdateSubmissionDraftInput = {
   feedback?: string | null
 }
 
+export function hasUnpublishedDraft(submission: Submission): boolean {
+  const hasDraft =
+    submission.draftScore != null || submission.draftFeedback != null
+
+  return (
+    hasDraft &&
+    (
+      submission.draftScore !== submission.publishedScore ||
+      submission.draftFeedback !== submission.publishedFeedback
+    )
+  )
+}
+
 export const submissionsKeys = {
   all: ['submissions'] as const,
   lists: () => [...submissionsKeys.all, 'list'] as const,

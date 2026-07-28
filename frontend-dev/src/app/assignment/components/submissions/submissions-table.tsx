@@ -24,6 +24,7 @@ import {
 import {
   Submission,
   SubmissionStatus,
+  hasUnpublishedDraft,
   useReturnSubmissions,
 } from "@/hooks/use-submissions";
 import { SubmissionSheet } from "@/app/assignment/components/submissions/submission-sheet";
@@ -130,11 +131,7 @@ function SubmissionsToolbar({
   const returnableSubmissionIds = table
     .getSelectedRowModel()
     .rows.map((row) => row.original)
-    .filter(
-      (submission) =>
-        submission.status !== "returned" &&
-        (submission.draftScore != null || submission.draftFeedback != null),
-    )
+    .filter(hasUnpublishedDraft)
     .map((submission) => submission.id);
 
   const hasReturnableSelection = returnableSubmissionIds.length > 0;

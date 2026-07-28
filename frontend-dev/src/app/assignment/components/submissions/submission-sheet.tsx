@@ -23,6 +23,7 @@ import {
 
 import {
   Submission,
+  hasUnpublishedDraft,
   useSubmissionTimeline,
   useReturnSubmission,
 } from "@/hooks/use-submissions";
@@ -60,10 +61,8 @@ export function SubmissionSheet({
 
   if (!submission) return null;
 
-  const hasDraft =
-    submission.draftScore != null || submission.draftFeedback != null;
   const canReturn =
-    hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
+    hasUnpublishedDraft(submission) && !returnSubmission.isPending;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

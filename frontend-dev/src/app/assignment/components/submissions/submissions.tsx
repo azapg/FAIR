@@ -37,6 +37,7 @@ import {
 import {
   SubmissionStatus,
   Submission,
+  hasUnpublishedDraft,
   useReturnSubmission,
   useUpdateSubmissionDraft,
 } from "@/hooks/use-submissions";
@@ -430,10 +431,8 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
   const startFlow = useStartFlow();
   const returnSubmission = useReturnSubmission();
 
-  const hasDraft =
-    submission.draftScore != null || submission.draftFeedback != null;
   const canReturn =
-    hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
+    hasUnpublishedDraft(submission) && !returnSubmission.isPending;
 
   function runFlow(flow?: Flow) {
     const version = latestPublishedVersion(flow);
