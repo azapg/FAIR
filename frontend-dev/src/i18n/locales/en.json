@@ -73,6 +73,8 @@
   "settings": {
     "title": "Settings",
     "description": "Manage your workspace preferences and account controls.",
+    "navigationLabel": "Settings sections",
+    "close": "Close settings",
     "categories": {
       "you": "Account & Preferences",
       "ai": "AI Features",

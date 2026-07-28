@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 
 import { Can } from "@/components/can";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/components/settings/settings-sections";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -66,6 +68,7 @@ function CategoryNavigation({
             <div key={section.id}>
               <button
                 type="button"
+                aria-current={selectedSectionId === section.id ? "page" : undefined}
                 className={cn(
                   "w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted",
                   selectedSectionId === section.id && "bg-muted font-medium",
@@ -83,6 +86,7 @@ function CategoryNavigation({
 }
 
 function DesktopSettingsContent() {
+  const { t } = useTranslation();
   const [selectedSectionId, setSelectedSectionId] = useState<SettingsSectionId>(DEFAULT_SECTION);
 
   const selectedSection = useMemo(
@@ -92,40 +96,60 @@ function DesktopSettingsContent() {
   const SelectedSectionComponent = selectedSection?.render;
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <aside className="w-72 border-r">
-        <ScrollArea className="h-full px-3 py-4">
-          <div className="space-y-4">
-            {SETTINGS_CATEGORY_ORDER.map((category) =>
-              category === "admin" ? (
-                <Can I={ADMIN_PERMISSION} key={category}>
+    <div className="grid h-full min-h-0 w-full grid-cols-[minmax(14rem,1fr)_minmax(0,46rem)_minmax(5.5rem,1fr)]">
+      <aside className="min-w-0 bg-muted/30">
+        <ScrollArea className="h-full">
+          <div className="ml-auto w-full max-w-60 px-3 py-16">
+            <h2 className="mb-5 px-2 text-sm font-semibold">{t("settings.title")}</h2>
+            <nav aria-label={t("settings.navigationLabel")} className="space-y-4">
+              {SETTINGS_CATEGORY_ORDER.map((category) =>
+                category === "admin" ? (
+                  <Can I={ADMIN_PERMISSION} key={category}>
+                    <CategoryNavigation
+                      category={category}
+                      selectedSectionId={selectedSectionId}
+                      onSelectSection={setSelectedSectionId}
+                    />
+                  </Can>
+                ) : (
                   <CategoryNavigation
+                    key={category}
                     category={category}
                     selectedSectionId={selectedSectionId}
                     onSelectSection={setSelectedSectionId}
                   />
-                </Can>
-              ) : (
-                <CategoryNavigation
-                  key={category}
-                  category={category}
-                  selectedSectionId={selectedSectionId}
-                  onSelectSection={setSelectedSectionId}
-                />
-              ),
-            )}
+                ),
+              )}
+            </nav>
           </div>
         </ScrollArea>
       </aside>
-      <ScrollArea className="h-full flex-1">
-        <div className="space-y-4 p-6">
-          {selectedSection && sectionIsAdmin(selectedSection) ? (
-            <Can I={ADMIN_PERMISSION}>{SelectedSectionComponent ? <SelectedSectionComponent /> : null}</Can>
-          ) : SelectedSectionComponent ? (
-            <SelectedSectionComponent />
-          ) : null}
-        </div>
-      </ScrollArea>
+      <main className="min-w-0 bg-background">
+        <ScrollArea className="h-full">
+          <div className="min-h-full space-y-4 px-6 py-16 lg:px-10">
+            {selectedSection && sectionIsAdmin(selectedSection) ? (
+              <Can I={ADMIN_PERMISSION}>
+                {SelectedSectionComponent ? <SelectedSectionComponent /> : null}
+              </Can>
+            ) : SelectedSectionComponent ? (
+              <SelectedSectionComponent />
+            ) : null}
+          </div>
+        </ScrollArea>
+      </main>
+      <div className="bg-background px-6 py-16">
+        <DialogClose
+          className="group flex flex-col items-center gap-1.5 text-muted-foreground outline-none"
+          aria-label={t("settings.close")}
+        >
+          <span className="flex size-9 items-center justify-center rounded-full border-2 border-current transition-colors group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background">
+            <X className="size-5" aria-hidden="true" />
+          </span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide" aria-hidden="true">
+            Esc
+          </span>
+        </DialogClose>
+      </div>
     </div>
   );
 }
@@ -192,7 +216,10 @@ export function SettingsDialog({ open, onOpenChange, isMobile }: SettingsDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!flex h-[90vh] !w-[calc(100vw-2rem)] !max-w-[calc(100vw-2rem)] !flex-col gap-0 overflow-hidden p-0 sm:!w-[1200px] sm:!max-w-[1200px]">
+      <DialogContent
+        showCloseButton={false}
+        className="!inset-0 !top-0 !left-0 !block !h-dvh !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-hidden !rounded-none !border-0 !p-0 !shadow-none data-[state=closed]:!zoom-out-100 data-[state=open]:!zoom-in-100"
+      >
         <DialogHeader className="sr-only">
           <DialogTitle>{t("settings.title")}</DialogTitle>
           <DialogDescription>{t("settings.description")}</DialogDescription>
