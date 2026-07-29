@@ -132,11 +132,14 @@ type EventRenderer = {
   renderBody?: (ctx: EventRenderContext) => React.ReactNode;
 };
 
+// Keep the event markers quiet and monochrome, like GitHub's activity timeline.
+// The event type still determines the icon, but not an accent color.
+const TIMELINE_ICON_COLOR = "border-border bg-muted text-muted-foreground";
+
 const EVENT_RENDERERS: Partial<Record<SubmissionEventType, EventRenderer>> = {
   submission_submitted: {
     icon: Upload,
-    color:
-      "border-blue-200 bg-blue-100 text-blue-600 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-300",
+    color: TIMELINE_ICON_COLOR,
     renderInline: ({ event, t }) => {
       const artifactCount = getNumberField(event.details, "artifact_count");
       return (
@@ -155,8 +158,7 @@ const EVENT_RENDERERS: Partial<Record<SubmissionEventType, EventRenderer>> = {
   },
   status_transitioned: {
     icon: ArrowRight,
-    color:
-      "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300",
+    color: TIMELINE_ICON_COLOR,
     renderInline: ({ event, t }) => {
       const fromStatus = getStringField(event.details, "from_status");
       const toStatus = getStringField(event.details, "to_status");
@@ -172,8 +174,7 @@ const EVENT_RENDERERS: Partial<Record<SubmissionEventType, EventRenderer>> = {
   },
   ai_initial_result_recorded: {
     icon: Bot,
-    color:
-      "border-indigo-200 bg-indigo-100 text-indigo-600 dark:border-indigo-700 dark:bg-indigo-900 dark:text-indigo-300",
+    color: TIMELINE_ICON_COLOR,
     renderInline: ({ event, t }) => {
       const attemptIndex = getNumberField(event.details, "attempt_index");
       return (
@@ -192,8 +193,7 @@ const EVENT_RENDERERS: Partial<Record<SubmissionEventType, EventRenderer>> = {
   },
   ai_regrade_result_recorded: {
     icon: Bot,
-    color:
-      "border-indigo-200 bg-indigo-100 text-indigo-600 dark:border-indigo-700 dark:bg-indigo-900 dark:text-indigo-300",
+    color: TIMELINE_ICON_COLOR,
     renderInline: ({ event, t }) => {
       const attemptIndex = getNumberField(event.details, "attempt_index");
       return (
@@ -212,8 +212,7 @@ const EVENT_RENDERERS: Partial<Record<SubmissionEventType, EventRenderer>> = {
   },
   draft_manually_edited: {
     icon: Pencil,
-    color:
-      "border-amber-200 bg-amber-100 text-amber-600 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-300",
+    color: TIMELINE_ICON_COLOR,
     renderInline: ({ event, t }) => {
       const score = getScoreChange(event.details);
       const feedback = getFeedbackChange(event.details);
@@ -261,8 +260,7 @@ const EVENT_RENDERERS: Partial<Record<SubmissionEventType, EventRenderer>> = {
   },
   returned_to_student: {
     icon: CheckCircle2,
-    color:
-      "border-green-200 bg-green-100 text-green-600 dark:border-green-700 dark:bg-green-900 dark:text-green-300",
+    color: TIMELINE_ICON_COLOR,
     renderInline: ({ event, t }) => {
       const publishedScore = getNumberField(event.details, "published_score");
       return (
@@ -290,8 +288,7 @@ const EVENT_RENDERERS: Partial<Record<SubmissionEventType, EventRenderer>> = {
 
 const DEFAULT_RENDERER: EventRenderer = {
   icon: User,
-  color:
-    "border-gray-200 bg-gray-100 text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400",
+  color: TIMELINE_ICON_COLOR,
   renderInline: ({ t }) => (
     <span>{t("submissions.timelineEvents.actions.unknownEvent")}</span>
   ),
