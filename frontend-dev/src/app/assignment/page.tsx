@@ -31,6 +31,7 @@ import { ArtifactAction } from "@/components/artifact-action";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermission } from "@/hooks/use-permission";
 import { SubmissionComments } from "@/components/submission-comments";
+import { StudentSubmissionGrade } from "@/app/assignment/components/submissions/student-submission-grade";
 
 interface InstructorSubmissionsSectionProps {
   setIsCreateSubmissionOpen: (value: boolean) => void;
@@ -69,6 +70,7 @@ function StudentSubmissionSection({
             <span>{attempt.isLate ? 'Late' : attempt.status}</span>
           </summary>
           <div className="mt-3 border-t pt-3">
+            <StudentSubmissionGrade submission={attempt} />
             <SubmissionComments submissionId={attempt.id} />
           </div>
         </details>

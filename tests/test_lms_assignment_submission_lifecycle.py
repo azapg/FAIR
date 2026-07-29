@@ -238,3 +238,27 @@ def test_roster_gradebook_queue_and_returned_grade(test_client, test_db):
         "/api/lms/notifications", headers=_auth(test_client, student)
     ).json()
     assert notifications[0]["kind"] == "grade_returned"
+
+    revised = test_client.patch(
+        f"/api/submissions/{submission_id}/draft",
+        json={"score": 96, "feedback": "Revised after review"},
+        headers=_auth(test_client, owner),
+    )
+    assert revised.status_code == 200
+
+    returned_again = test_client.post(
+        f"/api/submissions/{submission_id}/return",
+        headers=_auth(test_client, owner),
+    )
+    assert returned_again.status_code == 200
+    assert returned_again.json()["publishedScore"] == 96
+    assert returned_again.json()["publishedFeedback"] == "Revised after review"
+
+    revised_student_view = test_client.get(
+        f"/api/submissions/{submission_id}",
+        headers=_auth(test_client, student),
+    ).json()
+    assert revised_student_view["publishedScore"] == 96
+    assert revised_student_view["publishedFeedback"] == "Revised after review"
+    assert revised_student_view["draftScore"] is None
+    assert revised_student_view["draftFeedback"] is None
