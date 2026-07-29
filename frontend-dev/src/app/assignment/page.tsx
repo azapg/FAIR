@@ -194,6 +194,9 @@ export default function AssignmentPage() {
       keyboardShortcut="m"
       width="22rem"
       widthMobile="18rem"
+      resizable
+      minWidth={288}
+      maxWidth={512}
     >
       <ScrollArea className="w-full h-svh flex-1 min-w-0">
         <div className="min-w-0 break-words">

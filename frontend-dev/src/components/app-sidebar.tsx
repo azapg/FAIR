@@ -268,7 +268,13 @@ export function AppSidebar({
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
   const { data: notifications = [] } = useNotifications(isAuthenticated);
   const unreadCount = notifications.filter((notification) => !notification.readAt).length;
-  const { setOpen, state, isMobile: isSidebarMobile, openMobile } = useSidebar();
+  const {
+    setOpen,
+    state,
+    isMobile: isSidebarMobile,
+    openMobile,
+    width: sidebarWidth = "20rem",
+  } = useSidebar();
   const [showAllAssignments, setShowAllAssignments] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
@@ -316,8 +322,13 @@ export function AppSidebar({
 
   const sidebarStyle = {
     ...(style ?? {}),
-    ["--sidebar-width" as string]: !isSidebarMobile && inboxOpen ? "40rem" : "20rem",
-    ["--app-sidebar-main-width" as string]: "20rem",
+    ["--sidebar-width" as string]:
+      !isSidebarMobile && inboxOpen
+        ? `calc(${sidebarWidth} + 20rem)`
+        : isSidebarMobile
+          ? "20rem"
+          : sidebarWidth,
+    ["--app-sidebar-main-width" as string]: sidebarWidth,
   } as React.CSSProperties;
 
   return (

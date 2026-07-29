@@ -41,10 +41,107 @@ type SidebarContextProps = {
   width?: string;
   widthMobile?: string;
   widthIcon?: string;
+  resizable: boolean;
+  minWidth: number;
+  maxWidth: number;
+  widthPixels: number;
+  setWidth: (width: number) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
 const FlowSidebarContext = React.createContext<SidebarContextProps | null>(null);
+
+function clampSidebarWidth(width: number, minWidth: number, maxWidth: number) {
+  return Math.min(Math.max(width, minWidth), maxWidth);
+}
+
+function sidebarWidthToPixels(width: string) {
+  const value = Number.parseFloat(width);
+  if (!Number.isFinite(value)) return 0;
+
+  if (width.endsWith("rem") && typeof window !== "undefined") {
+    const rootFontSize = Number.parseFloat(
+      window.getComputedStyle(document.documentElement).fontSize,
+    );
+    return value * (Number.isFinite(rootFontSize) ? rootFontSize : 16);
+  }
+
+  return value;
+}
+
+function useResizableSidebarWidth({
+  width,
+  minWidth,
+  maxWidth,
+  resizable,
+  storageKey,
+}: {
+  width: string;
+  minWidth: number;
+  maxWidth: number;
+  resizable: boolean;
+  storageKey: string;
+}) {
+  const defaultWidth = clampSidebarWidth(
+    sidebarWidthToPixels(width),
+    minWidth,
+    maxWidth,
+  );
+  const [resizedWidth, setResizedWidth] = React.useState<number | null>(() => {
+    if (!resizable || typeof window === "undefined") return null;
+
+    try {
+      const storedWidth = Number.parseFloat(
+        window.localStorage.getItem(storageKey) ?? "",
+      );
+      return Number.isFinite(storedWidth)
+        ? clampSidebarWidth(storedWidth, minWidth, maxWidth)
+        : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const widthPixels = resizedWidth ?? defaultWidth;
+  const setWidth = React.useCallback(
+    (nextWidth: number) => {
+      if (!resizable) return;
+
+      const clampedWidth = clampSidebarWidth(
+        nextWidth,
+        minWidth,
+        maxWidth,
+      );
+      setResizedWidth(clampedWidth);
+      try {
+        window.localStorage.setItem(storageKey, String(clampedWidth));
+      } catch {
+        // Resizing should still work when storage is unavailable.
+      }
+    },
+    [maxWidth, minWidth, resizable, storageKey],
+  );
+
+  return {
+    currentWidth: resizedWidth === null ? width : `${resizedWidth}px`,
+    setWidth,
+    widthPixels,
+  };
+}
+
+function useCurrentSidebar() {
+  const flowContext = React.useContext(FlowSidebarContext);
+  const sidebarContext = React.useContext(SidebarContext);
+  const context = flowContext || sidebarContext;
+
+  if (!context) {
+    throw new Error(
+      "Sidebar components must be used within a SidebarProvider or FlowSidebarProvider.",
+    );
+  }
+
+  return context;
+}
 
 function useSidebar() {
   const context = React.useContext(SidebarContext);
@@ -73,6 +170,9 @@ function SidebarProvider({
   width = SIDEBAR_WIDTH,
   widthMobile = SIDEBAR_WIDTH_MOBILE,
   widthIcon = SIDEBAR_WIDTH_ICON,
+  resizable = false,
+  minWidth = 240,
+  maxWidth = 480,
   className,
   style,
   children,
@@ -86,9 +186,23 @@ function SidebarProvider({
   width?: string;
   widthMobile?: string;
   widthIcon?: string;
+  resizable?: boolean;
+  minWidth?: number;
+  maxWidth?: number;
 }) {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
+  const {
+    currentWidth,
+    setWidth,
+    widthPixels,
+  } = useResizableSidebarWidth({
+    width,
+    minWidth,
+    maxWidth,
+    resizable,
+    storageKey: `${cookieName}_width`,
+  });
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -144,9 +258,14 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
-      width,
+      width: currentWidth,
       widthMobile,
       widthIcon,
+      resizable,
+      minWidth,
+      maxWidth,
+      widthPixels,
+      setWidth,
     }),
     [
       state,
@@ -156,9 +275,14 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
-      width,
+      currentWidth,
       widthMobile,
       widthIcon,
+      resizable,
+      minWidth,
+      maxWidth,
+      widthPixels,
+      setWidth,
     ],
   );
 
@@ -169,7 +293,7 @@ function SidebarProvider({
           data-slot="sidebar-wrapper"
           style={
             {
-              "--sidebar-width": width,
+              "--sidebar-width": currentWidth,
               "--sidebar-width-icon": widthIcon,
               "--sidebar-width-mobile": widthMobile,
               ...style,
@@ -197,6 +321,9 @@ function FlowSidebarProvider({
   width = SIDEBAR_WIDTH,
   widthMobile = SIDEBAR_WIDTH_MOBILE,
   widthIcon = SIDEBAR_WIDTH_ICON,
+  resizable = false,
+  minWidth = 240,
+  maxWidth = 480,
   className,
   style,
   children,
@@ -210,9 +337,23 @@ function FlowSidebarProvider({
   width?: string;
   widthMobile?: string;
   widthIcon?: string;
+  resizable?: boolean;
+  minWidth?: number;
+  maxWidth?: number;
 }) {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
+  const {
+    currentWidth,
+    setWidth,
+    widthPixels,
+  } = useResizableSidebarWidth({
+    width,
+    minWidth,
+    maxWidth,
+    resizable,
+    storageKey: `${cookieName}_width`,
+  });
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -268,9 +409,14 @@ function FlowSidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
-      width,
+      width: currentWidth,
       widthMobile,
       widthIcon,
+      resizable,
+      minWidth,
+      maxWidth,
+      widthPixels,
+      setWidth,
     }),
     [
       state,
@@ -280,9 +426,14 @@ function FlowSidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
-      width,
+      currentWidth,
       widthMobile,
       widthIcon,
+      resizable,
+      minWidth,
+      maxWidth,
+      widthPixels,
+      setWidth,
     ],
   );
 
@@ -293,7 +444,7 @@ function FlowSidebarProvider({
           data-slot="sidebar-wrapper"
           style={
             {
-              "--sidebar-width": width,
+              "--sidebar-width": currentWidth,
               "--sidebar-width-icon": widthIcon,
               "--sidebar-width-mobile": widthMobile,
               ...style,
@@ -325,15 +476,7 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
   const { style, ...containerProps } = props;
-  const flowContext = React.useContext(FlowSidebarContext);
-  const sidebarContext = React.useContext(SidebarContext);
-
-  const context = flowContext || sidebarContext;
-  if (!context) {
-    throw new Error(
-      "useSidebar must be used within a SidebarProvider or FlowSidebarProvider.",
-    );
-  }
+  const context = useCurrentSidebar();
 
   const { isMobile, state, openMobile, setOpenMobile, widthMobile } = context;
 
@@ -478,24 +621,133 @@ function FlowSidebarTrigger({
   );
 }
 
-function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar();
+function SidebarRail({
+  className,
+  onClick,
+  onKeyDown,
+  ...props
+}: React.ComponentProps<"button">) {
+  const {
+    maxWidth,
+    minWidth,
+    resizable,
+    setWidth,
+    state,
+    toggleSidebar,
+    widthPixels,
+  } = useCurrentSidebar();
+  const dragState = React.useRef<{
+    dragged: boolean;
+    pointerId: number;
+    side: "left" | "right";
+    startWidth: number;
+    startX: number;
+  } | null>(null);
+  const suppressClick = React.useRef(false);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (!resizable || state === "collapsed" || event.button !== 0) return;
+
+    const sidebar = event.currentTarget.closest("[data-side]");
+    const side =
+      sidebar?.getAttribute("data-side") === "right" ? "right" : "left";
+    dragState.current = {
+      dragged: false,
+      pointerId: event.pointerId,
+      side,
+      startWidth: widthPixels,
+      startX: event.clientX,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragState.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const horizontalDelta = event.clientX - drag.startX;
+    if (Math.abs(horizontalDelta) >= 2) {
+      drag.dragged = true;
+    }
+    if (drag.dragged) {
+      setWidth(
+        drag.startWidth + (drag.side === "left" ? horizontalDelta : -horizontalDelta),
+      );
+    }
+  };
+
+  const finishPointerInteraction = (
+    event: React.PointerEvent<HTMLButtonElement>,
+  ) => {
+    const drag = dragState.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    suppressClick.current = drag.dragged;
+    dragState.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
 
   return (
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
-      tabIndex={-1}
-      onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      role={resizable ? "separator" : undefined}
+      aria-label={resizable ? "Resize or toggle sidebar" : "Toggle sidebar"}
+      aria-orientation={resizable ? "vertical" : undefined}
+      aria-valuemax={resizable ? maxWidth : undefined}
+      aria-valuemin={resizable ? minWidth : undefined}
+      aria-valuenow={resizable ? Math.round(widthPixels) : undefined}
+      aria-keyshortcuts={
+        resizable ? "ArrowLeft ArrowRight Home End" : undefined
+      }
+      tabIndex={resizable ? 0 : -1}
+      onClick={(event) => {
+        onClick?.(event);
+        if (event.defaultPrevented) return;
+        if (suppressClick.current) {
+          suppressClick.current = false;
+          return;
+        }
+        toggleSidebar();
+      }}
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        if (
+          event.defaultPrevented ||
+          !resizable ||
+          state === "collapsed" ||
+          !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        if (event.key === "Home" || event.key === "End") {
+          setWidth(event.key === "Home" ? minWidth : maxWidth);
+          return;
+        }
+
+        const sidebar = event.currentTarget.closest("[data-side]");
+        const isRightSidebar = sidebar?.getAttribute("data-side") === "right";
+        const direction = event.key === "ArrowRight" ? 1 : -1;
+        setWidth(widthPixels + direction * (isRightSidebar ? -8 : 8));
+      }}
+      onPointerCancel={finishPointerInteraction}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishPointerInteraction}
+      title={resizable ? "Drag to resize; click to toggle" : "Toggle sidebar"}
       className={cn(
+        "touch-none",
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
         "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
         "hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
         "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
         "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+        resizable && state === "expanded" && "cursor-col-resize",
         className,
       )}
       {...props}
