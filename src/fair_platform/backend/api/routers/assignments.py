@@ -2,6 +2,7 @@ from uuid import UUID, uuid4
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Form
+from pydantic import ValidationError
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
@@ -19,6 +20,7 @@ from fair_platform.backend.api.schema.assignment import (
     AssignmentRead,
     AssignmentUpdate,
     AssignmentStatusUpdate,
+    PointsGrade,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.core.security.permissions import has_capability
@@ -40,7 +42,7 @@ async def create_assignment(
     title: str = Form(...),
     description: str = Form(None),
     deadline: str = Form(None),
-    max_grade: str = Form(None),
+    max_grade: str = Form(...),
     artifact_ids: str = Form(None),
     files: List[UploadFile] = File(None),
     allow_resubmissions: bool = Form(True),
@@ -59,7 +61,7 @@ async def create_assignment(
     - title: Assignment title (required)
     - description: Optional description text
     - deadline: Optional deadline in ISO format (YYYY-MM-DDTHH:MM:SS)
-    - max_grade: Optional JSON object with grade structure: {"type": "points", "value": 100}
+    - max_grade: JSON object with point scale: {"type": "points", "value": 100}
     - artifact_ids: Optional JSON array of existing artifact UUIDs: ["uuid1", "uuid2"]
     - files: Optional list of files to upload as new artifacts
     """
@@ -75,15 +77,13 @@ async def create_assignment(
         )
 
     try:
-        max_grade_dict = None
-        if max_grade:
-            try:
-                max_grade_dict = json.loads(max_grade)
-            except json.JSONDecodeError:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid max_grade JSON. Expected format: {\"type\": \"points\", \"value\": 100}"
-                )
+        try:
+            max_grade_dict = PointsGrade.model_validate_json(max_grade).model_dump()
+        except (ValidationError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Invalid max_grade. Expected {"type": "points", "value": <positive number>}',
+            )
 
         existing_artifact_ids = []
         if artifact_ids:

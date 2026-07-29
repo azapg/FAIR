@@ -204,7 +204,7 @@ def test_thread_rejects_spoofed_or_inconsistent_educational_scope(test_db):
         id=uuid4(),
         course_id=first_course.id,
         title="Scoped assignment",
-        max_grade={"value": 100},
+        max_grade={"type": "points", "value": 100},
     )
     with test_db() as session:
         session.add_all([outsider, instructor, first_course, second_course, assignment])

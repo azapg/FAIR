@@ -251,7 +251,7 @@ def test_execution_command_freezes_typed_assignment_artifact_access(test_db):
         id=uuid4(),
         course_id=course.id,
         title="Artifact assignment",
-        max_grade={"value": 100},
+        max_grade={"type": "points", "value": 100},
     )
     pinned_artifact = Artifact(
         id=uuid4(),
@@ -364,7 +364,7 @@ def test_execution_freezes_only_artifacts_visible_to_its_initiating_user(test_db
         id=uuid4(),
         course_id=course.id,
         title="Artifact access assignment",
-        max_grade={"value": 100},
+        max_grade={"type": "points", "value": 100},
     )
     visible = Artifact(
         id=uuid4(),

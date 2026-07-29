@@ -36,7 +36,7 @@ def _build_submission_graph(session):
         course_id=course.id,
         title="Assignment",
         description="Desc",
-        max_grade={"points": 100},
+        max_grade={"type": "points", "value": 100},
     )
     session.add(assignment)
 

@@ -186,7 +186,7 @@ class TestArtifactLifecycleManagement:
     #             title="Test Assignment",
     #             description="Test assignment",
     #             deadline=datetime.now() + timedelta(days=7),
-    #             max_grade={"points": 100}
+    #             max_grade={"type": "points", "value": 100}
     #         )
     #         session.add(assignment)
     #         session.commit()
@@ -426,7 +426,7 @@ class TestArtifactLifecycleManagement:
                 title="Test Assignment",
                 description="Test assignment",
                 deadline=datetime.now() + timedelta(days=7),
-                max_grade={"points": 100}
+                max_grade={"type": "points", "value": 100}
             )
             session.add(assignment)
             session.commit()

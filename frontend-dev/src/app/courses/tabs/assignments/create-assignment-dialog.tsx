@@ -48,19 +48,18 @@ export function CreateAssignmentDialog({
     title: "",
     description: "",
     dueDate: "",
-    gradeType: "",
-    gradeValue: "",
+    gradeValue: "100",
   });
 
   const [files, setFiles] = useState<FileItem[]>([]);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const {t, i18n} = useTranslation();
+  const {t} = useTranslation();
 
   const { mutateAsync: createAssignment, isPending } = useCreateAssignment();
 
   const resetForm = () => {
-    setForm({title: "", description: "", dueDate: "", gradeType: "", gradeValue: ""});
+    setForm({title: "", description: "", dueDate: "", gradeValue: "100"});
     setFiles([]);
     setSubmissionError(null);
   };
@@ -94,27 +93,12 @@ export function CreateAssignmentDialog({
       return;
     }
 
-    let totalPoints: Grade | undefined = undefined;
-    if (form.gradeType) {
-      switch (form.gradeType) {
-        case "points":
-        case "percentage": {
-          const num = Number(form.gradeValue);
-          if (Number.isFinite(num)) {
-            totalPoints = {type: form.gradeType, value: num};
-          }
-          break;
-        }
-        case "letter":
-          if (form.gradeValue.trim()) {
-            totalPoints = {type: "letter", value: form.gradeValue.trim()};
-          }
-          break;
-        case "pass_fail":
-          totalPoints = { type: "pass_fail", value: form.gradeValue === "pass" };
-          break;
-      }
+    const points = Number(form.gradeValue);
+    if (!Number.isFinite(points) || points <= 0) {
+      setSubmissionError(t("assignments.pointsRequired"));
+      return;
     }
+    const totalPoints: Grade = {type: "points", value: points};
 
     try {
       if (!courseId) {
@@ -126,7 +110,7 @@ export function CreateAssignmentDialog({
         title: form.title.trim(),
         description: form.description.trim() || null,
         deadline: form.dueDate || null,
-        maxGrade: totalPoints ?? null,
+        maxGrade: totalPoints,
         files: files.map(f => f.file),
       };
       
@@ -206,66 +190,18 @@ export function CreateAssignmentDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="gradeType">{t("assignments.gradingType")}</Label>
-              <select
-                id="gradeType"
-                className="w-full rounded-md border px-3 py-2 text-sm"
-                value={form.gradeType}
-                onChange={e =>
-                  setForm(f => ({
-                    ...f,
-                    gradeType: e.target.value as Grade["type"] | "",
-                    gradeValue: "",
-                  }))
-                }
-              >
-                <option value="">{t("assignments.none")}</option>
-                <option value="points">{t("assignments.points")}</option>
-                <option value="percentage">{t("assignments.percentage")}</option>
-                <option value="letter">{t("assignments.letter")}</option>
-                <option value="pass_fail">{t("assignments.passFail")}</option>
-              </select>
+              <Label htmlFor="gradeValue">{t("assignments.totalPoints")}</Label>
+              <Input
+                id="gradeValue"
+                type="number"
+                min="0"
+                step="any"
+                value={form.gradeValue}
+                onChange={e => setForm(f => ({...f, gradeValue: e.target.value}))}
+                placeholder="e.g., 100"
+                required
+              />
             </div>
-
-            {form.gradeType === "points" || form.gradeType === "percentage" ? (
-              <div className="grid gap-2">
-                <Label htmlFor="gradeValue">
-                  {form.gradeType === "points" ? t("assignments.points") : t("assignments.percentage")}
-                </Label>
-                <Input
-                  id="gradeValue"
-                  type="number"
-                  step="any"
-                  value={form.gradeValue}
-                  onChange={e => setForm(f => ({...f, gradeValue: e.target.value}))}
-                  placeholder={form.gradeType === "points" ? "e.g., 100" : "e.g., 10"}
-                />
-              </div>
-            ) : form.gradeType === "letter" ? (
-              <div className="grid gap-2">
-                <Label htmlFor="gradeLetter">{t("assignments.letterGrade")}</Label>
-                <Input
-                  id="gradeLetter"
-                  value={form.gradeValue}
-                  onChange={e => setForm(f => ({...f, gradeValue: e.target.value}))}
-                  placeholder="e.g., A+"
-                />
-              </div>
-            ) : form.gradeType === "pass_fail" ? (
-              <div className="grid gap-2">
-                <Label htmlFor="pf">{t("assignments.result")}</Label>
-                <select
-                  id="pf"
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                  value={form.gradeValue}
-                  onChange={e => setForm(f => ({...f, gradeValue: e.target.value}))}
-                >
-                  <option value="">{t("assignments.select")}</option>
-                  <option value="pass">{t("assignments.pass")}</option>
-                  <option value="fail">{t("assignments.fail")}</option>
-                </select>
-              </div>
-            ) : null}
 
             <div className="grid gap-2">
               <h2 className="text-muted-foreground text-sm">{t("assignments.resources")}</h2>

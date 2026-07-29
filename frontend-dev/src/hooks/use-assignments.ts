@@ -13,7 +13,7 @@ export type Assignment = {
   description?: string
 
   deadline?: string
-  maxGrade?: Grade
+  maxGrade: Grade
 
   createdAt: string
   updatedAt: string
@@ -27,7 +27,7 @@ export type CreateAssignmentInput = {
   title: string
   description?: string | null
   deadline?: string | null
-  maxGrade?: Grade | null
+  maxGrade: Grade
   artifacts?: string[]  // Existing artifact IDs
   files?: File[]        // New files to upload
 }
