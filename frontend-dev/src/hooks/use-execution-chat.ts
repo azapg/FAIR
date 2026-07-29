@@ -31,7 +31,15 @@ export const initialExecutionChatProjection: ExecutionChatProjection = {
 // FAIR normalizes standard event payloads to camel-case before serving them,
 // so clients read one shape regardless of what an Extension emitted.
 function payloadValue(payload: JsonRecord, field: string): unknown {
-  return payload[field];
+  if (field in payload) return payload[field];
+
+  // Keep the projector tolerant of raw Extension events as well as the
+  // camel-cased payloads returned by FAIR's API boundary.
+  const snakeCaseField = field.replace(
+    /[A-Z]/g,
+    (character) => `_${character.toLowerCase()}`,
+  );
+  return payload[snakeCaseField];
 }
 
 function asString(value: unknown, fallback = ""): string {
