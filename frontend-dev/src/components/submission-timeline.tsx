@@ -12,6 +12,7 @@ import {
   Upload,
   User,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +32,12 @@ const SubmissionTimeline: React.FC<TimelineProps> = ({ timeline }) => {
   const { t, i18n } = useTranslation();
 
   if (!timeline?.length) {
-    return <div>{t("submissions.timelineEvents.labels.noEvents")}</div>;
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+        <Clock3 className="size-5" aria-hidden="true" />
+        <p>{t("submissions.timelineEvents.labels.noEvents")}</p>
+      </div>
+    );
   }
 
   const sortedEvents = [...timeline].sort(
@@ -39,11 +45,14 @@ const SubmissionTimeline: React.FC<TimelineProps> = ({ timeline }) => {
   );
 
   return (
-    <div className="relative ml-4 space-y-8 border-l-2 border-border pb-10">
+    <ol
+      className="m-0 list-none p-0"
+      aria-label={t("submissions.timeline")}
+    >
       {sortedEvents.map((event) => (
         <TimelineItem key={event.id} event={event} t={t} locale={i18n.language} />
       ))}
-    </div>
+    </ol>
   );
 };
 
@@ -70,33 +79,44 @@ const TimelineItem = ({
   const time = formatEventTime(event.createdAt, locale);
 
   return (
-    <div className="relative pl-8">
+    <li className="group relative grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 pb-7 last:pb-0">
+      <div
+        className="absolute bottom-0 left-[15.5px] top-8 w-px bg-border group-last:hidden"
+        aria-hidden="true"
+      />
       <div
         className={cn(
-          "absolute -left-[21px] top-0 flex h-10 w-10 items-center justify-center rounded-full border bg-background ring-4 ring-background",
+          "relative z-10 flex size-8 items-center justify-center rounded-full border shadow-xs ring-4 ring-background",
           color,
         )}
       >
-        <Icon size={18} />
+        <Icon className="size-3.5" aria-hidden="true" />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <div className="flex items-start gap-2 text-sm text-muted-foreground">
-          <UserAvatar size="sm" username={actorName} />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-0.5 font-semibold text-foreground">{actorName}</span>
+      <div className="min-w-0 pt-1">
+        <div className="flex items-start gap-2">
+          <UserAvatar
+            avatarSrc={null}
+            username={actorName}
+            className="mt-0.5 h-8 w-8 rounded-lg"
+          />
+          <div className="min-w-0 text-sm leading-5 text-muted-foreground">
+            <p>
+              <span className="font-semibold text-foreground">{actorName}</span>{" "}
               {renderer.renderInline({ event, t })}
-              <span className="inline-flex items-center gap-1 text-xs opacity-70">
-                <Clock3 className="h-3 w-3" />
-                {time}
-              </span>
-            </div>
-            {body && <div className="mt-2">{body}</div>}
+            </p>
+            <time
+              className="mt-0.5 block text-xs text-muted-foreground/80"
+              dateTime={event.createdAt}
+              title={formatEventDateTime(event.createdAt, locale)}
+            >
+              {time}
+            </time>
           </div>
         </div>
+        {body && <div className="mt-3">{body}</div>}
       </div>
-    </div>
+    </li>
   );
 };
 
@@ -106,7 +126,7 @@ type EventRenderContext = {
 };
 
 type EventRenderer = {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   color: string;
   renderInline: (ctx: EventRenderContext) => React.ReactNode;
   renderBody?: (ctx: EventRenderContext) => React.ReactNode;
@@ -298,8 +318,10 @@ const FeedbackDiffWidget = ({
           {t("submissions.timelineEvents.labels.feedbackEdited")}
         </div>
         <button
+          type="button"
           onClick={() => setShowOld((prev) => !prev)}
-          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+          aria-expanded={showOld}
+          className="inline-flex items-center gap-1 rounded-sm text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
         >
           <FileDiff className="h-3 w-3" />
           {showOld
@@ -310,14 +332,15 @@ const FeedbackDiffWidget = ({
 
       <div className="space-y-3 p-3 text-sm">
         {showOld && (
-          <div className="rounded border border-border p-2 text-xs text-red-800 line-through">
+          <div className="rounded border border-red-200 bg-red-50/70 p-2 text-xs text-red-800 line-through dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
             {feedback.old || t("submissions.timelineEvents.labels.empty")}
           </div>
         )}
         <div
           className={cn(
             "text-foreground",
-            showOld && "rounded border border-border p-2 text-green-900",
+            showOld &&
+              "rounded border border-green-200 bg-green-50/70 p-2 text-green-900 dark:border-green-900 dark:bg-green-950/30 dark:text-green-300",
           )}
         >
           {feedback.new || t("submissions.timelineEvents.labels.empty")}
@@ -337,7 +360,7 @@ const ReturnedFeedbackDetails = ({
   const [open, setOpen] = React.useState(false);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
+      <CollapsibleTrigger className="inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
         <FileText className="h-3.5 w-3.5" />
         {open
           ? t("submissions.timelineEvents.labels.hideFeedback")
@@ -348,7 +371,7 @@ const ReturnedFeedbackDetails = ({
           <ChevronDown className="h-3.5 w-3.5" />
         )}
       </CollapsibleTrigger>
-      <CollapsibleContent className="mt-2 rounded-md border border-border bg-card px-3 py-2 text-sm">
+      <CollapsibleContent className="mt-2 rounded-lg border border-border bg-card px-3 py-2 text-sm shadow-xs">
         {feedback}
       </CollapsibleContent>
     </Collapsible>
@@ -365,7 +388,7 @@ const RawDetails = ({
   const [open, setOpen] = React.useState(false);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
+      <CollapsibleTrigger className="inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
         {open
           ? t("submissions.timelineEvents.labels.hideDetails")
           : t("submissions.timelineEvents.labels.showDetails")}
@@ -376,7 +399,7 @@ const RawDetails = ({
         )}
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 text-xs">
+        <pre className="mt-2 overflow-x-auto rounded-lg border bg-muted/50 p-3 text-xs">
           {JSON.stringify(details, null, 2)}
         </pre>
       </CollapsibleContent>
@@ -385,9 +408,18 @@ const RawDetails = ({
 };
 
 function formatEventTime(createdAt: string, locale: string) {
-  return new Date(createdAt).toLocaleTimeString(locale, {
+  return new Date(createdAt).toLocaleString(locale, {
+    month: "short",
+    day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+function formatEventDateTime(createdAt: string, locale: string) {
+  return new Date(createdAt).toLocaleString(locale, {
+    dateStyle: "full",
+    timeStyle: "short",
   });
 }
 
