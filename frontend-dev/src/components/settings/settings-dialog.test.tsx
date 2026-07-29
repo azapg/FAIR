@@ -3,7 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key === "settings.title" ? "Settings" : "Manage application settings.",
+    t: (key: string) => ({
+      "settings.title": "Settings",
+      "settings.description": "Manage application settings.",
+      "settings.navigationLabel": "Settings sections",
+      "settings.close": "Close settings",
+    })[key] ?? key,
   }),
 }))
 
@@ -21,6 +26,7 @@ describe("accessible dialogs", () => {
   it("names the desktop settings dialog", () => {
     render(<SettingsDialog open onOpenChange={vi.fn()} isMobile={false} />)
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Close settings" })).toBeInTheDocument()
   })
 
   it("names command dialogs", () => {

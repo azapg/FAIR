@@ -73,6 +73,8 @@
   "settings": {
     "title": "Configuración",
     "description": "Administra las preferencias de tu espacio y controles de cuenta.",
+    "navigationLabel": "Secciones de configuración",
+    "close": "Cerrar configuración",
     "categories": {
       "you": "Cuenta y preferencias",
       "ai": "Funciones de IA",
