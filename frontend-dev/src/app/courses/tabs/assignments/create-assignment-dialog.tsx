@@ -2,6 +2,7 @@ import {useState, FormEvent, useRef} from "react";
 import {Button} from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -12,7 +13,6 @@ import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Textarea} from "@/components/ui/textarea";
 import {Plus, FileText, X} from "lucide-react";
-import {ScrollArea} from "@/components/ui/scroll-area";
 import { Assignment, useCreateAssignment, type CreateAssignmentInput } from "@/hooks/use-assignments";
 import {CreateAssignmentForm, Grade} from "@/app/courses/tabs/assignments/assignments";
 import {useTranslation} from "react-i18next";
@@ -149,7 +149,7 @@ export function CreateAssignmentDialog({
           {t("common.create")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col gap-0 overflow-hidden sm:max-w-[60%]">
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden sm:max-w-2xl">
         <DialogHeader className="shrink-0 pb-4">
           <DialogTitle>{t("assignments.newAssignment")}</DialogTitle>
         </DialogHeader>
@@ -157,7 +157,10 @@ export function CreateAssignmentDialog({
           className="flex min-h-0 flex-1 flex-col"
           onSubmit={handleSubmit}
         >
-          <ScrollArea className="min-h-0 flex-1 pr-3">
+          <div
+            data-slot="assignment-form-scroll"
+            className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-3"
+          >
             <div className="grid gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="title">{t("assignments.titleLabel")}</Label>
@@ -174,6 +177,7 @@ export function CreateAssignmentDialog({
                 <Label htmlFor="description">{t("assignments.description")}</Label>
                 <Textarea
                   id="description"
+                  className="min-h-28 max-h-64 resize-y overflow-y-auto"
                   value={form.description}
                   onChange={e => setForm(f => ({...f, description: e.target.value}))}
                   placeholder={t("assignments.descriptionPlaceholder")}
@@ -251,9 +255,14 @@ export function CreateAssignmentDialog({
                 </div>
               ) : null}
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="shrink-0 pt-4">
+          <DialogFooter className="shrink-0 border-t pt-4">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isPending}>
+                {t("common.cancel")}
+              </Button>
+            </DialogClose>
             <Button type="submit" disabled={isPending}>
               {isPending ? t("assignments.creating") : t("common.add")}
             </Button>

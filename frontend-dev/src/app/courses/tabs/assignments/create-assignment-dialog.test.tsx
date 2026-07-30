@@ -13,6 +13,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => ({
       "common.add": "Add",
+      "common.cancel": "Cancel",
       "common.create": "Create",
       "assignments.addResources": "Add resources",
       "assignments.creating": "Creating",
@@ -38,7 +39,7 @@ describe("CreateAssignmentDialog", () => {
     });
   });
 
-  it("keeps the create footer outside the scrollable form body", () => {
+  it("keeps the actions outside a natively scrollable form body", () => {
     render(
       <CreateAssignmentDialog
         courseId="course-1"
@@ -49,13 +50,16 @@ describe("CreateAssignmentDialog", () => {
     );
 
     const dialog = screen.getByRole("dialog", { name: "New Assignment" });
-    const scrollArea = dialog.querySelector<HTMLElement>('[data-slot="scroll-area"]');
+    const scrollBody = dialog.querySelector<HTMLElement>('[data-slot="assignment-form-scroll"]');
     const footer = dialog.querySelector<HTMLElement>('[data-slot="dialog-footer"]');
+    const description = screen.getByLabelText("Description");
 
-    expect(dialog).toHaveClass("max-h-[calc(100vh-2rem)]");
-    expect(scrollArea).toHaveClass("min-h-0", "flex-1");
+    expect(dialog).toHaveClass("max-h-[calc(100dvh-2rem)]");
+    expect(scrollBody).toHaveClass("min-h-0", "flex-1", "overflow-y-auto");
+    expect(description).toHaveClass("max-h-64", "overflow-y-auto");
     expect(footer).toBeInTheDocument();
-    expect(scrollArea).not.toContainElement(footer);
+    expect(scrollBody).not.toContainElement(footer);
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
   });
 });
