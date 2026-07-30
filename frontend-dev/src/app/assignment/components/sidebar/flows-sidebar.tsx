@@ -17,6 +17,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import {
   latestPublishedVersion,
@@ -143,6 +144,7 @@ export function FlowsSidebar({
           <Play /> {startFlow.isPending ? "Starting…" : "Run published Flow"}
         </Button>
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }
