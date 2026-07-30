@@ -12,7 +12,7 @@ import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Textarea} from "@/components/ui/textarea";
 import {Plus, FileText, X} from "lucide-react";
-import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
+import {ScrollArea} from "@/components/ui/scroll-area";
 import { Assignment, useCreateAssignment, type CreateAssignmentInput } from "@/hooks/use-assignments";
 import {CreateAssignmentForm, Grade} from "@/app/courses/tabs/assignments/assignments";
 import {useTranslation} from "react-i18next";
@@ -149,116 +149,116 @@ export function CreateAssignmentDialog({
           {t("common.create")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[60%] h-[90%]">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[calc(100vh-2rem)] flex-col gap-0 overflow-hidden sm:max-w-[60%]">
+        <DialogHeader className="shrink-0 pb-4">
           <DialogTitle>{t("assignments.newAssignment")}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="h-full w-full">
-          <form
-            className="grid gap-4"
-            onSubmit={handleSubmit}
-          >
-            <div className="grid gap-2">
-              <Label htmlFor="title">{t("assignments.titleLabel")}</Label>
-              <Input
-                id="title"
-                value={form.title}
-                onChange={e => setForm(f => ({...f, title: e.target.value}))}
-                required
-                placeholder={t("assignments.titlePlaceholder")}
-              />
-            </div>
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={handleSubmit}
+        >
+          <ScrollArea className="min-h-0 flex-1 pr-3">
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">{t("assignments.titleLabel")}</Label>
+                <Input
+                  id="title"
+                  value={form.title}
+                  onChange={e => setForm(f => ({...f, title: e.target.value}))}
+                  required
+                  placeholder={t("assignments.titlePlaceholder")}
+                />
+              </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="description">{t("assignments.description")}</Label>
-              <Textarea
-                id="description"
-                value={form.description}
-                onChange={e => setForm(f => ({...f, description: e.target.value}))}
-                placeholder={t("assignments.descriptionPlaceholder")}
-              />
-            </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">{t("assignments.description")}</Label>
+                <Textarea
+                  id="description"
+                  value={form.description}
+                  onChange={e => setForm(f => ({...f, description: e.target.value}))}
+                  placeholder={t("assignments.descriptionPlaceholder")}
+                />
+              </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="due">{t("assignments.dueDate")}</Label>
-              <Input
-                id="due"
-                type="date"
-                value={form.dueDate}
-                onChange={e => setForm(f => ({...f, dueDate: e.target.value}))}
-              />
-            </div>
+              <div className="grid gap-2">
+                <Label htmlFor="due">{t("assignments.dueDate")}</Label>
+                <Input
+                  id="due"
+                  type="date"
+                  value={form.dueDate}
+                  onChange={e => setForm(f => ({...f, dueDate: e.target.value}))}
+                />
+              </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="gradeValue">{t("assignments.totalPoints")}</Label>
-              <Input
-                id="gradeValue"
-                type="number"
-                min="0"
-                step="any"
-                value={form.gradeValue}
-                onChange={e => setForm(f => ({...f, gradeValue: e.target.value}))}
-                placeholder="e.g., 100"
-                required
-              />
-            </div>
+              <div className="grid gap-2">
+                <Label htmlFor="gradeValue">{t("assignments.totalPoints")}</Label>
+                <Input
+                  id="gradeValue"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={form.gradeValue}
+                  onChange={e => setForm(f => ({...f, gradeValue: e.target.value}))}
+                  placeholder="e.g., 100"
+                  required
+                />
+              </div>
 
-            <div className="grid gap-2">
-              <h2 className="text-muted-foreground text-sm">{t("assignments.resources")}</h2>
-              <div className="flex flex-row flex-wrap gap-2 items-center">
-                {files.map((item) => (
+              <div className="grid gap-2">
+                <h2 className="text-muted-foreground text-sm">{t("assignments.resources")}</h2>
+                <div className="flex flex-row flex-wrap items-center gap-2">
+                  {files.map((item) => (
+                    <Button
+                      key={item.id}
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      className="flex items-center gap-1"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span className="max-w-[200px] truncate">{item.file.name}</span>
+                      <X
+                        className="ml-1 h-3 w-3 cursor-pointer hover:text-destructive"
+                        onClick={() => removeFile(item.id)}
+                      />
+                    </Button>
+                  ))}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    multiple
+                    onChange={(e) => {
+                      handleFilePick(e.target.files);
+                      e.currentTarget.value = "";
+                    }}
+                  />
                   <Button
-                    key={item.id}
-                    variant="secondary"
+                    variant="ghost"
                     size="sm"
                     type="button"
-                    className="flex items-center gap-1"
+                    onClick={() => fileInputRef.current?.click()}
+                    title={t("assignments.addResources")}
                   >
-                    <FileText className="h-4 w-4" />
-                    <span className="max-w-[200px] truncate">{item.file.name}</span>
-                    <X
-                      className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive"
-                      onClick={() => removeFile(item.id)}
-                    />
+                    <Plus />
                   </Button>
-                ))}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  multiple
-                  onChange={(e) => {
-                    handleFilePick(e.target.files);
-                    e.currentTarget.value = "";
-                  }}
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  title={t("assignments.addResources")}
-                >
-                  <Plus />
-                </Button>
+                </div>
               </div>
+
+              {submissionError ? (
+                <div className="text-sm text-red-600 rounded-md border border-red-200 bg-red-50 p-3">
+                  {submissionError}
+                </div>
+              ) : null}
             </div>
+          </ScrollArea>
 
-            {submissionError ? (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
-                {submissionError}
-              </div>
-            ) : null}
-
-            <DialogFooter>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? t("assignments.creating") : t("common.add")}
-              </Button>
-            </DialogFooter>
-          </form>
-
-          <ScrollBar />
-        </ScrollArea>
+          <DialogFooter className="shrink-0 pt-4">
+            <Button type="submit" disabled={isPending}>
+              {isPending ? t("assignments.creating") : t("common.add")}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
