@@ -65,6 +65,42 @@ from .lms_communication import (
     Notification,
     SubmissionComment,
 )
+from .lms_content import CourseContentVisibility, CourseItem, CourseSection
+from .lms_events import (
+    ActivityEvent,
+    CalendarEvent,
+    CalendarEventVisibility,
+    NotificationChannel,
+    NotificationDeliveryMode,
+    NotificationPreference,
+)
+from .lms_gradebook import (
+    GradeAggregationStrategy,
+    GradeCategory,
+    GradeEntry,
+    GradeEntryStatus,
+    GradeItem,
+    GradeReleaseState,
+)
+from .lms_organization import (
+    Cohort,
+    CohortMembership,
+    CourseGroup,
+    CourseGroupMembership,
+    CourseGroupMembershipRole,
+    ExternalIdentifier,
+    ExternalIdentifierSubjectType,
+    MembershipStatus,
+    Organization,
+    OrganizationMembership,
+    OrganizationMembershipRole,
+)
+from .lms_progress import (
+    AvailabilityRule,
+    CompletionRule,
+    ItemCompletionStatus,
+    UserItemCompletion,
+)
 
 __all__ = [
     "User",
@@ -132,4 +168,34 @@ __all__ = [
     "CoursePostKind",
     "Notification",
     "SubmissionComment",
+    "ActivityEvent",
+    "AvailabilityRule",
+    "CalendarEvent",
+    "CalendarEventVisibility",
+    "Cohort",
+    "CohortMembership",
+    "CompletionRule",
+    "CourseContentVisibility",
+    "CourseGroup",
+    "CourseGroupMembership",
+    "CourseGroupMembershipRole",
+    "CourseItem",
+    "CourseSection",
+    "ExternalIdentifier",
+    "ExternalIdentifierSubjectType",
+    "GradeAggregationStrategy",
+    "GradeCategory",
+    "GradeEntry",
+    "GradeEntryStatus",
+    "GradeItem",
+    "GradeReleaseState",
+    "ItemCompletionStatus",
+    "MembershipStatus",
+    "NotificationChannel",
+    "NotificationDeliveryMode",
+    "NotificationPreference",
+    "Organization",
+    "OrganizationMembership",
+    "OrganizationMembershipRole",
+    "UserItemCompletion",
 ]
