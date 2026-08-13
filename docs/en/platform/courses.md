@@ -34,12 +34,23 @@ Every course has a unique **Enrollment Code**. This is a simple 4-letter code (l
 ## What's Inside a Course?
 
 Once you've created a course, you can click on it to start adding content:
+- **Content:** Build an ordered outline with sections, pages, links, course files, and existing assignments.
 - **Assignments:** Create the tasks your students need to complete.
 - **Submissions:** See the work your students have turned in.
 - **Grading:** Set up how you want the AI or yourself to grade the work.
 
 ## Next Steps
 <Columns cols={2}>
+    <Card
+      title="Build Course Content"
+      icon="list-tree"
+      href="/en/platform/course-content"
+      arrow="true"
+      cta="Read the guide"
+    >
+      Organize course resources into a published student outline.
+    </Card>
+
     <Card
       title="Create an Assignment"
       icon="file-signature"

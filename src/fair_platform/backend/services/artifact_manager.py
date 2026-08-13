@@ -16,7 +16,7 @@ from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.submission import Submission
-from fair_platform.backend.data.models.enrollment import Enrollment
+from fair_platform.backend.data.models.enrollment import Enrollment, EnrollmentStatus
 from fair_platform.backend.storage.provider import (
     StorageProvider,
     get_storage_provider,
@@ -678,6 +678,7 @@ class ArtifactManager:
             enrollment = self.db.query(Enrollment).filter(
                 Enrollment.user_id == user.id,
                 Enrollment.course_id == artifact.course_id,
+                Enrollment.status == EnrollmentStatus.active,
             ).first()
             if enrollment:
                 return True
