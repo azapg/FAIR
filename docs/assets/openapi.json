@@ -4904,6 +4904,316 @@
         }
       }
     },
+    "/api/lms/courses/{course_id}/copy-preview": {
+      "post": {
+        "tags": [
+          "course-copy"
+        ],
+        "summary": "Course Copy Preview",
+        "operationId": "course_copy_preview_api_lms_courses__course_id__copy_preview_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseCopyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseCopyPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/copy": {
+      "post": {
+        "tags": [
+          "course-copy"
+        ],
+        "summary": "Copy Course",
+        "operationId": "copy_course_api_lms_courses__course_id__copy_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseCopyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseCopyResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/course-copy-jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "course-copy"
+        ],
+        "summary": "Get Copy Job",
+        "operationId": "get_copy_job_api_lms_course_copy_jobs__job_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseCopyResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/templates": {
+      "post": {
+        "tags": [
+          "course-copy"
+        ],
+        "summary": "Save Template",
+        "operationId": "save_template_api_lms_courses__course_id__templates_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseTemplateCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseTemplateRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/course-templates": {
+      "get": {
+        "tags": [
+          "course-copy"
+        ],
+        "summary": "List Templates",
+        "operationId": "list_templates_api_lms_course_templates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CourseTemplateRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Templates Api Lms Course Templates Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/lms/course-templates/{template_id}/instantiate": {
+      "post": {
+        "tags": [
+          "course-copy"
+        ],
+        "summary": "Instantiate Template",
+        "operationId": "instantiate_template_api_lms_course_templates__template_id__instantiate_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseCopyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseCopyResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/system/config": {
       "get": {
         "tags": [
@@ -9530,6 +9840,18 @@
             ],
             "title": "Publishedat"
           },
+          "rubricId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubricid"
+          },
           "allowResubmissions": {
             "type": "boolean",
             "title": "Allowresubmissions",
@@ -9631,6 +9953,29 @@
               }
             ],
             "title": "Artifacts"
+          },
+          "allowResubmissions": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowresubmissions"
+          },
+          "rubricId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubricid"
           }
         },
         "type": "object",
@@ -9800,6 +10145,18 @@
             "type": "boolean",
             "title": "Allow Resubmissions",
             "default": true
+          },
+          "rubric_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubric Id"
           }
         },
         "type": "object",
@@ -10315,6 +10672,309 @@
           "hidden"
         ],
         "title": "CourseContentVisibility"
+      },
+      "CourseCopyObjectPreview": {
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sourceid"
+          },
+          "objectType": {
+            "type": "string",
+            "title": "Objecttype"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "copy",
+              "transform",
+              "skip",
+              "unsupported"
+            ],
+            "title": "Action"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceId",
+          "objectType",
+          "title",
+          "action",
+          "reason"
+        ],
+        "title": "CourseCopyObjectPreview"
+      },
+      "CourseCopyPreview": {
+        "properties": {
+          "copied": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Copied"
+          },
+          "transformed": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Transformed"
+          },
+          "skipped": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Skipped"
+          },
+          "unsupported": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Unsupported"
+          },
+          "datePolicy": {
+            "type": "string",
+            "title": "Datepolicy"
+          },
+          "dateShiftDays": {
+            "type": "integer",
+            "title": "Dateshiftdays"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "objects": {
+            "items": {
+              "$ref": "#/components/schemas/CourseCopyObjectPreview"
+            },
+            "type": "array",
+            "title": "Objects"
+          }
+        },
+        "type": "object",
+        "required": [
+          "copied",
+          "transformed",
+          "skipped",
+          "unsupported",
+          "datePolicy",
+          "dateShiftDays",
+          "warnings",
+          "objects"
+        ],
+        "title": "CourseCopyPreview"
+      },
+      "CourseCopyRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/CourseCopySelection"
+          },
+          "datePolicy": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "shift"
+            ],
+            "title": "Datepolicy",
+            "default": "clear"
+          },
+          "dateShiftDays": {
+            "type": "integer",
+            "maximum": 3650.0,
+            "minimum": -3650.0,
+            "title": "Dateshiftdays",
+            "default": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Idempotencykey"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "idempotencyKey"
+        ],
+        "title": "CourseCopyRequest"
+      },
+      "CourseCopyResult": {
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Jobid"
+          },
+          "destinationCourseId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destinationcourseid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "mapping": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Mapping"
+          },
+          "errorMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errormessage"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "completedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobId",
+          "destinationCourseId",
+          "status",
+          "mapping",
+          "errorMessage",
+          "startedAt",
+          "completedAt"
+        ],
+        "title": "CourseCopyResult"
+      },
+      "CourseCopySelection": {
+        "properties": {
+          "content": {
+            "type": "boolean",
+            "title": "Content",
+            "default": true
+          },
+          "assignments": {
+            "type": "boolean",
+            "title": "Assignments",
+            "default": true
+          },
+          "rubrics": {
+            "type": "boolean",
+            "title": "Rubrics",
+            "default": true
+          },
+          "gradebook": {
+            "type": "boolean",
+            "title": "Gradebook",
+            "default": true
+          },
+          "quizzes": {
+            "type": "boolean",
+            "title": "Quizzes",
+            "default": true
+          },
+          "flows": {
+            "type": "boolean",
+            "title": "Flows",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "CourseCopySelection"
       },
       "CourseCreate": {
         "properties": {
@@ -11126,6 +11786,85 @@
         },
         "type": "object",
         "title": "CourseSettingsUpdate"
+      },
+      "CourseTemplateCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/CourseCopySelection"
+          },
+          "datePolicy": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "shift"
+            ],
+            "title": "Datepolicy",
+            "default": "clear"
+          },
+          "dateShiftDays": {
+            "type": "integer",
+            "maximum": 3650.0,
+            "minimum": -3650.0,
+            "title": "Dateshiftdays",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CourseTemplateCreate"
+      },
+      "CourseTemplateRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sourceCourseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sourcecourseid"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/CourseCopySelection"
+          },
+          "datePolicy": {
+            "type": "string",
+            "title": "Datepolicy"
+          },
+          "dateShiftDays": {
+            "type": "integer",
+            "title": "Dateshiftdays"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "sourceCourseId",
+          "selection",
+          "datePolicy",
+          "dateShiftDays",
+          "createdAt"
+        ],
+        "title": "CourseTemplateRead"
       },
       "CourseUpdate": {
         "properties": {

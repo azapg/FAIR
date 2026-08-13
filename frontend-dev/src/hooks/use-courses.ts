@@ -66,6 +66,57 @@ export type EnrollmentSummary = {
   status: 'active' | 'removed'
   updatedAt: string
 }
+export type CourseCopySelection = {
+  content: boolean
+  assignments: boolean
+  rubrics: boolean
+  gradebook: boolean
+  quizzes: boolean
+  flows: boolean
+}
+
+export type CourseCopyPreview = {
+  copied: Record<string, number>
+  transformed: Record<string, number>
+  skipped: Record<string, number>
+  unsupported: Record<string, number>
+  datePolicy: 'clear' | 'shift'
+  dateShiftDays: number
+  warnings: string[]
+  objects: Array<{
+    sourceId: string
+    objectType: string
+    title: string
+    action: 'copy' | 'transform' | 'skip' | 'unsupported'
+    reason: string
+  }>
+}
+
+export type CourseCopyInput = {
+  name: string
+  description?: string | null
+  section?: string | null
+  term?: string | null
+  datePolicy: 'clear' | 'shift'
+  dateShiftDays: number
+  selection: CourseCopySelection
+  idempotencyKey: string
+}
+
+export type CourseCopyResult = {
+  jobId: string
+  destinationCourseId?: string | null
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  mapping: Record<string, Record<string, string>>
+  errorMessage?: string | null
+  startedAt?: string | null
+  completedAt?: string | null
+}
+
+export type CourseTemplateInput = Pick<
+  CourseCopyInput,
+  'datePolicy' | 'dateShiftDays' | 'selection'
+> & { name: string }
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
@@ -114,6 +165,24 @@ const resetEnrollmentCode = async (id: string): Promise<Course> => {
 const updateCourseSettingsApi = async (id: string, data: CourseSettingsInput): Promise<Course> => {
   const res = await api.patch(`/courses/${id}/settings`, data)
   return res.data
+}
+export const previewCourseCopy = async (
+  id: string,
+  data: CourseCopyInput,
+): Promise<CourseCopyPreview> =>
+  (await api.post(`/lms/courses/${id}/copy-preview`, data)).data
+
+export const copyCourse = async (
+  id: string,
+  data: CourseCopyInput,
+): Promise<CourseCopyResult> =>
+  (await api.post(`/lms/courses/${id}/copy`, data)).data
+
+export const saveCourseTemplate = async (
+  id: string,
+  data: CourseTemplateInput,
+): Promise<void> => {
+  await api.post(`/lms/courses/${id}/templates`, data)
 }
 
 const joinCourseByCode = async (code: string): Promise<EnrollmentSummary> => {
