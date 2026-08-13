@@ -2356,54 +2356,6 @@
         }
       }
     },
-    "/api/lms/courses/{course_id}/gradebook": {
-      "get": {
-        "tags": [
-          "lms"
-        ],
-        "summary": "Get Course Gradebook",
-        "operationId": "get_course_gradebook_api_lms_courses__course_id__gradebook_get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "course_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Course Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CourseGradebook"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/lms/courses/{course_id}/grading-queue": {
       "get": {
         "tags": [
@@ -3495,6 +3447,384 @@
                     "$ref": "#/components/schemas/CourseItemRead"
                   },
                   "title": "Response Reorder Course Items Api Lms Courses  Course Id  Sections  Section Id  Items Order Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/gradebook": {
+      "get": {
+        "tags": [
+          "gradebook"
+        ],
+        "summary": "Get Course Gradebook",
+        "operationId": "get_course_gradebook_api_lms_courses__course_id__gradebook_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseGradebook"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/gradebook/categories": {
+      "post": {
+        "tags": [
+          "gradebook"
+        ],
+        "summary": "Create Gradebook Category",
+        "operationId": "create_gradebook_category_api_lms_courses__course_id__gradebook_categories_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradebookCategoryCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradebookCategoryRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/gradebook/categories/{category_id}": {
+      "patch": {
+        "tags": [
+          "gradebook"
+        ],
+        "summary": "Update Gradebook Category",
+        "operationId": "update_gradebook_category_api_lms_courses__course_id__gradebook_categories__category_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Category Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradebookCategoryUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradebookCategoryRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/gradebook/items": {
+      "post": {
+        "tags": [
+          "gradebook"
+        ],
+        "summary": "Create Gradebook Item",
+        "operationId": "create_gradebook_item_api_lms_courses__course_id__gradebook_items_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradebookItemCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradebookItemRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/gradebook/items/{item_id}": {
+      "patch": {
+        "tags": [
+          "gradebook"
+        ],
+        "summary": "Update Gradebook Item",
+        "operationId": "update_gradebook_item_api_lms_courses__course_id__gradebook_items__item_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradebookItemUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradebookItemRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/gradebook/items/{item_id}/entries/{user_id}": {
+      "put": {
+        "tags": [
+          "gradebook"
+        ],
+        "summary": "Upsert Gradebook Entry",
+        "operationId": "upsert_gradebook_entry_api_lms_courses__course_id__gradebook_items__item_id__entries__user_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradebookEntryUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradebookEntryCell"
                 }
               }
             }
@@ -9038,6 +9368,20 @@
             },
             "type": "array",
             "title": "Rows"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/GradebookCategoryRead"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GradebookItemRead"
+            },
+            "type": "array",
+            "title": "Items"
           }
         },
         "type": "object",
@@ -11382,7 +11726,231 @@
           "title",
           "maxGrade"
         ],
-        "title": "GradebookAssignment"
+        "title": "GradebookAssignment",
+        "description": "Legacy assignment column kept for additive response compatibility."
+      },
+      "GradebookCategoryCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight",
+            "description": "Optional percentage weight. If any category is weighted, all categories should have weights totaling 100; otherwise totals are provisional."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "GradebookCategoryCreate"
+      },
+      "GradebookCategoryRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          },
+          "aggregationStrategy": {
+            "type": "string",
+            "title": "Aggregationstrategy"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "title": "Isdefault",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "position",
+          "aggregationStrategy"
+        ],
+        "title": "GradebookCategoryRead"
+      },
+      "GradebookCategoryTotal": {
+        "properties": {
+          "pointsEarned": {
+            "type": "number",
+            "title": "Pointsearned"
+          },
+          "pointsPossible": {
+            "type": "number",
+            "title": "Pointspossible"
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          },
+          "provisional": {
+            "type": "boolean",
+            "title": "Provisional"
+          },
+          "gradedItemCount": {
+            "type": "integer",
+            "title": "Gradeditemcount"
+          },
+          "excusedItemCount": {
+            "type": "integer",
+            "title": "Excuseditemcount"
+          },
+          "missingEntryCount": {
+            "type": "integer",
+            "title": "Missingentrycount"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Categoryid"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pointsEarned",
+          "pointsPossible",
+          "provisional",
+          "gradedItemCount",
+          "excusedItemCount",
+          "missingEntryCount",
+          "categoryId"
+        ],
+        "title": "GradebookCategoryTotal"
+      },
+      "GradebookCategoryUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight",
+            "description": "Optional percentage weight. Mixed/misaligned weights remain visible but mark the course total provisional."
+          }
+        },
+        "type": "object",
+        "title": "GradebookCategoryUpdate"
       },
       "GradebookCell": {
         "properties": {
@@ -11452,7 +12020,408 @@
           "assignmentId",
           "state"
         ],
-        "title": "GradebookCell"
+        "title": "GradebookCell",
+        "description": "Legacy latest-attempt cell kept for grading-queue compatibility."
+      },
+      "GradebookCourseTotal": {
+        "properties": {
+          "pointsEarned": {
+            "type": "number",
+            "title": "Pointsearned"
+          },
+          "pointsPossible": {
+            "type": "number",
+            "title": "Pointspossible"
+          },
+          "percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage"
+          },
+          "provisional": {
+            "type": "boolean",
+            "title": "Provisional"
+          },
+          "gradedItemCount": {
+            "type": "integer",
+            "title": "Gradeditemcount"
+          },
+          "excusedItemCount": {
+            "type": "integer",
+            "title": "Excuseditemcount"
+          },
+          "missingEntryCount": {
+            "type": "integer",
+            "title": "Missingentrycount"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "calculation": {
+            "type": "string",
+            "enum": [
+              "points",
+              "category_weighted"
+            ],
+            "title": "Calculation"
+          },
+          "configuredWeightTotal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configuredweighttotal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pointsEarned",
+          "pointsPossible",
+          "provisional",
+          "gradedItemCount",
+          "excusedItemCount",
+          "missingEntryCount",
+          "calculation"
+        ],
+        "title": "GradebookCourseTotal"
+      },
+      "GradebookEntryCell": {
+        "properties": {
+          "gradeItemId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Gradeitemid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "graded",
+              "excused",
+              "missing",
+              "absent"
+            ],
+            "title": "Status"
+          },
+          "releaseState": {
+            "type": "string",
+            "enum": [
+              "released",
+              "unreleased",
+              "absent"
+            ],
+            "title": "Releasestate"
+          },
+          "pointsEarned": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pointsearned"
+          },
+          "sourceType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetype"
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceid"
+          },
+          "releasedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Releasedat"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "gradeItemId",
+          "status",
+          "releaseState"
+        ],
+        "title": "GradebookEntryCell"
+      },
+      "GradebookEntryUpsert": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "graded",
+              "excused",
+              "missing"
+            ],
+            "title": "Status"
+          },
+          "pointsEarned": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pointsearned"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "GradebookEntryUpsert"
+      },
+      "GradebookItemCreate": {
+        "properties": {
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "maxPoints": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Maxpoints"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "maxPoints"
+        ],
+        "title": "GradebookItemCreate"
+      },
+      "GradebookItemRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "maxPoints": {
+            "type": "number",
+            "title": "Maxpoints"
+          },
+          "sourceType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetype"
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceid"
+          },
+          "isManual": {
+            "type": "boolean",
+            "title": "Ismanual"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "position",
+          "maxPoints",
+          "isManual"
+        ],
+        "title": "GradebookItemRead"
+      },
+      "GradebookItemUpdate": {
+        "properties": {
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryid"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "maxPoints": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxpoints"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "type": "object",
+        "title": "GradebookItemUpdate"
       },
       "GradebookRow": {
         "properties": {
@@ -11475,6 +12444,30 @@
             },
             "type": "array",
             "title": "Cells"
+          },
+          "itemCells": {
+            "items": {
+              "$ref": "#/components/schemas/GradebookEntryCell"
+            },
+            "type": "array",
+            "title": "Itemcells"
+          },
+          "categoryTotals": {
+            "items": {
+              "$ref": "#/components/schemas/GradebookCategoryTotal"
+            },
+            "type": "array",
+            "title": "Categorytotals"
+          },
+          "courseTotal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GradebookCourseTotal"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -12604,7 +13597,8 @@
           "score": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "minimum": 0.0
               },
               {
                 "type": "null"

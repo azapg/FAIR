@@ -4,46 +4,13 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from fair_platform.backend.api.schema.assignment import PointsGrade
 from fair_platform.backend.api.schema.utils import schema_config
-
-
-class GradebookAssignment(BaseModel):
-    model_config = schema_config
-
-    id: UUID
-    title: str
-    deadline: datetime | None = None
-    max_grade: PointsGrade
-
-
-class GradebookCell(BaseModel):
-    model_config = schema_config
-
-    assignment_id: UUID
-    state: Literal["missing", "submitted", "returned", "excused"]
-    submission_id: UUID | None = None
-    score: float | None = None
-    submitted_at: datetime | None = None
-    is_late: bool = False
-    attempt_count: int = 0
-
-
-class GradebookRow(BaseModel):
-    model_config = schema_config
-
-    user_id: UUID
-    name: str
-    email: str
-    cells: list[GradebookCell]
-
-
-class CourseGradebook(BaseModel):
-    model_config = schema_config
-
-    course_id: UUID
-    assignments: list[GradebookAssignment]
-    rows: list[GradebookRow]
+from fair_platform.backend.api.schema.gradebook import (
+    CourseGradebook,
+    GradebookAssignment,
+    GradebookCell,
+    GradebookRow,
+)
 
 
 class GradingQueueItem(BaseModel):

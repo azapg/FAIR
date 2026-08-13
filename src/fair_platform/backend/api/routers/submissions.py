@@ -3,7 +3,16 @@ from typing import List, Optional
 from datetime import datetime, timezone
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+    UploadFile,
+    File,
+    Form,
+    Query,
+)
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_
 
@@ -17,13 +26,19 @@ from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.assignment import Assignment, AssignmentStatus
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.user import User
-from fair_platform.backend.data.models.artifact import Artifact, ArtifactStatus, AccessLevel
+from fair_platform.backend.data.models.artifact import (
+    Artifact,
+    ArtifactStatus,
+    AccessLevel,
+)
 from fair_platform.backend.api.schema.submission import (
     SubmissionRead,
     SubmissionUpdate,
     SubmissionDraftUpdate,
 )
-from fair_platform.backend.api.schema.submission_event import SubmissionTimelineEventRead
+from fair_platform.backend.api.schema.submission_event import (
+    SubmissionTimelineEventRead,
+)
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 from fair_platform.backend.services.submission_manager import get_submission_manager
@@ -34,14 +49,20 @@ from fair_platform.backend.data.models.enrollment import (
     Enrollment,
     EnrollmentStatus,
 )
-from fair_platform.backend.services.course_access import active_membership, can_manage_course
+from fair_platform.backend.services.course_access import (
+    active_membership,
+    can_manage_course,
+)
+from fair_platform.backend.services.gradebook import sync_assignment_user_grade_entry
 from fair_platform.backend.data.models.lms_communication import Notification
 
 router = APIRouter()
 
 
 @router.post("/", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
-@router.post("/synthetic", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/synthetic", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED
+)
 async def create_submission(
     assignment_id: UUID = Form(...),
     submitter_name: Optional[str] = Form(None),
@@ -74,19 +95,21 @@ async def create_submission(
         raise HTTPException(status_code=404, detail="Course not found")
     is_staff_submission = can_manage_course(db, course, current_user)
     membership = active_membership(db, course.id, current_user.id)
-    is_student_submission = bool(
+    is_student_member = bool(
         membership
         and membership.role == CourseMembershipRole.student
         and assignment.status == AssignmentStatus.published
-        and not course.is_archived
     )
-    if not is_staff_submission and not is_student_submission:
+    if not is_staff_submission and not is_student_member:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only course staff or an enrolled student can submit this assignment",
         )
-
-
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
+        )
     try:
         existing_artifact_ids = []
         if artifact_ids:
@@ -97,12 +120,14 @@ async def create_submission(
             except (json.JSONDecodeError, ValueError) as e:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}"
+                    detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}",
                 )
 
         if is_staff_submission:
             if not submitter_name or not submitter_name.strip():
-                raise HTTPException(status_code=422, detail="A synthetic submitter name is required")
+                raise HTTPException(
+                    status_code=422, detail="A synthetic submitter name is required"
+                )
             submitter = Submitter(
                 id=uuid4(),
                 name=submitter_name.strip(),
@@ -114,7 +139,9 @@ async def create_submission(
             db.add(submitter)
             db.flush()
         else:
-            submitter = db.query(Submitter).filter(Submitter.user_id == current_user.id).first()
+            submitter = (
+                db.query(Submitter).filter(Submitter.user_id == current_user.id).first()
+            )
             if submitter is None:
                 submitter = Submitter(
                     id=uuid4(),
@@ -137,8 +164,12 @@ async def create_submission(
             .first()
         )
         if previous_attempt and not assignment.allow_resubmissions:
-            raise HTTPException(status_code=409, detail="This assignment does not allow resubmissions")
-        attempt_number = (previous_attempt.attempt_number + 1) if previous_attempt else 1
+            raise HTTPException(
+                status_code=409, detail="This assignment does not allow resubmissions"
+            )
+        attempt_number = (
+            (previous_attempt.attempt_number + 1) if previous_attempt else 1
+        )
         submitted_at = datetime.now(timezone.utc)
 
         sub = Submission(
@@ -149,7 +180,11 @@ async def create_submission(
             submitted_at=submitted_at,
             status=SubmissionStatus.submitted,
             attempt_number=attempt_number,
-            is_late=bool(assignment.deadline and submitted_at.replace(tzinfo=None) > assignment.deadline.replace(tzinfo=None)),
+            is_late=bool(
+                assignment.deadline
+                and submitted_at.replace(tzinfo=None)
+                > assignment.deadline.replace(tzinfo=None)
+            ),
         )
         db.add(sub)
         db.flush()
@@ -159,11 +194,13 @@ async def create_submission(
         if existing_artifact_ids:
             for artifact_id in existing_artifact_ids:
                 try:
-                    manager.attach_to_submission(UUID(artifact_id), sub.id, current_user)
+                    manager.attach_to_submission(
+                        UUID(artifact_id), sub.id, current_user
+                    )
                 except ValueError:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Invalid artifact ID format: {artifact_id}"
+                        detail=f"Invalid artifact ID format: {artifact_id}",
                     )
 
         if files:
@@ -195,14 +232,16 @@ async def create_submission(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create submission: {str(e)}"
+            detail=f"Failed to create submission: {str(e)}",
         )
 
 
 @router.get("/", response_model=List[SubmissionRead])
 def list_submissions(
     db: Session = Depends(session_dependency),
-    assignment_id: UUID = Query(None, description="Filter submissions by assignment ID"),
+    assignment_id: UUID = Query(
+        None, description="Filter submissions by assignment ID"
+    ),
     current_user: User = Depends(get_current_user),
 ):
     """List all submissions, optionally filtered by assignment ID."""
@@ -241,7 +280,6 @@ def list_submissions(
 
     submissions = query.all()
 
-
     # Fetch all submitters in one query to avoid N+1
     submitter_ids = [sub.submitter_id for sub in submissions]
     submitters = db.query(Submitter).filter(Submitter.id.in_(submitter_ids)).all()
@@ -270,14 +308,15 @@ def list_submissions(
 
         assignment = db.get(Assignment, sub.assignment_id)
         course = db.get(Course, assignment.course_id) if assignment else None
-        manages_submission = bool(course and can_manage_course(db, course, current_user))
+        manages_submission = bool(
+            course and can_manage_course(db, course, current_user)
+        )
         if not manages_submission:
             sub_dict["draft_score"] = None
             sub_dict["draft_feedback"] = None
         result.append(sub_dict)
 
     return result
-
 
 
 @router.get("/{submission_id}", response_model=SubmissionRead)
@@ -338,7 +377,6 @@ def update_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
-
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
     if not course or not can_manage_course(db, course, current_user):
@@ -346,16 +384,23 @@ def update_submission(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this submission",
         )
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
+        )
 
     if payload.artifact_ids is not None:
         manager = get_artifact_manager(db)
 
-        old_artifacts = db.query(Artifact).join(
-            submission_artifacts,
-            submission_artifacts.c.artifact_id == Artifact.id
-        ).filter(
-            submission_artifacts.c.submission_id == sub.id
-        ).all()
+        old_artifacts = (
+            db.query(Artifact)
+            .join(
+                submission_artifacts, submission_artifacts.c.artifact_id == Artifact.id
+            )
+            .filter(submission_artifacts.c.submission_id == sub.id)
+            .all()
+        )
 
         for artifact in old_artifacts:
             manager.detach_from_submission(artifact.id, sub.id, current_user)
@@ -381,7 +426,6 @@ def delete_submission(
             status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
         )
 
-
     assignment = db.get(Assignment, sub.assignment_id)
     course = db.get(Course, assignment.course_id) if assignment else None
     if not course or not can_manage_course(db, course, current_user):
@@ -389,9 +433,27 @@ def delete_submission(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this submission",
         )
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
+        )
 
-
+    submitter = db.get(Submitter, sub.submitter_id)
+    user_id = (
+        submitter.user_id
+        if submitter is not None and not submitter.is_synthetic
+        else None
+    )
     db.delete(sub)
+    db.flush()
+    if user_id is not None:
+        sync_assignment_user_grade_entry(
+            db,
+            assignment,
+            user_id,
+            current_user,
+        )
     db.commit()
     return None
 
@@ -415,6 +477,11 @@ def update_submission_draft(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can edit drafts",
+        )
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
         )
 
     data = payload.model_dump(exclude_unset=True)
@@ -465,6 +532,11 @@ def return_submission(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can return submissions",
         )
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
+        )
 
     try:
         mgr = get_submission_manager(db)
@@ -495,7 +567,9 @@ def return_submission(
         )
 
 
-@router.get("/{submission_id}/timeline", response_model=List[SubmissionTimelineEventRead])
+@router.get(
+    "/{submission_id}/timeline", response_model=List[SubmissionTimelineEventRead]
+)
 def get_submission_timeline(
     submission_id: UUID,
     db: Session = Depends(session_dependency),

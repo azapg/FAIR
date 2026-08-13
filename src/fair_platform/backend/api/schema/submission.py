@@ -2,7 +2,7 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from fair_platform.backend.data.models.submission import SubmissionStatus
 from fair_platform.backend.api.schema.submitter import SubmitterRead
@@ -12,7 +12,7 @@ from fair_platform.backend.api.schema.utils import schema_config
 
 class SubmissionBase(BaseModel):
     model_config = schema_config
-    
+
     assignment_id: UUID
     submitter_id: UUID
     created_by_id: UUID
@@ -22,20 +22,20 @@ class SubmissionBase(BaseModel):
 
 class SubmissionCreate(SubmissionBase):
     model_config = schema_config
-    
+
     artifact_ids: Optional[List[UUID]] = None
 
 
 class SubmissionUpdate(BaseModel):
     model_config = schema_config
-    
+
     artifact_ids: Optional[List[UUID]] = None  # full replace if provided
 
 
 class SubmissionDraftUpdate(BaseModel):
     model_config = schema_config
 
-    score: Optional[float] = None
+    score: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
     feedback: Optional[str] = None
 
 
