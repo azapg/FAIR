@@ -30,6 +30,7 @@ from fair_platform.backend.api.routers.course_content import (
     router as course_content_router,
 )
 from fair_platform.backend.api.routers.gradebook import router as gradebook_router
+from fair_platform.backend.api.routers.quizzes import router as quizzes_router
 from fair_platform.backend.services.execution_outbox_dispatcher import (
     ExecutionOutboxDispatcher,
 )
@@ -127,6 +128,7 @@ app.include_router(
     course_content_router, prefix="/api/lms", tags=["course-content"]
 )
 app.include_router(gradebook_router, prefix="/api/lms", tags=["gradebook"])
+app.include_router(quizzes_router, prefix="/api/lms", tags=["quizzes"])
 app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
 app.include_router(executions_router, prefix="/api/v1", tags=["executions"])
 app.include_router(artifacts_router, prefix="/api/v1", tags=["artifacts"])

@@ -58,8 +58,9 @@
                 "group": "Platform",
                 "pages": [
                   "en/platform/courses",
-                  "en/platform/course-content",
-                  "en/platform/assignments",
+                    "en/platform/course-content",
+                    "en/platform/quizzes",
+                    "en/platform/assignments",
                   "en/platform/lms-primitives",
                   "en/platform/flows",
                   "en/platform/integrations",

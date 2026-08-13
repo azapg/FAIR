@@ -24,6 +24,8 @@ import {
   useUpdateCourseSection,
 } from '@/hooks/use-course-content'
 import { ItemDialog } from './item-dialog'
+import { QuizBuilderDialog } from './quiz-builder-dialog'
+import { QuizCard } from './quiz-card'
 import { SectionDialog } from './section-dialog'
 
 
@@ -36,7 +38,17 @@ function move<T>(values: T[], index: number, delta: -1 | 1): T[] {
 }
 
 
-function ContentItemView({ item, artifacts }: { item: CourseItem; artifacts: LmsArtifact[] }) {
+function ContentItemView({
+  item,
+  artifacts,
+  canManage,
+  isArchived,
+}: {
+  item: CourseItem
+  artifacts: LmsArtifact[]
+  canManage: boolean
+  isArchived: boolean
+}) {
   if (item.kind === 'heading') {
     return <h3 className="text-lg font-semibold">{item.title}</h3>
   }
@@ -78,6 +90,16 @@ function ContentItemView({ item, artifacts }: { item: CourseItem; artifacts: Lms
       </Link>
     )
   }
+  if (item.kind === 'quiz' && item.resourceId) {
+    return (
+      <QuizCard
+        courseId={item.courseId}
+        quizId={item.resourceId}
+        canManage={canManage}
+        isArchived={isArchived}
+      />
+    )
+  }
   return <span className="font-medium">{item.title}</span>
 }
 
@@ -109,6 +131,7 @@ export function CourseContentTab({
   const [itemDialogOpen, setItemDialogOpen] = useState(false)
   const [itemSectionId, setItemSectionId] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<CourseItem | null>(null)
+  const [quizDialogSectionId, setQuizDialogSectionId] = useState<string | null>(null)
 
   if (isLoading) return <div className="py-6 text-muted-foreground">Loading course content…</div>
   if (isError || !content) return <div className="py-6 text-muted-foreground">Course content is unavailable.</div>
@@ -168,7 +191,7 @@ export function CourseContentTab({
         <div>
           <h2 className="text-2xl font-semibold">Course content</h2>
           <p className="text-sm text-muted-foreground">
-            {content.canManage ? 'Organize pages, links, files, and assignments into a student-facing outline.' : 'Work through the course outline in order.'}
+            {content.canManage ? 'Organize pages, links, files, assignments, and quizzes into a student-facing outline.' : 'Work through the course outline in order.'}
           </p>
         </div>
         {canEdit && <Button onClick={openNewSection}><Plus /> Add section</Button>}
@@ -211,7 +234,9 @@ export function CourseContentTab({
               <div key={item.id} className="flex items-start gap-3 p-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-start gap-2">
-                    <div className="min-w-0 flex-1"><ContentItemView item={item} artifacts={artifacts} /></div>
+                    <div className="min-w-0 flex-1">
+                      <ContentItemView item={item} artifacts={artifacts} canManage={content.canManage} isArchived={isArchived} />
+                    </div>
                     {content.canManage && (
                       <div className="flex gap-1">
                         <Badge variant="secondary">{item.kind}</Badge>
@@ -242,8 +267,9 @@ export function CourseContentTab({
             )}
           </div>
           {canEdit && (
-            <div className="border-t p-3">
+            <div className="flex flex-wrap gap-2 border-t p-3">
               <Button variant="outline" size="sm" onClick={() => openNewItem(section.id)}><Plus /> Add content</Button>
+              <Button variant="outline" size="sm" onClick={() => setQuizDialogSectionId(section.id)}><Plus /> Add quiz</Button>
             </div>
           )}
         </section>
@@ -273,6 +299,16 @@ export function CourseContentTab({
             onSubmit={saveItem}
             pending={createItem.isPending || updateItem.isPending}
           />
+          {quizDialogSectionId && (
+            <QuizBuilderDialog
+              courseId={courseId}
+              sectionId={quizDialogSectionId}
+              open
+              onOpenChange={(open) => {
+                if (!open) setQuizDialogSectionId(null)
+              }}
+            />
+          )}
         </>
       )}
     </div>
