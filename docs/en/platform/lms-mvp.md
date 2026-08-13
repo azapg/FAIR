@@ -10,6 +10,11 @@ FAIR is LMS-complete at an MVP level when a teacher and a student can complete t
 - Draft, publish, close, and unpublish assignments.
 - Let enrolled students submit their own work, including numbered attempts and late state.
 - Give students a cross-course to-do view for missing and submitted work.
+- Give learner-only accounts a cross-course dashboard for published work,
+  returned feedback, recent course activity, completion, and current grades.
+- Give each student a self-scoped Grades page with released scores, feedback,
+  missing/unreleased states, server-computed contributions, and an explicit
+  current-versus-final grade explanation.
 - Show course staff a roster-derived grading queue and Gradebook 2.0, including
   ordered categories, optional percentage weights, assignment-linked and manual
   point items, released/excused entries, missing work, and server-computed totals.
