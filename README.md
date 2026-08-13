@@ -1,3 +1,5 @@
+
+
 # The Fair Platform [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) ![PyPI - Version](https://img.shields.io/pypi/v/fair-platform) ![PyPI - Downloads](https://img.shields.io/pypi/dm/fair-platform)
 
 
@@ -30,9 +32,8 @@ For detailed installation instructions, troubleshooting, and more, visit the [do
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - [Bun](https://bun.com/get) (for frontend development)
 
-Once you have uv and Bun instlaled, you can build the platform and start using it:
+Once you have uv and Bun installed, you can build the platform and start using it:
 ```bash
-uv run
 ./build.sh
 fair serve
 ```
