@@ -64,6 +64,22 @@ def _enum_value(value: Any) -> str:
     return value.value if hasattr(value, "value") else str(value)
 
 
+def _canonical_submission_order(*, newest_first: bool) -> tuple[Any, Any, Any]:
+    """Order attempts by number, submission time, and stable UUID tie-breaker."""
+
+    if newest_first:
+        return (
+            Submission.attempt_number.desc().nulls_last(),
+            Submission.submitted_at.desc().nulls_last(),
+            Submission.id.desc(),
+        )
+    return (
+        Submission.attempt_number.asc().nulls_first(),
+        Submission.submitted_at.asc().nulls_first(),
+        Submission.id.asc(),
+    )
+
+
 def _lock_course_order(db: Session, course_id: UUID) -> None:
     if db.get_bind().dialect.name == "sqlite":
         held_locks: dict[UUID, RLock] = db.info.setdefault(_SESSION_ORDER_LOCKS_KEY, {})
@@ -130,11 +146,7 @@ def legacy_course_grading_data(
     submissions = (
         db.query(Submission)
         .filter(Submission.assignment_id.in_(assignment_ids))
-        .order_by(
-            Submission.attempt_number,
-            Submission.submitted_at,
-            Submission.id,
-        )
+        .order_by(*_canonical_submission_order(newest_first=False))
         .all()
         if assignment_ids
         else []
@@ -251,17 +263,6 @@ def sync_assignment_user_grade_entry(
     """
 
     item = ensure_assignment_grade_item(db, assignment)
-    enrollment = (
-        db.query(Enrollment)
-        .filter(
-            Enrollment.course_id == assignment.course_id,
-            Enrollment.user_id == user_id,
-        )
-        .one_or_none()
-    )
-    if enrollment is None:
-        return None
-
     entry = (
         db.query(GradeEntry)
         .filter(
@@ -270,6 +271,21 @@ def sync_assignment_user_grade_entry(
         )
         .one_or_none()
     )
+    enrollment = (
+        db.query(Enrollment)
+        .filter(
+            Enrollment.course_id == assignment.course_id,
+            Enrollment.user_id == user_id,
+            Enrollment.role == CourseMembershipRole.student,
+            Enrollment.status == EnrollmentStatus.active,
+        )
+        .one_or_none()
+    )
+    if enrollment is None:
+        if entry is not None:
+            db.delete(entry)
+            db.flush()
+        return None
     submission = (
         db.query(Submission)
         .join(Submitter, Submitter.id == Submission.submitter_id)
@@ -278,11 +294,7 @@ def sync_assignment_user_grade_entry(
             Submitter.user_id == user_id,
             Submitter.is_synthetic.is_(False),
         )
-        .order_by(
-            Submission.attempt_number.desc(),
-            Submission.submitted_at.desc(),
-            Submission.id.desc(),
-        )
+        .order_by(*_canonical_submission_order(newest_first=True))
         .first()
     )
     if submission is None:
