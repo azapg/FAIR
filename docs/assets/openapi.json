@@ -3842,6 +3842,1068 @@
         }
       }
     },
+    "/api/lms/courses/{course_id}/question-banks": {
+      "get": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Get Question Banks",
+        "operationId": "get_question_banks_api_lms_courses__course_id__question_banks_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionBankRead"
+                  },
+                  "title": "Response Get Question Banks Api Lms Courses  Course Id  Question Banks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Post Question Bank",
+        "operationId": "post_question_bank_api_lms_courses__course_id__question_banks_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionBankCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionBankRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/question-banks/{bank_id}/questions": {
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Post Question",
+        "operationId": "post_question_api_lms_courses__course_id__question_banks__bank_id__questions_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "bank_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Bank Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionAuthoringRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/questions/{question_id}/versions": {
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Post Question Version",
+        "operationId": "post_question_version_api_lms_courses__course_id__questions__question_id__versions_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "question_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Question Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionVersionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionAuthoringRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes": {
+      "get": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Get Quizzes",
+        "operationId": "get_quizzes_api_lms_courses__course_id__quizzes_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuizRead"
+                  },
+                  "title": "Response Get Quizzes Api Lms Courses  Course Id  Quizzes Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Post Quiz",
+        "operationId": "post_quiz_api_lms_courses__course_id__quizzes_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAuthoringRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes/{quiz_id}": {
+      "get": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Get Quiz Summary",
+        "operationId": "get_quiz_summary_api_lms_courses__course_id__quizzes__quiz_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes/{quiz_id}/authoring": {
+      "get": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Get Quiz Authoring",
+        "operationId": "get_quiz_authoring_api_lms_courses__course_id__quizzes__quiz_id__authoring_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAuthoringRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes/{quiz_id}/questions": {
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Post Quiz Question",
+        "operationId": "post_quiz_question_api_lms_courses__course_id__quizzes__quiz_id__questions_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizQuestionAdd"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAuthoringRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes/{quiz_id}/publish": {
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Post Publish Quiz",
+        "operationId": "post_publish_quiz_api_lms_courses__course_id__quizzes__quiz_id__publish_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAuthoringRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes/{quiz_id}/close": {
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Post Close Quiz",
+        "operationId": "post_close_quiz_api_lms_courses__course_id__quizzes__quiz_id__close_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAuthoringRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes/{quiz_id}/attempts": {
+      "get": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Get Quiz Attempts",
+        "operationId": "get_quiz_attempts_api_lms_courses__course_id__quizzes__quiz_id__attempts_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuizAttemptRead"
+                  },
+                  "title": "Response Get Quiz Attempts Api Lms Courses  Course Id  Quizzes  Quiz Id  Attempts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Post Quiz Attempt",
+        "operationId": "post_quiz_attempt_api_lms_courses__course_id__quizzes__quiz_id__attempts_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAttemptRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes/{quiz_id}/attempts/{attempt_id}": {
+      "get": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Get Quiz Attempt",
+        "operationId": "get_quiz_attempt_api_lms_courses__course_id__quizzes__quiz_id__attempts__attempt_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          },
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Attempt Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAttemptRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes/{quiz_id}/attempts/{attempt_id}/answers/{attempt_question_id}": {
+      "put": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Put Quiz Answer",
+        "operationId": "put_quiz_answer_api_lms_courses__course_id__quizzes__quiz_id__attempts__attempt_id__answers__attempt_question_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          },
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Attempt Id"
+            }
+          },
+          {
+            "name": "attempt_question_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Attempt Question Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuizAnswerUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAttemptRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes/{quiz_id}/attempts/{attempt_id}/submit": {
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Post Submit Attempt",
+        "operationId": "post_submit_attempt_api_lms_courses__course_id__quizzes__quiz_id__attempts__attempt_id__submit_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          },
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Attempt Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAttemptRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lms/courses/{course_id}/quizzes/{quiz_id}/attempts/{attempt_id}/release": {
+      "post": {
+        "tags": [
+          "quizzes"
+        ],
+        "summary": "Post Release Attempt",
+        "operationId": "post_release_attempt_api_lms_courses__course_id__quizzes__quiz_id__attempts__attempt_id__release_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          },
+          {
+            "name": "quiz_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Quiz Id"
+            }
+          },
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Attempt Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizAttemptRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/system/config": {
       "get": {
         "tags": [
@@ -8574,6 +9636,85 @@
         "type": "object",
         "title": "AssignmentUpdate"
       },
+      "AttemptQuestionRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "questionVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Questionversionid"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/QuestionKind"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionOptionRead"
+            },
+            "type": "array",
+            "title": "Options"
+          },
+          "points": {
+            "type": "number",
+            "title": "Points"
+          },
+          "selectedOptionId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selectedoptionid"
+          },
+          "isCorrect": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iscorrect"
+          },
+          "pointsAwarded": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pointsawarded"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "questionVersionId",
+          "position",
+          "kind",
+          "prompt",
+          "points"
+        ],
+        "title": "AttemptQuestionRead"
+      },
       "AuthUserRead": {
         "properties": {
           "name": {
@@ -9407,7 +10548,8 @@
               "page",
               "link",
               "file",
-              "assignment"
+              "assignment",
+              "quiz"
             ],
             "title": "Kind"
           },
@@ -9472,7 +10614,8 @@
               "page",
               "link",
               "file",
-              "assignment"
+              "assignment",
+              "quiz"
             ],
             "title": "Kind"
           },
@@ -13247,6 +14390,843 @@
         ],
         "title": "PointsGrade",
         "description": "The canonical grading scale persisted by FAIR."
+      },
+      "QuestionAuthoringRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "bankId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Bankid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionVersionAuthoringRead"
+            },
+            "type": "array",
+            "title": "Versions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "bankId",
+          "title",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "QuestionAuthoringRead"
+      },
+      "QuestionBankCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "QuestionBankCreate"
+      },
+      "QuestionBankRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionAuthoringRead"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "courseId",
+          "name",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "QuestionBankRead"
+      },
+      "QuestionCreate": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/QuestionKind"
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Options"
+          },
+          "correctOptionIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Correctoptionindex"
+          },
+          "defaultPoints": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Defaultpoints",
+            "default": 1
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "prompt",
+          "correctOptionIndex",
+          "title"
+        ],
+        "title": "QuestionCreate"
+      },
+      "QuestionKind": {
+        "type": "string",
+        "enum": [
+          "single_choice",
+          "true_false"
+        ],
+        "title": "QuestionKind"
+      },
+      "QuestionOptionRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "QuestionOptionRead"
+      },
+      "QuestionVersionAuthoringRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "questionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Questionid"
+          },
+          "versionNumber": {
+            "type": "integer",
+            "title": "Versionnumber"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/QuestionKind"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionOptionRead"
+            },
+            "type": "array",
+            "title": "Options"
+          },
+          "correctOptionId": {
+            "type": "string",
+            "title": "Correctoptionid"
+          },
+          "defaultPoints": {
+            "type": "number",
+            "title": "Defaultpoints"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "questionId",
+          "versionNumber",
+          "kind",
+          "prompt",
+          "correctOptionId",
+          "defaultPoints",
+          "createdAt"
+        ],
+        "title": "QuestionVersionAuthoringRead"
+      },
+      "QuestionVersionCreate": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/QuestionKind"
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Options"
+          },
+          "correctOptionIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Correctoptionindex"
+          },
+          "defaultPoints": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Defaultpoints",
+            "default": 1
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "prompt",
+          "correctOptionIndex"
+        ],
+        "title": "QuestionVersionCreate"
+      },
+      "QuizAnswerUpsert": {
+        "properties": {
+          "selectedOptionId": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Selectedoptionid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "selectedOptionId"
+        ],
+        "title": "QuizAnswerUpsert"
+      },
+      "QuizAttemptRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "quizId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Quizid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          },
+          "attemptNumber": {
+            "type": "integer",
+            "title": "Attemptnumber"
+          },
+          "status": {
+            "$ref": "#/components/schemas/QuizAttemptStatus"
+          },
+          "maxPoints": {
+            "type": "number",
+            "title": "Maxpoints"
+          },
+          "earnedPoints": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earnedpoints"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Startedat"
+          },
+          "submittedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submittedat"
+          },
+          "releasedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Releasedat"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/AttemptQuestionRead"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "quizId",
+          "userId",
+          "attemptNumber",
+          "status",
+          "maxPoints",
+          "startedAt"
+        ],
+        "title": "QuizAttemptRead"
+      },
+      "QuizAttemptStatus": {
+        "type": "string",
+        "enum": [
+          "in_progress",
+          "submitted",
+          "released"
+        ],
+        "title": "QuizAttemptStatus"
+      },
+      "QuizAuthoringRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "courseItemId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseitemid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "status": {
+            "$ref": "#/components/schemas/QuizStatus"
+          },
+          "releasePolicy": {
+            "$ref": "#/components/schemas/QuizReleasePolicy"
+          },
+          "attemptLimit": {
+            "type": "integer",
+            "title": "Attemptlimit"
+          },
+          "opensAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opensat"
+          },
+          "closesAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closesat"
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedat"
+          },
+          "closedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closedat"
+          },
+          "questionCount": {
+            "type": "integer",
+            "title": "Questioncount"
+          },
+          "maxPoints": {
+            "type": "number",
+            "title": "Maxpoints"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuizQuestionAuthoringRead"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "courseId",
+          "courseItemId",
+          "title",
+          "status",
+          "releasePolicy",
+          "attemptLimit",
+          "questionCount",
+          "maxPoints",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "QuizAuthoringRead"
+      },
+      "QuizCreate": {
+        "properties": {
+          "sectionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sectionid"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "attemptLimit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Attemptlimit",
+            "default": 1
+          },
+          "releasePolicy": {
+            "$ref": "#/components/schemas/QuizReleasePolicy",
+            "default": "manual"
+          },
+          "opensAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opensat"
+          },
+          "closesAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closesat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sectionId",
+          "title"
+        ],
+        "title": "QuizCreate"
+      },
+      "QuizQuestionAdd": {
+        "properties": {
+          "questionVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Questionversionid"
+          },
+          "points": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "questionVersionId"
+        ],
+        "title": "QuizQuestionAdd"
+      },
+      "QuizQuestionAuthoringRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "points": {
+            "type": "number",
+            "title": "Points"
+          },
+          "version": {
+            "$ref": "#/components/schemas/QuestionVersionAuthoringRead"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "position",
+          "points",
+          "version"
+        ],
+        "title": "QuizQuestionAuthoringRead"
+      },
+      "QuizRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "courseItemId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseitemid"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "status": {
+            "$ref": "#/components/schemas/QuizStatus"
+          },
+          "releasePolicy": {
+            "$ref": "#/components/schemas/QuizReleasePolicy"
+          },
+          "attemptLimit": {
+            "type": "integer",
+            "title": "Attemptlimit"
+          },
+          "opensAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opensat"
+          },
+          "closesAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closesat"
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedat"
+          },
+          "closedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closedat"
+          },
+          "questionCount": {
+            "type": "integer",
+            "title": "Questioncount"
+          },
+          "maxPoints": {
+            "type": "number",
+            "title": "Maxpoints"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "courseId",
+          "courseItemId",
+          "title",
+          "status",
+          "releasePolicy",
+          "attemptLimit",
+          "questionCount",
+          "maxPoints",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "QuizRead"
+      },
+      "QuizReleasePolicy": {
+        "type": "string",
+        "enum": [
+          "immediate",
+          "manual"
+        ],
+        "title": "QuizReleasePolicy"
+      },
+      "QuizStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "published",
+          "closed"
+        ],
+        "title": "QuizStatus"
       },
       "ResendVerificationRequest": {
         "properties": {

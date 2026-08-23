@@ -5,7 +5,7 @@ import api from '@/lib/api'
 
 
 export type CourseContentVisibility = 'draft' | 'published' | 'hidden'
-export type CourseItemKind = 'heading' | 'page' | 'link' | 'file' | 'assignment'
+export type CourseItemKind = 'heading' | 'page' | 'link' | 'file' | 'assignment' | 'quiz'
 
 export type CourseItem = {
   id: string

@@ -101,6 +101,20 @@ from .lms_progress import (
     ItemCompletionStatus,
     UserItemCompletion,
 )
+from .lms_quiz import (
+    Question,
+    QuestionBank,
+    QuestionKind,
+    QuestionVersion,
+    Quiz,
+    QuizAnswer,
+    QuizAttempt,
+    QuizAttemptQuestion,
+    QuizAttemptStatus,
+    QuizQuestion,
+    QuizReleasePolicy,
+    QuizStatus,
+)
 
 __all__ = [
     "User",
@@ -198,4 +212,16 @@ __all__ = [
     "OrganizationMembership",
     "OrganizationMembershipRole",
     "UserItemCompletion",
+    "Question",
+    "QuestionBank",
+    "QuestionKind",
+    "QuestionVersion",
+    "Quiz",
+    "QuizAnswer",
+    "QuizAttempt",
+    "QuizAttemptQuestion",
+    "QuizAttemptStatus",
+    "QuizQuestion",
+    "QuizReleasePolicy",
+    "QuizStatus",
 ]

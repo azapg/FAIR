@@ -1,6 +1,6 @@
 ---
 title: Course content
-description: Build an ordered student-facing course outline with sections, pages, links, files, and assignments.
+description: Build an ordered student-facing course outline with sections, pages, links, files, assignments, and quizzes.
 ---
 
 The **Content** tab gives instructors one ordered outline for the resources students need. It complements the existing **Assignments** tab; creating or organizing content does not replace assignment creation or change assignment submissions and grading.
@@ -10,15 +10,20 @@ The **Content** tab gives instructors one ordered outline for the resources stud
 Course staff can:
 
 - Add, edit, delete, and reorder sections.
-- Add headings, Markdown pages, web links, course-visible files, or an existing assignment.
+- Add headings, Markdown pages, web links, course-visible files, an existing assignment,
+  or a course-linked objective quiz.
 - Move sections and items with the labelled up and down buttons, including from a keyboard.
 - mark each section or item as **Draft**, **Published**, or **Hidden**.
 
-An assignment or file can appear only once in a course outline. Linked assignments and files remain their original FAIR resources; the outline stores a reference instead of copying them.
+An assignment, file, or quiz can appear only once in a course outline. Linked
+resources remain their original FAIR records; the outline stores a typed reference
+instead of copying them.
 
 ## What students see
 
-Students see published sections and published items only. A linked assignment is shown only after that assignment is also published. Draft and hidden content remains available to course staff in the builder.
+Students see published sections and published items only. A linked assignment or
+quiz is shown only after that resource is also published. Draft and hidden content
+remains available to course staff in the builder.
 
 Files open through FAIR's authenticated artifact access, so course permissions still apply when a student reads or downloads a file.
 
