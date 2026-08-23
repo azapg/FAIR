@@ -18,7 +18,7 @@ import { PdfPreview } from "@/components/pdf-preview";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ArtifactActionProps = Omit<ComponentProps<typeof Button>, "onClick"> & {
-  artifact: LmsArtifact;
+  artifact: Pick<LmsArtifact, "id" | "title" | "mime">;
   icon?: ComponentType<{ className?: string; size?: number }>;
   label?: ReactNode;
 };

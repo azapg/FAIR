@@ -18,7 +18,8 @@ import {useAuth} from "@/contexts/auth-context";
 import {usePermission} from "@/hooks/use-permission";
 import {GradebookTab} from "@/app/courses/tabs/gradebook-tab";
 import {StreamTab} from "@/app/courses/tabs/stream-tab";
-type CourseTab = "stream" | "assignments" | "gradebook" | "participants" | "runs" | "artifacts" | "flows" | "capabilities";
+import {CourseContentTab} from "@/app/courses/tabs/content/course-content-tab";
+type CourseTab = "stream" | "content" | "assignments" | "gradebook" | "participants" | "runs" | "artifacts" | "flows" | "capabilities";
 
 export default function CourseDetailPage() {
   const params = useParams<{ courseId: string, tab: string }>()
@@ -44,8 +45,8 @@ export default function CourseDetailPage() {
       instructorId === user.id || canManageUsers || course.membershipRole === 'assistant'
     );
     const visibleTabs: CourseTab[] = isInstructorView
-      ? ["stream", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
-      : ["stream", "assignments", "artifacts"];
+      ? ["stream", "content", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
+      : ["stream", "content", "assignments", "artifacts"];
     if (!tab || !visibleTabs.includes(tab as CourseTab)) {
       navigate(`assignments`);
     }
@@ -65,8 +66,8 @@ export default function CourseDetailPage() {
   const isCourseAssistant = course.membershipRole === 'assistant';
   const isInstructorView = isCourseOwner || isCourseAdmin || isCourseAssistant;
   const visibleTabs: CourseTab[] = isInstructorView
-    ? ["stream", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
-    : ["stream", "assignments", "artifacts"];
+    ? ["stream", "content", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
+    : ["stream", "content", "assignments", "artifacts"];
   const currentTab = (tab && visibleTabs.includes(tab as CourseTab) ? tab : "assignments") as CourseTab;
 
   const showEnrollmentControls =
@@ -127,6 +128,7 @@ export default function CourseDetailPage() {
         <ScrollArea className={"w-full border-b"}>
           <TabsList className={"px-8 w-full"}>
             <TabsTrigger value="stream">Stream</TabsTrigger>
+            <TabsTrigger value="content">Content</TabsTrigger>
             <TabsTrigger value="assignments">{t("tabs.assignments")}</TabsTrigger>
             {isInstructorView && <TabsTrigger value="gradebook">Gradebook</TabsTrigger>}
             <TabsTrigger value="artifacts">{t("tabs.artifacts")}</TabsTrigger>
@@ -145,6 +147,14 @@ export default function CourseDetailPage() {
         </TabsContent>
         <TabsContent value={"stream"} className={"px-8"}>
           <StreamTab courseId={courseId as string} canPost={isInstructorView}/>
+        </TabsContent>
+        <TabsContent value={"content"} className={"px-8"}>
+          <CourseContentTab
+            courseId={courseId as string}
+            canManage={isInstructorView}
+            isArchived={course.isArchived}
+            assignments={assignments}
+          />
         </TabsContent>
         {isInstructorView && (
           <TabsContent value={"gradebook"} className={"px-8"}>

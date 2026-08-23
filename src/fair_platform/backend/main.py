@@ -26,6 +26,9 @@ from fair_platform.backend.api.routers.executions import router as executions_ro
 from fair_platform.backend.api.routers.artifacts import router as artifacts_router
 from fair_platform.backend.api.routers.flows import router as flows_router
 from fair_platform.backend.api.routers.lms import router as lms_router
+from fair_platform.backend.api.routers.course_content import (
+    router as course_content_router,
+)
 from fair_platform.backend.services.execution_outbox_dispatcher import (
     ExecutionOutboxDispatcher,
 )
@@ -119,6 +122,9 @@ app.include_router(version_router, prefix="/api", tags=["version"])
 app.include_router(rubrics_router, prefix="/api/rubrics", tags=["rubrics"])
 app.include_router(enrollments_router, prefix="/api/enrollments", tags=["enrollments"])
 app.include_router(lms_router, prefix="/api/lms", tags=["lms"])
+app.include_router(
+    course_content_router, prefix="/api/lms", tags=["course-content"]
+)
 app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
 app.include_router(executions_router, prefix="/api/v1", tags=["executions"])
 app.include_router(artifacts_router, prefix="/api/v1", tags=["artifacts"])
