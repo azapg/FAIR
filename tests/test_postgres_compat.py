@@ -120,6 +120,18 @@ def test_postgres_json_columns_are_jsonb(postgres_database_url: str) -> None:
         ("artifact_versions", "provenance"),
         ("submission_events", "details"),
         ("rubrics", "content"),
+        ("organizations", "attributes"),
+        ("external_identifiers", "attributes"),
+        ("course_items", "payload"),
+        ("completion_rules", "config"),
+        ("availability_rules", "config"),
+        ("user_item_completions", "evidence"),
+        ("grade_categories", "calculation_policy"),
+        ("grade_items", "calculation_policy"),
+        ("grade_items", "release_policy"),
+        ("calendar_events", "recurrence"),
+        ("notification_preferences", "config"),
+        ("activity_events", "payload"),
     ]
 
     with engine.connect() as conn:

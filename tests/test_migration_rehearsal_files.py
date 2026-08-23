@@ -113,6 +113,10 @@ def test_destructive_cutover_rejects_downgrade(tmp_path: Path) -> None:
     run_migrations_to_head(database_url)
     with pytest.raises(RuntimeError, match="intentional destructive cutover"):
         command.downgrade(build_alembic_config(database_url), "20260307_0013")
+    # Reversible revisions after the points-only cutover are removed before
+    # the irreversible 20260727_0028 downgrade refuses to continue.
+    assert _read_revision(db_path) == "20260727_0028"
+    run_migrations_to_head(database_url)
     assert _read_revision(db_path) == _alembic_head()
 
 
