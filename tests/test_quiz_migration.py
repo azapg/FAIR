@@ -18,7 +18,7 @@ from fair_platform.backend.data.migrations import (
 
 A3_REVISION = "20260812_0031"
 A4_REVISION = "20260812_0032"
-A7_REVISION = "20260812_0033"
+A8_REVISION = "20260812_0034"
 QUIZ_TABLES = {
     "question_banks",
     "questions",
@@ -74,9 +74,14 @@ def test_quiz_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -> No
     engine.dispose()
 
     run_migrations_to_head(database_url)
-    assert _revision(path) == A7_REVISION
+    assert _revision(path) == A8_REVISION
     engine = create_engine(database_url)
-    assert "course_templates" in inspect(engine).get_table_names()
+    schema = inspect(engine)
+    assert "course_templates" in schema.get_table_names()
+    assert {column["name"] for column in schema.get_columns("course_copy_jobs")} >= {
+        "lease_token",
+        "lease_expires_at",
+    }
     engine.dispose()
 
 
@@ -351,7 +356,7 @@ def test_populated_quiz_downgrade_removes_only_a4_generic_projections(
     engine.dispose()
 
     run_migrations_to_head(database_url)
-    assert _revision(path) == A7_REVISION
+    assert _revision(path) == A8_REVISION
 
 
 def test_quiz_migration_is_explicit_and_stacked_on_gradebook() -> None:

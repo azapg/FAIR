@@ -68,7 +68,10 @@ def course_copy_preview(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
-    return preview(db, _source(db, course_id, current_user), payload)
+    try:
+        return preview(db, _source(db, course_id, current_user), payload)
+    except CourseCopyConflict as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
 
 
 @router.post("/courses/{course_id}/copy", response_model=CourseCopyResult)

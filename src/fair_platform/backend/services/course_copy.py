@@ -11,6 +11,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 import json
+import re
 from threading import Lock, RLock
 from typing import Any
 from uuid import UUID, uuid4
@@ -19,6 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from fair_platform.backend.data.models.artifact import Artifact
 from fair_platform.backend.data.models.assignment import Assignment
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.enrollment import (
@@ -39,7 +41,7 @@ from fair_platform.backend.data.models.lms_content import (
     CourseSection,
 )
 from fair_platform.backend.data.models.lms_course_copy import CourseCopyJob
-from fair_platform.backend.data.models.lms_events import ActivityEvent
+from fair_platform.backend.data.models.lms_events import ActivityEvent, CalendarEvent
 from fair_platform.backend.data.models.lms_gradebook import (
     GradeCategory,
     GradeEntry,
@@ -50,7 +52,9 @@ from fair_platform.backend.data.models.lms_quiz import (
     QuestionBank,
     QuestionVersion,
     Quiz,
+    QuizAnswer,
     QuizAttempt,
+    QuizAttemptQuestion,
     QuizQuestion,
 )
 from fair_platform.backend.data.models.rubric import Rubric
@@ -70,6 +74,7 @@ COPY_KINDS = (
     "questions",
     "question_versions",
     "quizzes",
+    "quiz_questions",
     "flows",
     "flow_versions",
 )
@@ -85,6 +90,7 @@ SELECTION_FOR_KIND = {
     "questions": "quizzes",
     "question_versions": "quizzes",
     "quizzes": "quizzes",
+    "quiz_questions": "quizzes",
     "flows": "flows",
     "flow_versions": "flows",
 }
@@ -92,17 +98,59 @@ SECRET_KEYS = {
     "accesskey",
     "accesskeyid",
     "apikey",
+    "auth",
+    "authentication",
     "authorization",
+    "basicauth",
+    "bearerauth",
     "clientsecret",
+    "connectionstring",
+    "cookie",
     "credential",
     "credentials",
+    "dsn",
+    "keyring",
+    "keystore",
+    "oauth",
+    "oauth2",
     "password",
     "privatekey",
     "refreshtoken",
     "secret",
     "secretkey",
+    "sessionid",
+    "sessionkey",
+    "setcookie",
     "token",
+    "tokens",
 }
+SECRET_KEY_MARKERS = (
+    "accesskey",
+    "apikey",
+    "credential",
+    "password",
+    "passwd",
+    "privatekey",
+    "secret",
+    "sessionkey",
+    "token",
+)
+HEADER_CONTAINER_KEYS = {
+    "defaultheaders",
+    "header",
+    "headers",
+    "httpheaders",
+    "requestheaders",
+}
+SECRET_HEADER_KEYS = {
+    "authorization",
+    "cookie",
+    "proxyauthorization",
+    "setcookie",
+}
+# Course copies are synchronous, bounded database work. A generous fixed lease
+# makes abandoned requests recoverable without treating normal copies as stale.
+COURSE_COPY_LEASE = timedelta(minutes=30)
 _SQLITE_JOB_LOCKS: dict[UUID, RLock] = {}
 _SQLITE_JOB_LOCKS_GUARD = Lock()
 
@@ -111,8 +159,20 @@ class CourseCopyConflict(ValueError):
     pass
 
 
+class _CourseCopyLeaseLost(RuntimeError):
+    pass
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _aware(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def _snapshot(payload: Any) -> dict[str, Any]:
@@ -133,23 +193,34 @@ def _normalized_key(value: str) -> str:
     return "".join(character for character in value.casefold() if character.isalnum())
 
 
-def _without_secrets(value: Any) -> Any:
+def _without_secrets(value: Any, *, _container: str | None = None) -> Any:
     if isinstance(value, dict):
-        return {
-            key: _without_secrets(child)
-            for key, child in value.items()
-            if not _is_secret_key(str(key))
-        }
+        sanitized: dict[Any, Any] = {}
+        for key, child in value.items():
+            normalized = _normalized_key(str(key))
+            if _is_secret_key(str(key)):
+                continue
+            if _container in HEADER_CONTAINER_KEYS and _is_secret_header(normalized):
+                continue
+            sanitized[key] = _without_secrets(child, _container=normalized)
+        return sanitized
     if isinstance(value, list):
-        return [_without_secrets(child) for child in value]
+        return [_without_secrets(child, _container=_container) for child in value]
     return deepcopy(value)
 
 
 def _is_secret_key(key: str) -> bool:
     normalized = _normalized_key(key)
     return normalized in SECRET_KEYS or any(
-        token in normalized
-        for token in ("secret", "password", "token", "credential", "privatekey")
+        marker in normalized for marker in SECRET_KEY_MARKERS
+    )
+
+
+def _is_secret_header(normalized: str) -> bool:
+    return (
+        normalized in SECRET_HEADER_KEYS
+        or normalized.endswith("auth")
+        or any(marker in normalized for marker in SECRET_KEY_MARKERS)
     )
 
 
@@ -160,6 +231,232 @@ def _count(db: Session, model: type, **filters: Any) -> int:
 def _source_assignment_ids(db: Session, course_id: UUID) -> list[UUID]:
     return list(
         db.scalars(select(Assignment.id).where(Assignment.course_id == course_id))
+    )
+
+
+def _course_model_ids(db: Session, model: type, course_id: UUID) -> set[str]:
+    return {
+        str(value)
+        for value in db.scalars(select(model.id).where(model.course_id == course_id))
+    }
+
+
+def _source_reference_ids(db: Session, course_id: UUID) -> set[str]:
+    assignment_ids = _source_assignment_ids(db, course_id)
+    flow_ids = list(db.scalars(select(Flow.id).where(Flow.course_id == course_id)))
+    post_ids = list(
+        db.scalars(select(CoursePost.id).where(CoursePost.course_id == course_id))
+    )
+    submission_ids = (
+        list(
+            db.scalars(
+                select(Submission.id).where(
+                    Submission.assignment_id.in_(assignment_ids)
+                )
+            )
+        )
+        if assignment_ids
+        else []
+    )
+    attempt_ids = list(
+        db.scalars(select(QuizAttempt.id).where(QuizAttempt.course_id == course_id))
+    )
+    attempt_question_ids = (
+        list(
+            db.scalars(
+                select(QuizAttemptQuestion.id).where(
+                    QuizAttemptQuestion.attempt_id.in_(attempt_ids)
+                )
+            )
+        )
+        if attempt_ids
+        else []
+    )
+    rubric_ids = (
+        set(
+            str(value)
+            for value in db.scalars(
+                select(Assignment.rubric_id).where(
+                    Assignment.course_id == course_id,
+                    Assignment.rubric_id.is_not(None),
+                )
+            )
+        )
+        if assignment_ids
+        else set()
+    )
+    course_models = (
+        Artifact,
+        Assignment,
+        Enrollment,
+        Execution,
+        CoursePost,
+        CourseSection,
+        CourseItem,
+        CalendarEvent,
+        ActivityEvent,
+        GradeCategory,
+        GradeEntry,
+        GradeItem,
+        QuestionBank,
+        Question,
+        QuestionVersion,
+        Quiz,
+        QuizQuestion,
+        QuizAttempt,
+        Flow,
+    )
+    references = {str(course_id), *rubric_ids}
+    for model in course_models:
+        references.update(_course_model_ids(db, model, course_id))
+    if flow_ids:
+        references.update(
+            str(value)
+            for value in db.scalars(
+                select(FlowVersion.id).where(FlowVersion.flow_id.in_(flow_ids))
+            )
+        )
+    references.update(str(value) for value in submission_ids)
+    if submission_ids:
+        references.update(
+            str(value)
+            for value in db.scalars(
+                select(SubmissionComment.id).where(
+                    SubmissionComment.submission_id.in_(submission_ids)
+                )
+            )
+        )
+    if post_ids:
+        references.update(
+            str(value)
+            for value in db.scalars(
+                select(CourseComment.id).where(CourseComment.post_id.in_(post_ids))
+            )
+        )
+    references.update(str(value) for value in attempt_question_ids)
+    if attempt_question_ids:
+        references.update(
+            str(value)
+            for value in db.scalars(
+                select(QuizAnswer.id).where(
+                    QuizAnswer.attempt_question_id.in_(attempt_question_ids)
+                )
+            )
+        )
+    return references
+
+
+def _planned_reference_ids(db: Session, course_id: UUID, payload: Any) -> set[str]:
+    selection = payload.selection
+    planned = {str(course_id)}
+    assignments = db.query(Assignment).filter_by(course_id=course_id).all()
+    if selection.assignments:
+        planned.update(str(item.id) for item in assignments)
+    if selection.rubrics:
+        planned.update(
+            str(item.rubric_id) for item in assignments if item.rubric_id is not None
+        )
+    if selection.content:
+        planned.update(_course_model_ids(db, CourseSection, course_id))
+        planned.update(
+            str(item.id)
+            for item in db.query(CourseItem).filter_by(course_id=course_id)
+            if _supported_content_item(item, selection)
+        )
+    if selection.gradebook:
+        planned.update(_course_model_ids(db, GradeCategory, course_id))
+        for item in db.query(GradeItem).filter_by(course_id=course_id):
+            compatible = (
+                item.source_type is None
+                or (item.source_type == "assignment" and selection.assignments)
+                or (item.source_type == "quiz" and selection.quizzes)
+            )
+            if compatible:
+                planned.add(str(item.id))
+    if selection.quizzes:
+        for model in (
+            QuestionBank,
+            Question,
+            QuestionVersion,
+            Quiz,
+            QuizQuestion,
+        ):
+            planned.update(_course_model_ids(db, model, course_id))
+    if selection.flows:
+        flow_ids = list(db.scalars(select(Flow.id).where(Flow.course_id == course_id)))
+        planned.update(str(value) for value in flow_ids)
+        if flow_ids:
+            planned.update(
+                str(value)
+                for value in db.scalars(
+                    select(FlowVersion.id).where(FlowVersion.flow_id.in_(flow_ids))
+                )
+            )
+    return planned
+
+
+def _referenced_source_ids(value: Any, candidates: set[str]) -> set[str]:
+    if isinstance(value, dict):
+        references: set[str] = set()
+        for key, child in value.items():
+            references.update(_referenced_source_ids(str(key), candidates))
+            references.update(_referenced_source_ids(child, candidates))
+        return references
+    if isinstance(value, list):
+        references = set()
+        for child in value:
+            references.update(_referenced_source_ids(child, candidates))
+        return references
+    if isinstance(value, UUID):
+        rendered = str(value)
+        return {rendered} if rendered in candidates else set()
+    if isinstance(value, str):
+        folded = value.casefold()
+        return {candidate for candidate in candidates if candidate.casefold() in folded}
+    return set()
+
+
+def _unsafe_flow_references(
+    db: Session, course_id: UUID, payload: Any
+) -> dict[UUID, set[str]]:
+    if not payload.selection.flows:
+        return {}
+    candidates = _source_reference_ids(db, course_id)
+    unmapped = candidates - _planned_reference_ids(db, course_id, payload)
+    if not unmapped:
+        return {}
+    versions = (
+        db.query(FlowVersion)
+        .join(Flow, Flow.id == FlowVersion.flow_id)
+        .filter(Flow.course_id == course_id)
+        .all()
+    )
+    issues: dict[UUID, set[str]] = {}
+    for version in versions:
+        references: set[str] = set()
+        for document in (
+            version.definition,
+            version.capability_pins,
+            version.config_snapshot,
+        ):
+            references.update(
+                _referenced_source_ids(_without_secrets(document), unmapped)
+            )
+        if references:
+            issues[version.id] = references
+    return issues
+
+
+def _validate_flow_reference_safety(db: Session, course_id: UUID, payload: Any) -> None:
+    issues = _unsafe_flow_references(db, course_id, payload)
+    if not issues:
+        return
+    reference_count = len({value for values in issues.values() for value in values})
+    raise CourseCopyConflict(
+        "Flow copy is unsafe: "
+        f"{len(issues)} flow version(s) retain {reference_count} reference(s) to "
+        "source-course resources excluded by this selection. Include the referenced "
+        "components or remove flows from the copy."
     )
 
 
@@ -223,6 +520,7 @@ def _supported_content_item(item: CourseItem, selection: Any) -> bool:
 
 
 def preview(db: Session, source: Course, payload: Any) -> dict[str, Any]:
+    _validate_flow_reference_safety(db, source.id, payload)
     selection = payload.selection
     copied = {kind: 0 for kind in COPY_KINDS}
     transformed = {
@@ -277,6 +575,7 @@ def preview(db: Session, source: Course, payload: Any) -> dict[str, Any]:
         copied["questions"] = _count(db, Question, course_id=source.id)
         copied["question_versions"] = _count(db, QuestionVersion, course_id=source.id)
         copied["quizzes"] = _count(db, Quiz, course_id=source.id)
+        copied["quiz_questions"] = _count(db, QuizQuestion, course_id=source.id)
     if selection.flows:
         flows = db.query(Flow).filter_by(course_id=source.id).all()
         copied["flows"] = len(flows)
@@ -501,6 +800,7 @@ def _count_for_kind(db: Session, course_id: UUID, kind: str) -> int:
         "questions": Question,
         "question_versions": QuestionVersion,
         "quizzes": Quiz,
+        "quiz_questions": QuizQuestion,
         "flows": Flow,
     }
     if kind == "artifacts":
@@ -591,40 +891,67 @@ def _lock_job(db: Session, job_id: UUID) -> CourseCopyJob:
 
 
 def execute(db: Session, source: Course, actor_id: UUID, payload: Any) -> CourseCopyJob:
+    _validate_flow_reference_safety(db, source.id, payload)
     job = create_or_resume_job(db, source, actor_id, payload)
     sqlite_lock = _job_lock(job.id) if db.get_bind().dialect.name == "sqlite" else None
     if sqlite_lock is not None:
         sqlite_lock.acquire()
     try:
         job = _lock_job(db, job.id)
-        if job.status in {"completed", "running"}:
+        now = _now()
+        lease_expires_at = _aware(job.lease_expires_at)
+        if job.status == "completed" or (
+            job.status == "running"
+            and job.lease_token is not None
+            and lease_expires_at is not None
+            and lease_expires_at > now
+        ):
             db.commit()
             return job
+        lease_token = uuid4()
         job.status = "running"
         job.error = None
-        job.started_at = _now()
+        job.started_at = now
         job.completed_at = None
+        job.destination_course_id = None
+        job.mapping = {}
+        job.lease_token = lease_token
+        job.lease_expires_at = now + COURSE_COPY_LEASE
         db.commit()
 
         try:
             with db.begin_nested():
                 mapping = _copy_graph(db, source, actor_id, payload)
-                job = db.get(CourseCopyJob, job.id)
+                job = _lock_job(db, job.id)
+                if job.status != "running" or job.lease_token != lease_token:
+                    raise _CourseCopyLeaseLost(
+                        "Course copy lease was reclaimed by another worker"
+                    )
                 job.destination_course_id = UUID(mapping["courses"][str(source.id)])
                 job.mapping = mapping
-            job.status = "completed"
-            job.completed_at = _now()
+                job.status = "completed"
+                job.completed_at = _now()
+                job.lease_token = None
+                job.lease_expires_at = None
             db.commit()
             db.refresh(job)
             return job
+        except _CourseCopyLeaseLost:
+            db.rollback()
+            return db.get(CourseCopyJob, job.id)
         except Exception as exc:
             db.rollback()
-            job = db.get(CourseCopyJob, job.id)
+            job = _lock_job(db, job.id)
+            if job.status != "running" or job.lease_token != lease_token:
+                db.commit()
+                return job
             job.status = "failed"
             job.error = str(exc)[:4000]
             job.destination_course_id = None
             job.mapping = {}
             job.completed_at = _now()
+            job.lease_token = None
+            job.lease_expires_at = None
             db.commit()
             db.refresh(job)
             return job
@@ -693,12 +1020,14 @@ def _copy_graph(
         )
     if payload.selection.quizzes:
         _copy_quizzes(db, source.id, destination.id, actor_id, copied_date, mapping)
-    if payload.selection.flows:
-        _copy_flows(db, source.id, destination.id, actor_id, mapping)
     if payload.selection.gradebook:
         _copy_gradebook(db, source.id, destination.id, mapping)
     if payload.selection.content:
         _copy_course_items(db, source.id, destination.id, mapping, payload)
+    # Flows are copied last so every selected source-course reference already has
+    # a destination mapping before the flow documents are rewritten.
+    if payload.selection.flows:
+        _copy_flows(db, source.id, destination.id, actor_id, mapping)
     return mapping
 
 
@@ -857,16 +1186,16 @@ def _copy_quizzes(
         version_id = mapping["question_versions"].get(str(old.question_version_id))
         if quiz_id is None or version_id is None:
             continue
-        db.add(
-            QuizQuestion(
-                id=uuid4(),
-                course_id=destination_id,
-                quiz_id=UUID(quiz_id),
-                question_version_id=UUID(version_id),
-                position=old.position,
-                points=old.points,
-            )
+        new = QuizQuestion(
+            id=uuid4(),
+            course_id=destination_id,
+            quiz_id=UUID(quiz_id),
+            question_version_id=UUID(version_id),
+            position=old.position,
+            points=old.points,
         )
+        db.add(new)
+        mapping["quiz_questions"][str(old.id)] = str(new.id)
 
 
 def _copy_flows(
@@ -876,7 +1205,9 @@ def _copy_flows(
     actor_id: UUID,
     mapping: dict[str, dict[str, str]],
 ) -> None:
-    for old in db.query(Flow).filter_by(course_id=source_id).all():
+    source_flows = db.query(Flow).filter_by(course_id=source_id).all()
+    copied_flows: dict[UUID, Flow] = {}
+    for old in source_flows:
         new = Flow(
             id=uuid4(),
             owner_user_id=actor_id,
@@ -886,32 +1217,48 @@ def _copy_flows(
             archived_at=None,
         )
         db.add(new)
+        copied_flows[old.id] = new
         mapping["flows"][str(old.id)] = str(new.id)
-        for old_version in old.versions:
-            definition = _remap_references(
-                _without_secrets(old_version.definition), mapping
-            )
-            pins = _remap_references(
-                _without_secrets(old_version.capability_pins), mapping
-            )
-            config = _remap_references(
-                _without_secrets(old_version.config_snapshot), mapping
-            )
-            new_version = FlowVersion(
-                id=uuid4(),
-                flow_id=new.id,
-                ordinal=old_version.ordinal,
-                state="draft",
-                definition=definition,
-                capability_pins=pins,
-                config_snapshot=config,
-                definition_hash=flow_version_hash(definition, pins, config),
-                created_by_user_id=actor_id,
-                published_at=None,
-                archived_at=None,
-            )
-            db.add(new_version)
-            mapping["flow_versions"][str(old_version.id)] = str(new_version.id)
+
+    versions = [
+        (old_version, copied_flows[old.id])
+        for old in source_flows
+        for old_version in old.versions
+    ]
+    for old_version, _new_flow in versions:
+        mapping["flow_versions"][str(old_version.id)] = str(uuid4())
+
+    source_references = _source_reference_ids(db, source_id)
+    for old_version, new_flow in versions:
+        definition = _remap_references(
+            _without_secrets(old_version.definition),
+            mapping,
+            forbidden_source_ids=source_references,
+        )
+        pins = _remap_references(
+            _without_secrets(old_version.capability_pins),
+            mapping,
+            forbidden_source_ids=source_references,
+        )
+        config = _remap_references(
+            _without_secrets(old_version.config_snapshot),
+            mapping,
+            forbidden_source_ids=source_references,
+        )
+        new_version = FlowVersion(
+            id=UUID(mapping["flow_versions"][str(old_version.id)]),
+            flow_id=new_flow.id,
+            ordinal=old_version.ordinal,
+            state="draft",
+            definition=definition,
+            capability_pins=pins,
+            config_snapshot=config,
+            definition_hash=flow_version_hash(definition, pins, config),
+            created_by_user_id=actor_id,
+            published_at=None,
+            archived_at=None,
+        )
+        db.add(new_version)
 
 
 def _copy_gradebook(
@@ -1038,22 +1385,50 @@ def _copy_course_items(
         mapping["items"][str(old.id)] = str(new.id)
 
 
-def _remap_references(value: Any, mapping: dict[str, dict[str, str]]) -> Any:
+def _remap_references(
+    value: Any,
+    mapping: dict[str, dict[str, str]],
+    *,
+    forbidden_source_ids: set[str] | None = None,
+) -> Any:
     replacements = {
         source_id: destination_id
         for resource_mapping in mapping.values()
         for source_id, destination_id in resource_mapping.items()
     }
+    remapped = _replace_references(value, replacements)
+    if forbidden_source_ids and _referenced_source_ids(remapped, forbidden_source_ids):
+        raise CourseCopyConflict(
+            "Flow copy retained a reference to source-course data; copy was rolled back"
+        )
+    return remapped
+
+
+def _replace_references(value: Any, replacements: dict[str, str]) -> Any:
     if isinstance(value, dict):
-        return {key: _remap_references(child, mapping) for key, child in value.items()}
+        return {
+            _replace_reference_string(str(key), replacements): _replace_references(
+                child, replacements
+            )
+            for key, child in value.items()
+        }
     if isinstance(value, list):
-        return [_remap_references(child, mapping) for child in value]
+        return [_replace_references(child, replacements) for child in value]
     if isinstance(value, UUID):
         replacement = replacements.get(str(value))
         return UUID(replacement) if replacement else value
     if isinstance(value, str):
-        return replacements.get(value, value)
+        return _replace_reference_string(value, replacements)
     return deepcopy(value)
+
+
+def _replace_reference_string(value: str, replacements: dict[str, str]) -> str:
+    result = value
+    for source_id, destination_id in replacements.items():
+        result = re.sub(
+            re.escape(source_id), destination_id, result, flags=re.IGNORECASE
+        )
+    return result
 
 
 __all__ = [
