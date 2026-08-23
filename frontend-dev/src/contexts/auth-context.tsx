@@ -1,5 +1,6 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
 import api from "@/lib/api";
+import { getOptionalInitialState } from "@/lib/initial-state";
 
 export enum AuthUserRole {
   USER = 'user',
@@ -60,15 +61,54 @@ const normalizeUser = (raw: Partial<AuthUser> & { role?: string, isVerified?: bo
 })
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const injectedState = useMemo(() => getOptionalInitialState(), [])
+  const injectedUser = useMemo(
+    () => (injectedState?.auth.user ? normalizeUser(injectedState.auth.user) : null),
+    [injectedState],
+  )
+  const injectedIsAuthenticated = useMemo(
+    () => Boolean(injectedState?.auth.isAuthenticated && injectedUser),
+    [injectedState, injectedUser],
+  )
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (injectedIsAuthenticated && injectedUser) {
+      return injectedUser
+    }
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('user')
+      if (raw) {
+        try {
+          return normalizeUser(JSON.parse(raw))
+        } catch {
+          return null
+        }
+      }
+    }
+    return null
+  })
+  const [token, setToken] = useState<string | null>(() => {
+    if (injectedIsAuthenticated) {
+      return "injected-session"
+    }
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token')
+    }
+    return null
+  })
+  const [loading, setLoading] = useState(!injectedIsAuthenticated)
 
   useEffect(() => {
     const validateStoredSession = async () => {
       try {
         const storedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null
         const storedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null
+
+        if (!storedToken && injectedIsAuthenticated && injectedUser) {
+          setToken('injected-session')
+          setUser(injectedUser)
+          persist(null, injectedUser)
+          return
+        }
         
         if (storedToken && storedUser) {
           // Set the token temporarily to make the validation request
@@ -119,7 +159,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         window.removeEventListener('auth:session-expired', handleSessionExpiry)
       }
     }
-  }, [])
+  }, [injectedIsAuthenticated, injectedUser])
 
   const persist = useCallback((nextToken: string | null, nextUser: AuthUser | null) => {
     if (typeof window === 'undefined') return
@@ -192,6 +232,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setToken(null)
     setUser(null)
     persist(null, null)
+    void api.post('/auth/logout').catch(() => undefined)
   }, [persist])
 
   const setSession = useCallback((newToken: string, rawUser: Partial<AuthUser> & { role?: string, isVerified?: boolean, is_verified?: boolean }) => {

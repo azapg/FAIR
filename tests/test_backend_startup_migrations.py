@@ -1,4 +1,5 @@
 import pytest
+import json
 
 import fair_platform.backend.main as backend_main
 
@@ -113,3 +114,21 @@ async def test_lifespan_warns_when_no_migration_and_no_fallback(monkeypatch):
         pass
 
     assert calls == ["warn"]
+
+
+def test_serialize_initial_state_for_html_escapes_html_sensitive_chars():
+    state = {"message": "<script>alert('xss')</script>&ok>"}
+    serialized = backend_main._serialize_initial_state_for_html(state)
+    assert "<script>" not in serialized
+    assert "\\u003cscript\\u003e" in serialized
+    assert "\\u0026ok\\u003e" in serialized
+    assert json.loads(serialized) == state
+
+
+def test_inject_initial_state_adds_script_before_head_close():
+    html = "<html><head><title>X</title></head><body></body></html>"
+    state = {"auth": {"isAuthenticated": False, "user": None}}
+    injected = backend_main._inject_initial_state(html, state)
+    assert "__FAIR_INITIAL_STATE__" in injected
+    assert injected.index("__FAIR_INITIAL_STATE__") < injected.index("</head>")
+    assert "</script>" in injected

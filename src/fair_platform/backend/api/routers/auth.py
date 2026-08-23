@@ -4,7 +4,7 @@ from secrets import token_urlsafe
 from uuid import UUID, uuid4
 
 from fair_platform.backend.api.schema.user import AuthUserRead, UserCreate
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 import bcrypt
@@ -91,6 +91,48 @@ def create_access_token(data: dict, remember_me: bool = False):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def _token_expiration_delta(remember_me: bool) -> timedelta:
+    if remember_me:
+        return timedelta(days=REMEMBER_ME_TOKEN_EXPIRE_DAYS)
+    return timedelta(hours=DEFAULT_TOKEN_EXPIRE_HOURS)
+
+
+def _set_access_token_cookie(response: Response, token: str, *, remember_me: bool) -> None:
+    is_secure = get_base_url().lower().startswith("https://")
+    max_age = int(_token_expiration_delta(remember_me).total_seconds())
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=is_secure,
+        samesite="lax",
+        max_age=max_age,
+        path="/",
+    )
+
+
+def _set_access_token_cookie_from_token(response: Response, token: str) -> None:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        exp = payload.get("exp")
+        if isinstance(exp, (int, float)):
+            ttl_seconds = max(0, int(exp - datetime.now(timezone.utc).timestamp()))
+            is_secure = get_base_url().lower().startswith("https://")
+            response.set_cookie(
+                key="access_token",
+                value=token,
+                httponly=True,
+                secure=is_secure,
+                samesite="lax",
+                max_age=ttl_seconds,
+                path="/",
+            )
+            return
+    except JWTError:
+        pass
+    _set_access_token_cookie(response, token, remember_me=False)
+
+
 def _create_action_token(
     *,
     user: User,
@@ -175,6 +217,7 @@ async def register(
     user_in: UserCreate,
     db: Session = Depends(session_dependency),
     mailer: Mailer = Depends(get_mailer),
+    response: Response = None,
 ):
     """Register a new user with password hashing"""
     existing = db.query(User).filter(User.email == user_in.email).first()
@@ -215,6 +258,8 @@ async def register(
         {"sub": str(user.id), "role": user.role},
         remember_me=False
     )
+    if response is not None:
+        _set_access_token_cookie(response, access_token, remember_me=False)
     auth_user = auth_user_payload(user)
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
     return {
@@ -228,6 +273,7 @@ async def register(
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(session_dependency),
+    response: Response = None,
 ):
     """Login endpoint with proper password verification"""
     user = db.query(User).filter(User.email == form_data.username).first()
@@ -249,17 +295,30 @@ def login(
         {"sub": str(user.id), "role": user.role},
         remember_me=remember_me
     )
+    if response is not None:
+        _set_access_token_cookie(response, access_token, remember_me=remember_me)
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.get("/me", response_model=AuthUserRead)
-def read_me(current_user: User = Depends(get_current_user)):
+def read_me(
+    response: Response,
+    token: str = Depends(oauth2_scheme),
+    current_user: User = Depends(get_current_user),
+):
     """
     Return the currently authenticated user's public information.
     """
+    _set_access_token_cookie_from_token(response, token)
     auth_user = auth_user_payload(current_user)
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
     return auth_user
+
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie("access_token", path="/")
+    return {"detail": "Logged out"}
 
 
 @router.post("/forgot-password")
@@ -345,6 +404,7 @@ async def resend_verification_request(
 async def verify_email_confirm(
     payload: TokenConfirmRequest,
     db: Session = Depends(session_dependency),
+    response: Response = None,
 ):
     token_data = _decode_action_token(
         payload.token,
@@ -369,6 +429,8 @@ async def verify_email_confirm(
         {"sub": str(user.id), "role": user.role},
         remember_me=False
     )
+    if response is not None:
+        _set_access_token_cookie(response, access_token, remember_me=False)
     auth_user = auth_user_payload(user)
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
 

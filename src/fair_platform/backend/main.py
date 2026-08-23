@@ -3,11 +3,14 @@ import os
 import logging
 import asyncio
 import sys
-from fastapi import FastAPI
+import json
+from uuid import UUID
+from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from jose import JWTError, jwt
 from starlette.middleware.cors import CORSMiddleware
 
 from fair_platform.backend.data.database import init_db
@@ -39,12 +42,34 @@ from fair_platform.backend.services.workflow_runner import (
 )
 from fair_platform.backend.data.database import SessionLocal
 from fair_platform.backend.data.models import ExtensionClient
+from fair_platform.backend.data.models.user import User
 from fair_platform.backend.services.extension_auth import hash_extension_secret
+from fair_platform.backend.api.routers.auth import ALGORITHM, SECRET_KEY
+from fair_platform.backend.core.state_injection import build_initial_state
 
 logger = logging.getLogger(__name__)
 
 CORE_EXTENSION_ID = "fair.core"
 CORE_EXTENSION_SECRET = "fair-core-dev-secret"
+
+
+def _serialize_initial_state_for_html(state: dict[str, object]) -> str:
+    serialized = json.dumps(state, separators=(",", ":"), ensure_ascii=False)
+    return (
+        serialized
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
+
+
+def _inject_initial_state(index_template: str, state: dict[str, object]) -> str:
+    state_json = _serialize_initial_state_for_html(state)
+    state_script = (
+        '<script id="__FAIR_INITIAL_STATE__" type="application/json">'
+        f"{state_json}</script>"
+    )
+    return index_template.replace("</head>", f"{state_script}\n</head>", 1)
 
 
 def _is_auto_migrate_enabled() -> bool:
@@ -254,15 +279,56 @@ def run(
                 "/fonts", StaticFiles(directory=dist_path / "fonts"), name="fonts"
             )
             app.mount("/data", StaticFiles(directory=dist_path / "data"), name="data")
+            index_path = dist_path / "index.html"
+            index_template = index_path.read_text(encoding="utf-8")
 
         @app.get("/favicon.svg")
         async def favicon():
             return FileResponse(dist_path / "favicon.svg", media_type="image/svg+xml")
 
+        def _resolve_authenticated_user(request: Request) -> User | None:
+            auth_header = request.headers.get("Authorization", "").strip()
+            bearer_token: str | None = None
+            if auth_header.lower().startswith("bearer "):
+                bearer_token = auth_header[7:].strip() or None
+            token = bearer_token or request.cookies.get("access_token")
+            if not token:
+                return None
+
+            try:
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                user_id = payload.get("sub")
+                if not user_id:
+                    return None
+                with SessionLocal() as db:
+                    return db.get(User, UUID(str(user_id)))
+            except (JWTError, ValueError, TypeError):
+                return None
+
+        def _render_index_html_with_state(request: Request) -> str:
+            user = _resolve_authenticated_user(request)
+            return _inject_initial_state(index_template, build_initial_state(user))
+
+        @app.get("/", include_in_schema=False)
+        async def serve_index(request: Request):
+            if dev:
+                return FileResponse(dist_path / "index.html")
+            return HTMLResponse(
+                content=_render_index_html_with_state(request),
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+            )
+
         @app.middleware("http")
         async def spa_fallback(request, call_next):
             response = await call_next(request)
-            if response.status_code == 404:
+            if response.status_code == 404 and request.method == "GET":
+                if dev:
+                    return FileResponse(dist_path / "index.html")
+                return HTMLResponse(
+                    content=_render_index_html_with_state(request),
+                    headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+                )
+            if response.status_code == 405 and request.method == "HEAD":
                 return FileResponse(dist_path / "index.html")
             return response
 
