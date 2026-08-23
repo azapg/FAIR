@@ -32,6 +32,7 @@ from fair_platform.backend.data.models.enrollment import (
 )
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
 from fair_platform.backend.services.course_access import can_manage_course
+from fair_platform.backend.services.course_content_service import CourseContentService
 from fair_platform.backend.services.notifications import notify_course_members
 
 router = APIRouter()
@@ -309,18 +310,23 @@ def delete_assignment(
             detail="Only the course instructor or admin can delete this assignment",
         )
 
-    submissions = (
-        db.query(Submission)
-        .filter(Submission.assignment_id == assignment_id)
-        .all()
-    )
-    for submission in submissions:
-        submission.artifacts.clear()
-        submission.runs.clear()
-        db.delete(submission)
+    try:
+        CourseContentService(db).remove_resource_links("assignment", assignment_id)
+        submissions = (
+            db.query(Submission)
+            .filter(Submission.assignment_id == assignment_id)
+            .all()
+        )
+        for submission in submissions:
+            submission.artifacts.clear()
+            submission.runs.clear()
+            db.delete(submission)
 
-    db.delete(assignment)
-    db.commit()
+        db.delete(assignment)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return None
 
 
