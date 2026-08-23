@@ -32,6 +32,7 @@ from fair_platform.backend.services.course_access import (
     can_view_course,
     course_role,
 )
+from fair_platform.backend.services.gradebook import ensure_default_category
 
 router = APIRouter()
 
@@ -133,6 +134,8 @@ def create_course(
         term=course.term,
     )
     db.add(db_course)
+    db.flush()
+    ensure_default_category(db, db_course.id)
     db.add(
         Enrollment(
             id=uuid4(),

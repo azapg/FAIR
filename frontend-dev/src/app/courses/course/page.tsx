@@ -158,7 +158,7 @@ export default function CourseDetailPage() {
         </TabsContent>
         {isInstructorView && (
           <TabsContent value={"gradebook"} className={"px-8"}>
-            <GradebookTab courseId={courseId as string}/>
+            <GradebookTab courseId={courseId as string} isArchived={course.isArchived}/>
           </TabsContent>
         )}
         {isInstructorView && (

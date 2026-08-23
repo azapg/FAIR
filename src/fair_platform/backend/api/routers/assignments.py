@@ -1,7 +1,16 @@
 from uuid import UUID, uuid4
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Form
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    status,
+    UploadFile,
+    File,
+    Form,
+)
 from pydantic import ValidationError
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
@@ -34,8 +43,13 @@ from fair_platform.backend.services.artifact_manager import get_artifact_manager
 from fair_platform.backend.services.course_access import can_manage_course
 from fair_platform.backend.services.course_content_service import CourseContentService
 from fair_platform.backend.services.notifications import notify_course_members
+from fair_platform.backend.services.gradebook import (
+    delete_assignment_grade_item,
+    ensure_assignment_grade_item,
+)
 
 router = APIRouter()
+
 
 @router.post("/", response_model=AssignmentRead, status_code=status.HTTP_201_CREATED)
 async def create_assignment(
@@ -76,6 +90,11 @@ async def create_assignment(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can create assignments",
         )
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
+        )
 
     try:
         try:
@@ -95,7 +114,7 @@ async def create_assignment(
             except (json.JSONDecodeError, ValueError) as e:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}"
+                    detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}",
                 )
 
         deadline_dt = None
@@ -105,7 +124,7 @@ async def create_assignment(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid deadline format. Use ISO format (YYYY-MM-DDTHH:MM:SS)"
+                    detail="Invalid deadline format. Use ISO format (YYYY-MM-DDTHH:MM:SS)",
                 )
 
         assignment = Assignment(
@@ -120,17 +139,20 @@ async def create_assignment(
         )
         db.add(assignment)
         db.flush()
+        ensure_assignment_grade_item(db, assignment)
 
         manager = get_artifact_manager(db)
 
         if existing_artifact_ids:
             for artifact_id in existing_artifact_ids:
                 try:
-                    manager.attach_to_assignment(UUID(artifact_id), assignment.id, current_user)
+                    manager.attach_to_assignment(
+                        UUID(artifact_id), assignment.id, current_user
+                    )
                 except ValueError:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Invalid artifact ID format: {artifact_id}"
+                        detail=f"Invalid artifact ID format: {artifact_id}",
                     )
 
         if files:
@@ -156,7 +178,7 @@ async def create_assignment(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create assignment: {str(e)}"
+            detail=f"Failed to create assignment: {str(e)}",
         )
 
 
@@ -206,8 +228,13 @@ def list_assignments(
     )
     return assignments
 
+
 @router.get("/{assignment_id}", response_model=AssignmentRead)
-def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+def get_assignment(
+    assignment_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
         raise HTTPException(
@@ -265,6 +292,11 @@ def update_assignment(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this assignment",
         )
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
+        )
 
     if payload.title is not None:
         assignment.title = payload.title
@@ -273,11 +305,12 @@ def update_assignment(
     if payload.deadline is not None:
         assignment.deadline = payload.deadline
     if payload.max_grade is not None:
-        assignment.max_grade = payload.max_grade
+        assignment.max_grade = payload.max_grade.model_dump()
     if payload.allow_resubmissions is not None:
         assignment.allow_resubmissions = payload.allow_resubmissions
 
     db.add(assignment)
+    ensure_assignment_grade_item(db, assignment)
     db.commit()
 
     # TODO: Handle artifact updates if provided in payload
@@ -309,6 +342,11 @@ def delete_assignment(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this assignment",
         )
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
+        )
 
     try:
         CourseContentService(db).remove_resource_links("assignment", assignment_id)
@@ -322,6 +360,7 @@ def delete_assignment(
             submission.runs.clear()
             db.delete(submission)
 
+        delete_assignment_grade_item(db, assignment)
         db.delete(assignment)
         db.commit()
     except Exception:
@@ -342,9 +381,11 @@ def update_assignment_status(
         raise HTTPException(status_code=404, detail="Assignment not found")
     course = db.get(Course, assignment.course_id)
     if not course or not can_manage_course(db, course, current_user):
-        raise HTTPException(status_code=403, detail="Only course staff can change publication status")
-    if course.is_archived and payload.status == AssignmentStatus.published:
-        raise HTTPException(status_code=400, detail="Assignments in archived courses cannot be published")
+        raise HTTPException(
+            status_code=403, detail="Only course staff can change publication status"
+        )
+    if course.is_archived:
+        raise HTTPException(status_code=400, detail="Archived courses are read-only")
     assignment.status = payload.status
     if payload.status == AssignmentStatus.published and assignment.published_at is None:
         assignment.published_at = datetime.now(timezone.utc)

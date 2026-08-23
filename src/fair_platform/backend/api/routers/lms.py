@@ -5,14 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.api.schema.lms import (
-    CourseGradebook,
-    GradebookAssignment,
-    GradebookCell,
-    GradebookRow,
-    GradingQueueItem,
-    StudentTodoItem,
-)
+from fair_platform.backend.api.schema.lms import GradingQueueItem, StudentTodoItem
 from fair_platform.backend.api.schema.lms_communication import (
     CourseCommentCreate,
     CourseCommentRead,
@@ -42,6 +35,7 @@ from fair_platform.backend.data.models.lms_communication import (
 )
 from fair_platform.backend.services.course_access import can_manage_course, can_view_course
 from fair_platform.backend.services.notifications import notify_course_members
+from fair_platform.backend.services.gradebook import legacy_course_grading_data
 
 
 router = APIRouter()
@@ -95,101 +89,6 @@ def _submission_context(db: Session, submission_id: UUID, user: User):
     return submission, submitter, assignment, course
 
 
-def _course_grading_data(db: Session, course_id: UUID):
-    assignments = (
-        db.query(Assignment)
-        .filter(
-            Assignment.course_id == course_id,
-            Assignment.status.in_([AssignmentStatus.published, AssignmentStatus.closed]),
-        )
-        .order_by(Assignment.deadline, Assignment.title)
-        .all()
-    )
-    memberships = (
-        db.query(Enrollment)
-        .filter(
-            Enrollment.course_id == course_id,
-            Enrollment.role == CourseMembershipRole.student,
-            Enrollment.status == EnrollmentStatus.active,
-        )
-        .all()
-    )
-    users = {
-        user.id: user
-        for user in db.query(User).filter(User.id.in_([item.user_id for item in memberships])).all()
-    }
-    submitters = {
-        item.user_id: item
-        for item in db.query(Submitter)
-        .filter(Submitter.user_id.in_(users.keys()), Submitter.is_synthetic.is_(False))
-        .all()
-    }
-    submissions = (
-        db.query(Submission)
-        .filter(Submission.assignment_id.in_([item.id for item in assignments]))
-        .order_by(Submission.attempt_number)
-        .all()
-    )
-    by_student_assignment: dict[tuple[UUID, UUID], list[Submission]] = {}
-    submitter_users = {item.id: user_id for user_id, item in submitters.items()}
-    for submission in submissions:
-        user_id = submitter_users.get(submission.submitter_id)
-        if user_id is not None:
-            by_student_assignment.setdefault((user_id, submission.assignment_id), []).append(submission)
-    return assignments, memberships, users, by_student_assignment
-
-
-@router.get("/courses/{course_id}/gradebook", response_model=CourseGradebook)
-def get_course_gradebook(
-    course_id: UUID,
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    _managed_course(db, course_id, current_user)
-    assignments, memberships, users, attempts = _course_grading_data(db, course_id)
-    rows: list[GradebookRow] = []
-    for membership in memberships:
-        user = users.get(membership.user_id)
-        if not user:
-            continue
-        cells: list[GradebookCell] = []
-        for assignment in assignments:
-            student_attempts = attempts.get((user.id, assignment.id), [])
-            latest = student_attempts[-1] if student_attempts else None
-            if latest is None:
-                state = "missing"
-            elif latest.status == SubmissionStatus.returned:
-                state = "returned"
-            elif latest.status == SubmissionStatus.excused:
-                state = "excused"
-            else:
-                state = "submitted"
-            cells.append(
-                GradebookCell(
-                    assignment_id=assignment.id,
-                    state=state,
-                    submission_id=latest.id if latest else None,
-                    score=latest.published_score if latest and state == "returned" else None,
-                    submitted_at=latest.submitted_at if latest else None,
-                    is_late=latest.is_late if latest else False,
-                    attempt_count=len(student_attempts),
-                )
-            )
-        rows.append(
-            GradebookRow(
-                user_id=user.id,
-                name=user.name,
-                email=str(user.email),
-                cells=cells,
-            )
-        )
-    return CourseGradebook(
-        course_id=course_id,
-        assignments=[GradebookAssignment.model_validate(item) for item in assignments],
-        rows=rows,
-    )
-
-
 @router.get("/courses/{course_id}/grading-queue", response_model=list[GradingQueueItem])
 def get_grading_queue(
     course_id: UUID,
@@ -197,7 +96,9 @@ def get_grading_queue(
     current_user: User = Depends(get_current_user),
 ):
     _managed_course(db, course_id, current_user)
-    assignments, memberships, users, attempts = _course_grading_data(db, course_id)
+    assignments, memberships, users, attempts = legacy_course_grading_data(
+        db, course_id
+    )
     assignment_map = {item.id: item for item in assignments}
     items: list[GradingQueueItem] = []
     for membership in memberships:

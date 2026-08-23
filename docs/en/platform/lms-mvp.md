@@ -10,7 +10,34 @@ FAIR is LMS-complete at an MVP level when a teacher and a student can complete t
 - Draft, publish, close, and unpublish assignments.
 - Let enrolled students submit their own work, including numbered attempts and late state.
 - Give students a cross-course to-do view for missing and submitted work.
-- Show course staff a roster-derived grading queue and gradebook, including missing work.
+- Show course staff a roster-derived grading queue and Gradebook 2.0, including
+  ordered categories, optional percentage weights, assignment-linked and manual
+  point items, released/excused entries, missing work, and server-computed totals.
+  Points are canonical; percentages and weighted totals are derived views.
+
+## Gradebook 2.0 contract
+
+- Every course has a default **Assignments** category. Assignment creation and
+  `max_grade` updates synchronize one linked grade item with the same point maximum.
+- Manual items and entries are course-staff controls. An entry can be released
+  points, excused, or reset to missing; manual entries cannot target non-students
+  or exceed the item maximum.
+- Returning or re-returning a submission atomically projects only
+  `Submission.published_score` into the linked released grade entry. Draft scores
+  never appear in Gradebook 2.0, and `published_score` remains supported for
+  existing assignment/submission clients.
+- The learner's latest attempt is authoritative. Returning an older attempt does
+  not replace a newer attempt's state, and deleting an attempt atomically
+  reprojects the next latest attempt or clears the released entry.
+- A category weight is a percentage. If any category uses weights, all relevant
+  categories should be weighted and the configured total should equal 100.
+- Missing or unreleased entries are **not treated as zero**. Category and course
+  totals show only released evidence and are marked `provisional` with explicit
+  reasons while relevant entries or weights are absent.
+- Archived courses remain readable but all gradebook mutations are rejected.
+- The existing `GET /api/lms/courses/{course_id}/gradebook` assignment and cell
+  fields are unchanged; categories, items, item cells, category totals, and course
+  totals are additive fields.
 - Keep draft grades private, then return a score and feedback to the student.
 - Keep submission comment threads private to the owning student and course staff.
 - Notify students about published assignments and class posts, and notify authors about comments.
