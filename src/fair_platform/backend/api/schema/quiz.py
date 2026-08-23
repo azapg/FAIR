@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Self
 from uuid import UUID
 
@@ -123,7 +123,17 @@ class QuizCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_window(self) -> Self:
-        if self.opens_at and self.closes_at and self.opens_at >= self.closes_at:
+        opens_at = self.opens_at
+        closes_at = self.closes_at
+        if opens_at is not None and opens_at.tzinfo is None:
+            opens_at = opens_at.replace(tzinfo=timezone.utc)
+        elif opens_at is not None:
+            opens_at = opens_at.astimezone(timezone.utc)
+        if closes_at is not None and closes_at.tzinfo is None:
+            closes_at = closes_at.replace(tzinfo=timezone.utc)
+        elif closes_at is not None:
+            closes_at = closes_at.astimezone(timezone.utc)
+        if opens_at is not None and closes_at is not None and opens_at >= closes_at:
             raise ValueError("closesAt must be later than opensAt")
         return self
 
