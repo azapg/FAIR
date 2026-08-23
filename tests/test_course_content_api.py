@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 from fair_platform.backend.api.routers.auth import hash_password
-from fair_platform.backend.data.models.artifact import AccessLevel, Artifact
-from fair_platform.backend.data.models.assignment import Assignment, AssignmentStatus
+from fair_platform.backend.data.models.artifact import (
+    AccessLevel,
+    Artifact,
+    ArtifactStatus,
+)
+from fair_platform.backend.data.models.assignment import (
+    Assignment,
+    AssignmentStatus,
+)
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.enrollment import Enrollment, EnrollmentStatus
 from fair_platform.backend.data.models.lms_content import (
@@ -313,3 +321,208 @@ def test_removed_membership_cannot_open_course_artifact(test_db):
         enrollment.status = EnrollmentStatus.active
         session.commit()
         assert manager.can_view(student, artifact) is True
+
+
+def test_resource_deletion_removes_outline_links_and_compacts_positions(
+    test_client, test_db
+):
+    with test_db() as session:
+        owner = _user(session, "Owner", UserRole.instructor)
+        course = _course(session, owner)
+        assignment = Assignment(
+            id=uuid4(),
+            course_id=course.id,
+            title="Disposable assignment",
+            max_grade={"type": "points", "value": 100},
+            status=AssignmentStatus.draft,
+        )
+        deleted_artifact = Artifact(
+            id=uuid4(),
+            title="Disposable file",
+            artifact_type="document",
+            creator_id=owner.id,
+            status=ArtifactStatus.attached,
+            access_level=AccessLevel.course,
+            course_id=course.id,
+        )
+        archived_artifact = Artifact(
+            id=uuid4(),
+            title="Archivable file",
+            artifact_type="document",
+            creator_id=owner.id,
+            status=ArtifactStatus.attached,
+            access_level=AccessLevel.course,
+            course_id=course.id,
+        )
+        section = CourseSection(
+            id=uuid4(),
+            course_id=course.id,
+            title="Resources",
+            position=0,
+            visibility=CourseContentVisibility.published,
+        )
+        session.add_all(
+            [assignment, deleted_artifact, archived_artifact, section]
+        )
+        session.flush()
+        assignment_item = CourseItem(
+            id=uuid4(),
+            course_id=course.id,
+            section_id=section.id,
+            title=assignment.title,
+            position=0,
+            kind="assignment",
+            visibility=CourseContentVisibility.draft,
+            resource_type="assignment",
+            resource_id=assignment.id,
+            payload={},
+        )
+        deleted_artifact_item = CourseItem(
+            id=uuid4(),
+            course_id=course.id,
+            section_id=section.id,
+            title=deleted_artifact.title,
+            position=1,
+            kind="file",
+            visibility=CourseContentVisibility.published,
+            resource_type="artifact",
+            resource_id=deleted_artifact.id,
+            payload={},
+        )
+        archived_artifact_item = CourseItem(
+            id=uuid4(),
+            course_id=course.id,
+            section_id=section.id,
+            title=archived_artifact.title,
+            position=2,
+            kind="file",
+            visibility=CourseContentVisibility.published,
+            resource_type="artifact",
+            resource_id=archived_artifact.id,
+            payload={},
+        )
+        surviving_item = CourseItem(
+            id=uuid4(),
+            course_id=course.id,
+            section_id=section.id,
+            title="Keep me",
+            position=3,
+            kind="page",
+            visibility=CourseContentVisibility.published,
+            copied_from_id=assignment_item.id,
+            payload_schema_uri="urn:fair:lms:course-item:page:v1",
+            payload={"body": "Still here"},
+        )
+        session.add_all(
+            [
+                assignment_item,
+                deleted_artifact_item,
+                archived_artifact_item,
+                surviving_item,
+            ]
+        )
+        session.commit()
+
+    headers = _auth(test_client, owner)
+    response = test_client.delete(
+        f"/api/assignments/{assignment.id}", headers=headers
+    )
+    assert response.status_code == 204
+
+    with test_db() as session:
+        assert session.get(Assignment, assignment.id) is None
+        assert session.get(CourseItem, assignment_item.id) is None
+        remaining = (
+            session.query(CourseItem)
+            .filter(CourseItem.section_id == section.id)
+            .order_by(CourseItem.position)
+            .all()
+        )
+        assert [item.id for item in remaining] == [
+            deleted_artifact_item.id,
+            archived_artifact_item.id,
+            surviving_item.id,
+        ]
+        assert [item.position for item in remaining] == [0, 1, 2]
+        assert session.get(CourseItem, surviving_item.id).copied_from_id is None
+
+    response = test_client.delete(
+        f"/api/v1/artifacts/{deleted_artifact.id}", headers=headers
+    )
+    assert response.status_code == 204
+
+    with test_db() as session:
+        assert (
+            session.get(Artifact, deleted_artifact.id).status
+            == ArtifactStatus.archived
+        )
+        assert session.get(CourseItem, deleted_artifact_item.id) is None
+
+    response = test_client.put(
+        f"/api/v1/artifacts/{archived_artifact.id}",
+        json={"status": "archived"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+
+    with test_db() as session:
+        assert (
+            session.get(Artifact, archived_artifact.id).status
+            == ArtifactStatus.archived
+        )
+        assert session.get(CourseItem, archived_artifact_item.id) is None
+        remaining = (
+            session.query(CourseItem)
+            .filter(CourseItem.section_id == section.id)
+            .order_by(CourseItem.position)
+            .all()
+        )
+        assert [(item.id, item.position) for item in remaining] == [
+            (surviving_item.id, 0)
+        ]
+
+
+def test_orphan_cleanup_removes_outline_link(test_db):
+    with test_db() as session:
+        owner = _user(session, "Owner", UserRole.instructor)
+        course = _course(session, owner)
+        artifact = Artifact(
+            id=uuid4(),
+            title="Expired orphan",
+            artifact_type="document",
+            creator_id=owner.id,
+            status=ArtifactStatus.orphaned,
+            access_level=AccessLevel.course,
+            course_id=course.id,
+            updated_at=datetime.now() - timedelta(days=8),
+        )
+        section = CourseSection(
+            id=uuid4(),
+            course_id=course.id,
+            title="Resources",
+            position=0,
+            visibility=CourseContentVisibility.published,
+        )
+        session.add_all([artifact, section])
+        session.flush()
+        item = CourseItem(
+            id=uuid4(),
+            course_id=course.id,
+            section_id=section.id,
+            title=artifact.title,
+            position=0,
+            kind="file",
+            visibility=CourseContentVisibility.published,
+            resource_type="artifact",
+            resource_id=artifact.id,
+            payload={},
+        )
+        session.add(item)
+        session.commit()
+
+        manager = ArtifactManager(session, storage_provider=object())
+        assert manager.cleanup_orphaned() == 1
+        session.commit()
+
+        assert session.get(Artifact, artifact.id).status == ArtifactStatus.archived
+        assert session.get(CourseItem, item.id) is None
