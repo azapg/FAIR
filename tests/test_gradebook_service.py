@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Event, Thread
 from uuid import uuid4
 
@@ -9,7 +9,11 @@ from fastapi import HTTPException
 
 from fair_platform.backend.data.models.assignment import Assignment, AssignmentStatus
 from fair_platform.backend.data.models.course import Course
-from fair_platform.backend.data.models.enrollment import Enrollment
+from fair_platform.backend.data.models.enrollment import (
+    CourseMembershipRole,
+    Enrollment,
+    EnrollmentStatus,
+)
 from fair_platform.backend.data.models.lms_gradebook import GradeCategory, GradeEntry
 from fair_platform.backend.data.models.submission import Submission, SubmissionStatus
 from fair_platform.backend.data.models.submitter import Submitter
@@ -120,6 +124,91 @@ def test_assignment_item_sync_and_published_only_projection(test_db):
         assert revised.id == entry.id
         assert float(revised.points_earned) == submission.published_score == 74
         assert float(revised.points_earned) != submission.draft_score
+
+
+@pytest.mark.parametrize(
+    ("role", "status"),
+    [
+        (CourseMembershipRole.student, EnrollmentStatus.removed),
+        (CourseMembershipRole.assistant, EnrollmentStatus.active),
+    ],
+)
+def test_assignment_projection_requires_active_student_enrollment(
+    test_db, role, status
+):
+    with test_db() as session:
+        owner, student, _, course, assignment, submitter = _fixture(session)
+        submission = Submission(
+            id=uuid4(),
+            assignment_id=assignment.id,
+            submitter_id=submitter.id,
+            created_by_id=student.id,
+            submitted_at=datetime.utcnow(),
+            status=SubmissionStatus.returned,
+            published_score=73,
+            returned_at=datetime.utcnow(),
+        )
+        session.add(submission)
+        session.flush()
+        assert sync_released_submission_entry(session, submission, owner) is not None
+        assert session.query(GradeEntry).count() == 1
+
+        enrollment = (
+            session.query(Enrollment)
+            .filter(
+                Enrollment.course_id == course.id,
+                Enrollment.user_id == student.id,
+            )
+            .one()
+        )
+        enrollment.role = role
+        enrollment.status = status
+        session.flush()
+
+        assert sync_released_submission_entry(session, submission, owner) is None
+        assert session.query(GradeEntry).count() == 0
+
+
+def test_assignment_projection_ranks_tied_attempts_by_submission_time(test_db):
+    with test_db() as session:
+        owner, student, _, _, assignment, first_submitter = _fixture(session)
+        second_submitter = Submitter(
+            id=uuid4(),
+            user_id=student.id,
+            name=student.name,
+            email=str(student.email),
+            is_synthetic=False,
+        )
+        now = datetime.utcnow()
+        later_submitted = Submission(
+            id=uuid4(),
+            assignment_id=assignment.id,
+            submitter_id=first_submitter.id,
+            created_by_id=student.id,
+            submitted_at=now,
+            returned_at=now + timedelta(minutes=1),
+            attempt_number=1,
+            status=SubmissionStatus.returned,
+            published_score=88,
+        )
+        later_returned = Submission(
+            id=uuid4(),
+            assignment_id=assignment.id,
+            submitter_id=second_submitter.id,
+            created_by_id=student.id,
+            submitted_at=now - timedelta(minutes=1),
+            returned_at=now + timedelta(days=1),
+            attempt_number=1,
+            status=SubmissionStatus.returned,
+            published_score=64,
+        )
+        session.add_all([second_submitter, later_submitted, later_returned])
+        session.flush()
+
+        entry = sync_released_submission_entry(session, later_returned, owner)
+        assert entry is not None
+        assert entry.source_id == later_submitted.id
+        assert float(entry.points_earned) == 88
 
 
 def test_manual_entries_require_active_student_and_compute_honest_totals(test_db):

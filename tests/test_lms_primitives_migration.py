@@ -12,7 +12,6 @@ from sqlalchemy.exc import DatabaseError
 from fair_platform.backend.data.database import Base
 from fair_platform.backend.data.migrations import (
     build_alembic_config,
-    run_migrations_to_head,
     run_migrations_to_revision,
 )
 import fair_platform.backend.data.models  # noqa: F401
@@ -55,9 +54,11 @@ def _revision(path: Path) -> str:
     return row[0]
 
 
-def test_primitives_revision_is_the_sole_head() -> None:
+def test_primitives_revision_has_the_expected_parent() -> None:
     script = ScriptDirectory.from_config(build_alembic_config("sqlite:///:memory:"))
-    assert script.get_heads() == [PRIMITIVES_REVISION]
+    revision = script.get_revision(PRIMITIVES_REVISION)
+    assert revision is not None
+    assert revision.down_revision == PRIOR_REVISION
 
 
 def test_upgrade_from_points_head_has_model_column_parity(tmp_path: Path) -> None:
@@ -66,7 +67,7 @@ def test_upgrade_from_points_head_has_model_column_parity(tmp_path: Path) -> Non
     run_migrations_to_revision(PRIOR_REVISION, database_url)
     assert _revision(database_path) == PRIOR_REVISION
 
-    run_migrations_to_head(database_url)
+    run_migrations_to_revision(PRIMITIVES_REVISION, database_url)
     assert _revision(database_path) == PRIMITIVES_REVISION
 
     engine = create_engine(database_url)
@@ -87,7 +88,7 @@ def test_upgrade_from_points_head_has_model_column_parity(tmp_path: Path) -> Non
 def test_activity_event_trigger_rejects_raw_update_and_delete(tmp_path: Path) -> None:
     database_path = tmp_path / "activity-events.sqlite"
     database_url = _database_url(database_path)
-    run_migrations_to_head(database_url)
+    run_migrations_to_revision(PRIMITIVES_REVISION, database_url)
 
     engine = create_engine(database_url)
     with engine.begin() as connection:
@@ -123,7 +124,7 @@ def test_primitives_migration_downgrades_and_reupgrades_cleanly(
     database_path = tmp_path / "round-trip.sqlite"
     database_url = _database_url(database_path)
     config = build_alembic_config(database_url)
-    run_migrations_to_head(database_url)
+    run_migrations_to_revision(PRIMITIVES_REVISION, database_url)
 
     command.downgrade(config, PRIOR_REVISION)
     assert _revision(database_path) == PRIOR_REVISION
@@ -136,7 +137,7 @@ def test_primitives_migration_downgrades_and_reupgrades_cleanly(
         }
     engine.dispose()
 
-    run_migrations_to_head(database_url)
+    run_migrations_to_revision(PRIMITIVES_REVISION, database_url)
     assert _revision(database_path) == PRIMITIVES_REVISION
 
 

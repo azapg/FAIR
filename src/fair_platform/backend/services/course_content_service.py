@@ -308,6 +308,33 @@ class CourseContentService:
         self.db.flush()
         self._compact_items(section_id)
 
+    def remove_resource_links(self, resource_type: str, resource_id: UUID) -> int:
+        """Remove outline links to a deleted resource and repair item ordering."""
+        items = self.db.scalars(
+            select(CourseItem)
+            .where(
+                CourseItem.resource_type == resource_type,
+                CourseItem.resource_id == resource_id,
+            )
+            .with_for_update()
+        ).all()
+        item_ids = [item.id for item in items]
+        if item_ids:
+            copied_items = self.db.scalars(
+                select(CourseItem)
+                .where(CourseItem.copied_from_id.in_(item_ids))
+                .with_for_update()
+            ).all()
+            for copied_item in copied_items:
+                copied_item.copied_from_id = None
+        section_ids = {item.section_id for item in items}
+        for item in items:
+            self.db.delete(item)
+        self.db.flush()
+        for section_id in sorted(section_ids, key=str):
+            self._compact_items(section_id)
+        return len(items)
+
     def reorder_items(
         self, course_id: UUID, section_id: UUID, ordered_ids: list[UUID]
     ) -> list[CourseItem]:
