@@ -27,6 +27,7 @@ from fair_platform.backend.core.security.permissions import (
     has_capability,
     has_capability_and_owner,
 )
+from fair_platform.backend.services.course_content_service import CourseContentService
 
 
 class ArtifactManager:
@@ -272,6 +273,10 @@ class ArtifactManager:
         if status is not None:
             self._validate_status_transition(artifact.status, status)
             artifact.status = status
+            if status == ArtifactStatus.archived:
+                CourseContentService(self.db).remove_resource_links(
+                    "artifact", artifact.id
+                )
         if course_id is not None:
             artifact.course_id = course_id
         if assignment_id is not None:
@@ -313,14 +318,17 @@ class ArtifactManager:
         
         if not self.can_delete(user, artifact):
             raise HTTPException(status_code=403, detail="Permission denied")
-        
+
         if hard_delete:
             if not has_capability(user, "cleanup_orphaned_artifacts"):
                 raise HTTPException(
                     status_code=403,
                     detail="Hard delete requires admin privileges"
                 )
-            
+
+        CourseContentService(self.db).remove_resource_links("artifact", artifact.id)
+
+        if hard_delete:
             for derivative in list(artifact.derivatives):
                 self._delete_derivative_object(derivative.storage_uri)
             
@@ -613,6 +621,9 @@ class ArtifactManager:
         
         count = 0
         for artifact in orphaned_artifacts:
+            CourseContentService(self.db).remove_resource_links(
+                "artifact", artifact.id
+            )
             if hard_delete:
                 for derivative in list(artifact.derivatives):
                     self._delete_derivative_object(derivative.storage_uri)
