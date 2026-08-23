@@ -71,11 +71,15 @@ def _aware(value: datetime | None, fallback: datetime) -> datetime:
     return result.astimezone(timezone.utc)
 
 
-def _submission_rank(row: Mapping[str, Any], now: datetime) -> tuple[int, float, str]:
-    released_at = _aware(row["returned_at"] or row["submitted_at"], now)
+def _submission_rank(row: Mapping[str, Any]) -> tuple[int, float, str]:
+    """Mirror the runtime attempt/submitted-at/UUID recency contract exactly."""
+
+    submitted_at = row["submitted_at"]
     return (
-        int(row["attempt_number"] or 0),
-        released_at.timestamp(),
+        int(row["attempt_number"]) if row["attempt_number"] is not None else -1,
+        _aware(submitted_at, submitted_at).timestamp()
+        if submitted_at is not None
+        else float("-inf"),
         str(row["id"]),
     )
 
@@ -342,9 +346,7 @@ def upgrade() -> None:
             continue
         key = (submission["assignment_id"], user_id)
         current = latest_by_assignment_user.get(key)
-        if current is None or _submission_rank(submission, now) > _submission_rank(
-            current, now
-        ):
+        if current is None or _submission_rank(submission) > _submission_rank(current):
             latest_by_assignment_user[key] = submission
 
     existing_entries = {

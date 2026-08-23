@@ -245,6 +245,66 @@ def test_gradebook_backfill_upgrade_downgrade_and_reupgrade(tmp_path: Path) -> N
     assert len(entries) == 2
 
 
+def test_gradebook_backfill_ranks_tied_attempts_by_submission_time(
+    tmp_path: Path,
+) -> None:
+    database_url = (
+        f"sqlite:///{(tmp_path / 'gradebook-tied-attempts.sqlite').as_posix()}"
+    )
+    run_migrations_to_revision(A1_REVISION, database_url)
+    seeded = _seed_legacy_grade_data(database_url)
+    engine = create_engine(database_url)
+    submitters = Base.metadata.tables["submitters"]
+    submissions = Base.metadata.tables["submissions"]
+    competing_submitter_id = uuid4()
+    competing_submission_id = uuid4()
+    with engine.begin() as connection:
+        canonical = (
+            connection.execute(
+                sa.select(submissions).where(
+                    submissions.c.id == seeded["latest_returned_id"]
+                )
+            )
+            .mappings()
+            .one()
+        )
+        connection.execute(
+            submitters.insert().values(
+                id=competing_submitter_id,
+                name="Backfill Student",
+                email="duplicate-backfill-student@example.test",
+                user_id=seeded["student_id"],
+                is_synthetic=False,
+                created_at=canonical["submitted_at"],
+            )
+        )
+        connection.execute(
+            submissions.insert().values(
+                id=competing_submission_id,
+                assignment_id=seeded["returned_assignment_id"],
+                submitter_id=competing_submitter_id,
+                created_by_id=seeded["student_id"],
+                submitted_at=canonical["submitted_at"] - timedelta(minutes=1),
+                status="returned",
+                draft_score=64,
+                draft_feedback=None,
+                published_score=64,
+                published_feedback=None,
+                returned_at=canonical["submitted_at"] + timedelta(days=1),
+                attempt_number=canonical["attempt_number"],
+                is_late=False,
+            )
+        )
+    engine.dispose()
+
+    run_migrations_to_revision(A3_REVISION, database_url)
+    _, _, entries = _gradebook_rows(database_url)
+    graded = next(entry for entry in entries if entry["status"] == "graded")
+    assert graded["source_id"] == seeded["latest_returned_id"]
+    assert graded["source_id"] != competing_submission_id
+    assert float(graded["points_earned"]) == 85
+
+
 def test_gradebook_backfill_rejects_invalid_published_scores(tmp_path: Path) -> None:
     database_url = f"sqlite:///{(tmp_path / 'gradebook-invalid.sqlite').as_posix()}"
     run_migrations_to_revision(A1_REVISION, database_url)
