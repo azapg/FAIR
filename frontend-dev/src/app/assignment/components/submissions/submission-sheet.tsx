@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   CircleCheck,
   Ellipsis,
@@ -65,22 +66,36 @@ export function SubmissionSheet({
     hasUnpublishedDraft(submission) && !returnSubmission.isPending;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        className="w-full h-9/10 md:h-full md:min-w-4/5 lg:min-w-1/2 gap-0"
-        side={isMobile ? "bottom" : "right"}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        showCloseButton={false}
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      direction={isMobile ? "bottom" : "right"}
+      autoFocus={focusOn !== "feedback"}
+    >
+      <DrawerContent
+        className="h-9/10 w-full gap-0 data-[vaul-drawer-direction=bottom]:max-h-[90vh] md:h-full md:min-w-4/5 lg:min-w-1/2"
       >
         <div className="w-full flex justify-between text-muted-foreground py-2 px-4">
           <div className="flex items-center">
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon-sm">
-                {isMobile ? <PanelBottomClose /> : <PanelRightClose />}
+            <DrawerClose asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("submissions.closeDetails")}
+              >
+                {isMobile ? (
+                  <PanelBottomClose aria-hidden="true" />
+                ) : (
+                  <PanelRightClose aria-hidden="true" />
+                )}
               </Button>
-            </SheetTrigger>
-            <Button variant="ghost" size="icon-sm">
-              <Maximize2 />
+            </DrawerClose>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("submissions.expandDetails")}
+            >
+              <Maximize2 aria-hidden="true" />
             </Button>
           </div>
           <div className="flex gap-2 items-center">
@@ -91,17 +106,24 @@ export function SubmissionSheet({
             >
               <CircleCheck size={16} /> {t("submissions.returnAction")}
             </Button>
-            <Button variant="ghost" size="icon-sm">
-              <Ellipsis />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("submissions.moreActions")}
+            >
+              <Ellipsis aria-hidden="true" />
             </Button>
           </div>
         </div>
 
         <ScrollArea className="overflow-y-auto gap-6">
-          <SheetHeader className="gap-3 px-8 md:px-12">
-            <SheetTitle className="text-3xl font-medium">
+          <DrawerHeader className="gap-3 px-8 md:px-12 text-left">
+            <DrawerTitle className="text-3xl font-medium">
               {submission.submitter?.name}
-            </SheetTitle>
+            </DrawerTitle>
+            <DrawerDescription className="sr-only">
+              {t("submissions.detailsDescription")}
+            </DrawerDescription>
             <PropertiesDisplay scroll gapX={4} className="items-start">
               <Property>
                 <PropertyLabel>{t("submissions.status")}</PropertyLabel>
@@ -137,7 +159,7 @@ export function SubmissionSheet({
                 </PropertyValue>
               </Property>
             </PropertiesDisplay>
-          </SheetHeader>
+          </DrawerHeader>
 
           <div className="px-8 md:px-12">
             <Tabs defaultValue="attachments" className="w-full">
@@ -148,7 +170,9 @@ export function SubmissionSheet({
                 <TabsTrigger value="timeline">
                   {t("submissions.timeline")}
                 </TabsTrigger>
-                <TabsTrigger value="comments">Private comments</TabsTrigger>
+                <TabsTrigger value="comments">
+                  {t("submissions.privateComments")}
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="attachments" className="py-3">
                 <SubmissionAttachments artifacts={submission.artifacts} />
@@ -162,8 +186,8 @@ export function SubmissionSheet({
             </Tabs>
           </div>
         </ScrollArea>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
