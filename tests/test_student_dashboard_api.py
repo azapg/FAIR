@@ -376,6 +376,59 @@ def test_dashboard_returns_other_sources_when_progress_fails(
     }
 
 
+def test_dashboard_prioritizes_actionable_dated_work_before_the_limit(
+    test_client, test_db
+):
+    with test_db() as session:
+        _, _, student, _, course, _ = _setup(session)
+        now = datetime.now(timezone.utc)
+        undated = [
+            Assignment(
+                id=uuid4(),
+                course_id=course.id,
+                title=f"Undated practice {index:02d}",
+                deadline=None,
+                max_grade={"type": "points", "value": 10},
+                status=AssignmentStatus.published,
+                published_at=now,
+            )
+            for index in range(21)
+        ]
+        submitted_assignment = Assignment(
+            id=uuid4(),
+            course_id=course.id,
+            title="Already submitted",
+            deadline=now + timedelta(hours=1),
+            max_grade={"type": "points", "value": 10},
+            status=AssignmentStatus.published,
+            published_at=now,
+        )
+        session.add_all([*undated, submitted_assignment])
+        session.flush()
+        submitter = session.query(Submitter).filter_by(user_id=student.id).one()
+        session.add(
+            Submission(
+                id=uuid4(),
+                assignment_id=submitted_assignment.id,
+                submitter_id=submitter.id,
+                created_by_id=student.id,
+                submitted_at=now,
+                status=SubmissionStatus.submitted,
+                attempt_number=1,
+            )
+        )
+        session.commit()
+
+    response = test_client.get(
+        "/api/lms/student/dashboard", headers=_auth(test_client, student)
+    )
+    assert response.status_code == 200
+    upcoming = response.json()["upcomingWork"]
+    assert len(upcoming) == 20
+    assert upcoming[0]["title"] == "Cell diagram"
+    assert all(item["state"] == "upcoming" for item in upcoming)
+
+
 def test_dashboard_work_respects_private_due_override_cutoff_and_completion(
     test_client, test_db
 ):

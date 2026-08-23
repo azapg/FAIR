@@ -336,6 +336,20 @@ def work_projection(
             "submission_id": submission.id if submission else None,
         }
         (overdue if state == "overdue" else upcoming).append(payload)
+
+    def work_sort_key(item: dict[str, Any]) -> tuple[Any, ...]:
+        deadline = item["deadline"]
+        return (
+            item["state"] == "submitted",
+            deadline is None,
+            deadline or now,
+            item["course_name"].casefold(),
+            item["title"].casefold(),
+            str(item["assignment_id"]),
+        )
+
+    upcoming.sort(key=work_sort_key)
+    overdue.sort(key=work_sort_key)
     return upcoming[:20], overdue[:20]
 
 
