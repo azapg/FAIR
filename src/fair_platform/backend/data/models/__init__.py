@@ -66,6 +66,7 @@ from .lms_communication import (
     SubmissionComment,
 )
 from .lms_content import CourseContentVisibility, CourseItem, CourseSection
+from .lms_course_copy import CourseCopyJob, CourseTemplate
 from .lms_events import (
     ActivityEvent,
     CalendarEvent,
@@ -195,6 +196,8 @@ __all__ = [
     "CourseGroupMembershipRole",
     "CourseItem",
     "CourseSection",
+    "CourseCopyJob",
+    "CourseTemplate",
     "ExternalIdentifier",
     "ExternalIdentifierSubjectType",
     "GradeAggregationStrategy",

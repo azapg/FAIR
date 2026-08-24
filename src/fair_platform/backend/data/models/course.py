@@ -57,6 +57,9 @@ class Course(Base):
     is_archived: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=false(), nullable=False
     )
+    copied_from_id: Mapped[Optional[UUID]] = mapped_column(
+        _UUID, ForeignKey("courses.id", ondelete="RESTRICT"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, nullable=False, default=datetime.utcnow
     )

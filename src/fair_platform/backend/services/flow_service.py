@@ -41,7 +41,7 @@ def _state(value: object) -> str:
     return value.value if hasattr(value, "value") else str(value)
 
 
-def _version_hash(
+def flow_version_hash(
     definition: dict, capability_pins: list[dict], config_snapshot: dict
 ) -> str:
     encoded = json.dumps(
@@ -120,7 +120,10 @@ def create_flow_version(
                 f"Flow node {node.id!r} references an unknown CapabilityDefinition"
             )
         installation = session.get(ExtensionInstallation, capability.installation_id)
-        if installation is None or _state(installation.status) != ExtensionInstallationStatus.enabled.value:
+        if (
+            installation is None
+            or _state(installation.status) != ExtensionInstallationStatus.enabled.value
+        ):
             raise FlowStateError(
                 f"Flow node {node.id!r} requires an enabled Extension installation"
             )
@@ -144,7 +147,7 @@ def create_flow_version(
         definition=definition_document,
         capability_pins=capability_pins,
         config_snapshot=config_snapshot,
-        definition_hash=_version_hash(
+        definition_hash=flow_version_hash(
             definition_document, capability_pins, config_snapshot
         ),
         created_by_user_id=created_by_user_id,
@@ -244,7 +247,9 @@ def start_flow_execution(
     except FlowRuntimeError as exc:
         raise FlowStateError(str(exc)) from exc
     if advanced.step is None or advanced.dispatch is None:
-        raise FlowStateError("Published FlowVersion did not produce a dispatchable step")
+        raise FlowStateError(
+            "Published FlowVersion did not produce a dispatchable step"
+        )
     return execution, version, advanced.step, advanced.dispatch
 
 
@@ -254,6 +259,7 @@ __all__ = [
     "archive_flow_version",
     "create_flow",
     "create_flow_version",
+    "flow_version_hash",
     "get_owned_flow",
     "publish_flow_version",
     "start_flow_execution",

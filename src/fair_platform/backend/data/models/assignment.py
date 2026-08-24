@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from .submission import Submission
     from .artifact import Artifact
     from .execution import Execution
+    from .rubric import Rubric
 
 assignment_artifacts = Table(
     "assignment_artifacts",
@@ -64,6 +65,9 @@ class Assignment(Base):
         String(32), nullable=False, default=AssignmentStatus.published
     )
     published_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP, nullable=True)
+    rubric_id: Mapped[Optional[UUID]] = mapped_column(
+        SAUUID, ForeignKey("rubrics.id", ondelete="RESTRICT"), nullable=True
+    )
     allow_resubmissions: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
     )
@@ -75,6 +79,7 @@ class Assignment(Base):
     executions: Mapped[List["Execution"]] = relationship(
         "Execution", back_populates="assignment"
     )
+    rubric: Mapped[Optional["Rubric"]] = relationship("Rubric")
 
     direct_artifacts: Mapped[List["Artifact"]] = relationship(
         "Artifact", back_populates="assignment"

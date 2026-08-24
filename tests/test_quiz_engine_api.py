@@ -152,6 +152,38 @@ def _author_quiz(
     return published.json()
 
 
+def test_quiz_window_handles_mixed_naive_and_aware_datetimes(
+    test_client, test_db
+) -> None:
+    with test_db() as session:
+        owner, _, _, _, _, course, section = _setup(session)
+    headers = _auth(test_client, owner)
+
+    created = test_client.post(
+        f"/api/lms/courses/{course.id}/quizzes",
+        json={
+            "sectionId": str(section.id),
+            "title": "Mixed timezone window",
+            "opensAt": "2030-01-01T12:00:00Z",
+            "closesAt": "2030-01-01T13:00:00",
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+
+    invalid = test_client.post(
+        f"/api/lms/courses/{course.id}/quizzes",
+        json={
+            "sectionId": str(section.id),
+            "title": "Backwards mixed timezone window",
+            "opensAt": "2030-01-01T14:00:00",
+            "closesAt": "2030-01-01T13:00:00Z",
+        },
+        headers=headers,
+    )
+    assert invalid.status_code == 422, invalid.text
+
+
 def test_objective_attempt_is_immutable_idempotent_and_projects_released_points(
     test_client, test_db
 ):

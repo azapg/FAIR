@@ -24,6 +24,7 @@ from fair_platform.backend.data.models.assignment import (
 )
 from fair_platform.backend.data.models.submission import Submission
 from fair_platform.backend.data.models.course import Course
+from fair_platform.backend.data.models.rubric import Rubric
 from fair_platform.backend.data.models.artifact import ArtifactStatus, AccessLevel
 from fair_platform.backend.api.schema.assignment import (
     AssignmentRead,
@@ -61,6 +62,7 @@ async def create_assignment(
     artifact_ids: str = Form(None),
     files: List[UploadFile] = File(None),
     allow_resubmissions: bool = Form(True),
+    rubric_id: UUID | None = Form(None),
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
@@ -127,6 +129,22 @@ async def create_assignment(
                     detail="Invalid deadline format. Use ISO format (YYYY-MM-DDTHH:MM:SS)",
                 )
 
+        rubric = db.get(Rubric, rubric_id) if rubric_id is not None else None
+        if rubric_id is not None and rubric is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Rubric not found",
+            )
+        if (
+            rubric is not None
+            and rubric.created_by_id != current_user.id
+            and not has_capability(current_user, "admin")
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the rubric owner can attach it to an assignment",
+            )
+
         assignment = Assignment(
             id=uuid4(),
             course_id=course_id,
@@ -136,6 +154,7 @@ async def create_assignment(
             max_grade=max_grade_dict,
             status=AssignmentStatus.draft,
             allow_resubmissions=allow_resubmissions,
+            rubric_id=rubric_id,
         )
         db.add(assignment)
         db.flush()
@@ -308,6 +327,20 @@ def update_assignment(
         assignment.max_grade = payload.max_grade.model_dump()
     if payload.allow_resubmissions is not None:
         assignment.allow_resubmissions = payload.allow_resubmissions
+    if "rubric_id" in payload.model_fields_set:
+        rubric = db.get(Rubric, payload.rubric_id) if payload.rubric_id else None
+        if payload.rubric_id is not None and rubric is None:
+            raise HTTPException(status_code=400, detail="Rubric not found")
+        if (
+            rubric is not None
+            and rubric.created_by_id != current_user.id
+            and not has_capability(current_user, "admin")
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Only the rubric owner can attach it to an assignment",
+            )
+        assignment.rubric_id = payload.rubric_id
 
     db.add(assignment)
     ensure_assignment_grade_item(db, assignment)
