@@ -133,8 +133,31 @@ SECRET_KEY_MARKERS = (
     "privatekey",
     "secret",
     "sessionkey",
-    "token",
 )
+TOKEN_METRIC_WORDS = {
+    "budget",
+    "budgets",
+    "completion",
+    "completions",
+    "count",
+    "counts",
+    "input",
+    "inputs",
+    "limit",
+    "limits",
+    "max",
+    "maximum",
+    "min",
+    "minimum",
+    "output",
+    "outputs",
+    "prompt",
+    "prompts",
+    "remaining",
+    "total",
+    "usage",
+    "used",
+}
 HEADER_CONTAINER_KEYS = {
     "defaultheaders",
     "header",
@@ -148,6 +171,7 @@ SECRET_HEADER_KEYS = {
     "proxyauthorization",
     "setcookie",
 }
+HEADER_NAME_KEYS = {"header", "headername", "key", "name"}
 # Course copies are synchronous, bounded database work. A generous fixed lease
 # makes abandoned requests recoverable without treating normal copies as stale.
 COURSE_COPY_LEASE = timedelta(minutes=30)
@@ -200,28 +224,88 @@ def _without_secrets(value: Any, *, _container: str | None = None) -> Any:
             normalized = _normalized_key(str(key))
             if _is_secret_key(str(key)):
                 continue
-            if _container in HEADER_CONTAINER_KEYS and _is_secret_header(normalized):
+            if _container in HEADER_CONTAINER_KEYS and _is_secret_header(str(key)):
                 continue
             sanitized[key] = _without_secrets(child, _container=normalized)
         return sanitized
     if isinstance(value, list):
-        return [_without_secrets(child, _container=_container) for child in value]
+        if _container in HEADER_CONTAINER_KEYS and _is_secret_header_pair(value):
+            return []
+        return [
+            _without_secrets(child, _container=_container)
+            for child in value
+            if _container not in HEADER_CONTAINER_KEYS
+            or not _is_secret_header_entry(child)
+        ]
     return deepcopy(value)
 
 
 def _is_secret_key(key: str) -> bool:
     normalized = _normalized_key(key)
-    return normalized in SECRET_KEYS or any(
-        marker in normalized for marker in SECRET_KEY_MARKERS
+    return (
+        normalized in SECRET_KEYS
+        or any(marker in normalized for marker in SECRET_KEY_MARKERS)
+        or _is_credential_token_key(key)
     )
 
 
-def _is_secret_header(normalized: str) -> bool:
+def _key_words(value: str) -> tuple[str, ...]:
+    separated = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", value)
+    separated = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", separated)
+    return tuple(part.casefold() for part in re.findall(r"[A-Za-z0-9]+", separated))
+
+
+def _is_credential_token_key(key: str) -> bool:
+    normalized = _normalized_key(key)
+    words = _key_words(key)
+    token_words = {"token", "tokens"}
+    has_token_word = any(word in token_words for word in words)
+    has_token_suffix = normalized.endswith(("token", "tokens"))
+    has_compact_metric = any(
+        normalized.startswith(f"{metric}token")
+        or normalized.startswith(f"token{metric}")
+        for metric in TOKEN_METRIC_WORDS
+    )
+
+    if not has_token_word and not has_token_suffix and not has_compact_metric:
+        return False
+    if any(word in TOKEN_METRIC_WORDS for word in words) or has_compact_metric:
+        return False
+    return True
+
+
+def _is_secret_header(key: str) -> bool:
+    normalized = _normalized_key(key)
     return (
         normalized in SECRET_HEADER_KEYS
         or normalized.endswith("auth")
-        or any(marker in normalized for marker in SECRET_KEY_MARKERS)
+        or _is_secret_key(key)
     )
+
+
+def _is_secret_header_pair(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and len(value) == 2
+        and isinstance(value[0], str)
+        and _is_secret_header(value[0])
+    )
+
+
+def _is_secret_header_entry(value: Any) -> bool:
+    if _is_secret_header_pair(value):
+        return True
+    if not isinstance(value, dict):
+        return False
+
+    for key, child in value.items():
+        if (
+            _normalized_key(str(key)) in HEADER_NAME_KEYS
+            and isinstance(child, str)
+            and _is_secret_header(child)
+        ):
+            return True
+    return len(value) == 1 and _is_secret_header(str(next(iter(value))))
 
 
 def _count(db: Session, model: type, **filters: Any) -> int:
