@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useMyAIEntitlement } from "@/hooks/use-access-controls";
 
 const noop = () => undefined;
 
@@ -63,15 +64,23 @@ const LiveMessageRow = React.memo(function LiveMessageRow({
 
 export default function LiveChatPage() {
   const capabilities = useCapabilities();
+  const entitlement = useMyAIEntitlement();
   const agentCapabilities = (capabilities.data ?? []).filter(
     (capability) => capability.surface === "chat.agent",
   );
   const [capabilityDefinitionId, setCapabilityDefinitionId] = React.useState("");
   React.useEffect(() => {
     if (!capabilityDefinitionId && agentCapabilities[0]) {
-      setCapabilityDefinitionId(agentCapabilities[0].id);
+      setCapabilityDefinitionId(
+        agentCapabilities.find((capability) => capability.costControl?.executable !== false)?.id
+          ?? agentCapabilities[0].id,
+      );
     }
   }, [agentCapabilities, capabilityDefinitionId]);
+  const selectedCapability = agentCapabilities.find(
+    (capability) => capability.id === capabilityDefinitionId,
+  );
+  const accessDenied = selectedCapability?.costControl?.executable === false;
   const live = useExecutionChat(capabilityDefinitionId || undefined);
   const pending = live.pendingInteraction;
   const isStreaming = live.status === "streaming";
@@ -107,6 +116,9 @@ export default function LiveChatPage() {
             <h1 className="text-sm font-semibold">FAIR live execution</h1>
             <p className="text-xs text-muted-foreground">
               {live.executionId ? `Execution ${live.executionId.slice(0, 8)} · ${live.status}` : "No active Execution"}
+              {entitlement.data?.controlsEnabled && entitlement.data.remainingUnits != null
+                ? ` · ${entitlement.data.remainingUnits} credits remaining`
+                : ""}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -126,8 +138,9 @@ export default function LiveChatPage() {
               </SelectTrigger>
               <SelectContent>
                 {agentCapabilities.map((capability) => (
-                  <SelectItem key={capability.id} value={capability.id}>
+                  <SelectItem key={capability.id} value={capability.id} disabled={capability.costControl?.executable === false}>
                     {capability.displayName ?? capability.capabilityId} · {capability.version}
+                    {capability.costControl?.classification === "ai" ? ` · ${capability.costControl.costUnits} credits` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -186,11 +199,16 @@ export default function LiveChatPage() {
                   disabled={
                     isStreaming ||
                     Boolean(pending) ||
-                    !capabilityDefinitionId
+                    !capabilityDefinitionId ||
+                    accessDenied
                   }
                   placeholder={
                     pending
                       ? "Awaiting your response above…"
+                      : accessDenied
+                        ? selectedCapability?.costControl?.reason === "ai_quota_exhausted"
+                          ? "Monthly AI credits exhausted"
+                          : "AI access is not available for this capability"
                       : capabilityDefinitionId
                         ? "Ask the selected agent…"
                         : "Install or select an agent capability…"

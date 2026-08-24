@@ -51,6 +51,7 @@ from fair_platform.backend.services.execution_protocol import (
     build_execution_command,
 )
 from fair_platform.backend.services.execution_lifecycle import expire_due_executions
+from fair_platform.backend.services.access_control import capability_cost_control
 from fair_platform.extension_sdk.contracts.extension import (
     CapabilityManifest,
     ExtensionManifest,
@@ -103,13 +104,28 @@ def _schema_uri(schema: dict, fallback: str) -> str:
     return str(schema.get("$id") or fallback)
 
 
-def _capability_read(row: CapabilityDefinition) -> CapabilityRead:
+def _capability_read(
+    row: CapabilityDefinition,
+    *,
+    db: Session | None = None,
+    user: User | None = None,
+) -> CapabilityRead:
     snapshot = CapabilityManifest.model_validate(row.manifest_snapshot or {})
+    cost_control = (
+        capability_cost_control(
+            db,
+            capability_definition_id=row.id,
+            user_id=user.id if user is not None else None,
+        )
+        if db is not None
+        else None
+    )
     return CapabilityRead(
         **snapshot.model_dump(),
         id=row.id,
         installation_id=row.installation_id,
         created_at=row.created_at,
+        cost_control=cost_control,
     )
 
 
@@ -279,7 +295,9 @@ def sync_own_manifest(
     installation.display_name = manifest.display_name
     installation.version = manifest.version
     installation.manifest_version = manifest.manifest_version
-    installation.manifest = manifest.model_dump(by_alias=True, mode="json", exclude_none=True)
+    installation.manifest = manifest.model_dump(
+        by_alias=True, mode="json", exclude_none=True
+    )
     _sync_capabilities(db, installation, manifest)
     db.commit()
 
@@ -497,7 +515,9 @@ def list_capabilities(
         statement = statement.where(
             CapabilityDefinition.installation_id == installation_id
         )
-    return [_capability_read(row) for row in db.scalars(statement)]
+    return [
+        _capability_read(row, db=db, user=current_user) for row in db.scalars(statement)
+    ]
 
 
 @router.get("/capabilities/{capability_id}", response_model=CapabilityRead)
@@ -517,7 +537,7 @@ def get_capability(
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Capability not found")
-    return _capability_read(row)
+    return _capability_read(row, db=db, user=current_user)
 
 
 @router.post("/grants", response_model=GrantRead, status_code=status.HTTP_201_CREATED)

@@ -66,6 +66,7 @@
                   "en/platform/lms-primitives",
                   "en/platform/flows",
                   "en/platform/integrations",
+                  "en/platform/access-controls",
                   "en/platform/settings"
                 ]
               },
@@ -160,6 +161,7 @@
                   "es/platform/foundational-api",
                   "es/platform/flows",
                   "es/platform/integrations",
+                  "es/platform/access-controls",
                   "es/platform/settings"
                 ]
               }

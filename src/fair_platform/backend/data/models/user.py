@@ -4,7 +4,7 @@ from typing import Optional
 from typing import Any
 
 from pydantic import EmailStr
-from sqlalchemy import Boolean, String, UUID as SAUUID
+from sqlalchemy import Boolean, String, UniqueConstraint, UUID as SAUUID, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, TYPE_CHECKING
 
@@ -31,10 +31,14 @@ class UserRole(str, Enum):
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("normalized_email", name="uq_users_normalized_email"),
+    )
 
     id: Mapped[UUID] = mapped_column(SAUUID, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[EmailStr] = mapped_column(String, nullable=False)
+    normalized_email: Mapped[str] = mapped_column(String(320), nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -57,7 +61,9 @@ class User(Base):
     )
     # Relationship to submissions created by this user (professor/admin)
     created_submissions: Mapped[List["Submission"]] = relationship(
-        "Submission", back_populates="created_by", foreign_keys="Submission.created_by_id"
+        "Submission",
+        back_populates="created_by",
+        foreign_keys="Submission.created_by_id",
     )
     rubrics: Mapped[List["Rubric"]] = relationship("Rubric", back_populates="creator")
     enrollments: Mapped[List["Enrollment"]] = relationship(
@@ -66,3 +72,23 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r} role={self.role}>"
+
+
+def normalize_email_address(value: str) -> str:
+    """Return FAIR's canonical identity key for an email address."""
+
+    address = value.strip()
+    local, separator, domain = address.rpartition("@")
+    if not separator or not local or not domain:
+        raise ValueError("A valid email address is required")
+    try:
+        normalized_domain = domain.encode("idna").decode("ascii").casefold()
+    except UnicodeError as exc:
+        raise ValueError("A valid email address is required") from exc
+    return f"{local.casefold()}@{normalized_domain}"
+
+
+@event.listens_for(User, "before_insert")
+@event.listens_for(User, "before_update")
+def _synchronize_normalized_email(_mapper, _connection, target: User) -> None:
+    target.normalized_email = normalize_email_address(str(target.email))

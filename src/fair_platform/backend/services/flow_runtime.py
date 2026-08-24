@@ -356,7 +356,11 @@ def advance_flow_execution(
 
 
 def fail_flow_execution(
-    session: Session, root_execution_id: UUID, error: str
+    session: Session,
+    root_execution_id: UUID,
+    error: str,
+    *,
+    error_code: str = "flow_runtime_error",
 ) -> FlowAdvanceResult:
     root = session.get(Execution, root_execution_id)
     if root is None or _value(root.kind) != ExecutionKind.flow.value:
@@ -372,7 +376,7 @@ def fail_flow_execution(
         session,
         root,
         status=ExecutionStatus.failed.value,
-        payload={"errorCode": "flow_runtime_error", "errorSummary": error},
+        payload={"errorCode": error_code, "errorSummary": error},
     )
 
 

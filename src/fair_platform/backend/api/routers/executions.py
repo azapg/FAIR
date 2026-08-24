@@ -86,6 +86,7 @@ from fair_platform.backend.services.execution_store import (
     create_execution,
     normalize_standard_event_payload,
 )
+from fair_platform.backend.services.access_control import AccessPolicyError
 from fair_platform.backend.services.flow_runtime import (
     FlowRuntimeError,
     advance_flow_execution,
@@ -627,7 +628,9 @@ def _resolve_function_scope(
 ) -> tuple[UUID | None, UUID | None]:
     """Authorize the course/assignment a function run claims to act in."""
 
-    assignment = db.get(Assignment, payload.assignment_id) if payload.assignment_id else None
+    assignment = (
+        db.get(Assignment, payload.assignment_id) if payload.assignment_id else None
+    )
     if payload.assignment_id is not None and assignment is None:
         raise HTTPException(status_code=404, detail="Assignment not found")
     course_id = assignment.course_id if assignment else payload.course_id
@@ -967,7 +970,19 @@ def ingest_extension_events(
             execution.status
         ) in {"completed", "failed", "cancelled", "expired"}:
             try:
-                advance_flow_execution(db, execution.root_execution_id)
+                # Later Flow steps are created after an extension event has already
+                # been projected. Isolate the next-step reservation so a quota
+                # denial removes the undispatched step without discarding the
+                # accepted terminal event for the previous step.
+                with db.begin_nested():
+                    advance_flow_execution(db, execution.root_execution_id)
+            except AccessPolicyError as exc:
+                fail_flow_execution(
+                    db,
+                    execution.root_execution_id,
+                    exc.detail,
+                    error_code=exc.code,
+                )
             except FlowRuntimeError as exc:
                 fail_flow_execution(db, execution.root_execution_id, str(exc))
         db.commit()

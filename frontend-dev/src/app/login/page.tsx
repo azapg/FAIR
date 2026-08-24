@@ -12,11 +12,13 @@ import { useTranslation } from 'react-i18next'
 import { IfSetting } from '@/components/if-setting'
 import { AuthPageShell } from '@/components/auth/auth-page-shell'
 import api from '@/lib/api'
+import { useSystemConfig } from '@/hooks/use-system-config'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const { login, loading } = useAuth()
   const { t } = useTranslation()
+  const systemConfig = useSystemConfig()
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [rememberMe, setRememberMe] = React.useState(false)
@@ -149,14 +151,16 @@ export default function LoginPage() {
               </div>
             </Field>
           )}
-          <Field>
-            <FieldDescription className="text-center">
-              {t('auth.noAccount')}{' '}
-              <Link to="/register" className="underline underline-offset-4">
-                {t('auth.createOne')}
-              </Link>
-            </FieldDescription>
-          </Field>
+          {systemConfig.data?.registration.mode !== 'invite_only' && (
+            <Field>
+              <FieldDescription className="text-center">
+                {t('auth.noAccount')}{' '}
+                <Link to="/register" className="underline underline-offset-4">
+                  {t('auth.createOne')}
+                </Link>
+              </FieldDescription>
+            </Field>
+          )}
         </FieldGroup>
       </form>
     </AuthPageShell>
