@@ -259,6 +259,71 @@ def test_course_copy_strips_secret_configuration_recursively() -> None:
     }
 
 
+def test_course_copy_strips_secrets_from_list_style_headers() -> None:
+    copied = _without_secrets(
+        {
+            "nodes": [
+                {
+                    "config": {
+                        "headers": [
+                            {"name": "Authorization", "value": "Bearer nope"},
+                            {"key": "Cookie", "value": "session=nope"},
+                            ["Proxy-Authorization", "Basic nope"],
+                            ["X-Api-Key", "nope"],
+                            {"name": "Accept", "value": "application/json"},
+                            ["X-Trace-Id", "keep"],
+                        ]
+                    }
+                }
+            ],
+            "headers": ["Authorization", "Bearer nope"],
+        }
+    )
+
+    assert copied == {
+        "nodes": [
+            {
+                "config": {
+                    "headers": [
+                        {"name": "Accept", "value": "application/json"},
+                        ["X-Trace-Id", "keep"],
+                    ]
+                }
+            }
+        ],
+        "headers": [],
+    }
+
+
+def test_course_copy_preserves_token_metrics_but_strips_credentials() -> None:
+    copied = _without_secrets(
+        {
+            "maxTokens": 4096,
+            "min_tokens": 32,
+            "tokenizer": "cl100k_base",
+            "tokenCount": 17,
+            "inputTokens": 12,
+            "completion_tokens": 5,
+            "tokensUsed": 17,
+            "authToken": "nope",
+            "access_token": "nope",
+            "refreshToken": "nope",
+            "githubToken": "nope",
+            "token": "nope",
+        }
+    )
+
+    assert copied == {
+        "maxTokens": 4096,
+        "min_tokens": 32,
+        "tokenizer": "cl100k_base",
+        "tokenCount": 17,
+        "inputTokens": 12,
+        "completion_tokens": 5,
+        "tokensUsed": 17,
+    }
+
+
 def test_course_copy_rejects_unmapped_source_course_flow_references(
     test_client, test_db, professor_user
 ) -> None:
