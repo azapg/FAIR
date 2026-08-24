@@ -120,6 +120,12 @@ export type CourseTemplateInput = Pick<
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
+export function hasStaffCourseMembership(courses: Course[]): boolean {
+  return courses.some(
+    (course) => course.membershipRole === 'owner' || course.membershipRole === 'assistant',
+  )
+}
+
 export const coursesKeys = {
   all: ['courses'] as const,
   lists: () => [...coursesKeys.all, 'list'] as const,

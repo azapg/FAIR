@@ -3842,6 +3842,80 @@
         }
       }
     },
+    "/api/lms/student/dashboard": {
+      "get": {
+        "tags": [
+          "student-dashboard"
+        ],
+        "summary": "Get Student Dashboard",
+        "operationId": "get_student_dashboard_api_lms_student_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentDashboard"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/lms/courses/{course_id}/grades": {
+      "get": {
+        "tags": [
+          "student-dashboard"
+        ],
+        "summary": "Get Student Course Grades",
+        "operationId": "get_student_course_grades_api_lms_courses__course_id__grades_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentCourseGrades"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/lms/courses/{course_id}/question-banks": {
       "get": {
         "tags": [
@@ -16175,6 +16249,561 @@
           "leaseId"
         ],
         "title": "RunnerCommandAck"
+      },
+      "StudentCourseActivity": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "courseName": {
+            "type": "string",
+            "title": "Coursename"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "announcement",
+              "material",
+              "assignment"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurredat"
+          },
+          "link": {
+            "type": "string",
+            "title": "Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "courseId",
+          "courseName",
+          "kind",
+          "title",
+          "occurredAt",
+          "link"
+        ],
+        "title": "StudentCourseActivity"
+      },
+      "StudentCourseGrades": {
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "courseName": {
+            "type": "string",
+            "title": "Coursename"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          },
+          "total": {
+            "$ref": "#/components/schemas/GradebookCourseTotal"
+          },
+          "currentGradeLabel": {
+            "type": "string",
+            "title": "Currentgradelabel",
+            "default": "Current grade"
+          },
+          "finalGradeAvailable": {
+            "type": "boolean",
+            "title": "Finalgradeavailable",
+            "default": false
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/GradebookCategoryRead"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "categoryTotals": {
+            "items": {
+              "$ref": "#/components/schemas/GradebookCategoryTotal"
+            },
+            "type": "array",
+            "title": "Categorytotals"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StudentGradeItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "courseId",
+          "courseName",
+          "total"
+        ],
+        "title": "StudentCourseGrades"
+      },
+      "StudentCourseProgress": {
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "courseName": {
+            "type": "string",
+            "title": "Coursename"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          },
+          "completedItems": {
+            "type": "integer",
+            "title": "Completeditems"
+          },
+          "trackedItems": {
+            "type": "integer",
+            "title": "Trackeditems"
+          },
+          "completionPercentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completionpercentage"
+          },
+          "currentGrade": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentgrade"
+          },
+          "pointsEarned": {
+            "type": "number",
+            "title": "Pointsearned"
+          },
+          "pointsPossible": {
+            "type": "number",
+            "title": "Pointspossible"
+          },
+          "gradeIsProvisional": {
+            "type": "boolean",
+            "title": "Gradeisprovisional"
+          }
+        },
+        "type": "object",
+        "required": [
+          "courseId",
+          "courseName",
+          "completedItems",
+          "trackedItems",
+          "pointsEarned",
+          "pointsPossible",
+          "gradeIsProvisional"
+        ],
+        "title": "StudentCourseProgress"
+      },
+      "StudentDashboard": {
+        "properties": {
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generatedat"
+          },
+          "upcomingWork": {
+            "items": {
+              "$ref": "#/components/schemas/StudentDashboardWorkItem"
+            },
+            "type": "array",
+            "title": "Upcomingwork"
+          },
+          "overdueWork": {
+            "items": {
+              "$ref": "#/components/schemas/StudentDashboardWorkItem"
+            },
+            "type": "array",
+            "title": "Overduework"
+          },
+          "returnedFeedback": {
+            "items": {
+              "$ref": "#/components/schemas/StudentReturnedFeedback"
+            },
+            "type": "array",
+            "title": "Returnedfeedback"
+          },
+          "recentActivity": {
+            "items": {
+              "$ref": "#/components/schemas/StudentCourseActivity"
+            },
+            "type": "array",
+            "title": "Recentactivity"
+          },
+          "courseProgress": {
+            "items": {
+              "$ref": "#/components/schemas/StudentCourseProgress"
+            },
+            "type": "array",
+            "title": "Courseprogress"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/StudentDashboardSourceStatus"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generatedAt"
+        ],
+        "title": "StudentDashboard"
+      },
+      "StudentDashboardSourceStatus": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "work",
+              "feedback",
+              "activity",
+              "progress"
+            ],
+            "title": "Source"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "available"
+        ],
+        "title": "StudentDashboardSourceStatus"
+      },
+      "StudentDashboardWorkItem": {
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignmentid"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "courseName": {
+            "type": "string",
+            "title": "Coursename"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "timezoneName": {
+            "type": "string",
+            "title": "Timezonename",
+            "default": "UTC"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "upcoming",
+              "overdue",
+              "submitted"
+            ],
+            "title": "State"
+          },
+          "submissionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submissionid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assignmentId",
+          "courseId",
+          "courseName",
+          "title",
+          "state"
+        ],
+        "title": "StudentDashboardWorkItem"
+      },
+      "StudentGradeItem": {
+        "properties": {
+          "gradeItemId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Gradeitemid"
+          },
+          "categoryId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryid"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "maxPoints": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxpoints"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "graded",
+              "excused",
+              "missing",
+              "unreleased"
+            ],
+            "title": "Status"
+          },
+          "pointsEarned": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pointsearned"
+          },
+          "releasedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Releasedat"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "assignmentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignmentid"
+          },
+          "submissionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submissionid"
+          },
+          "contributionPercentagePoints": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contributionpercentagepoints"
+          }
+        },
+        "type": "object",
+        "required": [
+          "gradeItemId",
+          "status"
+        ],
+        "title": "StudentGradeItem"
+      },
+      "StudentReturnedFeedback": {
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignmentid"
+          },
+          "submissionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Submissionid"
+          },
+          "courseId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Courseid"
+          },
+          "courseName": {
+            "type": "string",
+            "title": "Coursename"
+          },
+          "assignmentTitle": {
+            "type": "string",
+            "title": "Assignmenttitle"
+          },
+          "pointsEarned": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pointsearned"
+          },
+          "maxPoints": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxpoints"
+          },
+          "feedbackAvailable": {
+            "type": "boolean",
+            "title": "Feedbackavailable"
+          },
+          "returnedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Returnedat"
+          },
+          "link": {
+            "type": "string",
+            "title": "Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assignmentId",
+          "submissionId",
+          "courseId",
+          "courseName",
+          "assignmentTitle",
+          "feedbackAvailable",
+          "returnedAt",
+          "link"
+        ],
+        "title": "StudentReturnedFeedback"
       },
       "StudentTodoItem": {
         "properties": {

@@ -16,6 +16,7 @@ const ExtensionDetailPage = lazy(() => import("@/app/extensions/extension/page")
 const ChatDemoPage = lazy(() => import("@/app/chat/page"));
 const LiveChatPage = lazy(() => import("@/app/chat/live-page"));
 const TodoPage = lazy(() => import("@/app/todo/page"));
+const StudentDashboardPage = lazy(() => import("@/app/dashboard/page"));
 
 function RouteFallback() {
   return (
@@ -40,6 +41,7 @@ export function App() {
 
         <Route path="courses" element={<CoursesPage />} />
         <Route path="todo" element={<TodoPage />} />
+        <Route path="dashboard" element={<StudentDashboardPage />} />
         <Route path="courses/:courseId" element={<CourseDetailPage />} />
         <Route path="courses/:courseId/" element={<CourseDetailPage />} />
         <Route path="courses/:courseId/:tab" element={<CourseDetailPage />} />

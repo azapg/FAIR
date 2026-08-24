@@ -1,4 +1,4 @@
-import {useCourse} from "@/hooks/use-courses";
+import {hasStaffCourseMembership, useCourse, useCourses} from "@/hooks/use-courses";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import {BreadcrumbNav, BreadcrumbSegment} from "@/components/breadcrumb-nav";
 import AssignmentsTab from "@/app/courses/tabs/assignments/assignments-tab";
@@ -19,8 +19,10 @@ import {usePermission} from "@/hooks/use-permission";
 import {GradebookTab} from "@/app/courses/tabs/gradebook-tab";
 import {StreamTab} from "@/app/courses/tabs/stream-tab";
 import {CourseContentTab} from "@/app/courses/tabs/content/course-content-tab";
+import {StudentGradesTab} from "@/app/courses/tabs/student-grades-tab";
+import {AuthUserRole} from "@/contexts/auth-context";
 import { CourseCopyDialog } from "@/app/courses/components/course-copy-dialog";
-type CourseTab = "stream" | "content" | "assignments" | "gradebook" | "participants" | "runs" | "artifacts" | "flows" | "capabilities";
+type CourseTab = "stream" | "content" | "assignments" | "grades" | "gradebook" | "participants" | "runs" | "artifacts" | "flows" | "capabilities";
 
 export default function CourseDetailPage() {
   const params = useParams<{ courseId: string, tab: string }>()
@@ -37,7 +39,10 @@ export default function CourseDetailPage() {
   const basePath = location.pathname.split('/').slice(0, -1).join('/');
 
   const {isLoading, isError, data: course} = useCourse(courseId, Boolean(courseId), true);
+  const {data: allCourses = []} = useCourses({include_archived: true}, Boolean(user));
   const {data: assignmentsList} = useAssignments(courseId ? {course_id: courseId} : undefined, Boolean(courseId));
+
+  const hasActiveStaffCourse = hasStaffCourseMembership(allCourses);
 
   useEffect(() => {
     if (!courseId || isLoading || isError || !course) return;
@@ -45,13 +50,14 @@ export default function CourseDetailPage() {
     const isInstructorView = !!user && (
       instructorId === user.id || canManageUsers || course.membershipRole === 'assistant'
     );
+    const isLearnerView = !isInstructorView && user?.role === AuthUserRole.USER && !hasActiveStaffCourse;
     const visibleTabs: CourseTab[] = isInstructorView
       ? ["stream", "content", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
-      : ["stream", "content", "assignments", "artifacts"];
+      : ["stream", "content", "assignments", ...(isLearnerView ? ["grades" as CourseTab] : []), "artifacts"];
     if (!tab || !visibleTabs.includes(tab as CourseTab)) {
       navigate(`assignments`);
     }
-  }, [tab, courseId, navigate, basePath, isLoading, isError, course, user, canManageUsers]);
+  }, [tab, courseId, navigate, basePath, isLoading, isError, course, user, canManageUsers, hasActiveStaffCourse]);
 
   if (isLoading) {
     return <div>{t("common.loading")}</div>;
@@ -66,9 +72,10 @@ export default function CourseDetailPage() {
   const isCourseAdmin = !!user && canManageUsers;
   const isCourseAssistant = course.membershipRole === 'assistant';
   const isInstructorView = isCourseOwner || isCourseAdmin || isCourseAssistant;
+  const isLearnerView = !isInstructorView && user?.role === AuthUserRole.USER && !hasActiveStaffCourse;
   const visibleTabs: CourseTab[] = isInstructorView
     ? ["stream", "content", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
-    : ["stream", "content", "assignments", "artifacts"];
+    : ["stream", "content", "assignments", ...(isLearnerView ? ["grades" as CourseTab] : []), "artifacts"];
   const currentTab = (tab && visibleTabs.includes(tab as CourseTab) ? tab : "assignments") as CourseTab;
 
   const showEnrollmentControls =
@@ -95,7 +102,7 @@ export default function CourseDetailPage() {
   const segments: BreadcrumbSegment[] = [
     {label: t("courses.title"), slug: "courses"},
     ...(courseId ? [{label: course?.name ?? "Course", slug: courseId}] : []),
-    ...(tab ? [{label: t(`tabs.${tab}`), slug: tab}] : []),
+    ...(tab ? [{label: tab === 'grades' ? 'Grades' : t(`tabs.${tab}`), slug: tab}] : []),
   ];
 
   // Map assignments from detailed course if present
@@ -133,6 +140,7 @@ export default function CourseDetailPage() {
             <TabsTrigger value="content">Content</TabsTrigger>
             <TabsTrigger value="assignments">{t("tabs.assignments")}</TabsTrigger>
             {isInstructorView && <TabsTrigger value="gradebook">Gradebook</TabsTrigger>}
+            {isLearnerView && <TabsTrigger value="grades">Grades</TabsTrigger>}
             <TabsTrigger value="artifacts">{t("tabs.artifacts")}</TabsTrigger>
             {isInstructorView && <TabsTrigger value="participants">{t("tabs.participants")}</TabsTrigger>}
             {isInstructorView && <TabsTrigger value="runs">{t("tabs.runs")}</TabsTrigger>}
@@ -161,6 +169,11 @@ export default function CourseDetailPage() {
         {isInstructorView && (
           <TabsContent value={"gradebook"} className={"px-8"}>
             <GradebookTab courseId={courseId as string} isArchived={course.isArchived}/>
+          </TabsContent>
+        )}
+        {isLearnerView && (
+          <TabsContent value={"grades"} className={"px-4 sm:px-8"}>
+            <StudentGradesTab courseId={courseId as string} enabled={currentTab === 'grades'}/>
           </TabsContent>
         )}
         {isInstructorView && (

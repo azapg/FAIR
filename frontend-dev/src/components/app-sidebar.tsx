@@ -37,6 +37,7 @@ import {
   ClipboardList,
   Puzzle,
   ListTodo,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   Collapsible,
@@ -45,7 +46,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useCourses } from "@/hooks/use-courses";
+import { hasStaffCourseMembership, useCourses } from "@/hooks/use-courses";
 import { useAllAssignments } from "@/hooks/use-assignments";
 import {
   DropdownMenu,
@@ -152,12 +153,14 @@ function NavMain({
   isSearchOpen,
   onSearchClick,
   unreadCount,
+  showStudentDashboard,
 }: {
   isInboxOpen: boolean;
   onInboxToggle: () => void;
   isSearchOpen: boolean;
   onSearchClick: () => void;
   unreadCount: number;
+  showStudentDashboard: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -170,6 +173,17 @@ function NavMain({
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
+
+      {showStudentDashboard && (
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild tooltip="Dashboard">
+            <Link to="/dashboard">
+              <LayoutDashboard />
+              <span>Dashboard</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      )}
 
       {/*search*/}
       <SidebarMenuItem>
@@ -264,7 +278,9 @@ export function AppSidebar({
   const { effectiveTheme, setThemePreference, setLanguagePreference } =
     usePreferenceSettings();
   const isMobile = useIsMobile();
-  const { data: courses = [] } = useCourses();
+  const { data: courses = [], isLoading: coursesLoading } = useCourses();
+  const { data: eligibilityCourses = [], isLoading: eligibilityCoursesLoading } =
+    useCourses({ include_archived: true }, Boolean(authUser));
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
   const { data: notifications = [] } = useNotifications(isAuthenticated);
   const unreadCount = notifications.filter((notification) => !notification.readAt).length;
@@ -285,6 +301,10 @@ export function AppSidebar({
   const [assignmentsOpen, setAssignmentsOpen] = useState(false);
   const coursesContentId = useId();
   const assignmentsContentId = useId();
+  const showStudentDashboard = !coursesLoading
+    && !eligibilityCoursesLoading
+    && authUser?.role === 'user'
+    && !hasStaffCourseMembership(eligibilityCourses);
 
   const handleSearchInputDebounced = (query: string) => {
     void query;
@@ -406,6 +426,7 @@ export function AppSidebar({
                   setInboxOpen((current) => !current);
                 }}
                 unreadCount={unreadCount}
+                showStudentDashboard={showStudentDashboard}
               />
             </SidebarGroupContent>
           </SidebarGroup>
