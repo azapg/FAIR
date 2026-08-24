@@ -18,7 +18,7 @@ class PointsGrade(BaseModel):
 
 class AssignmentBase(BaseModel):
     model_config = schema_config
-    
+
     course_id: UUID
     title: str
     description: Optional[str] = None
@@ -26,6 +26,7 @@ class AssignmentBase(BaseModel):
     max_grade: PointsGrade
     status: AssignmentStatus = AssignmentStatus.published
     published_at: Optional[datetime] = None
+    rubric_id: Optional[UUID] = None
     allow_resubmissions: bool = True
 
 
@@ -36,12 +37,14 @@ class AssignmentCreate(AssignmentBase):
 
 class AssignmentUpdate(BaseModel):
     model_config = schema_config
-    
+
     title: Optional[str] = None
     description: Optional[str] = None
     deadline: Optional[datetime] = None
     max_grade: Optional[PointsGrade] = None
     artifacts: Optional[List[UUID]] = None
+    allow_resubmissions: Optional[bool] = None
+    rubric_id: Optional[UUID] = None
 
 
 class AssignmentRead(AssignmentBase):

@@ -21,6 +21,7 @@ import {StreamTab} from "@/app/courses/tabs/stream-tab";
 import {CourseContentTab} from "@/app/courses/tabs/content/course-content-tab";
 import {StudentGradesTab} from "@/app/courses/tabs/student-grades-tab";
 import {AuthUserRole} from "@/contexts/auth-context";
+import { CourseCopyDialog } from "@/app/courses/components/course-copy-dialog";
 type CourseTab = "stream" | "content" | "assignments" | "grades" | "gradebook" | "participants" | "runs" | "artifacts" | "flows" | "capabilities";
 
 export default function CourseDetailPage() {
@@ -116,6 +117,7 @@ export default function CourseDetailPage() {
       <div className={"px-8 py-2"}>
         <h1 className={"text-3xl font-bold pb-1"}>{course?.name}</h1>
         <p className={"text-sm text-muted-foreground"}>{course?.description}</p>
+        {isInstructorView && courseId && <div className="mt-3"><CourseCopyDialog courseId={courseId} name={course.name} /></div>}
       </div>
       {showEnrollmentControls && (
         <EnrollmentControls

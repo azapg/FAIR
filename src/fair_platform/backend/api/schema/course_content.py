@@ -10,7 +10,7 @@ from fair_platform.backend.api.schema.utils import schema_config
 from fair_platform.backend.data.models.lms_content import CourseContentVisibility
 
 
-CourseItemKind = Literal["heading", "page", "link", "file", "assignment"]
+CourseItemKind = Literal["heading", "page", "link", "file", "assignment", "quiz"]
 
 
 class CourseSectionCreate(BaseModel):

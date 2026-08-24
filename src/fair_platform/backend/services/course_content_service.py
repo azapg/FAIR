@@ -18,16 +18,18 @@ from fair_platform.backend.data.models.lms_content import (
     CourseItem,
     CourseSection,
 )
+from fair_platform.backend.data.models.lms_quiz import Quiz, QuizAttempt, QuizStatus
 
 
-COURSE_ITEM_KINDS = {"heading", "page", "link", "file", "assignment"}
-RESOURCE_TYPES = {"file": "artifact", "assignment": "assignment"}
+COURSE_ITEM_KINDS = {"heading", "page", "link", "file", "assignment", "quiz"}
+RESOURCE_TYPES = {"file": "artifact", "assignment": "assignment", "quiz": "quiz"}
 PAYLOAD_SCHEMAS = {
     "heading": "urn:fair:lms:course-item:heading:v1",
     "page": "urn:fair:lms:course-item:page:v1",
     "link": "urn:fair:lms:course-item:link:v1",
     "file": "urn:fair:lms:course-item:file:v1",
     "assignment": "urn:fair:lms:course-item:assignment:v1",
+    "quiz": "urn:fair:lms:course-item:quiz:v1",
 }
 
 
@@ -63,14 +65,18 @@ class CourseContentService:
 
         if staff_view:
             return [
-                (section, sorted(section.items, key=lambda item: (item.position, item.id)))
+                (
+                    section,
+                    sorted(section.items, key=lambda item: (item.position, item.id)),
+                )
                 for section in sections
             ]
 
         published_sections = [
             section
             for section in sections
-            if _enum_value(section.visibility) == CourseContentVisibility.published.value
+            if _enum_value(section.visibility)
+            == CourseContentVisibility.published.value
         ]
         assignment_ids = {
             item.resource_id
@@ -89,17 +95,41 @@ class CourseContentService:
             if assignment_ids
             else []
         )
+        quiz_ids = {
+            item.resource_id
+            for section in published_sections
+            for item in section.items
+            if item.kind == "quiz" and item.resource_id is not None
+        }
+        published_quizzes = set(
+            self.db.scalars(
+                select(Quiz.id).where(
+                    Quiz.id.in_(quiz_ids),
+                    Quiz.course_id == course_id,
+                    Quiz.status.in_([QuizStatus.published, QuizStatus.closed]),
+                )
+            ).all()
+            if quiz_ids
+            else []
+        )
 
         result: list[tuple[CourseSection, list[CourseItem]]] = []
         for section in published_sections:
             visible_items = []
-            for item in sorted(section.items, key=lambda value: (value.position, value.id)):
+            for item in sorted(
+                section.items, key=lambda value: (value.position, value.id)
+            ):
                 if (
                     _enum_value(item.visibility)
                     != CourseContentVisibility.published.value
                 ):
                     continue
-                if item.kind == "assignment" and item.resource_id not in published_assignments:
+                if (
+                    item.kind == "assignment"
+                    and item.resource_id not in published_assignments
+                ):
+                    continue
+                if item.kind == "quiz" and item.resource_id not in published_quizzes:
                     continue
                 visible_items.append(item)
             result.append((section, visible_items))
@@ -144,6 +174,22 @@ class CourseContentService:
 
     def delete_section(self, course_id: UUID, section_id: UUID) -> None:
         section = self._section(course_id, section_id)
+        item_ids = list(
+            self.db.scalars(
+                select(CourseItem.id)
+                .where(
+                    CourseItem.course_id == course_id,
+                    CourseItem.section_id == section_id,
+                )
+                .order_by(CourseItem.position, CourseItem.id)
+                .with_for_update()
+            ).all()
+        )
+        # Route every child through its resource-specific guard. In particular,
+        # published or attempted quizzes must not be orphaned by a section-level
+        # cascade, while draft quizzes are deleted with their content item.
+        for item_id in reversed(item_ids):
+            self.delete_item(course_id, item_id)
         self.db.delete(section)
         self.db.flush()
         self._compact_sections(course_id)
@@ -239,9 +285,55 @@ class CourseContentService:
     def delete_item(self, course_id: UUID, item_id: UUID) -> None:
         item = self._item(course_id, item_id)
         section_id = item.section_id
+        if item.kind == "quiz" and item.resource_id is not None:
+            quiz = self.db.get(Quiz, item.resource_id)
+            has_attempts = self.db.scalar(
+                select(QuizAttempt.id).where(QuizAttempt.quiz_id == item.resource_id)
+            )
+            if (
+                quiz is None
+                or _enum_value(quiz.status) != QuizStatus.draft.value
+                or has_attempts is not None
+            ):
+                raise CourseContentConflict(
+                    "Published quizzes cannot be removed from course content; close the quiz instead"
+                )
+            self.db.delete(item)
+            self.db.flush()
+            self.db.delete(quiz)
+            self.db.flush()
+            self._compact_items(section_id)
+            return
         self.db.delete(item)
         self.db.flush()
         self._compact_items(section_id)
+
+    def remove_resource_links(self, resource_type: str, resource_id: UUID) -> int:
+        """Remove outline links to a deleted resource and repair item ordering."""
+        items = self.db.scalars(
+            select(CourseItem)
+            .where(
+                CourseItem.resource_type == resource_type,
+                CourseItem.resource_id == resource_id,
+            )
+            .with_for_update()
+        ).all()
+        item_ids = [item.id for item in items]
+        if item_ids:
+            copied_items = self.db.scalars(
+                select(CourseItem)
+                .where(CourseItem.copied_from_id.in_(item_ids))
+                .with_for_update()
+            ).all()
+            for copied_item in copied_items:
+                copied_item.copied_from_id = None
+        section_ids = {item.section_id for item in items}
+        for item in items:
+            self.db.delete(item)
+        self.db.flush()
+        for section_id in sorted(section_ids, key=str):
+            self._compact_items(section_id)
+        return len(items)
 
     def reorder_items(
         self, course_id: UUID, section_id: UUID, ordered_ids: list[UUID]
@@ -323,7 +415,9 @@ class CourseContentService:
 
         if kind == "heading":
             if resource_id is not None or payload:
-                raise CourseContentError("Heading items cannot link a resource or payload")
+                raise CourseContentError(
+                    "Heading items cannot link a resource or payload"
+                )
             return None, {}
 
         if payload:
@@ -337,6 +431,10 @@ class CourseContentService:
                 raise CourseContentError(
                     "Assignment items must link an assignment from this course"
                 )
+        elif kind == "quiz":
+            quiz = self.db.get(Quiz, resource_id)
+            if quiz is None or quiz.course_id != course_id:
+                raise CourseContentError("Quiz items must link a quiz from this course")
         elif kind == "file":
             artifact = self.db.get(Artifact, resource_id)
             if (
@@ -369,7 +467,9 @@ class CourseContentService:
         ).all()
         self._assign_positions(items)
 
-    def _assign_positions(self, ordered: list[CourseSection] | list[CourseItem]) -> None:
+    def _assign_positions(
+        self, ordered: list[CourseSection] | list[CourseItem]
+    ) -> None:
         if not ordered:
             return
         temporary_start = max(item.position for item in ordered) + len(ordered) + 1

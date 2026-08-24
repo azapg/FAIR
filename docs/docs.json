@@ -59,6 +59,8 @@
                 "pages": [
                   "en/platform/courses",
                   "en/platform/course-content",
+                  "en/platform/course-copy",
+                  "en/platform/quizzes",
                   "en/platform/student-dashboard",
                   "en/platform/assignments",
                   "en/platform/lms-primitives",

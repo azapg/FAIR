@@ -66,6 +66,7 @@ from .lms_communication import (
     SubmissionComment,
 )
 from .lms_content import CourseContentVisibility, CourseItem, CourseSection
+from .lms_course_copy import CourseCopyJob, CourseTemplate
 from .lms_events import (
     ActivityEvent,
     CalendarEvent,
@@ -100,6 +101,20 @@ from .lms_progress import (
     CompletionRule,
     ItemCompletionStatus,
     UserItemCompletion,
+)
+from .lms_quiz import (
+    Question,
+    QuestionBank,
+    QuestionKind,
+    QuestionVersion,
+    Quiz,
+    QuizAnswer,
+    QuizAttempt,
+    QuizAttemptQuestion,
+    QuizAttemptStatus,
+    QuizQuestion,
+    QuizReleasePolicy,
+    QuizStatus,
 )
 
 __all__ = [
@@ -181,6 +196,8 @@ __all__ = [
     "CourseGroupMembershipRole",
     "CourseItem",
     "CourseSection",
+    "CourseCopyJob",
+    "CourseTemplate",
     "ExternalIdentifier",
     "ExternalIdentifierSubjectType",
     "GradeAggregationStrategy",
@@ -198,4 +215,16 @@ __all__ = [
     "OrganizationMembership",
     "OrganizationMembershipRole",
     "UserItemCompletion",
+    "Question",
+    "QuestionBank",
+    "QuestionKind",
+    "QuestionVersion",
+    "Quiz",
+    "QuizAnswer",
+    "QuizAttempt",
+    "QuizAttemptQuestion",
+    "QuizAttemptStatus",
+    "QuizQuestion",
+    "QuizReleasePolicy",
+    "QuizStatus",
 ]

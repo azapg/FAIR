@@ -19,6 +19,9 @@ FAIR is LMS-complete at an MVP level when a teacher and a student can complete t
   ordered categories, optional percentage weights, assignment-linked and manual
   point items, released/excused entries, missing work, and server-computed totals.
   Points are canonical; percentages and weighted totals are derived views.
+- Build reusable single-choice and true/false questions, publish linked quizzes,
+  auto-score immutable learner attempts, and release canonical quiz points either
+  immediately or after staff review.
 
 ## Gradebook 2.0 contract
 
@@ -47,7 +50,11 @@ FAIR is LMS-complete at an MVP level when a teacher and a student can complete t
 - Keep submission comment threads private to the owning student and course staff.
 - Notify students about published assignments and class posts, and notify authors about comments.
 
-This MVP deliberately does not include quizzes, standards/outcomes, attendance, SIS/LTI integrations, advanced analytics, group assignments, peer review, calendars, microservices, or multi-region scaling. AI graders and learning agents can integrate with this foundation but are not required for LMS behavior.
+The quiz slice deliberately excludes random pools, essay/manual grading, timers,
+CSV exchange, partial credit, and question analytics. The wider MVP does not
+include standards/outcomes, attendance, SIS/LTI integrations, advanced analytics,
+group assignments, peer review, microservices, or multi-region scaling. AI graders
+and learning agents can integrate with this foundation but are not required for LMS behavior.
 
 ## Researcher/local profile
 
