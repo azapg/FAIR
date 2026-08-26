@@ -1,14 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import {Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog';
+import { ResponsiveDialogContent } from '@/components/ui/responsive-dialog';
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -52,7 +46,7 @@ export function SectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby="section-dialog-description">
+      <ResponsiveDialogContent aria-describedby="section-dialog-description">
         <form className="space-y-4" onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>{section ? 'Edit section' : 'Add section'}</DialogTitle>
@@ -88,7 +82,7 @@ export function SectionDialog({
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   )
 }
