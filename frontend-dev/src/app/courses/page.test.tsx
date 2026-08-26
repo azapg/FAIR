@@ -28,6 +28,8 @@ vi.mock("@/hooks/use-courses", () => ({
   useJoinCourseByCode: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@/components/page-header", () => ({ PageHeader: () => null }));
+vi.mock("@/components/ui/responsive-dialog", () => ({ ResponsiveDialogContent: () => null }));
 vi.mock("@/app/courses/components/course-grid", () => ({ default: () => null }));
 vi.mock("@/app/courses/components/course-form-dialog", () => ({ default: () => null }));
 

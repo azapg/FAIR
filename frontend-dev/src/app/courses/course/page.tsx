@@ -45,6 +45,8 @@ export default function CourseDetailPage() {
   const canManageUsers = usePermission("manage_users");
   const resetEnrollmentCode = useResetEnrollmentCode();
   const updateCourseSettings = useUpdateCourseSettings();
+  const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState(false);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   const basePath = location.pathname.split('/').slice(0, -1).join('/');
 
@@ -87,8 +89,6 @@ export default function CourseDetailPage() {
     ? ["timeline", "stream", "content", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
     : ["timeline", "stream", "content", "assignments", ...(isLearnerView ? ["grades" as CourseTab] : []), "artifacts"];
   const currentTab = (tab && visibleTabs.includes(tab as CourseTab) ? tab : "assignments") as CourseTab;
-  const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState(false);
-  const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   const showEnrollmentControls =
     !!user &&

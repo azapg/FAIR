@@ -30,7 +30,7 @@ export function FloatingNav({
   return (
     <div
       className={cn(
-        "fixed inset-x-0 bottom-4 z-40 flex items-center justify-center gap-2 px-6 pb-[env(safe-area-inset-bottom)] md:hidden",
+        "fixed inset-x-0 bottom-4 z-40 flex items-center justify-start gap-2 px-6 pb-[env(safe-area-inset-bottom)] md:hidden",
         className,
       )}
     >
@@ -61,7 +61,6 @@ export function FloatingNav({
           })}
         </nav>
       )}
-      {action}
     </div>
   );
 }
@@ -80,7 +79,7 @@ export function FloatingActionButton({
     <Button
       size="icon"
       className={cn(
-        "size-12 shrink-0 rounded-full border bg-background/80 shadow-sm backdrop-blur",
+        "size-12 shrink-0 rounded-full border bg-background/80 text-foreground shadow-sm backdrop-blur",
         className,
       )}
       {...props}
