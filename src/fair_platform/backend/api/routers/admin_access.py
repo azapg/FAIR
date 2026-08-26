@@ -29,8 +29,10 @@ from fair_platform.backend.core.config import (
     get_admission_mode_override,
     get_ai_controls_enabled_override,
     get_base_url,
+    get_email_enabled,
 )
 from fair_platform.backend.core.security.permissions import has_capability
+from fair_platform.backend.services.mailer import Mailer, get_mailer
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import (
     AdmissionMode,
@@ -217,7 +219,7 @@ def delete_admission_rule(
     db.commit()
 
 
-def _invite_read(row, *, token: str | None = None):
+def _invite_read(row, *, token: str | None = None, registration_url: str | None = None):
     now = datetime.now(timezone.utc)
     expires_at = (
         row.expires_at.replace(tzinfo=timezone.utc)
@@ -240,7 +242,11 @@ def _invite_read(row, *, token: str | None = None):
     return InviteSecretRead(
         **values,
         token=token,
-        registration_url=f"{get_base_url()}/register#invite={token}",
+        registration_url=(
+            registration_url
+            if registration_url is not None
+            else f"{get_base_url()}/register#invite={token}"
+        ),
     )
 
 
@@ -257,12 +263,21 @@ def list_invites(
 
 
 @router.post("/invites", response_model=InviteSecretRead, status_code=201)
-def create_invite(
+async def create_invite(
     payload: InviteCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
+    mailer: Mailer = Depends(get_mailer),
 ):
     _require_admin(current_user)
+    if payload.send_email and not get_email_enabled():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Email delivery is disabled on this deployment. "
+                "Enable a mail provider or copy the invitation link manually."
+            ),
+        )
     row, token = create_registration_invite(
         db,
         email=str(payload.email),
@@ -271,7 +286,10 @@ def create_invite(
     )
     db.commit()
     db.refresh(row)
-    return _invite_read(row, token=token)
+    registration_url = f"{get_base_url()}/register#invite={token}"
+    if payload.send_email:
+        await mailer.send_invitation(str(payload.email), registration_url)
+    return _invite_read(row, token=token, registration_url=registration_url)
 
 
 @router.post("/invites/{invite_id}/revoke", response_model=InviteRead)

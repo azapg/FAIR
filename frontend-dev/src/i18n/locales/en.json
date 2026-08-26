@@ -247,7 +247,9 @@
       "noCapabilities": "No installed capabilities.",
       "usageAudit": "Usage audit",
       "usageAuditDescription": "Immutable charges for accepted metered executions.",
-      "currentMonthCredits": "weighted credits accepted this UTC month"
+      "currentMonthCredits": "weighted credits accepted this UTC month",
+      "inviteAlsoSend": "Also email the invitation link",
+      "inviteEmailed": "Invitation created and emailed"
     }
   },
   "auth": {

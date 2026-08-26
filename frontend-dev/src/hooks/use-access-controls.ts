@@ -126,8 +126,11 @@ export function useRegistrationInvites() {
 export function useCreateRegistrationInvite() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { email: string; expiresInDays: number }) =>
-      (await api.post("/v1/admin/invites", payload)).data as InviteSecret,
+    mutationFn: async (payload: {
+      email: string;
+      expiresInDays: number;
+      sendEmail?: boolean;
+    }) => (await api.post("/v1/admin/invites", payload)).data as InviteSecret,
     onSuccess: () => client.invalidateQueries({ queryKey: keys.invites }),
   });
 }
