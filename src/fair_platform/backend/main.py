@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 
 from fair_platform.backend.data.database import init_db
 from fair_platform.backend.core.config import validate_security_configuration
@@ -118,6 +119,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
 
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
