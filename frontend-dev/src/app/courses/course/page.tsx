@@ -1,6 +1,6 @@
 import {hasStaffCourseMembership, useCourse, useCourses} from "@/hooks/use-courses";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
-import {BreadcrumbNav, BreadcrumbSegment} from "@/components/breadcrumb-nav";
+import { PageHeader } from "@/components/page-header";
 import AssignmentsTab from "@/app/courses/tabs/assignments/assignments-tab";
 import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import {useParams, useNavigate, useLocation} from "react-router-dom";
@@ -99,26 +99,21 @@ export default function CourseDetailPage() {
     await resetEnrollmentCode.mutateAsync(courseId);
   };
 
-  const segments: BreadcrumbSegment[] = [
-    {label: t("courses.title"), slug: "courses"},
-    ...(courseId ? [{label: course?.name ?? "Course", slug: courseId}] : []),
-    ...(tab ? [{label: tab === 'grades' ? 'Grades' : t(`tabs.${tab}`), slug: tab}] : []),
-  ];
-
   // Map assignments from detailed course if present
   const courseAssignments = 'assignments' in course ? course.assignments : [];
   const assignments = assignmentsList ?? courseAssignments ?? [];
 
   return (
     <div className="flex flex-col">
-      <div className={"py-2 px-5"}>
-        <BreadcrumbNav segments={segments}/>
-      </div>
-      <div className={"px-8 py-2"}>
-        <h1 className={"text-3xl font-bold pb-1"}>{course?.name}</h1>
-        <p className={"text-sm text-muted-foreground"}>{course?.description}</p>
-        {isInstructorView && courseId && <div className="mt-3"><CourseCopyDialog courseId={courseId} name={course.name} /></div>}
-      </div>
+      <PageHeader
+        title={course.name}
+        description={course.description}
+        actions={
+          isInstructorView && courseId ? (
+            <CourseCopyDialog courseId={courseId} name={course.name} />
+          ) : undefined
+        }
+      />
       {showEnrollmentControls && (
         <EnrollmentControls
           enrollmentCode={enrollmentCode}
@@ -135,7 +130,7 @@ export default function CourseDetailPage() {
         navigate(`${basePath}/${val}`, {replace: true});
       }}>
         <ScrollArea className={"w-full border-b"}>
-          <TabsList className={"px-8 w-full"}>
+          <TabsList className={"px-6 sm:px-8 w-full"}>
             <TabsTrigger value="stream">Stream</TabsTrigger>
             <TabsTrigger value="content">Content</TabsTrigger>
             <TabsTrigger value="assignments">{t("tabs.assignments")}</TabsTrigger>
@@ -149,16 +144,16 @@ export default function CourseDetailPage() {
           </TabsList>
           <ScrollBar orientation="horizontal" className={"hidden"}/>
         </ScrollArea>
-        <TabsContent value={"assignments"} className={"px-8 py-3"}>
+        <TabsContent value={"assignments"} className={"px-6 sm:px-8 py-3"}>
           <AssignmentsTab assignments={assignments} courseId={courseId} canManageAssignments={isInstructorView}/>
         </TabsContent>
-        <TabsContent value={"artifacts"} className={"px-8"}>
+        <TabsContent value={"artifacts"} className={"px-6 sm:px-8"}>
           <ArtifactsTab courseId={courseId} assignments={assignments}/>
         </TabsContent>
-        <TabsContent value={"stream"} className={"px-8"}>
+        <TabsContent value={"stream"} className={"px-6 sm:px-8"}>
           <StreamTab courseId={courseId as string} canPost={isInstructorView}/>
         </TabsContent>
-        <TabsContent value={"content"} className={"px-8"}>
+        <TabsContent value={"content"} className={"px-6 sm:px-8"}>
           <CourseContentTab
             courseId={courseId as string}
             canManage={isInstructorView}
@@ -167,17 +162,17 @@ export default function CourseDetailPage() {
           />
         </TabsContent>
         {isInstructorView && (
-          <TabsContent value={"gradebook"} className={"px-8"}>
+          <TabsContent value={"gradebook"} className={"px-6 sm:px-8"}>
             <GradebookTab courseId={courseId as string} isArchived={course.isArchived}/>
           </TabsContent>
         )}
         {isLearnerView && (
-          <TabsContent value={"grades"} className={"px-4 sm:px-8"}>
+          <TabsContent value={"grades"} className={"px-4 sm:px-6 sm:px-8"}>
             <StudentGradesTab courseId={courseId as string} enabled={currentTab === 'grades'}/>
           </TabsContent>
         )}
         {isInstructorView && (
-          <TabsContent value={"participants"} className={"px-8"}>
+          <TabsContent value={"participants"} className={"px-6 sm:px-8"}>
             <ParticipantsTab
               courseId={courseId as string}
               instructor={"instructor" in course ? course.instructor : undefined}
@@ -186,17 +181,17 @@ export default function CourseDetailPage() {
           </TabsContent>
         )}
         {isInstructorView && (
-          <TabsContent value={"runs"} className={"px-8"}>
+          <TabsContent value={"runs"} className={"px-6 sm:px-8"}>
             <RunsTab courseId={courseId}/>
           </TabsContent>
         )}
         {isInstructorView && (
-          <TabsContent value={"flows"} className={"px-8"}>
+          <TabsContent value={"flows"} className={"px-6 sm:px-8"}>
             <FlowsTab courseId={courseId}/>
           </TabsContent>
         )}
         {isInstructorView && (
-          <TabsContent value={"capabilities"} className={"px-8"}>
+          <TabsContent value={"capabilities"} className={"px-6 sm:px-8"}>
             <CapabilitiesTab/>
           </TabsContent>
         )}

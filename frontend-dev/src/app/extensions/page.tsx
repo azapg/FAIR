@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { BreadcrumbNav } from "@/components/breadcrumb-nav";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {Dialog, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
@@ -49,27 +49,23 @@ export default function ExtensionsPage() {
 
   return (
     <main className="flex flex-col justify-center">
-      <div className="px-5 py-2">
-        <BreadcrumbNav segments={[{ label: t("extensions.title"), slug: "extensions" }]} />
-      </div>
-
-      <div className="flex items-center justify-between px-6 pt-3">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t("extensions.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("extensions.subtitle")}</p>
-        </div>
-        {canManageExtensions && (
-          <Button
-            onClick={() => {
-              setExtensionId("");
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            {t("extensions.create")}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={t("extensions.title")}
+        description={t("extensions.subtitle")}
+        actions={
+          canManageExtensions && (
+            <Button
+              onClick={() => {
+                setExtensionId("");
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t("extensions.create")}
+            </Button>
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 px-6 py-4 md:grid-cols-2 xl:grid-cols-3">
         {!canManageExtensions && (

@@ -6,7 +6,7 @@ import {useCourses, useCreateCourse, useDeleteCourse, Course, useJoinCourseByCod
 import {useAuth} from "@/contexts/auth-context";
 import CourseGrid from "@/app/courses/components/course-grid";
 import CourseFormDialog from "@/app/courses/components/course-form-dialog";
-import {BreadcrumbNav} from "@/components/breadcrumb-nav";
+import { PageHeader } from "@/components/page-header";
 import {useTranslation} from "react-i18next";
 import {Dialog, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
 import {ResponsiveDialogContent} from "@/components/ui/responsive-dialog";
@@ -84,46 +84,39 @@ export default function CoursesPage() {
 
   return (
     <main className="flex flex-col justify-center">
-      <div className={"py-2 px-5"}>
-        <BreadcrumbNav segments={[
-          {
-            label: t("courses.title"),
-            slug: "courses"
-          }
-        ]}/>
-      </div>
-      <div className="flex items-center justify-between px-6 pt-3">
-        <h1 className="text-3xl">{t("courses.yourCourses")}</h1>
+      <PageHeader
+        title={t("courses.yourCourses")}
+        actions={
+          <>
+            {canJoinCourses && (
+              <Button variant="outline" onClick={openJoinDialog}>
+                {t("courses.joinCourse")}
+              </Button>
+            )}
 
-        <div className="flex items-center gap-2">
-          {canJoinCourses && (
-            <Button variant="outline" onClick={openJoinDialog}>
-              {t("courses.joinCourse")}
-            </Button>
-          )}
-
-          {canCreateCourses && (
-            <CourseFormDialog
-              open={open}
-              onOpenChangeAction={setOpen}
-              mode="create"
-              name={name}
-              description={description}
-              onNameChangeAction={setName}
-              onDescriptionChangeAction={setDescription}
-              onSubmitAction={onSubmitCreateAction}
-              isSubmitting={createCourse.isPending}
-              isDisabled={createCourse.isPending || !isAuthenticated}
-              trigger={
-                <Button onClick={openCreateDialog}>
-                  <Plus className="mr-2"/>
-                  {t("common.create")}
-                </Button>
-              }
-            />
-          )}
-        </div>
-      </div>
+            {canCreateCourses && (
+              <CourseFormDialog
+                open={open}
+                onOpenChangeAction={setOpen}
+                mode="create"
+                name={name}
+                description={description}
+                onNameChangeAction={setName}
+                onDescriptionChangeAction={setDescription}
+                onSubmitAction={onSubmitCreateAction}
+                isSubmitting={createCourse.isPending}
+                isDisabled={createCourse.isPending || !isAuthenticated}
+                trigger={
+                  <Button onClick={openCreateDialog}>
+                    <Plus className="mr-2"/>
+                    {t("common.create")}
+                  </Button>
+                }
+              />
+            )}
+          </>
+        }
+      />
 
       <div className={"px-6"}>
         <CourseGrid

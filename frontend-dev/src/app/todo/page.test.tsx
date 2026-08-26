@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const { useStudentTodo } = vi.hoisted(() => ({ useStudentTodo: vi.fn() }))
 
 vi.mock('@/hooks/use-lms', () => ({ useStudentTodo }))
-vi.mock('@/components/breadcrumb-nav', () => ({ BreadcrumbNav: () => null }))
 
 import TodoPage from './page'
 

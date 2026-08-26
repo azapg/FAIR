@@ -5,8 +5,8 @@ import { SubmissionsTable } from "@/app/assignment/components/submissions/submis
 import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
 import {
   FlowSidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { PageHeader } from "@/components/page-header";
 import { FlowsSidebar } from "@/app/assignment/components/sidebar/flows-sidebar";
 import {
   PropertiesDisplay,
@@ -202,23 +202,23 @@ export default function AssignmentPage() {
     >
       <ScrollArea className="w-full h-svh flex-1 min-w-0">
         <div className="min-w-0 break-words">
-          <div className="fixed inset-x-0 top-4 z-40 flex items-center justify-between px-4 pointer-events-none">
-            <SidebarTrigger className="pointer-events-auto size-10 rounded-full border bg-background/80 shadow-sm backdrop-blur" />
-            {isInstructorView && (
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Assignment options"
-                className="pointer-events-auto size-10 rounded-full border bg-background/80 shadow-sm backdrop-blur"
-                onClick={() => setIsOptionsOpen(true)}
-              >
-                <Ellipsis />
-              </Button>
-            )}
-          </div>
-          <div className={"px-4 pt-16 sm:px-8 sm:pt-14"}>
+          <PageHeader
+            title={assignment.title}
+            barActions={
+              isInstructorView ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Assignment options"
+                  className="size-10 rounded-full border bg-background/80 shadow-sm backdrop-blur"
+                  onClick={() => setIsOptionsOpen(true)}
+                >
+                  <Ellipsis />
+                </Button>
+              ) : undefined
+            }
+          >
             <div className={"mb-5"}>
-              <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
               {!assignment.description ||
               assignment.description.trim() === "" ? (
                 <p className="text-muted-foreground italic">
@@ -295,7 +295,7 @@ export default function AssignmentPage() {
             {!isInstructorView && (
               <StudentSubmissionSection assignment={assignment} submissions={submissions} />
             )}
-          </div>
+          </PageHeader>
         </div>
       </ScrollArea>
       {isInstructorView && (

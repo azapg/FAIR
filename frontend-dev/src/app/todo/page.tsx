@@ -1,17 +1,16 @@
 import { Link } from 'react-router-dom'
-import { BreadcrumbNav } from '@/components/breadcrumb-nav'
+import { PageHeader } from '@/components/page-header'
 import { useStudentTodo } from '@/hooks/use-lms'
 
 export default function TodoPage() {
   const { data: items = [], isLoading } = useStudentTodo()
   return (
     <main>
-      <div className="px-5 py-2"><BreadcrumbNav segments={[{ label: 'To-do', slug: 'todo' }]} /></div>
+      <PageHeader
+        title="To-do"
+        description="Published work that is missing or awaiting grading."
+      />
       <div className="mx-auto max-w-4xl space-y-4 px-6 py-4">
-        <div>
-          <h1 className="text-3xl font-semibold">To-do</h1>
-          <p className="text-sm text-muted-foreground">Published work that is missing or awaiting grading.</p>
-        </div>
         {isLoading && <div className="text-muted-foreground">Loading work…</div>}
         {items.map((item) => (
           <Link
