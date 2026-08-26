@@ -213,7 +213,10 @@
       "ruleValue": "Approved value",
       "noRules": "No approval rules configured.",
       "invitations": "Registration invitations",
-      "invitationsDescription": "Email-bound, single-use links expire after seven days. The secret is shown once.",
+      "invitationsDescription": "Email-bound, single-use links expire after the chosen number of days. The secret is shown once.",
+      "inviteExpiry": "Expiry",
+      "inviteExpiresIn_one": "Expires in {{count}} day",
+      "inviteExpiresIn_other": "Expires in {{count}} days",
       "createInvite": "Create invitation",
       "copyInviteNow": "Copy this link now. It cannot be shown again.",
       "copyInvite": "Copy invitation link",
@@ -243,7 +246,9 @@
       "noCapabilities": "No installed capabilities.",
       "usageAudit": "Usage audit",
       "usageAuditDescription": "Immutable charges for accepted metered executions.",
-      "currentMonthCredits": "weighted credits accepted this UTC month"
+      "currentMonthCredits": "weighted credits accepted this UTC month",
+      "inviteAlsoSend": "Also email the invitation link",
+      "inviteEmailed": "Invitation created and emailed"
     }
   },
   "auth": {

@@ -242,6 +242,60 @@ def test_expired_and_revoked_invitations_fail_closed(test_client, test_db, admin
         assert response.json()["code"] == "registration_not_permitted"
 
 
+class _RecordingMailer:
+    def __init__(self):
+        self.sent: list[tuple[str, str]] = []
+
+    async def send_invitation(self, email: str, invite_url: str) -> None:
+        self.sent.append((email, invite_url))
+
+
+def test_invite_email_delivery_requires_enabled_email(test_client, admin_user):
+    headers = _admin_headers(test_client, admin_user)
+    response = test_client.post(
+        "/api/v1/admin/invites",
+        json={"email": "invitee@example.edu", "sendEmail": True},
+        headers=headers,
+    )
+    assert response.status_code == 400
+    assert "disabled" in response.json()["detail"]
+
+
+def test_invite_email_delivery_sends_secret_link(test_client, admin_user, monkeypatch):
+    from fair_platform.backend.main import app
+    from fair_platform.backend.services.mailer import get_mailer
+
+    monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+    headers = _admin_headers(test_client, admin_user)
+    fake_mailer = _RecordingMailer()
+    app.dependency_overrides[get_mailer] = lambda: fake_mailer
+    try:
+        created = test_client.post(
+            "/api/v1/admin/invites",
+            json={"email": "invitee@example.edu", "sendEmail": True},
+            headers=headers,
+        )
+    finally:
+        app.dependency_overrides.pop(get_mailer, None)
+    assert created.status_code == 201
+    token = created.json()["token"]
+    assert len(fake_mailer.sent) == 1
+    sent_email, sent_url = fake_mailer.sent[0]
+    assert sent_email == "invitee@example.edu"
+    assert sent_url.endswith(f"#invite={token}")
+
+
+def test_invite_without_send_email_still_returns_secret_link(test_client, admin_user):
+    headers = _admin_headers(test_client, admin_user)
+    created = test_client.post(
+        "/api/v1/admin/invites",
+        json={"email": "invitee@example.edu"},
+        headers=headers,
+    )
+    assert created.status_code == 201
+    assert created.json()["registrationUrl"].startswith("http")
+
+
 def test_admission_policy_does_not_block_existing_login(
     test_client, test_db, student_user
 ):

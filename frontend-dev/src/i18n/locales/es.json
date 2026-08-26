@@ -213,7 +213,10 @@
       "ruleValue": "Valor aprobado",
       "noRules": "No hay reglas de aprobación configuradas.",
       "invitations": "Invitaciones de registro",
-      "invitationsDescription": "Los enlaces están ligados al correo, son de un solo uso y vencen en siete días. El secreto se muestra una vez.",
+      "invitationsDescription": "Los enlaces están ligados al correo, son de un solo uso y vencen tras los días elegidos. El secreto se muestra una vez.",
+      "inviteExpiry": "Expiry",
+      "inviteExpiresIn_one": "Vence en {{count}} día",
+      "inviteExpiresIn_other": "Vence en {{count}} días",
       "createInvite": "Crear invitación",
       "copyInviteNow": "Copia este enlace ahora. No podrá mostrarse nuevamente.",
       "copyInvite": "Copiar enlace de invitación",
@@ -243,7 +246,9 @@
       "noCapabilities": "No hay capacidades instaladas.",
       "usageAudit": "Auditoría de uso",
       "usageAuditDescription": "Cargos inmutables por ejecuciones medidas aceptadas.",
-      "currentMonthCredits": "créditos ponderados aceptados este mes UTC"
+      "currentMonthCredits": "créditos ponderados aceptados este mes UTC",
+      "inviteAlsoSend": "Enviar también el enlace por correo",
+      "inviteEmailed": "Invitación creada y enviada por correo"
     }
   },
   "auth": {

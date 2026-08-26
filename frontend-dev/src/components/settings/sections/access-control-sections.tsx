@@ -57,6 +57,8 @@ export function AdmissionSection() {
   const [ruleKind, setRuleKind] = React.useState<"email" | "domain">("domain");
   const [ruleValue, setRuleValue] = React.useState("");
   const [inviteEmail, setInviteEmail] = React.useState("");
+  const [inviteExpiryDays, setInviteExpiryDays] = React.useState("7");
+  const [sendInviteEmail, setSendInviteEmail] = React.useState(false);
   const [lastInviteUrl, setLastInviteUrl] = React.useState<string | null>(null);
 
   const mode = policy.data?.effectiveAdmissionMode ?? "open";
@@ -154,11 +156,20 @@ export function AdmissionSection() {
           onSubmit={(event) => {
             event.preventDefault();
             createInvite.mutate(
-              { email: inviteEmail, expiresInDays: 7 },
+              {
+                email: inviteEmail,
+                expiresInDays: Number(inviteExpiryDays),
+                sendEmail: sendInviteEmail,
+              },
               {
                 onSuccess: (created) => {
                   setInviteEmail("");
                   setLastInviteUrl(created.registrationUrl);
+                  if (sendInviteEmail) {
+                    toast.success(t("settings.access.inviteEmailed"), {
+                      description: inviteEmail,
+                    });
+                  }
                 },
                 onError: reportFailure,
               },
@@ -172,7 +183,29 @@ export function AdmissionSection() {
             placeholder="person@example.edu"
             required
           />
+          <Select
+            value={inviteExpiryDays}
+            onValueChange={setInviteExpiryDays}
+          >
+            <SelectTrigger className="sm:w-36" aria-label={t("settings.access.inviteExpiry")}><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[1, 3, 7, 14, 30, 90].map((days) => (
+                <SelectItem key={days} value={String(days)}>
+                  {t("settings.access.inviteExpiresIn", { count: days })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button type="submit" disabled={createInvite.isPending}>{t("settings.access.createInvite")}</Button>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground sm:w-full">
+            <input
+              type="checkbox"
+              className="size-4 accent-primary"
+              checked={sendInviteEmail}
+              onChange={(event) => setSendInviteEmail(event.target.checked)}
+            />
+            {t("settings.access.inviteAlsoSend")}
+          </label>
         </form>
         {lastInviteUrl && (
           <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
