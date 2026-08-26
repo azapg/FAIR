@@ -107,7 +107,7 @@ function InstructorSubmissionsSection({
     <div className={"space-y-3 mb-5"}>
       <div className={"flex justify-between items-center mb-3"}>
         <h2 className={"text-xl font-semibold"}>{t("submissions.title")}</h2>
-        <Button size="sm" onClick={() => setIsCreateSubmissionOpen(true)}>
+        <Button size="sm" className="hidden md:inline-flex" onClick={() => setIsCreateSubmissionOpen(true)}>
           <Plus /> {t("common.add")}
         </Button>
       </div>

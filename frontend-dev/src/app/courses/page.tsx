@@ -94,7 +94,7 @@ export default function CoursesPage() {
       <PageHeader
         title={t("courses.yourCourses")}
         actions={
-          <>
+          <div className="hidden gap-2 md:flex">
             {canJoinCourses && (
               <Button variant="outline" onClick={openJoinDialog}>
                 {t("courses.joinCourse")}
@@ -121,7 +121,7 @@ export default function CoursesPage() {
                 }
               />
             )}
-          </>
+          </div>
         }
       />
 

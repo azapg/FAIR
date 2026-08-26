@@ -87,6 +87,7 @@ export default function AssignmentsTab({
       <AssignmentsTable
         columns={columns}
         data={assignments}
+        courseId={courseId}
         onCreateAssignment={
           canManageAssignments ? () => setIsCreateOpen(true) : undefined
         }

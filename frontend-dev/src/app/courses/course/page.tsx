@@ -22,8 +22,16 @@ import {CourseContentTab} from "@/app/courses/tabs/content/course-content-tab";
 import {StudentGradesTab} from "@/app/courses/tabs/student-grades-tab";
 import {AuthUserRole} from "@/contexts/auth-context";
 import { CourseCopyDialog } from "@/app/courses/components/course-copy-dialog";
-import { FloatingNav, type FloatingNavItem } from "@/components/floating-nav";
-import { GraduationCap, History, Package, Users } from "lucide-react";
+import { FloatingNav, FloatingActionButton, type FloatingNavItem } from "@/components/floating-nav";
+import { GraduationCap, History, Package, Plus, Users } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
+import { CreateAssignmentDialog } from "@/app/courses/tabs/assignments/create-assignment-dialog";
 type CourseTab = "timeline" | "stream" | "content" | "assignments" | "grades" | "gradebook" | "participants" | "runs" | "artifacts" | "flows" | "capabilities";
 
 export default function CourseDetailPage() {
@@ -79,6 +87,8 @@ export default function CourseDetailPage() {
     ? ["timeline", "stream", "content", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
     : ["timeline", "stream", "content", "assignments", ...(isLearnerView ? ["grades" as CourseTab] : []), "artifacts"];
   const currentTab = (tab && visibleTabs.includes(tab as CourseTab) ? tab : "assignments") as CourseTab;
+  const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState(false);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   const showEnrollmentControls =
     !!user &&
@@ -150,7 +160,12 @@ export default function CourseDetailPage() {
           <div className="space-y-8">
             <section>
               <h2 className="mb-3 text-lg font-semibold">Stream</h2>
-              <StreamTab courseId={courseId as string} canPost={isInstructorView}/>
+              <StreamTab
+                courseId={courseId as string}
+                canPost={isInstructorView}
+                composerOpen={isComposerOpen}
+                onComposerOpenChange={setIsComposerOpen}
+              />
             </section>
             <section>
               <h2 className="mb-3 text-lg font-semibold">Content</h2>
@@ -225,6 +240,38 @@ export default function CourseDetailPage() {
           if (!courseId) return;
           navigate(`${basePath}/${val}`, {replace: true});
         }}
+        action={
+          isInstructorView && courseId && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <FloatingActionButton aria-label={t("common.add")}>
+                  <Plus className="size-5" />
+                </FloatingActionButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="mb-2">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setIsCreateAssignmentOpen(true);
+                  }}
+                >
+                  <Plus />
+                  {t("assignments.newAssignment")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (currentTab !== "timeline") {
+                      navigate(`${basePath}/timeline`, {replace: true});
+                    }
+                    setIsComposerOpen(true);
+                  }}
+                >
+                  <Plus />
+                  Create post
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
+        }
         items={
           [
             { value: "timeline", label: "Timeline", icon: History },
@@ -238,6 +285,14 @@ export default function CourseDetailPage() {
           ] satisfies FloatingNavItem[]
         }
       />
+      {isInstructorView && courseId && (
+        <CreateAssignmentDialog
+          courseId={courseId}
+          onAssignmentCreated={() => {}}
+          open={isCreateAssignmentOpen}
+          onOpenChange={setIsCreateAssignmentOpen}
+        />
+      )}
     </div>
   );
 }

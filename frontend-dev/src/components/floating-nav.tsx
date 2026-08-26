@@ -34,6 +34,7 @@ export function FloatingNav({
         className,
       )}
     >
+      {action}
       {items.length > 0 && (
         <nav
           aria-label="Views"
