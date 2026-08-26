@@ -89,6 +89,7 @@
       "password": "Contraseña",
       "theme": "Tema",
       "language": "Idioma",
+      "uiScale": "Tamaño de la interfaz",
       "simpleView": "Vista simple",
       "simpleViewDescription": "Condensa pantallas densas para usuarios avanzados e instructores.",
       "devMode": "Modo desarrollador",
@@ -134,6 +135,10 @@
     "languages": {
       "en": "Inglés",
       "es": "Español"
+    },
+    "interfaceSizes": {
+      "default": "Predeterminado",
+      "compact": "Compacto"
     },
     "empty": {
       "title": "Sección en desarrollo",

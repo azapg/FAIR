@@ -89,6 +89,7 @@
       "password": "Password",
       "theme": "Theme",
       "language": "Language",
+      "uiScale": "Interface Size",
       "simpleView": "Simple View",
       "simpleViewDescription": "Condense dense screens for power users and instructors.",
       "devMode": "Developer Mode",
@@ -134,6 +135,10 @@
     "languages": {
       "en": "English",
       "es": "Spanish"
+    },
+    "interfaceSizes": {
+      "default": "Default",
+      "compact": "Compact"
     },
     "empty": {
       "title": "Section in development",

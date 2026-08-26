@@ -8,7 +8,7 @@ import { useTheme } from "@/components/theme-provider";
 import { useTranslation } from "react-i18next";
 import { useLocalPreference } from "@/hooks/use-local-preference";
 import { useUserSetting } from "@/hooks/use-user-settings";
-import type { LanguageCode, ThemeMode } from "@/hooks/use-preference-settings";
+import type { LanguageCode, ThemeMode, UiScale } from "@/hooks/use-preference-settings";
 import api from "@/lib/api";
 
 
@@ -29,6 +29,8 @@ function SettingsRuntime() {
     useLocalPreference<boolean | undefined>("ui.simpleView");
   const { value: localDevMode, setValue: setLocalDevMode } =
     useLocalPreference<boolean | undefined>("ui.devMode");
+  const { value: localUiScale, setValue: setLocalUiScale } =
+    useLocalPreference<UiScale | undefined>("ui.uiScale");
   const { setValue: setLocalEmailEnabled } =
     useLocalPreference<boolean>("features.emailEnabled");
 
@@ -36,11 +38,13 @@ function SettingsRuntime() {
   const languageServer = useUserSetting<LanguageCode>("preferences.language", "en").value;
   const simpleViewServer = useUserSetting<boolean>("preferences.simpleView", false).value;
   const devModeServer = useUserSetting<boolean>("preferences.devMode", false).value;
+  const uiScaleServer = useUserSetting<UiScale>("preferences.uiScale", "default").value;
 
   const resolvedTheme = localTheme ?? themeServer;
   const resolvedLanguage = localLanguage ?? languageServer;
   const resolvedSimpleView = localSimpleView ?? simpleViewServer;
   const resolvedDevMode = localDevMode ?? devModeServer;
+  const resolvedUiScale = localUiScale ?? uiScaleServer;
 
   useEffect(() => {
     if (localTheme === undefined) {
@@ -85,6 +89,10 @@ function SettingsRuntime() {
   useEffect(() => {
     document.documentElement.classList.toggle("dev-mode", Boolean(resolvedDevMode));
   }, [resolvedDevMode]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("ui-scale-compact", resolvedUiScale === "compact");
+  }, [resolvedUiScale]);
 
   useEffect(() => {
     let active = true;

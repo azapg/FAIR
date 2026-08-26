@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { usePreferenceSettings } from "@/hooks/use-preference-settings";
+import type { UiScale } from "@/hooks/use-preference-settings";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -19,10 +20,12 @@ export function PreferencesSection() {
     effectiveLanguage,
     effectiveSimpleView,
     effectiveDevMode,
+    effectiveUiScale,
     setThemePreference,
     setLanguagePreference,
     setSimpleViewPreference,
     setDevModePreference,
+    setUiScalePreference,
     isSaving,
   } = usePreferenceSettings();
 
@@ -60,6 +63,22 @@ export function PreferencesSection() {
           <SelectContent>
             <SelectItem value="en">{t("settings.languages.en")}</SelectItem>
             <SelectItem value="es">{t("settings.languages.es")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="settings-ui-scale">{t("settings.fields.uiScale")}</Label>
+        <Select
+          value={effectiveUiScale}
+          onValueChange={(value) => setUiScalePreference(value as UiScale)}
+        >
+          <SelectTrigger id="settings-ui-scale" className="w-full">
+            <SelectValue placeholder={t("settings.fields.uiScale")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="default">{t("settings.interfaceSizes.default")}</SelectItem>
+            <SelectItem value="compact">{t("settings.interfaceSizes.compact")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
