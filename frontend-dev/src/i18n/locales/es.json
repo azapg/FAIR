@@ -247,7 +247,9 @@
       "noCapabilities": "No hay capacidades instaladas.",
       "usageAudit": "Auditoría de uso",
       "usageAuditDescription": "Cargos inmutables por ejecuciones medidas aceptadas.",
-      "currentMonthCredits": "créditos ponderados aceptados este mes UTC"
+      "currentMonthCredits": "créditos ponderados aceptados este mes UTC",
+      "inviteAlsoSend": "Enviar también el enlace por correo",
+      "inviteEmailed": "Invitación creada y enviada por correo"
     }
   },
   "auth": {

@@ -27,7 +27,7 @@ An administrator can choose a mode under **Settings → Admin → Admission**:
 | Approved emails | The normalized address must match an approved individual address or its exact domain must be approved. Subdomains are not implicit wildcards. |
 | Invite only | Registration requires an unexpired, unrevoked, single-use token bound to the same normalized email address. |
 
-Administrators can add and remove exact email or domain rules and create or revoke invitations. The invitation URL is shown only when it is created. FAIR stores a hash of the token, not the plaintext token, and places the token in the URL fragment so it is not sent in the initial HTTP request. Registration with an invitation does not mark the email as verified; ordinary verification policy still applies.
+Administrators can add and remove exact email or domain rules and create or revoke invitations. The invitation URL is shown only when it is created. When a mail provider is configured (`FAIR_EMAIL_ENABLED=1`), an administrator can also have FAIR email the invitation link directly to the invitee; the secret is still shown once in the admin UI as a backup. FAIR stores a hash of the token, not the plaintext token, and places the token in the URL fragment so it is not sent in the initial HTTP request. Registration with an invitation does not mark the email as verified; ordinary verification policy still applies.
 
 Use `FAIR_ADMISSION_MODE=open|allowlist|invite_only` when deployment configuration should be authoritative. When present, this value overrides the stored setting and locks the mode selector in the admin UI. Rules and invitations remain database-managed.
 

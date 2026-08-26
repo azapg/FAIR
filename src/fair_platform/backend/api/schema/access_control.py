@@ -49,6 +49,7 @@ class InviteCreate(BaseModel):
     model_config = schema_config
     email: EmailStr
     expires_in_days: int = Field(default=7, ge=1, le=90)
+    send_email: bool = False
 
 
 class InviteRead(BaseModel):
