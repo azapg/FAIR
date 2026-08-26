@@ -17,7 +17,6 @@ import {
   DataTable,
   DataTableContent,
   DataTableEmpty,
-  DataTablePagination,
   DataTableSearch,
   useDataTableContext,
 } from "@/components/data-table";
@@ -210,7 +209,6 @@ export function SubmissionsTable({
         columns={columns}
         filterKey="submitter.name"
         enableRowSelection={canManage}
-        enablePagination
         onRowSelectionChange={setRowSelection}
         state={{ rowSelection }}
         meta={{ onFeedbackClick }}
@@ -230,8 +228,6 @@ export function SubmissionsTable({
             />
           </DataTableEmpty>
         </DataTableContent>
-
-        <DataTablePagination />
       </DataTable>
 
       <SubmissionSheet
