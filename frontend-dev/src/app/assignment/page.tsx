@@ -202,7 +202,7 @@ export default function AssignmentPage() {
     >
       <ScrollArea className="w-full h-svh flex-1 min-w-0">
         <div className="min-w-0 break-words">
-          <div className="fixed inset-x-0 top-3 z-40 flex items-center justify-between px-3 pointer-events-none">
+          <div className="fixed inset-x-0 top-4 z-40 flex items-center justify-between px-4 pointer-events-none">
             <SidebarTrigger className="pointer-events-auto size-10 rounded-full border bg-background/80 shadow-sm backdrop-blur" />
             {isInstructorView && (
               <Button
@@ -216,7 +216,7 @@ export default function AssignmentPage() {
               </Button>
             )}
           </div>
-          <div className={"px-8 pt-16 sm:pt-14"}>
+          <div className={"px-4 pt-16 sm:px-8 sm:pt-14"}>
             <div className={"mb-5"}>
               <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
               {!assignment.description ||
