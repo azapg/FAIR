@@ -1,11 +1,5 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import {Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
+import { ResponsiveDialogContent } from "@/components/ui/responsive-dialog";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {LoaderIcon} from "lucide-react";
@@ -45,7 +39,7 @@ export function CreateSubmissionDialog({ assignmentId, open, onOpenChange }: Cre
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={""}>
+      <ResponsiveDialogContent className={""}>
         <DialogHeader>
           <DialogTitle>{t("submissions.addSubmission")}</DialogTitle>
           <DialogDescription>{t("submissions.createSynthetic")}</DialogDescription>
@@ -85,7 +79,7 @@ export function CreateSubmissionDialog({ assignmentId, open, onOpenChange }: Cre
             )}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   )
 }

@@ -1,12 +1,7 @@
 import {FormEvent, useEffect, useState} from "react";
 import {Button} from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import {Dialog, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
+import { ResponsiveDialogContent } from "@/components/ui/responsive-dialog";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Textarea} from "@/components/ui/textarea";
@@ -92,7 +87,7 @@ export function EditAssignmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]">
+      <ResponsiveDialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>{t("assignments.editAssignment")}</DialogTitle>
         </DialogHeader>
@@ -155,7 +150,7 @@ export function EditAssignmentDialog({
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

@@ -8,7 +8,8 @@ import CourseGrid from "@/app/courses/components/course-grid";
 import CourseFormDialog from "@/app/courses/components/course-form-dialog";
 import {BreadcrumbNav} from "@/components/breadcrumb-nav";
 import {useTranslation} from "react-i18next";
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
+import {Dialog, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
+import {ResponsiveDialogContent} from "@/components/ui/responsive-dialog";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import {usePermission} from "@/hooks/use-permission";
@@ -141,7 +142,7 @@ export default function CoursesPage() {
       </div>
 
       <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
-        <DialogContent>
+        <ResponsiveDialogContent>
           <DialogHeader>
             <DialogTitle>{t("courses.joinCourse")}</DialogTitle>
           </DialogHeader>
@@ -167,7 +168,7 @@ export default function CoursesPage() {
               </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
+        </ResponsiveDialogContent>
       </Dialog>
     </main>
   );

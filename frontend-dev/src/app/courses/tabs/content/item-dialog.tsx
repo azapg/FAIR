@@ -1,14 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import {Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog';
+import { ResponsiveDialogContent } from '@/components/ui/responsive-dialog';
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -84,7 +78,7 @@ export function ItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto" aria-describedby="item-dialog-description">
+      <ResponsiveDialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto" aria-describedby="item-dialog-description">
         <form className="space-y-4" onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>{item ? 'Edit content item' : 'Add content item'}</DialogTitle>
@@ -187,7 +181,7 @@ export function ItemDialog({
             <Button type="submit" disabled={!valid || pending}>{pending ? 'Saving…' : 'Save item'}</Button>
           </DialogFooter>
         </form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   )
 }

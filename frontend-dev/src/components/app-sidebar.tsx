@@ -66,15 +66,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { usePreferenceSettings } from "@/hooks/use-preference-settings";
 import { IfSetting } from "@/components/if-setting";
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { AppSearch } from "@/components/app-search";
 import {
   Empty,
   EmptyContent,
@@ -295,8 +287,6 @@ export function AppSidebar({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [coursesOpen, setCoursesOpen] = useState(true);
   const [assignmentsOpen, setAssignmentsOpen] = useState(false);
   const coursesContentId = useId();
@@ -305,10 +295,6 @@ export function AppSidebar({
     && !eligibilityCoursesLoading
     && authUser?.role === 'user'
     && !hasStaffCourseMembership(eligibilityCourses);
-
-  const handleSearchInputDebounced = (query: string) => {
-    void query;
-  };
 
   useEffect(() => {
     if (state !== "expanded") {
@@ -321,15 +307,6 @@ export function AppSidebar({
       setInboxOpen(false);
     }
   }, [isSidebarMobile, openMobile]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      handleSearchInputDebounced(searchQuery);
-    }, 250);
-
-    return () => clearTimeout(timeout);
-  }, [searchQuery]);
 
   const displayTitle = t("header.title");
   const userName = authUser?.name || t("header.profile");
@@ -712,49 +689,11 @@ export function AppSidebar({
         </aside>
       )}
       </div>
-      <CommandDialog
-        title={t("nav.search")}
-        description={t("common.searchDescription", { defaultValue: "Search navigation and available commands." })}
+      <AppSearch
         open={searchOpen}
-        onOpenChange={(open) => {
-          setSearchOpen(open);
-          if (!open) {
-            setSearchQuery("");
-            setDebouncedSearchQuery("");
-          }
-        }}
-      >
-        <Command>
-          <CommandInput
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-            placeholder={t("nav.search")}
-          />
-          <CommandList>
-            <CommandEmpty>{t("common.noResults")}</CommandEmpty>
-            <CommandGroup heading="Suggestions">
-              <CommandItem
-                onSelect={() => {
-                  setSearchOpen(false);
-                  navigate("/courses");
-                }}
-              >
-                <BookOpen />
-                <span>Go to courses</span>
-              </CommandItem>
-              <CommandItem
-                onSelect={() => {
-                  setSearchOpen(false);
-                  setSettingsOpen(true);
-                }}
-              >
-                <SettingsIcon />
-                <span>Open settings</span>
-              </CommandItem>
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </CommandDialog>
+        onOpenChange={setSearchOpen}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} isMobile={isMobile} />
       <SidebarRail />
     </Sidebar>

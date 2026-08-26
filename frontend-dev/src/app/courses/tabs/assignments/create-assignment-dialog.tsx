@@ -1,14 +1,7 @@
 import {useState, FormEvent, useRef} from "react";
 import {Button} from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import {Dialog, DialogClose, DialogFooter, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
+import { ResponsiveDialogContent } from "@/components/ui/responsive-dialog";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Textarea} from "@/components/ui/textarea";
@@ -149,7 +142,7 @@ export function CreateAssignmentDialog({
           {t("common.create")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden sm:max-w-2xl">
+      <ResponsiveDialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden sm:max-w-2xl">
         <DialogHeader className="shrink-0 pb-4">
           <DialogTitle>{t("assignments.newAssignment")}</DialogTitle>
         </DialogHeader>
@@ -268,7 +261,7 @@ export function CreateAssignmentDialog({
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }
