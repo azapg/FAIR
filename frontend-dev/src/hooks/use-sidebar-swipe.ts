@@ -1,7 +1,6 @@
 import * as React from "react";
 
-const EDGE_ZONE_PX = 32;
-const SWIPE_THRESHOLD_PX = 60;
+const SWIPE_THRESHOLD_PX = 50;
 const DIRECTIONAL_RATIO = 1.2;
 const SCROLL_LOCK_PX = 10;
 
@@ -28,9 +27,9 @@ export function useSidebarSwipe({
 
     const opensFromEdge = (dx: number) => {
       if (open || dx === 0) return false;
-      return side === "left"
-        ? dx > 0 && startRef.current!.x <= EDGE_ZONE_PX
-        : dx < 0 && window.innerWidth - startRef.current!.x <= EDGE_ZONE_PX;
+      // If any sidebar is currently open, don't open another - close has priority
+      if (document.querySelector('[data-slot="sheet-overlay"]')) return false;
+      return side === "left" ? dx > 0 : dx < 0;
     };
 
     const closesWithSwipe = (dx: number) => {
