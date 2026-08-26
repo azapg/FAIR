@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import sqlite3
 from pathlib import Path
+from uuid import uuid4
 
 from alembic import command
 from alembic.migration import MigrationContext
@@ -63,6 +64,82 @@ def test_upgrade_rehearsal_head_to_head_is_idempotent(tmp_path: Path) -> None:
 
     assert first == _alembic_head()
     assert second == first
+
+
+def _insert_pre_identity_user(connection, *, email: str) -> None:
+    connection.execute(
+        text(
+            """
+            INSERT INTO users (
+                id, name, email, role, password_hash, is_verified, settings
+            ) VALUES (
+                :id, :name, :email, 'user', NULL, 1, '{}'
+            )
+            """
+        ),
+        {"id": uuid4().hex, "name": email, "email": email},
+    )
+
+
+def test_admission_migration_backfills_normalized_email_and_tables(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "admission_backfill.sqlite"
+    database_url = f"sqlite:///{db_path.as_posix()}"
+    run_migrations_to_revision("20260727_0028", database_url)
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        _insert_pre_identity_user(connection, email="Person@EXAMPLE.edu")
+    engine.dispose()
+
+    run_migrations_to_head(database_url)
+
+    engine = create_engine(database_url)
+    with engine.connect() as connection:
+        schema = inspect(connection)
+        assert connection.scalar(text("SELECT normalized_email FROM users")) == (
+            "person@example.edu"
+        )
+        assert {
+            "platform_policies",
+            "admission_rules",
+            "registration_invites",
+            "ai_capability_policies",
+            "ai_entitlements",
+            "ai_usage_charges",
+        } <= set(schema.get_table_names())
+        assert {column["name"] for column in schema.get_columns("users")} >= {
+            "email",
+            "normalized_email",
+        }
+    engine.dispose()
+
+
+def test_admission_migration_refuses_normalized_email_collision(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "admission_collision.sqlite"
+    database_url = f"sqlite:///{db_path.as_posix()}"
+    run_migrations_to_revision("20260727_0028", database_url)
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        _insert_pre_identity_user(connection, email="same@EXAMPLE.edu")
+        _insert_pre_identity_user(connection, email="SAME@example.edu")
+    engine.dispose()
+
+    with pytest.raises(RuntimeError, match="normalized email collisions"):
+        run_migrations_to_head(database_url)
+
+    engine = create_engine(database_url)
+    with engine.connect() as connection:
+        # The intervening LMS migrations commit successfully; the admission
+        # revision itself fails before stamping its new head.
+        assert _read_revision(db_path) == "20260812_0034"
+        assert "normalized_email" not in {
+            column["name"] for column in inspect(connection).get_columns("users")
+        }
+        assert connection.scalar(text("SELECT COUNT(*) FROM users")) == 2
+    engine.dispose()
 
 
 def test_upgrade_rehearsal_from_pre_merge_lms_head(tmp_path: Path) -> None:

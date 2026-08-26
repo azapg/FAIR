@@ -182,12 +182,68 @@
       },
       "adminPeople": {
         "title": "People",
-        "description": "Manage members and administrative access."
+        "description": "Assign per-user AI access and monthly weighted credits."
+      },
+      "adminAdmission": {
+        "title": "Admission",
+        "description": "Control who may create a FAIR account."
+      },
+      "adminAi": {
+        "title": "AI controls",
+        "description": "Classify costly capabilities, enforce credits, and audit usage."
       },
       "adminModels": {
         "title": "Models",
         "description": "Control organization-level model policies."
       }
+    },
+    "access": {
+      "admissionMode": "Registration admission",
+      "admissionModeDescription": "Admission applies to new account registration only. Existing accounts can still sign in.",
+      "open": "Open registration",
+      "allowlist": "Approved emails",
+      "inviteOnly": "Invitation only",
+      "environmentLocked": "Locked by environment",
+      "databaseManaged": "Managed here",
+      "emptyAllowlistWarning": "No one can register until at least one approved email or domain is added.",
+      "approvedEmails": "Approved emails and domains",
+      "approvedEmailsDescription": "Domains match exactly; add subdomains separately.",
+      "domain": "Domain",
+      "emailAddress": "Email",
+      "ruleValue": "Approved value",
+      "noRules": "No approval rules configured.",
+      "invitations": "Registration invitations",
+      "invitationsDescription": "Email-bound, single-use links expire after seven days. The secret is shown once.",
+      "createInvite": "Create invitation",
+      "copyInviteNow": "Copy this link now. It cannot be shown again.",
+      "copyInvite": "Copy invitation link",
+      "inviteCopied": "Invitation link copied",
+      "activeInvite": "Active",
+      "inactiveInvite": "Used, revoked, or expired",
+      "revoke": "Revoke",
+      "disabled": "Disabled",
+      "limited": "Limited",
+      "unlimited": "Unlimited",
+      "monthlyCredits": "Monthly credits",
+      "creditsUsed": "credits used",
+      "remaining": "remaining",
+      "noPeople": "No users found.",
+      "aiControls": "AI credit enforcement",
+      "aiControlsDescription": "Admission does not grant AI access. Entitlements and capability weights are enforced separately.",
+      "enforceCredits": "Enforce weighted execution credits",
+      "weightedNotCurrency": "Credits limit accepted FAIR executions; they are not a provider-currency ceiling.",
+      "unclassifiedWarning_one": "Classify {{count}} capability before enabling enforcement.",
+      "unclassifiedWarning_other": "Classify {{count}} capabilities before enabling enforcement.",
+      "capabilityCosts": "Capability classification",
+      "capabilityCostsDescription": "Every installed capability version must be classified. New versions fail closed when enforcement is on.",
+      "unmetered": "Unmetered",
+      "unclassified": "Unclassified",
+      "aiMetered": "AI metered",
+      "classify": "Classify",
+      "noCapabilities": "No installed capabilities.",
+      "usageAudit": "Usage audit",
+      "usageAuditDescription": "Immutable charges for accepted metered executions.",
+      "currentMonthCredits": "weighted credits accepted this UTC month"
     }
   },
   "auth": {
@@ -195,6 +251,10 @@
     "loginToFair": "Login to The Fair Platform",
     "welcome": "Welcome",
     "createYourAccount": "Create your account",
+    "approvedEmailRegistration": "Registration is limited to approved email addresses.",
+    "invitationRegistration": "A registration invitation is required.",
+    "invitationCode": "Invitation code",
+    "invitationCodeHint": "Open the invitation link from your administrator or paste its code here.",
     "email": "Email",
     "password": "Password",
     "name": "Name",

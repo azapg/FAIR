@@ -49,7 +49,6 @@ def add_agent_capability(
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
             },
-            "requestedScopes": requested_scopes or [],
             "declaredEffects": [],
             "supportsStreaming": True,
             "supportsResume": supports_resume,

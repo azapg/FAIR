@@ -182,12 +182,68 @@
       },
       "adminPeople": {
         "title": "Personas",
-        "description": "Administra miembros y acceso administrativo."
+        "description": "Asigna acceso a IA y créditos ponderados mensuales por usuario."
+      },
+      "adminAdmission": {
+        "title": "Admisión",
+        "description": "Controla quién puede crear una cuenta de FAIR."
+      },
+      "adminAi": {
+        "title": "Controles de IA",
+        "description": "Clasifica capacidades costosas, aplica créditos y audita el uso."
       },
       "adminModels": {
         "title": "Modelos",
         "description": "Controla políticas de modelos a nivel organización."
       }
+    },
+    "access": {
+      "admissionMode": "Admisión de registros",
+      "admissionModeDescription": "La admisión solo aplica al registro de cuentas nuevas. Las cuentas existentes pueden seguir iniciando sesión.",
+      "open": "Registro abierto",
+      "allowlist": "Correos aprobados",
+      "inviteOnly": "Solo por invitación",
+      "environmentLocked": "Bloqueado por el entorno",
+      "databaseManaged": "Administrado aquí",
+      "emptyAllowlistWarning": "Nadie podrá registrarse hasta agregar al menos un correo o dominio aprobado.",
+      "approvedEmails": "Correos y dominios aprobados",
+      "approvedEmailsDescription": "Los dominios coinciden de forma exacta; agrega los subdominios por separado.",
+      "domain": "Dominio",
+      "emailAddress": "Correo",
+      "ruleValue": "Valor aprobado",
+      "noRules": "No hay reglas de aprobación configuradas.",
+      "invitations": "Invitaciones de registro",
+      "invitationsDescription": "Los enlaces están ligados al correo, son de un solo uso y vencen en siete días. El secreto se muestra una vez.",
+      "createInvite": "Crear invitación",
+      "copyInviteNow": "Copia este enlace ahora. No podrá mostrarse nuevamente.",
+      "copyInvite": "Copiar enlace de invitación",
+      "inviteCopied": "Enlace de invitación copiado",
+      "activeInvite": "Activa",
+      "inactiveInvite": "Usada, revocada o vencida",
+      "revoke": "Revocar",
+      "disabled": "Deshabilitado",
+      "limited": "Limitado",
+      "unlimited": "Ilimitado",
+      "monthlyCredits": "Créditos mensuales",
+      "creditsUsed": "créditos usados",
+      "remaining": "restantes",
+      "noPeople": "No se encontraron usuarios.",
+      "aiControls": "Aplicación de créditos de IA",
+      "aiControlsDescription": "La admisión no concede acceso a IA. Los derechos y pesos de capacidad se aplican por separado.",
+      "enforceCredits": "Aplicar créditos ponderados por ejecución",
+      "weightedNotCurrency": "Los créditos limitan ejecuciones aceptadas por FAIR; no son un límite monetario del proveedor.",
+      "unclassifiedWarning_one": "Clasifica {{count}} capacidad antes de activar la aplicación.",
+      "unclassifiedWarning_other": "Clasifica {{count}} capacidades antes de activar la aplicación.",
+      "capabilityCosts": "Clasificación de capacidades",
+      "capabilityCostsDescription": "Cada versión instalada debe clasificarse. Las versiones nuevas se bloquean si la aplicación está activa.",
+      "unmetered": "Sin medición",
+      "unclassified": "Sin clasificar",
+      "aiMetered": "IA medida",
+      "classify": "Clasificar",
+      "noCapabilities": "No hay capacidades instaladas.",
+      "usageAudit": "Auditoría de uso",
+      "usageAuditDescription": "Cargos inmutables por ejecuciones medidas aceptadas.",
+      "currentMonthCredits": "créditos ponderados aceptados este mes UTC"
     }
   },
   "auth": {
@@ -195,6 +251,10 @@
     "loginToFair": "Inicia sesión en The Fair Platform",
     "welcome": "Bienvenido",
     "createYourAccount": "Crea tu cuenta",
+    "approvedEmailRegistration": "El registro está limitado a correos aprobados.",
+    "invitationRegistration": "Se requiere una invitación de registro.",
+    "invitationCode": "Código de invitación",
+    "invitationCodeHint": "Abre el enlace de tu administrador o pega aquí su código.",
     "email": "Correo electrónico",
     "password": "Contraseña",
     "name": "Nombre",

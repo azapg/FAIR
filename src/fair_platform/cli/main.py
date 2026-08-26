@@ -8,13 +8,18 @@ import sqlite3
 from collections import OrderedDict
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from uuid import uuid4
 
 import typer
 from typing_extensions import Annotated
 from fair_platform.backend.data.migrations import build_alembic_config
 from fair_platform.backend.api.routers.auth import hash_password
 from fair_platform.backend.data.database import SessionLocal
-from fair_platform.backend.data.models.user import User
+from fair_platform.backend.data.models.user import (
+    User,
+    UserRole,
+    normalize_email_address,
+)
 
 
 def _get_version() -> str:
@@ -91,7 +96,9 @@ def _run_server(host: str, port: int, headless: bool, dev: bool) -> None:
 
 def _start_backend_process(port: int, headless: bool) -> multiprocessing.Process:
     ctx = multiprocessing.get_context("spawn")
-    process = ctx.Process(target=_run_backend, kwargs={"port": port, "headless": headless})
+    process = ctx.Process(
+        target=_run_backend, kwargs={"port": port, "headless": headless}
+    )
     process.start()
     return process
 
@@ -360,7 +367,9 @@ def _migrate_sqlite_to_postgres(
     sqlite_conn.row_factory = sqlite3.Row
     migrated: OrderedDict[str, int] = OrderedDict()
 
-    pg_dsn_for_psycopg = normalized_target.replace("postgresql+psycopg://", "postgresql://", 1)
+    pg_dsn_for_psycopg = normalized_target.replace(
+        "postgresql+psycopg://", "postgresql://", 1
+    )
     pg_conn = psycopg.connect(pg_dsn_for_psycopg)
     pg_conn.autocommit = False
 
@@ -403,7 +412,9 @@ def _migrate_sqlite_to_postgres(
                 cols = list(rows[0].keys())
                 quoted_cols = ", ".join(f'"{c}"' for c in cols)
                 placeholders = ", ".join(["%s"] * len(cols))
-                insert_sql = f'INSERT INTO "{table}" ({quoted_cols}) VALUES ({placeholders})'
+                insert_sql = (
+                    f'INSERT INTO "{table}" ({quoted_cols}) VALUES ({placeholders})'
+                )
                 if on_conflict == "skip":
                     insert_sql += " ON CONFLICT DO NOTHING"
 
@@ -424,7 +435,9 @@ def _migrate_sqlite_to_postgres(
                                     parsed = v
                             else:
                                 parsed = v
-                            converted.append(Jsonb(parsed) if dtype == "jsonb" else parsed)
+                            converted.append(
+                                Jsonb(parsed) if dtype == "jsonb" else parsed
+                            )
                         elif dtype == "boolean" and isinstance(v, int):
                             converted.append(bool(v))
                         else:
@@ -470,10 +483,12 @@ def db_migrate_sqlite_to_postgres(
         str, typer.Option("--on-conflict", help="error|skip conflict handling")
     ] = "error",
     dry_run: Annotated[
-        bool, typer.Option("--dry-run", help="Parse and validate rows, but do not persist")
+        bool,
+        typer.Option("--dry-run", help="Parse and validate rows, but do not persist"),
     ] = False,
     verify: Annotated[
-        bool, typer.Option("--verify", help="Validate destination row counts after copy")
+        bool,
+        typer.Option("--verify", help="Validate destination row counts after copy"),
     ] = False,
 ):
     if on_conflict not in {"error", "skip"}:
@@ -508,6 +523,7 @@ def serve(
     # Check for updates unless disabled
     if not no_update_check:
         from fair_platform.utils.version import check_for_updates
+
         check_for_updates()
 
     _run_server(host="127.0.0.1", port=port, headless=headless, dev=False)
@@ -515,13 +531,17 @@ def serve(
 
 @app.command()
 def dev(
-    port: Annotated[int, typer.Option("--port", "-p", help="Backend port to use")] = 8000,
+    port: Annotated[
+        int, typer.Option("--port", "-p", help="Backend port to use")
+    ] = 8000,
     no_frontend: Annotated[
         bool, typer.Option("--no-frontend", help="Disable frontend dev server")
     ] = False,
     no_headless: Annotated[
         bool,
-        typer.Option("--no-headless", help="Serve the bundled frontend from the backend"),
+        typer.Option(
+            "--no-headless", help="Serve the bundled frontend from the backend"
+        ),
     ] = False,
 ):
     frontend_process = None
@@ -566,8 +586,16 @@ def reset_user_password(
         ),
     ],
 ):
+    try:
+        normalized_email = normalize_email_address(email)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
     with SessionLocal() as session:
-        user = session.query(User).filter(User.email == email).first()
+        user = (
+            session.query(User)
+            .filter(User.normalized_email == normalized_email)
+            .first()
+        )
         if user is None:
             typer.echo(f"User not found: {email}")
             raise typer.Exit(code=1)
@@ -577,6 +605,53 @@ def reset_user_password(
         session.commit()
 
     typer.echo(f"Password reset for {email}")
+
+
+@users_app.command("create-admin")
+def create_admin_user(
+    email: Annotated[str, typer.Argument(help="Email for the administrator")],
+    name: Annotated[str, typer.Option("--name", help="Administrator display name")],
+    password: Annotated[
+        str,
+        typer.Option(
+            "--password",
+            help="Password for the account",
+            prompt=True,
+            hide_input=True,
+            confirmation_prompt=True,
+        ),
+    ],
+):
+    """Create the first verified administrator without using public registration."""
+    if len(password) < 8:
+        raise typer.BadParameter("password must be at least 8 characters")
+    try:
+        normalized_email = normalize_email_address(email)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    with SessionLocal() as session:
+        existing = (
+            session.query(User)
+            .filter(User.normalized_email == normalized_email)
+            .first()
+        )
+        if existing is not None:
+            typer.echo(f"User already exists: {normalized_email}")
+            raise typer.Exit(code=1)
+        user = User(
+            id=uuid4(),
+            name=name.strip(),
+            email=email.strip(),
+            normalized_email=normalized_email,
+            role=UserRole.admin.value,
+            password_hash=hash_password(password),
+            is_verified=True,
+        )
+        session.add(user)
+        session.commit()
+
+    typer.echo(f"Administrator created: {normalized_email}")
 
 
 if __name__ == "__main__":

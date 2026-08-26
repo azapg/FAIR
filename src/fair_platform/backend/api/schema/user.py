@@ -4,12 +4,15 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from fair_platform.backend.data.models.user import UserRole
-from fair_platform.backend.api.schema.utils import schema_config, schema_config_with_enum
+from fair_platform.backend.api.schema.utils import (
+    schema_config,
+    schema_config_with_enum,
+)
 
 
 class UserBase(BaseModel):
     model_config = schema_config_with_enum
-    
+
     name: str
     email: EmailStr
     role: UserRole = UserRole.user
@@ -29,9 +32,18 @@ class UserCreate(UserBase):
     password: str
 
 
+class RegistrationRequest(BaseModel):
+    model_config = schema_config
+
+    name: str = Field(min_length=1, max_length=255)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    invite_token: str | None = Field(default=None, max_length=512)
+
+
 class UserUpdate(BaseModel):
     model_config = schema_config_with_enum
-    
+
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     role: Optional[UserRole] = None
@@ -62,6 +74,7 @@ __all__ = [
     "UserRole",
     "UserBase",
     "UserCreate",
+    "RegistrationRequest",
     "UserUpdate",
     "UserRead",
     "AuthUserRead",

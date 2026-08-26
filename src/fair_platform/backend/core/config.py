@@ -3,6 +3,7 @@ from typing import Literal
 from urllib.parse import urlparse
 
 DeploymentMode = Literal["COMMUNITY", "ENTERPRISE"]
+AdmissionModeValue = Literal["open", "allowlist", "invite_only"]
 INSECURE_DEFAULT_SECRET_KEY = "fair-insecure-default-key"
 
 
@@ -15,6 +16,34 @@ def _parse_bool_env(raw: str | None, *, default: bool = False) -> bool:
     if normalized in {"0", "false", "no", "off"}:
         return False
     return default
+
+
+def _parse_strict_bool_env(name: str) -> bool | None:
+    raw = os.getenv(name)
+    if raw is None:
+        return None
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise RuntimeError(f"{name} must be a boolean value")
+
+
+def get_admission_mode_override() -> AdmissionModeValue | None:
+    raw = os.getenv("FAIR_ADMISSION_MODE")
+    if raw is None:
+        return None
+    normalized = raw.strip().lower().replace("-", "_")
+    if normalized not in {"open", "allowlist", "invite_only"}:
+        raise RuntimeError(
+            "FAIR_ADMISSION_MODE must be one of: open, allowlist, invite_only"
+        )
+    return normalized  # type: ignore[return-value]
+
+
+def get_ai_controls_enabled_override() -> bool | None:
+    return _parse_strict_bool_env("FAIR_AI_CONTROLS_ENABLED")
 
 
 def get_deployment_mode() -> DeploymentMode:
@@ -33,6 +62,8 @@ def get_secret_key() -> str:
 
 def validate_security_configuration(secret_key: str | None = None) -> None:
     """Reject development-only authentication defaults in institutional mode."""
+    get_admission_mode_override()
+    get_ai_controls_enabled_override()
     resolved_secret = secret_key or get_secret_key()
     if get_deployment_mode() != "ENTERPRISE":
         return

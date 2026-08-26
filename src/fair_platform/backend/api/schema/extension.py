@@ -28,6 +28,19 @@ class CapabilityRead(CapabilityManifest):
     id: UUID
     installation_id: UUID
     created_at: datetime
+    cost_control: "CapabilityCostControlRead | None" = None
+
+
+class CapabilityCostControlRead(BaseModel):
+    model_config = schema_config
+    controls_enabled: bool
+    classification: Literal["unclassified", "unmetered", "ai"]
+    cost_units: int | None
+    executable: bool
+    reason: (
+        Literal["ai_policy_unconfigured", "ai_not_entitled", "ai_quota_exhausted"]
+        | None
+    )
 
 
 class InstallationRead(BaseModel):

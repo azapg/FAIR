@@ -9,21 +9,40 @@ import { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
 import { AuthPageShell } from '@/components/auth/auth-page-shell'
 import { ArrowLeft, ExternalLink, Mail } from 'lucide-react'
+import { useSystemConfig } from '@/hooks/use-system-config'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
   const { register, loading } = useAuth()
   const { t } = useTranslation()
+  const systemConfig = useSystemConfig()
   const [name, setName] = React.useState('')
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [verificationRequired, setVerificationRequired] = React.useState(false)
   const [verificationMessage, setVerificationMessage] = React.useState('')
+  const [inviteToken, setInviteToken] = React.useState('')
+
+  React.useEffect(() => {
+    const fragment = new URLSearchParams(window.location.hash.slice(1))
+    const token = fragment.get('invite')
+    if (!token) return
+    setInviteToken(token)
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
+  }, [])
+
+  const registrationMode = systemConfig.data?.registration.mode ?? 'open'
+  const invitationRequired = registrationMode === 'invite_only'
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     try {
-      const result = await register({ name, email, password })
+      const result = await register({
+        name,
+        email,
+        password,
+        inviteToken: inviteToken || undefined,
+      })
       if (result.verificationRequired) {
         setVerificationRequired(true)
         setVerificationMessage(result.detail ?? t('auth.verifyRegistrationDescription'))
@@ -96,7 +115,11 @@ export default function RegisterPage() {
           <div className="flex flex-col items-center gap-1 text-center">
             <h1 className="text-2xl font-bold">{t('auth.welcome')}</h1>
             <p className="text-sm text-balance text-muted-foreground">
-              {t('auth.createYourAccount')}
+              {registrationMode === 'allowlist'
+                ? t('auth.approvedEmailRegistration')
+                : invitationRequired
+                  ? t('auth.invitationRegistration')
+                  : t('auth.createYourAccount')}
             </p>
           </div>
           <Field>
@@ -138,8 +161,23 @@ export default function RegisterPage() {
               disabled={loading}
             />
           </Field>
+          {invitationRequired && (
+            <Field>
+              <FieldLabel htmlFor="invite-token">{t('auth.invitationCode')}</FieldLabel>
+              <Input
+                id="invite-token"
+                type="password"
+                autoComplete="off"
+                value={inviteToken}
+                onChange={(event) => setInviteToken(event.target.value)}
+                required
+                disabled={loading}
+              />
+              <FieldDescription>{t('auth.invitationCodeHint')}</FieldDescription>
+            </Field>
+          )}
           <Field>
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button type="submit" disabled={loading || (invitationRequired && !inviteToken)} className="w-full">
               {loading ? t('common.wait') : t('auth.createAccount')}
             </Button>
           </Field>

@@ -33,6 +33,13 @@ export type CapabilityDefinition = {
   supportsStreaming: boolean;
   supportsCancellation: boolean;
   supportsResume: boolean;
+  costControl?: {
+    controlsEnabled: boolean;
+    classification: "unclassified" | "unmetered" | "ai";
+    costUnits: number | null;
+    executable: boolean;
+    reason: "ai_policy_unconfigured" | "ai_not_entitled" | "ai_quota_exhausted" | null;
+  } | null;
 };
 
 export type CreateExtensionInput = {

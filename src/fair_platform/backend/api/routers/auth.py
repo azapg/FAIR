@@ -2,17 +2,19 @@ import os
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
-from fair_platform.backend.api.schema.user import AuthUserRead, UserCreate
+from fair_platform.backend.api.schema.user import AuthUserRead, RegistrationRequest
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 import bcrypt
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
 from fair_platform.backend.data.models.user import UserRole
+from fair_platform.backend.data.models.user import normalize_email_address
 from fair_platform.backend.core.config import (
     INSECURE_DEFAULT_SECRET_KEY,
     get_base_url,
@@ -23,6 +25,7 @@ from fair_platform.backend.core.config import (
 from fair_platform.backend.core.security.permissions import auth_user_payload
 from fair_platform.backend.api.schema.casing import to_camel_keys
 from fair_platform.backend.services.mailer import Mailer, get_mailer
+from fair_platform.backend.services.access_control import authorize_registration
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -245,28 +248,47 @@ def get_current_user(
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
-    user_in: UserCreate,
+    user_in: RegistrationRequest,
     response: Response,
     db: Session = Depends(session_dependency),
     mailer: Mailer = Depends(get_mailer),
 ):
     """Register a new user with password hashing"""
-    existing = db.query(User).filter(User.email == user_in.email).first()
+    normalized_email = normalize_email_address(str(user_in.email))
+    existing = db.query(User).filter(User.normalized_email == normalized_email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    invitation = authorize_registration(
+        db,
+        normalized_email=normalized_email,
+        invite_token=user_in.invite_token,
+    )
     password_hash = hash_password(user_in.password)
 
     user = User(
         id=uuid4(),
         name=user_in.name,
         email=user_in.email,
+        normalized_email=normalized_email,
         role=UserRole.user.value,
         password_hash=password_hash,
         is_verified=not get_email_enabled(),
     )
     db.add(user)
-    db.commit()
+    try:
+        # Insert the user before updating the invitation's foreign key. This
+        # keeps SQLite and PostgreSQL ordering identical without weakening the
+        # single registration transaction.
+        db.flush()
+        if invitation is not None:
+            invitation.redeemed_at = datetime.now(timezone.utc)
+            invitation.redeemed_by_user_id = user.id
+            db.add(invitation)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Email already registered") from exc
     db.refresh(user)
 
     if get_email_enabled() and not user.is_verified:
@@ -305,7 +327,11 @@ def login(
     db: Session = Depends(session_dependency),
 ):
     """Login endpoint with proper password verification"""
-    user = db.query(User).filter(User.email == form_data.username).first()
+    try:
+        normalized_email = normalize_email_address(form_data.username)
+    except ValueError:
+        normalized_email = ""
+    user = db.query(User).filter(User.normalized_email == normalized_email).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -357,7 +383,8 @@ async def forgot_password(
             detail=EMAIL_DISABLED_MESSAGE,
         )
 
-    user = db.query(User).filter(User.email == payload.email).first()
+    normalized_email = normalize_email_address(str(payload.email))
+    user = db.query(User).filter(User.normalized_email == normalized_email).first()
     if user:
         reset_token = _create_action_token(
             user=user,
@@ -412,7 +439,8 @@ async def resend_verification_request(
             detail=EMAIL_DISABLED_MESSAGE,
         )
 
-    user = db.query(User).filter(User.email == payload.email).first()
+    normalized_email = normalize_email_address(str(payload.email))
+    user = db.query(User).filter(User.normalized_email == normalized_email).first()
     if user and not user.is_verified:
         verification_token = _create_action_token(
             user=user,
