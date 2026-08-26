@@ -4,6 +4,7 @@ import { cva, VariantProps } from "class-variance-authority";
 import { PanelLeftIcon, PanelRightIcon } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSidebarSwipe } from "@/hooks/use-sidebar-swipe";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,6 +205,13 @@ function SidebarProvider({
     storageKey: `${cookieName}_width`,
   });
 
+  useSidebarSwipe({
+    side: "left",
+    open: openMobile,
+    onOpenChange: setOpenMobile,
+    enabled: isMobile,
+  });
+
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen);
@@ -353,6 +361,13 @@ function FlowSidebarProvider({
     maxWidth,
     resizable,
     storageKey: `${cookieName}_width`,
+  });
+
+  useSidebarSwipe({
+    side: "right",
+    open: openMobile,
+    onOpenChange: setOpenMobile,
+    enabled: isMobile,
   });
 
   // This is the internal state of the sidebar.
