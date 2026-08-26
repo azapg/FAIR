@@ -163,9 +163,24 @@
 
 @layer base {
     html {
-        /* Set root font size to scale up all text, spacing, and icons (relative to rem) */
-        /* Browser default is 16px (100%). 106.25% makes 1rem = 17px. */
-        font-size: 106.25%;
+        /*
+         * Root font size scales all text, spacing, and icons (Tailwind utilities are rem-based).
+         * Browser default is 16px (100%). Mobile keeps 106.25% (1rem = 17px);
+         * desktop defaults to 125% to match Chrome's 125% zoom.
+         * The "ui-scale-compact" class (set via Preferences) opts down to 100%.
+         */
+        --ui-scale: 106.25%;
+        font-size: var(--ui-scale);
+    }
+
+    @media (min-width: 768px) {
+        html {
+            --ui-scale: 125%;
+        }
+    }
+
+    html.ui-scale-compact {
+        --ui-scale: 100%;
     }
 
     * {

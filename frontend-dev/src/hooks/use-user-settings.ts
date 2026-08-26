@@ -156,6 +156,7 @@ const normalizeFallbackSettings = (
         devMode: false,
         theme: "system",
         language: "en",
+        uiScale: "default",
       },
     },
     baseSettings,
