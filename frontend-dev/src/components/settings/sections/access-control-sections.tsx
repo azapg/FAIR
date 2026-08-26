@@ -57,6 +57,7 @@ export function AdmissionSection() {
   const [ruleKind, setRuleKind] = React.useState<"email" | "domain">("domain");
   const [ruleValue, setRuleValue] = React.useState("");
   const [inviteEmail, setInviteEmail] = React.useState("");
+  const [inviteExpiryDays, setInviteExpiryDays] = React.useState("7");
   const [lastInviteUrl, setLastInviteUrl] = React.useState<string | null>(null);
 
   const mode = policy.data?.effectiveAdmissionMode ?? "open";
@@ -154,7 +155,7 @@ export function AdmissionSection() {
           onSubmit={(event) => {
             event.preventDefault();
             createInvite.mutate(
-              { email: inviteEmail, expiresInDays: 7 },
+              { email: inviteEmail, expiresInDays: Number(inviteExpiryDays) },
               {
                 onSuccess: (created) => {
                   setInviteEmail("");
@@ -172,6 +173,19 @@ export function AdmissionSection() {
             placeholder="person@example.edu"
             required
           />
+          <Select
+            value={inviteExpiryDays}
+            onValueChange={setInviteExpiryDays}
+          >
+            <SelectTrigger className="sm:w-36" aria-label={t("settings.access.inviteExpiry")}><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[1, 3, 7, 14, 30, 90].map((days) => (
+                <SelectItem key={days} value={String(days)}>
+                  {t("settings.access.inviteExpiresIn", { count: days })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button type="submit" disabled={createInvite.isPending}>{t("settings.access.createInvite")}</Button>
         </form>
         {lastInviteUrl && (

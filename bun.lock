@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "fair-platform-workspace",
@@ -65,5 +66,7 @@
     "undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
     "zod": ["zod@4.4.3", "", {}, "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ=="],
+
+    "@fair/extension-core/@fair/sdk": ["@fair/sdk@file:sdk/typescript", { "devDependencies": { "@types/node": "^22.10.0", "ai": "^7.0.31", "typescript": "^5.7.0" }, "peerDependencies": { "ai": ">=6" }, "optionalPeers": ["ai"] }],
   }
 }
