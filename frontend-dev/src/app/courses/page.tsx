@@ -1,5 +1,5 @@
 import {Button} from "@/components/ui/button";
-import {Plus} from "lucide-react";
+import {LogIn, Plus} from "lucide-react";
 import {useNavigate} from "react-router-dom";
 import {FormEvent, useState} from "react";
 import {useCourses, useCreateCourse, useDeleteCourse, Course, useJoinCourseByCode} from "@/hooks/use-courses";
@@ -7,6 +7,13 @@ import {useAuth} from "@/contexts/auth-context";
 import CourseGrid from "@/app/courses/components/course-grid";
 import CourseFormDialog from "@/app/courses/components/course-form-dialog";
 import { PageHeader } from "@/components/page-header";
+import { FloatingNav, FloatingActionButton } from "@/components/floating-nav";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {useTranslation} from "react-i18next";
 import {Dialog, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
 import {ResponsiveDialogContent} from "@/components/ui/responsive-dialog";
@@ -83,7 +90,7 @@ export default function CoursesPage() {
   };
 
   return (
-    <main className="flex flex-col justify-center">
+    <main className="flex flex-col justify-center pb-24 md:pb-0">
       <PageHeader
         title={t("courses.yourCourses")}
         actions={
@@ -133,6 +140,37 @@ export default function CoursesPage() {
           ) : undefined}
         />
       </div>
+
+      <FloatingNav
+        items={[]}
+        value=""
+        onValueChange={() => {}}
+        action={
+          (canCreateCourses || canJoinCourses) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <FloatingActionButton aria-label={t("common.add")}>
+                  <Plus className="size-5" />
+                </FloatingActionButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" className="mb-2">
+                {canJoinCourses && (
+                  <DropdownMenuItem onClick={() => setJoinOpen(true)}>
+                    <LogIn />
+                    {t("courses.joinCourse")}
+                  </DropdownMenuItem>
+                )}
+                {canCreateCourses && (
+                  <DropdownMenuItem onClick={() => openCreateDialog()}>
+                    <Plus />
+                    {t("courses.createCourse")}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
+        }
+      />
 
       <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
         <ResponsiveDialogContent>

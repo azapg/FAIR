@@ -22,7 +22,9 @@ import {CourseContentTab} from "@/app/courses/tabs/content/course-content-tab";
 import {StudentGradesTab} from "@/app/courses/tabs/student-grades-tab";
 import {AuthUserRole} from "@/contexts/auth-context";
 import { CourseCopyDialog } from "@/app/courses/components/course-copy-dialog";
-type CourseTab = "stream" | "content" | "assignments" | "grades" | "gradebook" | "participants" | "runs" | "artifacts" | "flows" | "capabilities";
+import { FloatingNav, type FloatingNavItem } from "@/components/floating-nav";
+import { GraduationCap, History, Package, Users } from "lucide-react";
+type CourseTab = "timeline" | "stream" | "content" | "assignments" | "grades" | "gradebook" | "participants" | "runs" | "artifacts" | "flows" | "capabilities";
 
 export default function CourseDetailPage() {
   const params = useParams<{ courseId: string, tab: string }>()
@@ -52,8 +54,8 @@ export default function CourseDetailPage() {
     );
     const isLearnerView = !isInstructorView && user?.role === AuthUserRole.USER && !hasActiveStaffCourse;
     const visibleTabs: CourseTab[] = isInstructorView
-      ? ["stream", "content", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
-      : ["stream", "content", "assignments", ...(isLearnerView ? ["grades" as CourseTab] : []), "artifacts"];
+      ? ["timeline", "stream", "content", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
+      : ["timeline", "stream", "content", "assignments", ...(isLearnerView ? ["grades" as CourseTab] : []), "artifacts"];
     if (!tab || !visibleTabs.includes(tab as CourseTab)) {
       navigate(`assignments`);
     }
@@ -74,8 +76,8 @@ export default function CourseDetailPage() {
   const isInstructorView = isCourseOwner || isCourseAdmin || isCourseAssistant;
   const isLearnerView = !isInstructorView && user?.role === AuthUserRole.USER && !hasActiveStaffCourse;
   const visibleTabs: CourseTab[] = isInstructorView
-    ? ["stream", "content", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
-    : ["stream", "content", "assignments", ...(isLearnerView ? ["grades" as CourseTab] : []), "artifacts"];
+    ? ["timeline", "stream", "content", "assignments", "gradebook", "participants", "runs", "artifacts", "flows", "capabilities"]
+    : ["timeline", "stream", "content", "assignments", ...(isLearnerView ? ["grades" as CourseTab] : []), "artifacts"];
   const currentTab = (tab && visibleTabs.includes(tab as CourseTab) ? tab : "assignments") as CourseTab;
 
   const showEnrollmentControls =
@@ -104,7 +106,7 @@ export default function CourseDetailPage() {
   const assignments = assignmentsList ?? courseAssignments ?? [];
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col pb-24 md:pb-0">
       <PageHeader
         title={course.name}
         description={course.description}
@@ -130,7 +132,7 @@ export default function CourseDetailPage() {
         navigate(`${basePath}/${val}`, {replace: true});
       }}>
         <ScrollArea className={"w-full border-b"}>
-          <TabsList className={"px-6 sm:px-8 w-full"}>
+          <TabsList className={"hidden w-full px-6 sm:px-8 md:flex"}>
             <TabsTrigger value="stream">Stream</TabsTrigger>
             <TabsTrigger value="content">Content</TabsTrigger>
             <TabsTrigger value="assignments">{t("tabs.assignments")}</TabsTrigger>
@@ -144,6 +146,27 @@ export default function CourseDetailPage() {
           </TabsList>
           <ScrollBar orientation="horizontal" className={"hidden"}/>
         </ScrollArea>
+        <TabsContent value={"timeline"} className={"px-6 sm:px-8 py-3"}>
+          <div className="space-y-8">
+            <section>
+              <h2 className="mb-3 text-lg font-semibold">Stream</h2>
+              <StreamTab courseId={courseId as string} canPost={isInstructorView}/>
+            </section>
+            <section>
+              <h2 className="mb-3 text-lg font-semibold">Content</h2>
+              <CourseContentTab
+                courseId={courseId as string}
+                canManage={isInstructorView}
+                isArchived={course.isArchived}
+                assignments={assignments}
+              />
+            </section>
+            <section>
+              <h2 className="mb-3 text-lg font-semibold">{t("tabs.assignments")}</h2>
+              <AssignmentsTab assignments={assignments} courseId={courseId} canManageAssignments={isInstructorView}/>
+            </section>
+          </div>
+        </TabsContent>
         <TabsContent value={"assignments"} className={"px-6 sm:px-8 py-3"}>
           <AssignmentsTab assignments={assignments} courseId={courseId} canManageAssignments={isInstructorView}/>
         </TabsContent>
@@ -167,7 +190,7 @@ export default function CourseDetailPage() {
           </TabsContent>
         )}
         {isLearnerView && (
-          <TabsContent value={"grades"} className={"px-4 sm:px-6 sm:px-8"}>
+          <TabsContent value={"grades"} className={"px-6 sm:px-8"}>
             <StudentGradesTab courseId={courseId as string} enabled={currentTab === 'grades'}/>
           </TabsContent>
         )}
@@ -196,6 +219,25 @@ export default function CourseDetailPage() {
           </TabsContent>
         )}
       </Tabs>
+      <FloatingNav
+        value={currentTab}
+        onValueChange={(val: string) => {
+          if (!courseId) return;
+          navigate(`${basePath}/${val}`, {replace: true});
+        }}
+        items={
+          [
+            { value: "timeline", label: "Timeline", icon: History },
+            { value: "artifacts", label: t("tabs.artifacts"), icon: Package },
+            ...(isInstructorView
+              ? [
+                  { value: "gradebook", label: "Gradebook", icon: GraduationCap },
+                  { value: "participants", label: t("tabs.participants"), icon: Users },
+                ]
+              : []),
+          ] satisfies FloatingNavItem[]
+        }
+      />
     </div>
   );
 }
