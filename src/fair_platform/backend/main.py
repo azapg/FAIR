@@ -1,10 +1,10 @@
 import importlib.resources
 import os
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
@@ -21,7 +21,9 @@ from fair_platform.backend.api.routers.auth import router as auth_router
 from fair_platform.backend.api.routers.version import router as version_router
 from fair_platform.backend.api.routers.rubrics import router as rubrics_router
 from fair_platform.backend.api.routers.enrollments import router as enrollments_router
-from fair_platform.backend.api.routers.extensions import router as extension_resources_router
+from fair_platform.backend.api.routers.extensions import (
+    router as extension_resources_router,
+)
 from fair_platform.backend.api.routers.system import router as system_router
 from fair_platform.backend.api.routers.executions import router as executions_router
 from fair_platform.backend.api.routers.artifacts import router as artifacts_router
@@ -36,12 +38,18 @@ from fair_platform.backend.api.routers.student_dashboard import (
 )
 from fair_platform.backend.api.routers.quizzes import router as quizzes_router
 from fair_platform.backend.api.routers.course_copy import router as course_copy_router
+from fair_platform.backend.api.routers.admin_access import (
+    router as admin_access_router,
+    self_router as ai_access_router,
+)
+from fair_platform.backend.services.access_control import AccessPolicyError
 from fair_platform.backend.services.execution_outbox_dispatcher import (
     ExecutionOutboxDispatcher,
 )
 from fair_platform.backend.data.database import SessionLocal
 
 logger = logging.getLogger(__name__)
+
 
 def _is_auto_migrate_enabled() -> bool:
     raw = os.getenv("FAIR_AUTO_MIGRATE", "1").strip().lower()
@@ -69,10 +77,14 @@ def _configured_cors_origins() -> list[str]:
 def _is_execution_dispatcher_enabled() -> bool:
     if os.getenv("PYTEST_CURRENT_TEST"):
         return False
-    raw = os.getenv(
-        "FAIR_ENABLE_EXECUTION_DISPATCHER",
-        "1",
-    ).strip().lower()
+    raw = (
+        os.getenv(
+            "FAIR_ENABLE_EXECUTION_DISPATCHER",
+            "1",
+        )
+        .strip()
+        .lower()
+    )
     return raw in {"1", "true", "yes", "on"}
 
 
@@ -121,6 +133,15 @@ app.add_middleware(
 )
 app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
 
+
+@app.exception_handler(AccessPolicyError)
+async def access_policy_error_handler(_request: Request, exc: AccessPolicyError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "code": exc.code, **exc.extra},
+    )
+
+
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
 app.include_router(assignments_router, prefix="/api/assignments", tags=["assignments"])
@@ -130,15 +151,15 @@ app.include_router(version_router, prefix="/api", tags=["version"])
 app.include_router(rubrics_router, prefix="/api/rubrics", tags=["rubrics"])
 app.include_router(enrollments_router, prefix="/api/enrollments", tags=["enrollments"])
 app.include_router(lms_router, prefix="/api/lms", tags=["lms"])
-app.include_router(
-    course_content_router, prefix="/api/lms", tags=["course-content"]
-)
+app.include_router(course_content_router, prefix="/api/lms", tags=["course-content"])
 app.include_router(gradebook_router, prefix="/api/lms", tags=["gradebook"])
 app.include_router(
     student_dashboard_router, prefix="/api/lms", tags=["student-dashboard"]
 )
 app.include_router(quizzes_router, prefix="/api/lms", tags=["quizzes"])
 app.include_router(course_copy_router, prefix="/api/lms", tags=["course-copy"])
+app.include_router(admin_access_router, prefix="/api/v1/admin", tags=["admin"])
+app.include_router(ai_access_router, prefix="/api/v1/ai", tags=["ai-access"])
 app.include_router(system_router, prefix="/api/v1/system", tags=["system"])
 app.include_router(executions_router, prefix="/api/v1", tags=["executions"])
 app.include_router(artifacts_router, prefix="/api/v1", tags=["artifacts"])

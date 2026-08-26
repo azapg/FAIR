@@ -31,7 +31,9 @@ def create_email_template_environment() -> Environment:
     template_dir = _resolve_email_templates_dir()
     return Environment(
         loader=FileSystemLoader(template_dir),
-        autoescape=select_autoescape(default_for_string=True, enabled_extensions=("html", "xml")),
+        autoescape=select_autoescape(
+            default_for_string=True, enabled_extensions=("html", "xml")
+        ),
     )
 
 
@@ -55,6 +57,15 @@ class Mailer:
         await self.provider.send_email(
             to=str(user.email),
             subject="Verify your FAIR account",
+            html_content=html_content,
+        )
+
+    async def send_invitation(self, email: str, invite_url: str) -> None:
+        template = self.template_env.get_template("invite.html")
+        html_content = template.render(invite_url=invite_url)
+        await self.provider.send_email(
+            to=email,
+            subject="Your FAIR registration invitation",
             html_content=html_content,
         )
 

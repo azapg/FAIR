@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from alembic import command
+from alembic.script import ScriptDirectory
 from sqlalchemy import UUID as SAUUID
 from sqlalchemy import MetaData, create_engine, inspect, select
 
@@ -18,7 +19,6 @@ from fair_platform.backend.data.migrations import (
 
 A3_REVISION = "20260812_0031"
 A4_REVISION = "20260812_0032"
-A8_REVISION = "20260812_0034"
 QUIZ_TABLES = {
     "question_banks",
     "questions",
@@ -38,6 +38,11 @@ def _revision(path: Path) -> str:
         ).fetchone()
     assert row is not None
     return row[0]
+
+
+def _alembic_head() -> str:
+    script = ScriptDirectory.from_config(build_alembic_config("sqlite:///:memory:"))
+    return script.get_current_head()
 
 
 def test_quiz_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -> None:
@@ -74,7 +79,7 @@ def test_quiz_migration_upgrades_downgrades_and_reupgrades(tmp_path: Path) -> No
     engine.dispose()
 
     run_migrations_to_head(database_url)
-    assert _revision(path) == A8_REVISION
+    assert _revision(path) == _alembic_head()
     engine = create_engine(database_url)
     schema = inspect(engine)
     assert "course_templates" in schema.get_table_names()
@@ -356,7 +361,7 @@ def test_populated_quiz_downgrade_removes_only_a4_generic_projections(
     engine.dispose()
 
     run_migrations_to_head(database_url)
-    assert _revision(path) == A8_REVISION
+    assert _revision(path) == _alembic_head()
 
 
 def test_quiz_migration_is_explicit_and_stacked_on_gradebook() -> None:

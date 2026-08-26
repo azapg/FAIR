@@ -200,6 +200,14 @@ def create_execution(
     execution.submissions = submissions
     session.add(execution)
     session.flush()
+    from fair_platform.backend.services.access_control import reserve_execution_credits
+
+    reserve_execution_credits(
+        session,
+        execution_id=execution.id,
+        user_id=execution.initiated_by_user_id,
+        capability_definition_id=execution.capability_definition_id,
+    )
     if lineage_source is not None:
         inherited_artifacts = list(
             session.scalars(

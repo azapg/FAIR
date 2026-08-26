@@ -1,4 +1,16 @@
 from .user import User, UserRole
+from .access_control import (
+    AdmissionMode,
+    AdmissionRule,
+    AdmissionRuleKind,
+    AICapabilityClassification,
+    AICapabilityPolicy,
+    AIEntitlement,
+    AIEntitlementState,
+    AIUsageCharge,
+    PlatformPolicy,
+    RegistrationInvite,
+)
 from .course import Course
 from .assignment import Assignment, AssignmentStatus
 from .enrollment import Enrollment, CourseMembershipRole, EnrollmentStatus
@@ -120,6 +132,16 @@ from .lms_quiz import (
 __all__ = [
     "User",
     "UserRole",
+    "AdmissionMode",
+    "AdmissionRule",
+    "AdmissionRuleKind",
+    "AICapabilityClassification",
+    "AICapabilityPolicy",
+    "AIEntitlement",
+    "AIEntitlementState",
+    "AIUsageCharge",
+    "PlatformPolicy",
+    "RegistrationInvite",
     "Course",
     "Assignment",
     "AssignmentStatus",

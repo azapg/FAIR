@@ -4,6 +4,11 @@ import { AccountSection } from "@/components/settings/sections/account-section";
 import { EmptySectionFromKeys } from "@/components/settings/sections/empty-section";
 import { NotificationsSection } from "@/components/settings/sections/notifications-section";
 import { PreferencesSection } from "@/components/settings/sections/preferences-section";
+import {
+  AdmissionSection,
+  AdminPeopleSection,
+  AIControlsSection,
+} from "@/components/settings/sections/access-control-sections";
 
 export type SettingsCategoryId = "you" | "research" | "admin";
 
@@ -12,7 +17,9 @@ export type SettingsSectionId =
   | "preferences"
   | "notifications"
   | "api-keys"
-  | "admin-people";
+  | "admin-people"
+  | "admin-admission"
+  | "admin-ai";
 
 export type SettingsSectionDefinition = {
   id: SettingsSectionId;
@@ -64,11 +71,20 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     category: "admin",
     titleKey: "settings.sections.adminPeople.title",
     descriptionKey: "settings.sections.adminPeople.description",
-    render: () => (
-      <EmptySectionFromKeys
-        titleKey="settings.sections.adminPeople.title"
-        descriptionKey="settings.sections.adminPeople.description"
-      />
-    ),
+    render: AdminPeopleSection,
+  },
+  {
+    id: "admin-admission",
+    category: "admin",
+    titleKey: "settings.sections.adminAdmission.title",
+    descriptionKey: "settings.sections.adminAdmission.description",
+    render: AdmissionSection,
+  },
+  {
+    id: "admin-ai",
+    category: "admin",
+    titleKey: "settings.sections.adminAi.title",
+    descriptionKey: "settings.sections.adminAi.description",
+    render: AIControlsSection,
   },
 ];

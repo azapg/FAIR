@@ -234,7 +234,10 @@ def test_db_migrate_sqlite_to_postgres_invokes_copy(monkeypatch):
 
     assert result.exit_code == 0
     assert captured["from_sqlite"] == Path("new.db")
-    assert captured["to_postgres"] == "postgresql://postgres:postgres@localhost:55432/postgres"
+    assert (
+        captured["to_postgres"]
+        == "postgresql://postgres:postgres@localhost:55432/postgres"
+    )
     assert captured["on_conflict"] == "skip"
     assert captured["dry_run"] is True
     assert captured["verify"] is True
@@ -286,6 +289,7 @@ class _FakeSession:
     def __init__(self, user):
         self.user = user
         self.committed = False
+        self.added = []
 
     def __enter__(self):
         return self
@@ -296,8 +300,8 @@ class _FakeSession:
     def query(self, _model):
         return _FakeQuery(self.user)
 
-    def add(self, _item):
-        return None
+    def add(self, item):
+        self.added.append(item)
 
     def commit(self):
         self.committed = True
@@ -315,7 +319,9 @@ def test_users_reset_password_updates_hash(monkeypatch):
     fake_session = _FakeSession(fake_user)
 
     monkeypatch.setattr(cli_main, "SessionLocal", lambda: fake_session)
-    monkeypatch.setattr(cli_main, "hash_password", lambda password: f"hashed::{password}")
+    monkeypatch.setattr(
+        cli_main, "hash_password", lambda password: f"hashed::{password}"
+    )
 
     result = runner.invoke(
         cli_main.app,
@@ -326,6 +332,38 @@ def test_users_reset_password_updates_hash(monkeypatch):
     assert fake_user.password_hash == "hashed::new-secret"
     assert fake_session.committed is True
     assert "Password reset for student@test.com" in result.output
+
+
+def test_users_create_admin_bootstraps_verified_account(monkeypatch):
+    runner = CliRunner()
+    fake_session = _FakeSession(None)
+
+    monkeypatch.setattr(cli_main, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(
+        cli_main, "hash_password", lambda password: f"hashed::{password}"
+    )
+
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "users",
+            "create-admin",
+            "ADMIN@EXAMPLE.edu",
+            "--name",
+            "Bootstrap Admin",
+            "--password",
+            "safe-password",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert fake_session.committed is True
+    assert len(fake_session.added) == 1
+    created = fake_session.added[0]
+    assert created.normalized_email == "admin@example.edu"
+    assert created.role == "admin"
+    assert created.is_verified is True
+    assert created.password_hash == "hashed::safe-password"
 
 
 def test_users_reset_password_returns_error_for_unknown_email(monkeypatch):

@@ -18,7 +18,7 @@ export type AuthUser = {
 }
 
 type LoginInput = { username: string; password: string; remember_me?: boolean }
-type RegisterInput = { name: string; email: string; password: string }
+type RegisterInput = { name: string; email: string; password: string; inviteToken?: string }
 export type RegisterResult = {
   verificationRequired: boolean
   detail?: string

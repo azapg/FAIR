@@ -1491,7 +1491,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UserCreate"
+                "$ref": "#/components/schemas/RegistrationRequest"
               }
             }
           },
@@ -5288,6 +5288,582 @@
         }
       }
     },
+    "/api/v1/admin/platform-policy": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Read Policy",
+        "operationId": "read_policy_api_v1_admin_platform_policy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformPolicyRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Policy",
+        "operationId": "update_policy_api_v1_admin_platform_policy_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformPolicyUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformPolicyRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/admission-rules": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Admission Rules",
+        "operationId": "list_admission_rules_api_v1_admin_admission_rules_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdmissionRuleRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Admission Rules Api V1 Admin Admission Rules Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Admission Rule",
+        "operationId": "create_admission_rule_api_v1_admin_admission_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdmissionRuleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdmissionRuleRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/admission-rules/{rule_id}": {
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete Admission Rule",
+        "operationId": "delete_admission_rule_api_v1_admin_admission_rules__rule_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "rule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Rule Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/invites": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Invites",
+        "operationId": "list_invites_api_v1_admin_invites_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InviteRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Invites Api V1 Admin Invites Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Invite",
+        "operationId": "create_invite_api_v1_admin_invites_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteSecretRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/invites/{invite_id}/revoke": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Revoke Invite",
+        "operationId": "revoke_invite_api_v1_admin_invites__invite_id__revoke_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "invite_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Invite Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/capability-cost-policies": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Capability Cost Policies",
+        "operationId": "list_capability_cost_policies_api_v1_admin_capability_cost_policies_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CapabilityCostPolicyRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Capability Cost Policies Api V1 Admin Capability Cost Policies Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/capability-cost-policies/{capability_id}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Put Capability Cost Policy",
+        "operationId": "put_capability_cost_policy_api_v1_admin_capability_cost_policies__capability_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "capability_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Capability Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CapabilityCostPolicyUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityCostPolicyRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ai-entitlements": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Ai Entitlements",
+        "operationId": "list_ai_entitlements_api_v1_admin_ai_entitlements_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AIEntitlementRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Ai Entitlements Api V1 Admin Ai Entitlements Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/ai-entitlement": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Put Ai Entitlement",
+        "operationId": "put_ai_entitlement_api_v1_admin_users__user_id__ai_entitlement_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIEntitlementUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIEntitlementRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ai-usage": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Read Ai Usage",
+        "operationId": "read_ai_usage_api_v1_admin_ai_usage_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIUsageRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/entitlement": {
+      "get": {
+        "tags": [
+          "ai-access"
+        ],
+        "summary": "Read My Ai Entitlement",
+        "operationId": "read_my_ai_entitlement_api_v1_ai_entitlement_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfAIEntitlementRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/system/config": {
       "get": {
         "tags": [
@@ -8837,6 +9413,263 @@
   },
   "components": {
     "schemas": {
+      "AIEntitlementRead": {
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          },
+          "userName": {
+            "type": "string",
+            "title": "Username"
+          },
+          "userEmail": {
+            "type": "string",
+            "format": "email",
+            "title": "Useremail"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "limited",
+              "unlimited"
+            ],
+            "title": "State"
+          },
+          "monthlyLimitUnits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthlylimitunits"
+          },
+          "usedUnits": {
+            "type": "integer",
+            "title": "Usedunits"
+          },
+          "remainingUnits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remainingunits"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date",
+            "title": "Periodstart"
+          },
+          "nextResetAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Nextresetat"
+          },
+          "controlsEnabled": {
+            "type": "boolean",
+            "title": "Controlsenabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId",
+          "userName",
+          "userEmail",
+          "state",
+          "monthlyLimitUnits",
+          "usedUnits",
+          "remainingUnits",
+          "periodStart",
+          "nextResetAt",
+          "controlsEnabled"
+        ],
+        "title": "AIEntitlementRead"
+      },
+      "AIEntitlementUpdate": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "limited",
+              "unlimited"
+            ],
+            "title": "State"
+          },
+          "monthlyLimitUnits": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000000000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthlylimitunits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "title": "AIEntitlementUpdate"
+      },
+      "AIUsageChargeRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "executionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Executionid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          },
+          "userEmail": {
+            "type": "string",
+            "format": "email",
+            "title": "Useremail"
+          },
+          "capabilityDefinitionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Capabilitydefinitionid"
+          },
+          "capabilityId": {
+            "type": "string",
+            "title": "Capabilityid"
+          },
+          "units": {
+            "type": "integer",
+            "title": "Units"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date",
+            "title": "Periodstart"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "executionId",
+          "userId",
+          "userEmail",
+          "capabilityDefinitionId",
+          "capabilityId",
+          "units",
+          "periodStart",
+          "createdAt"
+        ],
+        "title": "AIUsageChargeRead"
+      },
+      "AIUsageRead": {
+        "properties": {
+          "periodStart": {
+            "type": "string",
+            "format": "date",
+            "title": "Periodstart"
+          },
+          "totalUnits": {
+            "type": "integer",
+            "title": "Totalunits"
+          },
+          "charges": {
+            "items": {
+              "$ref": "#/components/schemas/AIUsageChargeRead"
+            },
+            "type": "array",
+            "title": "Charges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "periodStart",
+          "totalUnits",
+          "charges"
+        ],
+        "title": "AIUsageRead"
+      },
+      "AdmissionRuleCreate": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "email",
+              "domain"
+            ],
+            "title": "Kind"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "AdmissionRuleCreate"
+      },
+      "AdmissionRuleRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "email",
+              "domain"
+            ],
+            "title": "Kind"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "value",
+          "createdAt"
+        ],
+        "title": "AdmissionRuleRead"
+      },
       "ArtifactCreate": {
         "properties": {
           "title": {
@@ -10391,6 +11224,168 @@
         ],
         "title": "Body_upload_artifacts_api_v1_artifacts_uploads_post"
       },
+      "CapabilityCostControlRead": {
+        "properties": {
+          "controlsEnabled": {
+            "type": "boolean",
+            "title": "Controlsenabled"
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "unclassified",
+              "unmetered",
+              "ai"
+            ],
+            "title": "Classification"
+          },
+          "costUnits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Costunits"
+          },
+          "executable": {
+            "type": "boolean",
+            "title": "Executable"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ai_policy_unconfigured",
+                  "ai_not_entitled",
+                  "ai_quota_exhausted"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "controlsEnabled",
+          "classification",
+          "costUnits",
+          "executable",
+          "reason"
+        ],
+        "title": "CapabilityCostControlRead"
+      },
+      "CapabilityCostPolicyRead": {
+        "properties": {
+          "capabilityDefinitionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Capabilitydefinitionid"
+          },
+          "capabilityId": {
+            "type": "string",
+            "title": "Capabilityid"
+          },
+          "displayName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displayname"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "surface": {
+            "type": "string",
+            "title": "Surface"
+          },
+          "extensionId": {
+            "type": "string",
+            "title": "Extensionid"
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "unclassified",
+              "unmetered",
+              "ai"
+            ],
+            "title": "Classification"
+          },
+          "costUnits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Costunits"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "capabilityDefinitionId",
+          "capabilityId",
+          "displayName",
+          "version",
+          "surface",
+          "extensionId",
+          "classification",
+          "costUnits",
+          "updatedAt"
+        ],
+        "title": "CapabilityCostPolicyRead"
+      },
+      "CapabilityCostPolicyUpdate": {
+        "properties": {
+          "classification": {
+            "type": "string",
+            "enum": [
+              "unmetered",
+              "ai"
+            ],
+            "title": "Classification"
+          },
+          "costUnits": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Costunits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "classification",
+          "costUnits"
+        ],
+        "title": "CapabilityCostPolicyUpdate"
+      },
       "CapabilityManifest": {
         "properties": {
           "capabilityId": {
@@ -10635,6 +11630,16 @@
             "type": "string",
             "format": "date-time",
             "title": "Createdat"
+          },
+          "costControl": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CapabilityCostControlRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -15028,6 +16033,163 @@
         "type": "object",
         "title": "InteractionResolve"
       },
+      "InviteCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "expiresInDays": {
+            "type": "integer",
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Expiresindays",
+            "default": 7
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "InviteCreate"
+      },
+      "InviteRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expiresat"
+          },
+          "redeemedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redeemedat"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedat"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "expiresAt",
+          "redeemedAt",
+          "revokedAt",
+          "createdAt",
+          "active"
+        ],
+        "title": "InviteRead"
+      },
+      "InviteSecretRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expiresat"
+          },
+          "redeemedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redeemedat"
+          },
+          "revokedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokedat"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "registrationUrl": {
+            "type": "string",
+            "title": "Registrationurl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "expiresAt",
+          "redeemedAt",
+          "revokedAt",
+          "createdAt",
+          "active",
+          "token",
+          "registrationUrl"
+        ],
+        "title": "InviteSecretRead"
+      },
       "JsonSchemaDocument": {
         "properties": {
           "$schema": {
@@ -15181,6 +16343,118 @@
           "createdAt"
         ],
         "title": "NotificationRead"
+      },
+      "PlatformPolicyRead": {
+        "properties": {
+          "storedAdmissionMode": {
+            "type": "string",
+            "enum": [
+              "open",
+              "allowlist",
+              "invite_only"
+            ],
+            "title": "Storedadmissionmode"
+          },
+          "effectiveAdmissionMode": {
+            "type": "string",
+            "enum": [
+              "open",
+              "allowlist",
+              "invite_only"
+            ],
+            "title": "Effectiveadmissionmode"
+          },
+          "admissionSource": {
+            "type": "string",
+            "enum": [
+              "database",
+              "environment"
+            ],
+            "title": "Admissionsource"
+          },
+          "admissionLocked": {
+            "type": "boolean",
+            "title": "Admissionlocked"
+          },
+          "storedAiControlsEnabled": {
+            "type": "boolean",
+            "title": "Storedaicontrolsenabled"
+          },
+          "effectiveAiControlsEnabled": {
+            "type": "boolean",
+            "title": "Effectiveaicontrolsenabled"
+          },
+          "aiControlsSource": {
+            "type": "string",
+            "enum": [
+              "database",
+              "environment"
+            ],
+            "title": "Aicontrolssource"
+          },
+          "aiControlsLocked": {
+            "type": "boolean",
+            "title": "Aicontrolslocked"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "storedAdmissionMode",
+          "effectiveAdmissionMode",
+          "admissionSource",
+          "admissionLocked",
+          "storedAiControlsEnabled",
+          "effectiveAiControlsEnabled",
+          "aiControlsSource",
+          "aiControlsLocked",
+          "updatedAt"
+        ],
+        "title": "PlatformPolicyRead"
+      },
+      "PlatformPolicyUpdate": {
+        "properties": {
+          "admissionMode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "allowlist",
+                  "invite_only"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admissionmode"
+          },
+          "aiControlsEnabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aicontrolsenabled"
+          }
+        },
+        "type": "object",
+        "title": "PlatformPolicyUpdate"
       },
       "PointsGrade": {
         "properties": {
@@ -16041,6 +17315,46 @@
         ],
         "title": "QuizStatus"
       },
+      "RegistrationRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          },
+          "inviteToken": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitetoken"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password"
+        ],
+        "title": "RegistrationRequest"
+      },
       "ResendVerificationRequest": {
         "properties": {
           "email": {
@@ -16249,6 +17563,70 @@
           "leaseId"
         ],
         "title": "RunnerCommandAck"
+      },
+      "SelfAIEntitlementRead": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "limited",
+              "unlimited"
+            ],
+            "title": "State"
+          },
+          "monthlyLimitUnits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthlylimitunits"
+          },
+          "usedUnits": {
+            "type": "integer",
+            "title": "Usedunits"
+          },
+          "remainingUnits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remainingunits"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date",
+            "title": "Periodstart"
+          },
+          "nextResetAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Nextresetat"
+          },
+          "controlsEnabled": {
+            "type": "boolean",
+            "title": "Controlsenabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "monthlyLimitUnits",
+          "usedUnits",
+          "remainingUnits",
+          "periodStart",
+          "nextResetAt",
+          "controlsEnabled"
+        ],
+        "title": "SelfAIEntitlementRead"
       },
       "StudentCourseActivity": {
         "properties": {
@@ -17592,39 +18970,6 @@
           "userMessageId"
         ],
         "title": "TurnRead"
-      },
-      "UserCreate": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "title": "Email"
-          },
-          "role": {
-            "$ref": "#/components/schemas/UserRole",
-            "default": "user"
-          },
-          "isVerified": {
-            "type": "boolean",
-            "title": "Isverified",
-            "default": false
-          },
-          "password": {
-            "type": "string",
-            "title": "Password"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "email",
-          "password"
-        ],
-        "title": "UserCreate"
       },
       "UserRead": {
         "properties": {
