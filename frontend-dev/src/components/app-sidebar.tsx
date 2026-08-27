@@ -39,6 +39,7 @@ import {
   ListTodo,
   LayoutDashboard,
 } from "lucide-react";
+import { Menu02Icon } from "hugeicons-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -370,7 +371,18 @@ export function AppSidebar({
         <SidebarHeader className="pb-0 pt-4">
           <SidebarMenu>
             <SidebarMenuItem>
-              <Link to="/" aria-label={displayTitle}>
+              <Link
+                to="/"
+                aria-label={state === "collapsed" ? "Open sidebar" : displayTitle}
+                title={state === "collapsed" ? "Open sidebar" : displayTitle}
+                className="group/brand"
+                onClick={(event) => {
+                  if (state === "collapsed") {
+                    event.preventDefault();
+                    setOpen(true);
+                  }
+                }}
+              >
                 <div className="flex items-center justify-center">
                   <h1 className="text-2xl font-serif font-semibold text-foreground cursor-pointer">
                     <span className="transition-[opacity,transform,margin] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:hidden">
@@ -380,7 +392,8 @@ export function AppSidebar({
                       aria-hidden="true"
                       className="hidden ml-0 transition-[opacity,transform,margin] duration-200 ease-linear group-data-[collapsible=icon]:inline group-data-[collapsible=icon]:opacity-100"
                     >
-                      F
+                      <span className="group-hover/brand:hidden">F</span>
+                      <Menu02Icon className="hidden size-5 group-hover/brand:inline" />
                     </span>
                   </h1>
                 </div>

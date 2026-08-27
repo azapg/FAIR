@@ -35,15 +35,28 @@ function PostComments({ post }: { post: CoursePost }) {
   )
 }
 
-export function StreamTab({ courseId, canPost }: { courseId: string; canPost: boolean }) {
+export function StreamTab({
+  courseId,
+  canPost,
+  composerOpen,
+  onComposerOpenChange,
+}: {
+  courseId: string;
+  canPost: boolean;
+  composerOpen?: boolean;
+  onComposerOpenChange?: (open: boolean) => void;
+}) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const { data: posts = [], isLoading } = useCoursePosts(courseId)
   const createPost = useCreateCoursePost(courseId)
+  // When composerOpen is provided the composer visibility is controlled by the
+  // caller (e.g. the mobile floating action button); otherwise it stays open.
+  const showComposer = canPost && (composerOpen ?? true)
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 py-4">
-      {canPost && (
+      {showComposer && (
         <div className="space-y-3 rounded-lg border p-4">
           <h2 className="font-semibold">Share with your class</h2>
           <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Title" />
@@ -57,7 +70,13 @@ export function StreamTab({ courseId, canPost }: { courseId: string; canPost: bo
             disabled={!title.trim() || createPost.isPending}
             onClick={() => createPost.mutate(
               { title, body, kind: 'announcement' },
-              { onSuccess: () => { setTitle(''); setBody('') } },
+              {
+                onSuccess: () => {
+                  setTitle('')
+                  setBody('')
+                  onComposerOpenChange?.(false)
+                },
+              },
             )}
           >
             Post

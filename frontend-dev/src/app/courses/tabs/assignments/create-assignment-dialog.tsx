@@ -16,6 +16,7 @@ interface CreateAssignmentDialogProps {
   onAssignmentCreated: (assignment: Assignment) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
 }
 
 interface FileItem {
@@ -28,6 +29,7 @@ export function CreateAssignmentDialog({
   onAssignmentCreated,
   open: controlledOpen,
   onOpenChange,
+  showTrigger = true,
 }: CreateAssignmentDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
@@ -136,12 +138,14 @@ export function CreateAssignmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2"/>
-          {t("common.create")}
-        </Button>
-      </DialogTrigger>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="mr-2"/>
+            {t("common.create")}
+          </Button>
+        </DialogTrigger>
+      )}
       <ResponsiveDialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden sm:max-w-2xl">
         <DialogHeader className="shrink-0 pb-4">
           <DialogTitle>{t("assignments.newAssignment")}</DialogTitle>

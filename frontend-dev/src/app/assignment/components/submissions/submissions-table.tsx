@@ -32,7 +32,6 @@ import { DOCS_BASE_URL } from "@/lib/constants";
 interface DataTableProps {
   columns: ColumnDef<Submission>[];
   data: Submission[];
-  onCreateSubmission?: () => void;
   canManage?: boolean;
 }
 
@@ -71,11 +70,7 @@ const SUBMISSION_VIEWS: Array<{
   },
 ];
 
-export function EmptyTableState({
-  onCreateSubmission,
-}: {
-  onCreateSubmission?: () => void;
-}) {
+export function EmptyTableState() {
   const { t } = useTranslation();
 
   return (
@@ -91,11 +86,6 @@ export function EmptyTableState({
       </EmptyHeader>
       <EmptyContent className="items-start lg:items-center">
         <div className="flex gap-2">
-          {onCreateSubmission && (
-            <Button variant="outline" onClick={onCreateSubmission}>
-              {t("submissions.addSubmissions")}
-            </Button>
-          )}
           <Button
             variant="link"
             asChild
@@ -163,7 +153,6 @@ function SubmissionsToolbar({
 export function SubmissionsTable({
   columns,
   data,
-  onCreateSubmission,
   canManage = true,
 }: DataTableProps) {
   const { t } = useTranslation();
@@ -223,9 +212,7 @@ export function SubmissionsTable({
 
         <DataTableContent>
           <DataTableEmpty>
-            <EmptyTableState
-              onCreateSubmission={canManage ? onCreateSubmission : undefined}
-            />
+            <EmptyTableState />
           </DataTableEmpty>
         </DataTableContent>
       </DataTable>

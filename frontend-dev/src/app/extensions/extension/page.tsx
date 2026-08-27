@@ -4,7 +4,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { BreadcrumbNav } from "@/components/breadcrumb-nav";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -107,19 +107,10 @@ export default function ExtensionDetailPage() {
 
   return (
     <main className="flex flex-col justify-center">
-      <div className="px-5 py-2">
-        <BreadcrumbNav
-          segments={[
-            { label: t("extensions.title"), slug: "extensions" },
-            { label: extensionId, slug: extensionId },
-          ]}
-        />
-      </div>
-
-      <div className="px-6 pt-3">
-        <h1 className="text-3xl font-semibold tracking-tight">{extensionId}</h1>
-        <p className="text-sm text-muted-foreground">{t("extensions.detailSubtitle")}</p>
-      </div>
+      <PageHeader
+        title={extensionId}
+        description={t("extensions.detailSubtitle")}
+      />
 
       <div className="px-6 py-4">
         {!canManageExtensions && (

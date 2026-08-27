@@ -3,7 +3,7 @@ import { Ellipsis, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { BreadcrumbNav } from "@/components/breadcrumb-nav";
+import { PageHeader } from "@/components/page-header";
 import {
   DataTable,
   DataTableContent,
@@ -96,27 +96,16 @@ export default function RubricsPage() {
 
   return (
     <main className="flex flex-col justify-center">
-      <div className="px-5 py-2">
-        <BreadcrumbNav
-          segments={[
-            {
-              label: t("rubrics.title"),
-              slug: "rubrics",
-            },
-          ]}
-        />
-      </div>
-
-      <div className="flex items-center justify-between px-6 pt-3">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t("rubrics.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("rubrics.subtitle")}</p>
-        </div>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t("rubrics.createAction")}
-        </Button>
-      </div>
+      <PageHeader
+        title={t("rubrics.title")}
+        description={t("rubrics.subtitle")}
+        actions={
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t("rubrics.createAction")}
+          </Button>
+        }
+      />
 
       <div className="px-6 py-4">
         <DataTable

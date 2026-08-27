@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { FileText, Hourglass, Plus, Send } from "lucide-react";
+import { Ellipsis, FileText, Hourglass, Plus, Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SubmissionsTable } from "@/app/assignment/components/submissions/submissions-table";
 import { useSubmissionColumns } from "@/app/assignment/components/submissions/submissions";
 import {
   FlowSidebarProvider,
-  FlowSidebarTrigger,
 } from "@/components/ui/sidebar";
+import { PageHeader } from "@/components/page-header";
 import { FlowsSidebar } from "@/app/assignment/components/sidebar/flows-sidebar";
 import {
   PropertiesDisplay,
@@ -15,14 +15,18 @@ import {
   PropertyValue,
 } from "@/components/properties-display";
 
-import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 import { useParams } from "react-router-dom";
-import { useAssignment, Assignment, useUpdateAssignmentStatus } from "@/hooks/use-assignments";
+import { useAssignment, Assignment } from "@/hooks/use-assignments";
 import { useCourse } from "@/hooks/use-courses";
 import { useState } from "react";
 import { CreateSubmissionDialog } from "@/app/assignment/components/submissions/create-submission-dialog";
+import {
+  AssignmentOptionsDrawer,
+  AssignmentOptionsDropdown,
+} from "@/app/assignment/components/assignment-options-drawer";
+import { EditAssignmentDialog } from "@/app/courses/tabs/assignments/edit-assignment-dialog";
 import { useArtifacts } from "@/hooks/use-artifacts";
 import { useCreateStudentSubmission, useSubmissions, Submission } from "@/hooks/use-submissions";
 import { useTranslation } from "react-i18next";
@@ -106,15 +110,11 @@ function InstructorSubmissionsSection({
     <div className={"space-y-3 mb-5"}>
       <div className={"flex justify-between items-center mb-3"}>
         <h2 className={"text-xl font-semibold"}>{t("submissions.title")}</h2>
-        <Button size="sm" onClick={() => setIsCreateSubmissionOpen(true)}>
-          <Plus /> {t("common.add")}
-        </Button>
       </div>
       <SubmissionsTable
         columns={columns}
         data={submissions ?? []}
         canManage={true}
-        onCreateSubmission={() => setIsCreateSubmissionOpen(true)}
       />
       <CreateSubmissionDialog
         assignmentId={assignment.id.toString()}
@@ -162,7 +162,8 @@ export default function AssignmentPage() {
   });
   const { t } = useTranslation();
   const [isCreateSubmissionOpen, setIsCreateSubmissionOpen] = useState(false);
-  const updateAssignmentStatus = useUpdateAssignmentStatus();
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const isOverallLoading =
     isLoading ||
@@ -200,49 +201,44 @@ export default function AssignmentPage() {
     >
       <ScrollArea className="w-full h-svh flex-1 min-w-0">
         <div className="min-w-0 break-words">
-          <div
-            className={"flex flex-row justify-between items-center py-2 px-5"}
+          <PageHeader
+            title={assignment.title}
+            barActions={
+              isInstructorView ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Assignment options"
+                  className="size-10 rounded-full border bg-background/80 shadow-sm backdrop-blur"
+                  onClick={() => setIsOptionsOpen(true)}
+                >
+                  <Ellipsis />
+                </Button>
+              ) : undefined
+            }
+            actions={
+              isInstructorView ? (
+                <AssignmentOptionsDropdown
+                  assignment={assignment}
+                  courseName={course.name}
+                  onEdit={() => setIsEditOpen(true)}
+                  onAddSubmission={() => setIsCreateSubmissionOpen(true)}
+                  showFlowsAction
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Assignment options"
+                      className="hidden size-10 rounded-full border bg-background/80 shadow-sm backdrop-blur md:inline-flex"
+                    >
+                      <Ellipsis />
+                    </Button>
+                  }
+                />
+              ) : undefined
+            }
           >
-            <BreadcrumbNav
-              segments={[
-                {
-                  label: t("courses.title"),
-                  slug: "courses",
-                },
-                {
-                  label: course?.name || assignment?.courseId.toLocaleString(),
-                  slug:
-                    course?.id.toLocaleString() ||
-                    assignment?.courseId.toLocaleString(),
-                },
-                {
-                  label: t("tabs.assignments"),
-                  slug: "assignments",
-                },
-                {
-                  label: assignment.title,
-                  slug: assignment.id.toLocaleString(),
-                },
-              ]}
-            />
-            {isInstructorView && <FlowSidebarTrigger />}
-          </div>
-          <div className={"px-8 pt-2"}>
             <div className={"mb-5"}>
-              <div className="flex items-center justify-between gap-3">
-                <h1 className={"text-3xl font-bold pb-1"}>{assignment.title}</h1>
-                {isInstructorView && (
-                  <Button
-                    variant={assignment.status === 'published' ? 'outline' : 'default'}
-                    onClick={() => updateAssignmentStatus.mutate({
-                      id: assignment.id,
-                      status: assignment.status === 'published' ? 'draft' : 'published',
-                    })}
-                  >
-                    {assignment.status === 'published' ? 'Unpublish' : 'Publish'}
-                  </Button>
-                )}
-              </div>
               {!assignment.description ||
               assignment.description.trim() === "" ? (
                 <p className="text-muted-foreground italic">
@@ -319,7 +315,7 @@ export default function AssignmentPage() {
             {!isInstructorView && (
               <StudentSubmissionSection assignment={assignment} submissions={submissions} />
             )}
-          </div>
+          </PageHeader>
         </div>
       </ScrollArea>
       {isInstructorView && (
@@ -327,6 +323,24 @@ export default function AssignmentPage() {
           side={"right"}
           courseId={course.id}
           assignmentId={assignment.id}
+        />
+      )}
+      {isInstructorView && (
+        <AssignmentOptionsDrawer
+          assignment={assignment}
+          courseName={course.name}
+          open={isOptionsOpen}
+          onOpenChange={setIsOptionsOpen}
+          onEdit={() => setIsEditOpen(true)}
+          onAddSubmission={() => setIsCreateSubmissionOpen(true)}
+          showFlowsAction
+        />
+      )}
+      {isInstructorView && (
+        <EditAssignmentDialog
+          assignment={assignment}
+          open={isEditOpen}
+          onOpenChange={setIsEditOpen}
         />
       )}
     </FlowSidebarProvider>
