@@ -442,7 +442,7 @@ export function AppSidebar({
                       <BookOpen />
                       <span>{t("sidebar.courses.title")}</span>
                       <ChevronRight
-                        className={`ml-auto transition-transform duration-200 ${coursesOpen ? "rotate-90" : ""}`}
+                        className={`ml-auto md:mr-2 transition-transform duration-200 ${coursesOpen ? "rotate-90" : ""}`}
                       />
                     </SidebarMenuButton>
                     <CollapsibleContent id={coursesContentId}>
@@ -497,7 +497,7 @@ export function AppSidebar({
                       <FileText />
                       <span>{t("sidebar.assignments.title")}</span>
                       <ChevronRight
-                        className={`ml-auto transition-transform duration-200 ${assignmentsOpen ? "rotate-90" : ""}`}
+                        className={`ml-auto md:mr-2 transition-transform duration-200 ${assignmentsOpen ? "rotate-90" : ""}`}
                       />
                     </SidebarMenuButton>
                     <CollapsibleContent id={assignmentsContentId}>
@@ -570,7 +570,7 @@ export function AppSidebar({
                               {userEmail}
                             </span>
                           </div>
-                          <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
+                          <ChevronsUpDown className="ml-auto md:mr-2 size-4 group-data-[collapsible=icon]:hidden" />
                         </SidebarMenuButton>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent

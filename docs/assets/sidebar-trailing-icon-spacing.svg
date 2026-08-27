@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="title description">
+  <title id="title">Desktop sidebar trailing icon spacing</title>
+  <desc id="description">Before and after comparison showing trailing sidebar icons moved eight pixels inward on desktop.</desc>
+
+  <rect width="900" height="560" rx="18" fill="#171717"/>
+  <text x="48" y="54" fill="#f5f5f5" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">Desktop sidebar trailing icon spacing</text>
+  <text x="48" y="82" fill="#a3a3a3" font-family="Inter, Arial, sans-serif" font-size="15">The desktop-only inset keeps right-aligned controls visually balanced with the navigation.</text>
+
+  <g transform="translate(48 122)">
+    <rect width="350" height="372" rx="12" fill="#0d0d0d" stroke="#3a3a3a"/>
+    <text x="24" y="34" fill="#a3a3a3" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.5">BEFORE</text>
+    <text x="24" y="72" fill="#f5f5f5" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600">Your classes</text>
+
+    <g fill="none" stroke="#f5f5f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M25 96h8a6 6 0 0 1 6 6v14h-8a6 6 0 0 0-6 6z"/>
+      <path d="M39 96h8a6 6 0 0 0-6 6v14h-8"/>
+      <path d="m326 105 5 5-5 5"/>
+      <rect x="25" y="177" width="14" height="17" rx="2"/>
+      <path d="M29 177v-3m6 3v-3M29 182h6m-6 5h6"/>
+      <path d="m326 182 5 5-5 5"/>
+      <circle cx="32" cy="267" r="7"/>
+      <path d="M32 263v5m0 4v.1"/>
+    </g>
+    <g fill="#f5f5f5" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600">
+      <text x="56" y="112">Courses</text>
+      <text x="56" y="190">Assignments</text>
+      <text x="56" y="276">Account</text>
+    </g>
+    <line x1="338" y1="88" x2="338" y2="300" stroke="#6b7280" stroke-dasharray="3 4"/>
+    <text x="254" y="328" fill="#f87171" font-family="Inter, Arial, sans-serif" font-size="13">too close to edge</text>
+  </g>
+
+  <g transform="translate(502 122)">
+    <rect width="350" height="372" rx="12" fill="#0d0d0d" stroke="#3a3a3a"/>
+    <text x="24" y="34" fill="#86efac" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.5">AFTER</text>
+    <text x="24" y="72" fill="#f5f5f5" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="600">Your classes</text>
+
+    <g fill="none" stroke="#f5f5f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M25 96h8a6 6 0 0 1 6 6v14h-8a6 6 0 0 0-6 6z"/>
+      <path d="M39 96h8a6 6 0 0 0-6 6v14h-8"/>
+      <path d="m318 105 5 5-5 5"/>
+      <rect x="25" y="177" width="14" height="17" rx="2"/>
+      <path d="M29 177v-3m6 3v-3M29 182h6m-6 5h6"/>
+      <path d="m318 182 5 5-5 5"/>
+      <circle cx="32" cy="267" r="7"/>
+      <path d="M32 263v5m0 4v.1"/>
+    </g>
+    <g fill="#f5f5f5" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600">
+      <text x="56" y="112">Courses</text>
+      <text x="56" y="190">Assignments</text>
+      <text x="56" y="276">Account</text>
+    </g>
+    <line x1="338" y1="88" x2="338" y2="300" stroke="#6b7280" stroke-dasharray="3 4"/>
+    <line x1="323" y1="322" x2="338" y2="322" stroke="#86efac" stroke-width="2"/>
+    <path d="m323 322 5-4m-5 4 5 4m15-4-5-4m5 4-5 4" fill="none" stroke="#86efac" stroke-width="2" stroke-linecap="round"/>
+    <text x="237" y="348" fill="#86efac" font-family="Inter, Arial, sans-serif" font-size="13">+8px desktop inset</text>
+  </g>
+</svg>
