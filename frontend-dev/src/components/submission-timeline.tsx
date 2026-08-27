@@ -102,7 +102,7 @@ const TimelineItem = ({
           />
           <div className="min-w-0 text-sm leading-5 text-muted-foreground">
             <p>
-              <span className="font-semibold text-foreground">{actorName}</span>{" "}
+              <span className="font-medium text-foreground">{actorName}</span>{" "}
               {renderer.renderInline({ event, t })}
             </p>
             <time

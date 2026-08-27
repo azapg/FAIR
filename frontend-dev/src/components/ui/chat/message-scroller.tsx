@@ -83,7 +83,7 @@ export const MessageScrollerButton = React.forwardRef<
       ref={ref}
       className={cn(
         "absolute bottom-20 left-1/2 -translate-x-1/2 z-20",
-        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md",
+        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-md",
         "bg-popover text-popover-foreground hover:bg-muted border border-border transition-all active:scale-95 duration-100",
         className
       )}

@@ -278,7 +278,7 @@ export function GradebookTab({ courseId, isArchived = false }: { courseId: strin
   return (
     <div className="space-y-6 py-3">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div><h2 className="text-2xl font-semibold">Gradebook</h2><p className="text-sm text-muted-foreground">Released points are canonical. Percentages and weighted totals are computed views.</p></div>
+        <div><h2 className="text-base leading-5 font-medium">Gradebook</h2><p className="text-sm text-muted-foreground">Released points are canonical. Percentages and weighted totals are computed views.</p></div>
         <div className="flex flex-wrap gap-2"><div className="rounded-md bg-muted px-3 py-2 text-sm font-medium">{queue.length} need{queue.length === 1 ? 's' : ''} grading</div>{isArchived ? <div className="rounded-md border px-3 py-2 text-sm font-medium">Archived · read-only</div> : <><AddCategoryDialog courseId={courseId} /><AddItemDialog courseId={courseId} categories={orderedCategories} /></>}</div>
       </div>
 
@@ -292,8 +292,8 @@ export function GradebookTab({ courseId, isArchived = false }: { courseId: strin
       </div>
 
       <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50"><tr><th className="sticky left-0 z-10 min-w-52 bg-muted px-3 py-2 text-left">Student</th>{orderedItems.map((item) => <th key={item.id} className="min-w-36 px-3 py-2 text-left"><div>{item.title}</div><div className="text-xs font-normal text-muted-foreground">{formatPoints(item.maxPoints)} pts · {item.isManual ? 'manual' : 'assignment'}</div></th>)}<th className="min-w-48 px-3 py-2 text-left">Course total</th></tr></thead>
+        <table className="w-full text-[13px] leading-4 font-normal">
+          <thead className="bg-muted/50"><tr><th className="sticky left-0 z-10 min-w-52 bg-muted px-3 py-2 text-left font-medium">Student</th>{orderedItems.map((item) => <th key={item.id} className="min-w-36 px-3 py-2 text-left font-medium"><div>{item.title}</div><div className="text-xs font-normal text-muted-foreground">{formatPoints(item.maxPoints)} pts · {item.isManual ? 'manual' : 'assignment'}</div></th>)}<th className="min-w-48 px-3 py-2 text-left font-medium">Course total</th></tr></thead>
           <tbody>
             {gradebook.rows.map((row) => <tr key={row.userId} className="border-t"><td className="sticky left-0 z-10 bg-background px-3 py-2"><div className="font-medium">{row.name}</div><div className="text-xs text-muted-foreground">{row.email}</div></td>{orderedItems.map((item) => <td key={item.id} className="px-3 py-2">{item.isManual ? (isArchived ? <ReadOnlyManualEntry item={item} row={row} /> : <ManualEntryButton courseId={courseId} item={item} row={row} />) : <AssignmentEntry item={item} row={row} />}</td>)}<td className="px-3 py-2"><div className="font-medium">{formatTotal(row.courseTotal)}</div><div className="text-xs text-muted-foreground">{row.courseTotal?.provisional ? 'Provisional' : row.courseTotal?.calculation === 'category_weighted' ? 'Weighted' : 'Points'}</div></td></tr>)}
             {gradebook.rows.length === 0 && <tr><td className="px-3 py-8 text-center text-muted-foreground" colSpan={orderedItems.length + 2}>No active students.</td></tr>}
@@ -301,7 +301,7 @@ export function GradebookTab({ courseId, isArchived = false }: { courseId: strin
         </table>
       </div>
 
-      <div className="space-y-2"><h3 className="text-lg font-semibold">Needs grading</h3>{queue.map((item) => <Link key={item.submissionId} to={`/courses/${courseId}/assignments/${item.assignmentId}`} className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/50"><div><div className="font-medium">{item.studentName}</div><div className="text-sm text-muted-foreground">{item.assignmentTitle} · attempt {item.attemptNumber}</div></div><div className="text-sm capitalize">{item.isLate ? 'Late' : item.status}</div></Link>)}{queue.length === 0 && <p className="text-sm text-muted-foreground">Nothing needs grading.</p>}</div>
+      <div className="space-y-2"><h3 className="text-base leading-5 font-medium">Needs grading</h3>{queue.map((item) => <Link key={item.submissionId} to={`/courses/${courseId}/assignments/${item.assignmentId}`} className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/50"><div><div className="font-medium">{item.studentName}</div><div className="text-sm text-muted-foreground">{item.assignmentTitle} · attempt {item.attemptNumber}</div></div><div className="text-sm capitalize">{item.isLate ? 'Late' : item.status}</div></Link>)}{queue.length === 0 && <p className="text-sm text-muted-foreground">Nothing needs grading.</p>}</div>
     </div>
   )
 }

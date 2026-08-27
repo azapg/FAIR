@@ -37,7 +37,7 @@ export function ChatCanvas({
       className="w-[45%] border-l bg-card flex flex-col h-full shrink-0 shadow-xl z-20 relative animate-in slide-in-from-right duration-300"
     >
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0 bg-background/95 backdrop-blur">
-        <h2 id={titleId} className="flex items-center gap-2 font-semibold text-xs text-foreground flex-1 pr-4 truncate uppercase tracking-wider">
+        <h2 id={titleId} className="flex items-center gap-2 font-medium text-[13px] leading-4 text-foreground flex-1 pr-4 truncate uppercase tracking-wider">
           <Sparkles className="w-3.5 h-3.5 text-primary" /> {activeCanvasContent.title}
         </h2>
         <button
@@ -55,15 +55,15 @@ export function ChatCanvas({
       <ScrollArea className="flex-1 w-full bg-muted/5">
         <div className="p-4 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b">
-            <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5">
-              Type: <span className="bg-muted px-2 py-0.5 rounded-full text-foreground border text-[10px] font-bold uppercase">{activeCanvasContent.type}</span>
+            <div className="text-[13px] leading-4 text-muted-foreground font-normal flex items-center gap-1.5">
+              Type: <span className="bg-muted px-2 py-0.5 rounded-full text-foreground border text-[10px] font-medium uppercase">{activeCanvasContent.type}</span>
             </div>
           </div>
 
           {/* Render dynamic visualizations */}
           {activeCanvasContent.visualType === "chart" && activeCanvasContent.data && (
             <div className="bg-background border rounded-2xl p-5 shadow-xs">
-              <h4 className="font-bold text-center mb-6 text-sm tracking-tight text-foreground/90">
+              <h4 className="font-medium text-center mb-6 text-sm tracking-tight text-foreground/90">
                 {activeCanvasContent.title}
               </h4>
               <div className="aspect-[1.5] w-full bg-transparent border-l border-b border-muted-foreground/30 flex flex-col pt-4 pr-16 pb-6 pl-3 relative group hover:border-muted-foreground transition-colors select-none">
@@ -120,8 +120,8 @@ export function ChatCanvas({
                 </svg>
 
                 {/* Legend */}
-                <div className="absolute -right-2 top-0 w-16 text-[9px] space-y-1.5 flex flex-col justify-start items-start text-muted-foreground font-semibold p-1">
-                  <span className="font-bold text-foreground text-[10px] mb-1">Region</span>
+                <div className="absolute -right-2 top-0 w-16 text-[9px] space-y-1.5 flex flex-col justify-start items-start text-muted-foreground font-normal p-1">
+                  <span className="font-medium text-foreground text-[10px] mb-1">Region</span>
                   <div className="flex items-center gap-1"><div className="w-2 h-0.5 bg-blue-500"></div>AFR</div>
                   <div className="flex items-center gap-1"><div className="w-2 h-0.5 bg-orange-500"></div>AMR</div>
                   <div className="flex items-center gap-1"><div className="w-2 h-0.5 bg-pink-500"></div>EMR</div>
@@ -136,7 +136,7 @@ export function ChatCanvas({
           {/* Render Pendulum Physics Simulation */}
           {activeCanvasContent.visualType === "simulation" && (
             <div className="bg-background border rounded-2xl p-4 shadow-xs">
-              <h4 className="font-bold text-center mb-3 text-xs tracking-tight text-foreground/80 flex items-center justify-center gap-1.5">
+              <h4 className="font-medium text-center mb-3 text-xs tracking-tight text-foreground/80 flex items-center justify-center gap-1.5">
                 Double Pendulum Chaos Engine
               </h4>
               <DoublePendulum />

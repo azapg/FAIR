@@ -138,7 +138,7 @@ export function ArtifactsTab({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-xl font-semibold">{t("artifacts.title")}</h3>
+      <h3 className="text-base leading-5 font-medium">{t("artifacts.title")}</h3>
 
       <DataTable data={activeArtifacts} columns={columns} filterKey="title">
         <div className="pb-3">
@@ -151,7 +151,7 @@ export function ArtifactsTab({
 
       {archivedArtifacts.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-lg font-semibold">{t("artifacts.archivedTitle")}</h4>
+          <h4 className="text-base leading-5 font-medium">{t("artifacts.archivedTitle")}</h4>
           <DataTable data={archivedArtifacts} columns={archivedColumns}>
             <DataTableContent>
               <DataTableEmpty>{t("artifacts.empty")}</DataTableEmpty>

@@ -45,7 +45,7 @@ export const MessageAvatar = React.forwardRef<
       {...props}
     >
       {src && <AvatarImage src={src} />}
-      <AvatarFallback className="text-[10px] font-bold bg-muted/80 text-muted-foreground select-none">
+      <AvatarFallback className="text-[10px] font-normal bg-muted/80 text-muted-foreground select-none">
         {fallback ?? "AI"}
       </AvatarFallback>
     </Avatar>
@@ -88,7 +88,7 @@ export const MessageHeader = React.forwardRef<
       )}
       {...props}
     >
-      {senderName && <span className="font-bold text-foreground/80">{senderName}</span>}
+      {senderName && <span className="font-medium text-foreground/80">{senderName}</span>}
       {timestamp && <span>{timestamp}</span>}
       {children}
     </div>

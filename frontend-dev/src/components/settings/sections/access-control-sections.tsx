@@ -197,7 +197,7 @@ export function AdmissionSection() {
             </SelectContent>
           </Select>
           <Button type="submit" disabled={createInvite.isPending}>{t("settings.access.createInvite")}</Button>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground sm:w-full">
+          <label className="flex items-center gap-2 text-[13px] leading-4 text-muted-foreground sm:w-full">
             <input
               type="checkbox"
               className="size-4 accent-primary"
@@ -209,7 +209,7 @@ export function AdmissionSection() {
         </form>
         {lastInviteUrl && (
           <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
-            <p className="mb-2 text-sm font-medium">{t("settings.access.copyInviteNow")}</p>
+            <p className="mb-2 text-[13px] leading-4 font-medium">{t("settings.access.copyInviteNow")}</p>
             <div className="flex gap-2">
               <Input readOnly value={lastInviteUrl} className="font-mono text-xs" />
               <Button
@@ -382,7 +382,7 @@ export function AIControlsSection() {
       </SettingsSectionCard>
 
       <SettingsSectionCard title={t("settings.access.usageAudit")} description={t("settings.access.usageAuditDescription")}>
-        <p className="text-2xl font-semibold">{usage.data?.totalUnits ?? 0}</p>
+        <p className="text-xl leading-6 font-medium">{usage.data?.totalUnits ?? 0}</p>
         <p className="text-xs text-muted-foreground">{t("settings.access.currentMonthCredits")}</p>
         <div className="divide-y rounded-md border">
           {(usage.data?.charges ?? []).slice(0, 10).map((charge) => (

@@ -58,7 +58,7 @@ export function StreamTab({
     <div className="mx-auto max-w-3xl space-y-4 py-4">
       {showComposer && (
         <div className="space-y-3 rounded-lg border p-4">
-          <h2 className="font-semibold">Share with your class</h2>
+          <h2 className="text-base leading-5 font-medium">Share with your class</h2>
           <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Title" />
           <textarea
             className="min-h-24 w-full rounded-md border bg-background p-3 text-sm"
@@ -89,7 +89,7 @@ export function StreamTab({
           <div className="text-xs text-muted-foreground">
             {post.authorName} · {new Date(post.createdAt).toLocaleString()}
           </div>
-          <h2 className="mt-1 text-lg font-semibold">{post.title}</h2>
+          <h2 className="mt-1 text-base leading-5 font-medium">{post.title}</h2>
           {post.body && <p className="mt-2 whitespace-pre-wrap text-sm">{post.body}</p>}
           <PostComments post={post} />
         </article>

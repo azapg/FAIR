@@ -40,7 +40,7 @@ class ErrorBoundary extends Component<Props, State> {
       // Show minimal fallback UI since toast already notified user
       return (
         <div style={{ padding: "20px", textAlign: "center" }}>
-          <h2>{i18n.t("errors.oops")}</h2>
+          <h2 className="text-base leading-5 font-medium">{i18n.t("errors.oops")}</h2>
           <p>{i18n.t("errors.lookingIntoIt")}</p>
           <button onClick={() => window.location.reload()}>{i18n.t("errors.reloadPage")}</button>
         </div>

@@ -47,7 +47,7 @@ export function PageHeader({
             aria-hidden={!isCollapsed}
           >
             <div className="flex h-10 items-center rounded-full border bg-background/80 px-4 shadow-sm backdrop-blur">
-              <span className="truncate text-sm font-semibold">{title}</span>
+              <span className="truncate text-[13px] leading-4 font-medium">{title}</span>
             </div>
           </div>
           {barActions && (
@@ -60,7 +60,10 @@ export function PageHeader({
       <div className="px-6 pt-16 sm:px-8 sm:pt-14 md:pt-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 ref={titleRef} className="pb-1 text-3xl font-bold">
+            <h1
+              ref={titleRef}
+              className="pb-1 text-base leading-5 font-medium md:text-xl md:leading-6"
+            >
               {title}
             </h1>
             {description && (

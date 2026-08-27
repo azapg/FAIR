@@ -10,7 +10,7 @@ export const Marker = React.forwardRef<HTMLDivElement, MarkerProps>(
     const getStyles = () => {
       switch (variant) {
         case "date":
-          return "text-[10px] font-semibold text-muted-foreground uppercase tracking-widest bg-muted px-2.5 py-1 rounded-full border border-border/30"
+          return "text-[10px] font-medium text-muted-foreground uppercase tracking-widest bg-muted px-2.5 py-1 rounded-full border border-border/30"
         case "tool":
           return "text-xs font-mono text-muted-foreground bg-muted/40 border border-border/60 px-3 py-1.5 rounded-lg flex items-center gap-2"
         case "error":

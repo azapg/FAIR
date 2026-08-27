@@ -74,7 +74,7 @@ export const Attachment = React.forwardRef<HTMLDivElement, AttachmentProps>(
 
           {/* Details */}
           <div className="min-w-0 flex-1">
-            <h5 className="font-semibold text-foreground text-xs truncate leading-snug">
+            <h5 className="font-medium text-foreground text-xs truncate leading-snug">
               {name}
             </h5>
             <div className="flex items-center gap-1.5 mt-0.5">
@@ -85,14 +85,14 @@ export const Attachment = React.forwardRef<HTMLDivElement, AttachmentProps>(
               )}
               {type && !error && (
                 <>
-                  <span className="text-muted-foreground/30 text-[9px] font-bold">•</span>
+                  <span className="text-muted-foreground/30 text-[9px] font-normal">•</span>
                   <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                     {type}
                   </span>
                 </>
               )}
               {error && (
-                <span className="text-destructive text-[10px] font-semibold">
+                  <span className="text-destructive text-[10px] font-medium">
                   {error}
                 </span>
               )}

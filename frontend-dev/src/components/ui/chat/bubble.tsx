@@ -38,7 +38,7 @@ export const Bubble = React.forwardRef<HTMLDivElement, BubbleProps>(
       <div
         ref={ref}
         className={cn(
-          "w-fit max-w-[85%] sm:max-w-[75%] leading-relaxed text-[15px]",
+          "w-fit max-w-[85%] sm:max-w-[75%] leading-relaxed text-sm",
           getStyles(),
           className
         )}

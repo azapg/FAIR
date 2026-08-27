@@ -177,7 +177,7 @@ export function ChatInput({ onSend, disabled, placeholder = "Write a message..."
         </DropdownMenu>
 
         {selectedCourse && (
-          <div className="bg-primary/10 border border-primary/20 text-primary rounded-xl px-2.5 py-1 text-[10px] font-bold flex items-center gap-1 shrink-0 mb-1 max-w-[120px] truncate select-none">
+          <div className="bg-primary/10 border border-primary/20 text-primary rounded-xl px-2.5 py-1 text-[10px] font-medium flex items-center gap-1 shrink-0 mb-1 max-w-[120px] truncate select-none">
             <span className="truncate">{selectedCourse}</span>
             <button
               type="button"
@@ -203,7 +203,7 @@ export function ChatInput({ onSend, disabled, placeholder = "Write a message..."
               handleSend()
             }
           }}
-          className="flex-grow bg-transparent border-none px-2 py-2 outline-hidden resize-none min-h-[36px] max-h-[240px] overflow-y-auto text-[15px] text-foreground placeholder:text-muted-foreground align-bottom leading-relaxed custom-scrollbar"
+          className="flex-grow bg-transparent border-none px-2 py-2 outline-hidden resize-none min-h-[36px] max-h-[240px] overflow-y-auto text-sm text-foreground placeholder:text-muted-foreground align-bottom leading-relaxed custom-scrollbar"
           placeholder={isListening ? "Listening..." : placeholder}
           rows={1}
           disabled={isListening || disabled}

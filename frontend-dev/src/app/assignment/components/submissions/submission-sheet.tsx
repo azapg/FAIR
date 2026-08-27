@@ -118,7 +118,7 @@ export function SubmissionSheet({
 
         <ScrollArea className="overflow-y-auto gap-6">
           <DrawerHeader className="gap-3 px-8 md:px-12 text-left">
-            <DrawerTitle className="text-3xl font-medium">
+            <DrawerTitle className="text-base leading-5 font-medium">
               {submission.submitter?.name}
             </DrawerTitle>
             <DrawerDescription className="sr-only">

@@ -204,7 +204,7 @@ export function ArtifactAction({
       {isPreviewable ? (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent showCloseButton className="flex h-[95vh] w-[95vw] max-w-7xl flex-col p-3 sm:max-w-7xl">
-            <DialogTitle className="text-sm font-semibold">
+            <DialogTitle className="text-[13px] leading-4 font-medium">
               {artifact.title}
             </DialogTitle>
             <div className="flex-1 overflow-auto rounded border p-3">
@@ -225,7 +225,7 @@ export function ArtifactAction({
       {isPdfArtifact ? (
         <Dialog open={pdfOpen} onOpenChange={handlePdfClose}>
           <DialogContent showCloseButton className="flex h-[95vh] w-[95vw] max-w-7xl flex-col p-3 sm:max-w-7xl">
-            <DialogTitle className="text-sm font-semibold">
+            <DialogTitle className="text-[13px] leading-4 font-medium">
               {artifact.title}
             </DialogTitle>
             <div className="mb-2 flex items-center justify-end">

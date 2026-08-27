@@ -305,7 +305,7 @@ function ChatDashboard() {
           <div className="h-14 flex items-center justify-between px-6 shrink-0 z-10 select-none">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 px-3 py-1.5 text-base font-bold text-foreground hover:bg-muted rounded-xl transition-all cursor-pointer select-none">
+                <button className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] leading-4 font-medium text-foreground hover:bg-muted rounded-xl transition-all cursor-pointer select-none">
                   <span>{selectedModel === "feynman" ? "Feynman" : "Einstein"}</span>
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -313,14 +313,14 @@ function ChatDashboard() {
               <DropdownMenuContent className="w-72 p-2 rounded-2xl bg-card border shadow-xl z-50">
                 <DropdownMenuItem onClick={() => setSelectedModel("feynman")} className={cn("flex flex-col items-start gap-0.5 p-3 rounded-xl cursor-pointer", selectedModel === "feynman" && "bg-muted")}>
                   <div className="flex items-center justify-between w-full">
-                    <span className="font-bold text-sm">Feynman</span>
+                    <span className="font-medium text-sm">Feynman</span>
                     {selectedModel === "feynman" && <Check className="w-4 h-4 text-foreground" />}
                   </div>
                   <span className="text-[11px] text-muted-foreground">Great for everyday tasks</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSelectedModel("einstein")} className={cn("flex flex-col items-start gap-0.5 p-3 rounded-xl cursor-pointer", selectedModel === "einstein" && "bg-muted")}>
                   <div className="flex items-center justify-between w-full">
-                    <span className="font-bold text-sm">Einstein</span>
+                    <span className="font-medium text-sm">Einstein</span>
                     {selectedModel === "einstein" && <Check className="w-4 h-4 text-foreground" />}
                   </div>
                   <span className="text-[11px] text-muted-foreground">Great for complex work</span>
@@ -340,7 +340,7 @@ function ChatDashboard() {
                     state="idle"
                     variant="opal"
                   />
-                  <h1 className="text-2xl font-medium tracking-tight text-foreground transition-all duration-300 ease-out">
+                  <h1 className="text-base leading-5 font-medium text-foreground transition-all duration-300 ease-out">
                     {greeting}
                   </h1>
                 </div>
@@ -438,7 +438,7 @@ function ChatDashboard() {
                             variant="opal"
                             onLoad={() => setPersonaLoaded((prev) => ({ ...prev, thinking: true }))}
                           />
-                          <span className="shimmer text-[13px] font-semibold">
+                          <span className="shimmer text-[13px] leading-4 font-medium">
                             Thinking...
                           </span>
                         </div>

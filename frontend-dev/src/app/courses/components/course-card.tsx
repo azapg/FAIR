@@ -178,7 +178,7 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
       </div>
 
       <CardHeader className="flex-1 flex flex-col items-start">
-        <CardTitle>{course.name}</CardTitle>
+        <CardTitle className="md:text-xl md:leading-6">{course.name}</CardTitle>
       </CardHeader>
       <CardContent>
         {course.description && <CardDescription>{course.description}</CardDescription>}
