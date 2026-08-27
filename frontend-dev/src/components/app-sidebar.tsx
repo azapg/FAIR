@@ -8,6 +8,7 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
+  SidebarMenuBadge,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
@@ -207,10 +208,12 @@ function NavMain({
         >
           <InboxIcon />
           <span>{t("nav.inbox")}</span>
-          {unreadCount > 0 && (
-            <span className="ml-auto rounded-full bg-primary px-1.5 text-xs text-primary-foreground">{unreadCount}</span>
-          )}
         </SidebarMenuButton>
+        {unreadCount > 0 && (
+          <SidebarMenuBadge className="!right-4 rounded-full bg-primary px-1.5 text-xs !text-primary-foreground">
+            {unreadCount}
+          </SidebarMenuBadge>
+        )}
       </SidebarMenuItem>
     </SidebarMenu>
   );
@@ -442,7 +445,7 @@ export function AppSidebar({
                       <BookOpen />
                       <span>{t("sidebar.courses.title")}</span>
                       <ChevronRight
-                        className={`ml-auto transition-transform duration-200 ${coursesOpen ? "rotate-90" : ""}`}
+                        className={`ml-auto md:mr-3 transition-transform duration-200 ${coursesOpen ? "rotate-90" : ""}`}
                       />
                     </SidebarMenuButton>
                     <CollapsibleContent id={coursesContentId}>
@@ -497,7 +500,7 @@ export function AppSidebar({
                       <FileText />
                       <span>{t("sidebar.assignments.title")}</span>
                       <ChevronRight
-                        className={`ml-auto transition-transform duration-200 ${assignmentsOpen ? "rotate-90" : ""}`}
+                        className={`ml-auto md:mr-3 transition-transform duration-200 ${assignmentsOpen ? "rotate-90" : ""}`}
                       />
                     </SidebarMenuButton>
                     <CollapsibleContent id={assignmentsContentId}>
@@ -570,7 +573,7 @@ export function AppSidebar({
                               {userEmail}
                             </span>
                           </div>
-                          <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
+                          <ChevronsUpDown className="ml-auto md:mr-3 size-4 group-data-[collapsible=icon]:hidden" />
                         </SidebarMenuButton>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
