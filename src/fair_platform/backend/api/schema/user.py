@@ -41,6 +41,13 @@ class RegistrationRequest(BaseModel):
     invite_token: str | None = Field(default=None, max_length=512)
 
 
+class ChangePasswordRequest(BaseModel):
+    model_config = schema_config
+
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
 class UserUpdate(BaseModel):
     model_config = schema_config_with_enum
 
@@ -75,6 +82,7 @@ __all__ = [
     "UserBase",
     "UserCreate",
     "RegistrationRequest",
+    "ChangePasswordRequest",
     "UserUpdate",
     "UserRead",
     "AuthUserRead",

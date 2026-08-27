@@ -2,7 +2,11 @@ import os
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
-from fair_platform.backend.api.schema.user import AuthUserRead, RegistrationRequest
+from fair_platform.backend.api.schema.user import (
+    AuthUserRead,
+    ChangePasswordRequest,
+    RegistrationRequest,
+)
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
@@ -359,6 +363,24 @@ def login(
 def logout(response: Response):
     _clear_session_cookie(response)
     return {"detail": "Logged out"}
+
+
+@router.post("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+):
+    """Change the authenticated user's password after verifying the current one."""
+    if not current_user.password_hash or not verify_password(
+        payload.current_password, current_user.password_hash
+    ):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    current_user.password_hash = hash_password(payload.new_password)
+    db.add(current_user)
+    db.commit()
+    return {"detail": "Password changed successfully"}
 
 
 @router.get("/me", response_model=AuthUserRead)
