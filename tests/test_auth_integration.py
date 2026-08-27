@@ -828,6 +828,90 @@ class TestAuthenticationFlow:
         )
         assert login_response.status_code == 200
 
+    def test_authenticated_user_can_change_password(
+        self, test_client: TestClient, student_user
+    ):
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+
+        change_response = test_client.post(
+            "/api/auth/change-password",
+            json={
+                "currentPassword": "test_password_123",
+                "newPassword": "new_password_123",
+            },
+        )
+        assert change_response.status_code == 200
+        assert change_response.json()["detail"] == "Password changed successfully"
+
+        old_password_login = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert old_password_login.status_code == 401
+
+        new_password_login = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "new_password_123"},
+        )
+        assert new_password_login.status_code == 200
+
+    def test_change_password_rejects_wrong_current_password(
+        self, test_client: TestClient, student_user
+    ):
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+
+        change_response = test_client.post(
+            "/api/auth/change-password",
+            json={
+                "currentPassword": "wrong_password",
+                "newPassword": "new_password_123",
+            },
+        )
+        assert change_response.status_code == 400
+        assert change_response.json()["detail"] == "Current password is incorrect"
+
+        unchanged_password_login = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert unchanged_password_login.status_code == 200
+
+    def test_change_password_requires_authentication(self, test_client: TestClient):
+        response = test_client.post(
+            "/api/auth/change-password",
+            json={
+                "currentPassword": "test_password_123",
+                "newPassword": "new_password_123",
+            },
+        )
+        assert response.status_code == 401
+
+    def test_change_password_validates_new_password_length(
+        self, test_client: TestClient, student_user
+    ):
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+
+        response = test_client.post(
+            "/api/auth/change-password",
+            json={
+                "currentPassword": "test_password_123",
+                "newPassword": "short",
+            },
+        )
+        assert response.status_code == 422
+
     def test_verify_and_reset_confirm_reject_invalid_tokens(
         self, test_client: TestClient
     ):
