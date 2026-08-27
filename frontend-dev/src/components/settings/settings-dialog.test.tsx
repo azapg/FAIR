@@ -25,8 +25,15 @@ afterEach(cleanup)
 describe("accessible dialogs", () => {
   it("names the desktop settings dialog", () => {
     render(<SettingsDialog open onOpenChange={vi.fn()} isMobile={false} />)
-    expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Close settings" })).toBeInTheDocument()
+    const dialog = screen.getByRole("dialog", { name: "Settings" })
+
+    expect(dialog).toBeInTheDocument()
+    expect(dialog).toHaveClass("h-[90vh]")
+    expect(dialog).toHaveClass("!max-w-[1200px]")
+    expect(dialog).not.toHaveClass("!inset-0")
+
+    const closeButton = screen.getByRole("button", { name: "Close settings" })
+    expect(closeButton).toHaveClass("absolute", "top-4", "right-4", "size-10", "rounded-full")
   })
 
   it("names command dialogs", () => {

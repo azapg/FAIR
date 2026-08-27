@@ -96,10 +96,16 @@ function DesktopSettingsContent() {
   const SelectedSectionComponent = selectedSection?.render;
 
   return (
-    <div className="grid h-full min-h-0 w-full grid-cols-[minmax(14rem,1fr)_minmax(0,46rem)_minmax(5.5rem,1fr)]">
+    <div className="relative grid h-full min-h-0 w-full grid-cols-[minmax(14rem,1fr)_minmax(0,46rem)_minmax(5.5rem,1fr)]">
+      <DialogClose
+        className="absolute top-4 right-4 z-20 flex size-10 items-center justify-center rounded-full border bg-background/80 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+        aria-label={t("settings.close")}
+      >
+        <X className="size-5" aria-hidden="true" />
+      </DialogClose>
       <aside className="min-w-0 bg-muted/30">
         <ScrollArea className="h-full">
-          <div className="ml-auto w-full max-w-60 px-3 py-16">
+          <div className="ml-auto w-full max-w-60 px-3 py-6">
             <h2 className="mb-5 px-2 text-base leading-5 font-medium">{t("settings.title")}</h2>
             <nav aria-label={t("settings.navigationLabel")} className="space-y-4">
               {SETTINGS_CATEGORY_ORDER.map((category) =>
@@ -126,7 +132,7 @@ function DesktopSettingsContent() {
       </aside>
       <main className="min-w-0 bg-background">
         <ScrollArea className="h-full">
-          <div className="min-h-full space-y-4 px-6 py-16 lg:px-10">
+          <div className="min-h-full space-y-4 px-6 py-6 lg:px-10">
             {selectedSection && sectionIsAdmin(selectedSection) ? (
               <Can I={ADMIN_PERMISSION}>
                 {SelectedSectionComponent ? <SelectedSectionComponent /> : null}
@@ -137,19 +143,7 @@ function DesktopSettingsContent() {
           </div>
         </ScrollArea>
       </main>
-      <div className="bg-background px-6 py-16">
-        <DialogClose
-          className="group flex flex-col items-center gap-1.5 text-muted-foreground outline-none"
-          aria-label={t("settings.close")}
-        >
-          <span className="flex size-9 items-center justify-center rounded-full border-2 border-current transition-colors group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background">
-            <X className="size-5" aria-hidden="true" />
-          </span>
-          <span className="text-[10px] font-medium uppercase tracking-wide" aria-hidden="true">
-            Esc
-          </span>
-        </DialogClose>
-      </div>
+      <div className="bg-background" aria-hidden="true" />
     </div>
   );
 }
@@ -218,7 +212,7 @@ export function SettingsDialog({ open, onOpenChange, isMobile }: SettingsDialogP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="!inset-0 !top-0 !left-0 !block !h-dvh !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-hidden !rounded-none !border-0 !p-0 !shadow-none data-[state=closed]:!zoom-out-100 data-[state=open]:!zoom-in-100"
+        className="!flex h-[90vh] !w-[calc(100vw-2rem)] !max-w-[1200px] !flex-col gap-0 overflow-hidden p-0"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>{t("settings.title")}</DialogTitle>
