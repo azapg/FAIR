@@ -31,8 +31,7 @@ export function AssignmentsTable({
   columns,
   data,
   courseId,
-  onCreateAssignment,
-}: DataTableProps & { onCreateAssignment?: () => void }) {
+}: DataTableProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -69,11 +68,6 @@ export function AssignmentsTable({
             </EmptyHeader>
             <EmptyContent className="items-start lg:items-center">
               <div className="flex gap-2">
-                {onCreateAssignment && (
-                  <Button variant="outline" onClick={onCreateAssignment}>
-                    {t("assignments.createAssignment")}
-                  </Button>
-                )}
                 <Button
                   variant="link"
                   asChild

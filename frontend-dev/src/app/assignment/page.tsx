@@ -22,7 +22,10 @@ import { useAssignment, Assignment } from "@/hooks/use-assignments";
 import { useCourse } from "@/hooks/use-courses";
 import { useState } from "react";
 import { CreateSubmissionDialog } from "@/app/assignment/components/submissions/create-submission-dialog";
-import { AssignmentOptionsDrawer } from "@/app/assignment/components/assignment-options-drawer";
+import {
+  AssignmentOptionsDrawer,
+  AssignmentOptionsDropdown,
+} from "@/app/assignment/components/assignment-options-drawer";
 import { EditAssignmentDialog } from "@/app/courses/tabs/assignments/edit-assignment-dialog";
 import { useArtifacts } from "@/hooks/use-artifacts";
 import { useCreateStudentSubmission, useSubmissions, Submission } from "@/hooks/use-submissions";
@@ -107,15 +110,11 @@ function InstructorSubmissionsSection({
     <div className={"space-y-3 mb-5"}>
       <div className={"flex justify-between items-center mb-3"}>
         <h2 className={"text-xl font-semibold"}>{t("submissions.title")}</h2>
-        <Button size="sm" className="hidden md:inline-flex" onClick={() => setIsCreateSubmissionOpen(true)}>
-          <Plus /> {t("common.add")}
-        </Button>
       </div>
       <SubmissionsTable
         columns={columns}
         data={submissions ?? []}
         canManage={true}
-        onCreateSubmission={() => setIsCreateSubmissionOpen(true)}
       />
       <CreateSubmissionDialog
         assignmentId={assignment.id.toString()}
@@ -215,6 +214,27 @@ export default function AssignmentPage() {
                 >
                   <Ellipsis />
                 </Button>
+              ) : undefined
+            }
+            actions={
+              isInstructorView ? (
+                <AssignmentOptionsDropdown
+                  assignment={assignment}
+                  courseName={course.name}
+                  onEdit={() => setIsEditOpen(true)}
+                  onAddSubmission={() => setIsCreateSubmissionOpen(true)}
+                  showFlowsAction
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Assignment options"
+                      className="hidden size-10 rounded-full border bg-background/80 shadow-sm backdrop-blur md:inline-flex"
+                    >
+                      <Ellipsis />
+                    </Button>
+                  }
+                />
               ) : undefined
             }
           >

@@ -1,16 +1,17 @@
 import {
-  CloudUpload,
   CloudDownload,
+  CloudUpload,
   FlaskConical,
   PanelRight,
   Pencil,
   Plus,
   Share,
   Trash2,
+  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 
 import {
   Drawer,
@@ -29,6 +30,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
   Assignment,
@@ -37,14 +46,30 @@ import {
 } from "@/hooks/use-assignments";
 import { useFlowSidebar } from "@/components/ui/sidebar";
 
-interface AssignmentOptionsDrawerProps {
+export interface AssignmentOptionsProps {
   assignment: Assignment;
   courseName?: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   onEdit: () => void;
   onAddSubmission: () => void;
   showFlowsAction?: boolean;
+}
+
+interface AssignmentOptionsDrawerProps extends AssignmentOptionsProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+interface AssignmentOption {
+  label: string;
+  icon: LucideIcon;
+  destructive?: boolean;
+  onClick: () => void;
+}
+
+interface AssignmentOptionGroups {
+  primary: AssignmentOption[];
+  destructive: AssignmentOption[];
+  developer: AssignmentOption[];
 }
 
 function OptionRow({
@@ -52,12 +77,7 @@ function OptionRow({
   icon: Icon,
   destructive,
   onClick,
-}: {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  destructive?: boolean;
-  onClick: () => void;
-}) {
+}: AssignmentOption) {
   return (
     <button
       type="button"
@@ -73,23 +93,18 @@ function OptionRow({
   );
 }
 
-function OptionGroup({ children }: { children: React.ReactNode }) {
+function OptionGroup({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-xl bg-muted/50 divide-y divide-border/60">
+    <div className="divide-y divide-border/60 overflow-hidden rounded-xl bg-muted/50">
       {children}
     </div>
   );
 }
 
-export function AssignmentOptionsDrawer({
+function useAssignmentOptionsActions({
   assignment,
   courseName,
-  open,
-  onOpenChange,
-  onEdit,
-  onAddSubmission,
-  showFlowsAction,
-}: AssignmentOptionsDrawerProps) {
+}: Pick<AssignmentOptionsProps, "assignment" | "courseName">) {
   const navigate = useNavigate();
   const updateAssignmentStatus = useUpdateAssignmentStatus();
   const deleteAssignment = useDeleteAssignment();
@@ -98,10 +113,7 @@ export function AssignmentOptionsDrawer({
   const isPublished = assignment.status === "published";
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
-  const close = () => onOpenChange(false);
-
   const handleTogglePublish = () => {
-    close();
     updateAssignmentStatus.mutate({
       id: assignment.id,
       status: isPublished ? "draft" : "published",
@@ -109,7 +121,6 @@ export function AssignmentOptionsDrawer({
   };
 
   const handleShare = async () => {
-    close();
     const url = window.location.href;
     const shareData = {
       title: assignment.title,
@@ -133,7 +144,6 @@ export function AssignmentOptionsDrawer({
   };
 
   const handleDelete = () => {
-    close();
     deleteAssignment.mutate(assignment.id, {
       onSuccess: () => {
         navigate(`/courses/${assignment.courseId}/assignments`);
@@ -141,51 +151,163 @@ export function AssignmentOptionsDrawer({
     });
   };
 
+  return {
+    isPublished,
+    handleTogglePublish,
+    handleShare,
+    handleDelete,
+    deleteAssignment,
+    isDeleteConfirmOpen,
+    setIsDeleteConfirmOpen,
+    toggleFlowsSidebar,
+  };
+}
+
+function getOptionGroups(
+  props: AssignmentOptionsProps & {
+    close: () => void;
+    actions: ReturnType<typeof useAssignmentOptionsActions>;
+  },
+): AssignmentOptionGroups {
+  const { assignment, onEdit, onAddSubmission, showFlowsAction, close, actions } = props;
+
+  return {
+    primary: [
+      {
+        label: actions.isPublished ? "Unpublish" : "Publish",
+        icon: actions.isPublished ? CloudDownload : CloudUpload,
+        onClick: () => {
+          close();
+          actions.handleTogglePublish();
+        },
+      },
+      {
+        label: "Edit",
+        icon: Pencil,
+        onClick: () => {
+          close();
+          onEdit();
+        },
+      },
+      {
+        label: "Share",
+        icon: Share,
+        onClick: () => {
+          close();
+          void actions.handleShare();
+        },
+      },
+      ...(showFlowsAction
+        ? [{
+            label: "Flows panel",
+            icon: PanelRight,
+            onClick: () => {
+              close();
+              actions.toggleFlowsSidebar();
+            },
+          }]
+        : []),
+    ],
+    destructive: [
+      {
+        label: "Delete",
+        icon: Trash2,
+        destructive: true,
+        onClick: () => {
+          close();
+          actions.setIsDeleteConfirmOpen(true);
+        },
+      },
+    ],
+    developer: [
+      {
+        label: "Add submission",
+        icon: Plus,
+        onClick: () => {
+          close();
+          onAddSubmission();
+        },
+      },
+    ],
+  };
+}
+
+function OptionDropdownItem({
+  label,
+  icon: Icon,
+  destructive,
+  onClick,
+}: AssignmentOption) {
+  return (
+    <DropdownMenuItem variant={destructive ? "destructive" : "default"} onSelect={onClick}>
+      <Icon />
+      {label}
+    </DropdownMenuItem>
+  );
+}
+
+export function AssignmentOptionsDropdown({
+  trigger,
+  ...props
+}: AssignmentOptionsProps & { trigger: ReactElement }) {
+  const actions = useAssignmentOptionsActions(props);
+  const groups = getOptionGroups({ ...props, close: () => {}, actions });
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          {groups.primary.map((option) => (
+            <OptionDropdownItem key={option.label} {...option} />
+          ))}
+          <DropdownMenuSeparator />
+          {groups.destructive.map((option) => (
+            <OptionDropdownItem key={option.label} {...option} />
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Developer</DropdownMenuLabel>
+          {groups.developer.map((option) => (
+            <OptionDropdownItem key={option.label} {...option} />
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DeleteAssignmentAlertDialog
+        open={actions.isDeleteConfirmOpen}
+        onOpenChange={actions.setIsDeleteConfirmOpen}
+        onConfirm={actions.handleDelete}
+        isPending={actions.deleteAssignment.isPending}
+      />
+    </>
+  );
+}
+
+export function AssignmentOptionsDrawer({
+  open,
+  onOpenChange,
+  ...props
+}: AssignmentOptionsDrawerProps) {
+  const actions = useAssignmentOptionsActions(props);
+  const groups = getOptionGroups({ ...props, close: () => onOpenChange(false), actions });
+
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent>
           <DrawerHeader className="sr-only">
             <DrawerTitle>Assignment options</DrawerTitle>
-            <DrawerDescription>{assignment.title}</DrawerDescription>
+            <DrawerDescription>{props.assignment.title}</DrawerDescription>
           </DrawerHeader>
           <div className="space-y-3 overflow-y-auto px-4 pb-8">
             <OptionGroup>
-              <OptionRow
-                label={isPublished ? "Unpublish" : "Publish"}
-                icon={isPublished ? CloudDownload : CloudUpload}
-                onClick={handleTogglePublish}
-              />
-              <OptionRow
-                label="Edit"
-                icon={Pencil}
-                onClick={() => {
-                  close();
-                  onEdit();
-                }}
-              />
-              <OptionRow label="Share" icon={Share} onClick={handleShare} />
-              {showFlowsAction && (
-                <OptionRow
-                  label="Flows panel"
-                  icon={PanelRight}
-                  onClick={() => {
-                    close();
-                    toggleFlowsSidebar();
-                  }}
-                />
-              )}
+              {groups.primary.map((option) => (
+                <OptionRow key={option.label} {...option} />
+              ))}
             </OptionGroup>
             <OptionGroup>
-              <OptionRow
-                label="Delete"
-                icon={Trash2}
-                destructive
-                onClick={() => {
-                  close();
-                  setIsDeleteConfirmOpen(true);
-                }}
-              />
+              {groups.destructive.map((option) => (
+                <OptionRow key={option.label} {...option} />
+              ))}
             </OptionGroup>
             <div className="pt-4">
               <p className="flex items-center gap-1.5 px-1 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground/60">
@@ -193,24 +315,19 @@ export function AssignmentOptionsDrawer({
                 Developer
               </p>
               <OptionGroup>
-                <OptionRow
-                  label="Add submission"
-                  icon={Plus}
-                  onClick={() => {
-                    close();
-                    onAddSubmission();
-                  }}
-                />
+                {groups.developer.map((option) => (
+                  <OptionRow key={option.label} {...option} />
+                ))}
               </OptionGroup>
             </div>
           </div>
         </DrawerContent>
       </Drawer>
       <DeleteAssignmentAlertDialog
-        open={isDeleteConfirmOpen}
-        onOpenChange={setIsDeleteConfirmOpen}
-        onConfirm={handleDelete}
-        isPending={deleteAssignment.isPending}
+        open={actions.isDeleteConfirmOpen}
+        onOpenChange={actions.setIsDeleteConfirmOpen}
+        onConfirm={actions.handleDelete}
+        isPending={actions.deleteAssignment.isPending}
       />
     </>
   );

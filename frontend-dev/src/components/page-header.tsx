@@ -34,7 +34,7 @@ export function PageHeader({
 
   return (
     <>
-      <header className="pointer-events-none fixed inset-x-0 top-4 z-40 px-6">
+      <header className="pointer-events-none fixed inset-x-0 top-4 z-40 px-6 sm:px-8 md:hidden">
         <div className="flex items-center gap-2">
           <SidebarTrigger className="pointer-events-auto size-10 shrink-0 rounded-full border bg-background/80 shadow-sm backdrop-blur" />
           <div
@@ -57,7 +57,7 @@ export function PageHeader({
           )}
         </div>
       </header>
-      <div className="px-6 pt-16 sm:px-8 sm:pt-14">
+      <div className="px-6 pt-16 sm:px-8 sm:pt-14 md:pt-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 ref={titleRef} className="pb-1 text-3xl font-bold">

@@ -1,7 +1,6 @@
 import {useState, useEffect} from "react";
 import {AssignmentsTable} from "@/app/courses/tabs/assignments/assignments-table";
 import {useAssignmentColumns} from "@/app/courses/tabs/assignments/assignments";
-import {CreateAssignmentDialog} from "@/app/courses/tabs/assignments/create-assignment-dialog";
 import {Assignment, useDeleteAssignment} from "@/hooks/use-assignments";
 import {useTranslation} from "react-i18next";
 import {EditAssignmentDialog} from "@/app/courses/tabs/assignments/edit-assignment-dialog";
@@ -29,7 +28,6 @@ export default function AssignmentsTab({
   const [assignments, setAssignments] = useState<Assignment[]>(() => initialAssignments);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
   const {t} = useTranslation();
   const deleteAssignment = useDeleteAssignment();
@@ -47,10 +45,6 @@ export default function AssignmentsTab({
   useEffect(() => {
     setAssignments(initialAssignments);
   }, [initialAssignments]);
-
-  const handleAssignmentCreated = (newAssignment: Assignment) => {
-    setAssignments(prev => [...prev, newAssignment]);
-  };
 
   const handleAssignmentUpdated = (updated: Assignment) => {
     setAssignments(prev => prev.map(item => item.id === updated.id ? updated : item));
@@ -74,23 +68,12 @@ export default function AssignmentsTab({
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl">{t("assignments.title")}</h2>
-        {canManageAssignments && (
-          <CreateAssignmentDialog
-            courseId={courseId}
-            onAssignmentCreated={handleAssignmentCreated}
-            open={isCreateOpen}
-            onOpenChange={setIsCreateOpen}
-          />
-        )}
       </div>
 
       <AssignmentsTable
         columns={columns}
         data={assignments}
         courseId={courseId}
-        onCreateAssignment={
-          canManageAssignments ? () => setIsCreateOpen(true) : undefined
-        }
       />
       {canManageAssignments && (
         <EditAssignmentDialog

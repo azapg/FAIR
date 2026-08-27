@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, VariantProps } from "class-variance-authority";
-import { PanelLeftIcon, PanelRightIcon } from "lucide-react";
+import { Menu02Icon } from "hugeicons-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebarSwipe } from "@/hooks/use-sidebar-swipe";
@@ -604,7 +604,7 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <PanelLeftIcon />
+      <Menu02Icon className="size-5" />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );
@@ -630,7 +630,7 @@ function FlowSidebarTrigger({
       }}
       {...props}
     >
-      <PanelRightIcon />
+      <Menu02Icon className="size-5 rotate-180" />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );

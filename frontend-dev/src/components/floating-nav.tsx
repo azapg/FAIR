@@ -27,18 +27,26 @@ export function FloatingNav({
 }: FloatingNavProps) {
   if (items.length === 0 && !action) return null;
 
+  const hasViews = items.length > 0;
+  const hasAction = Boolean(action);
+
   return (
     <div
       className={cn(
-        "fixed inset-x-0 bottom-4 z-40 flex items-center justify-start gap-2 px-6 pb-[env(safe-area-inset-bottom)] md:hidden",
+        "fixed inset-x-0 bottom-4 z-40 flex items-center gap-2 px-6 pb-[env(safe-area-inset-bottom)] md:hidden sm:px-8",
+        hasViews && hasAction && "justify-end",
+        hasViews && !hasAction && "justify-center",
+        !hasViews && hasAction && "justify-end",
         className,
       )}
     >
-      {action}
-      {items.length > 0 && (
+      {hasViews && (
         <nav
           aria-label="Views"
-          className="flex items-center gap-1 rounded-full border bg-background/80 p-1.5 shadow-sm backdrop-blur"
+          className={cn(
+            "flex min-w-0 items-center gap-1 rounded-full border bg-background/80 p-1.5 shadow-sm backdrop-blur",
+            hasAction ? "flex-1" : "w-full max-w-md",
+          )}
         >
           {items.map((item) => {
             const isActive = item.value === value;
@@ -51,16 +59,17 @@ export function FloatingNav({
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => onValueChange(item.value)}
                 className={cn(
-                  "flex size-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground",
+                  "flex h-10 min-w-0 flex-1 basis-0 items-center justify-center rounded-full px-2 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground",
                   isActive && "bg-muted text-foreground hover:bg-muted",
                 )}
               >
-                <item.icon className="size-5" />
+                <item.icon className="size-5 shrink-0" />
               </button>
             );
           })}
         </nav>
       )}
+      {action}
     </div>
   );
 }

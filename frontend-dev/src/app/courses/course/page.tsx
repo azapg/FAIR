@@ -291,6 +291,7 @@ export default function CourseDetailPage() {
           onAssignmentCreated={() => {}}
           open={isCreateAssignmentOpen}
           onOpenChange={setIsCreateAssignmentOpen}
+          showTrigger={false}
         />
       )}
     </div>
