@@ -210,7 +210,7 @@ function NavMain({
           <span>{t("nav.inbox")}</span>
         </SidebarMenuButton>
         {unreadCount > 0 && (
-          <SidebarMenuBadge className="right-3 rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
+          <SidebarMenuBadge className="!right-4 rounded-full bg-primary px-1.5 text-xs !text-primary-foreground">
             {unreadCount}
           </SidebarMenuBadge>
         )}
