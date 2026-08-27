@@ -129,7 +129,7 @@ export function QuizBuilderDialog({
           </DialogHeader>
 
           <fieldset className="space-y-3 rounded-md border p-4">
-            <legend className="px-1 text-sm font-semibold">Quiz settings</legend>
+            <legend className="px-1 text-[13px] leading-4 font-medium">Quiz settings</legend>
             <div className="space-y-2">
               <Label htmlFor="quiz-title">Quiz title</Label>
               <Input id="quiz-title" value={quizTitle} onChange={(event) => setQuizTitle(event.target.value)} autoFocus />
@@ -154,7 +154,7 @@ export function QuizBuilderDialog({
           </fieldset>
 
           <fieldset className="space-y-3 rounded-md border p-4">
-            <legend className="px-1 text-sm font-semibold">Reusable question</legend>
+            <legend className="px-1 text-[13px] leading-4 font-medium">Reusable question</legend>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="quiz-bank">Question bank</Label>

@@ -113,7 +113,7 @@ export default function LiveChatPage() {
       <div className="flex h-screen w-full flex-col bg-background">
         <header className="flex h-14 shrink-0 items-center justify-between border-b px-6">
           <div>
-            <h1 className="text-sm font-semibold">FAIR live execution</h1>
+            <h1 className="text-[13px] leading-4 font-medium">FAIR live execution</h1>
             <p className="text-xs text-muted-foreground">
               {live.executionId ? `Execution ${live.executionId.slice(0, 8)} · ${live.status}` : "No active Execution"}
               {entitlement.data?.controlsEnabled && entitlement.data.remainingUnits != null

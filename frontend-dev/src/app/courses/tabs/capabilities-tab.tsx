@@ -56,7 +56,7 @@ export function CapabilitiesTab() {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-xl font-semibold">Extension capabilities</h3>
+      <h3 className="text-base leading-5 font-medium">Extension capabilities</h3>
       <DataTable
         data={capabilities.data ?? []}
         columns={columns}

@@ -20,7 +20,7 @@ export default function TodoPage() {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="font-semibold">{item.assignmentTitle}</div>
+                <div className="font-medium">{item.assignmentTitle}</div>
                 <div className="text-sm text-muted-foreground">{item.courseName}</div>
               </div>
               <div className="text-right text-sm">

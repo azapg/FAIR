@@ -37,7 +37,7 @@ export function SourcesSidebar({ sources, onClose }: SourcesSidebarProps) {
   return (
     <aside aria-labelledby={titleId} className="w-80 border-l bg-card/40 flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out">
       <div className="p-4 border-b shrink-0 flex items-center justify-between">
-        <h2 id={titleId} className="text-sm font-bold text-foreground/80 tracking-wide uppercase flex items-center gap-2">
+        <h2 id={titleId} className="text-[13px] leading-4 font-medium text-foreground/80 tracking-wide uppercase flex items-center gap-2">
           <BookIcon className="w-4 h-4 text-primary" /> Sources
         </h2>
         <Button
@@ -65,10 +65,10 @@ export function SourcesSidebar({ sources, onClose }: SourcesSidebarProps) {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[10px] font-mono font-bold shrink-0 bg-muted px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground">
+                    <span className="text-[10px] font-mono font-medium shrink-0 bg-muted px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground">
                       [{src.index}]
                     </span>
-                    <span className="text-sm font-semibold text-foreground truncate" title={src.title}>
+                    <span className="text-sm font-medium text-foreground truncate" title={src.title}>
                       {src.title}
                     </span>
                   </div>

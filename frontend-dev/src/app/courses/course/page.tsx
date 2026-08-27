@@ -159,7 +159,7 @@ export default function CourseDetailPage() {
         <TabsContent value={"timeline"} className={"px-6 sm:px-8 py-3"}>
           <div className="space-y-8">
             <section>
-              <h2 className="mb-3 text-lg font-semibold">Stream</h2>
+              <h2 className="mb-3 text-base leading-5 font-medium">Stream</h2>
               <StreamTab
                 courseId={courseId as string}
                 canPost={isInstructorView}
@@ -168,7 +168,7 @@ export default function CourseDetailPage() {
               />
             </section>
             <section>
-              <h2 className="mb-3 text-lg font-semibold">Content</h2>
+              <h2 className="mb-3 text-base leading-5 font-medium">Content</h2>
               <CourseContentTab
                 courseId={courseId as string}
                 canManage={isInstructorView}
@@ -177,7 +177,7 @@ export default function CourseDetailPage() {
               />
             </section>
             <section>
-              <h2 className="mb-3 text-lg font-semibold">{t("tabs.assignments")}</h2>
+              <h2 className="mb-3 text-base leading-5 font-medium">{t("tabs.assignments")}</h2>
               <AssignmentsTab assignments={assignments} courseId={courseId} canManageAssignments={isInstructorView}/>
             </section>
           </div>

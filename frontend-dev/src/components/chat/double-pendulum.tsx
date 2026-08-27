@@ -207,7 +207,7 @@ export function DoublePendulum() {
         onMouseLeave={handleMouseUp}
         className="border border-border/80 rounded-xl bg-card/60 shadow-inner cursor-pointer"
       />
-      <div className="text-[10px] text-muted-foreground font-semibold">
+      <div className="text-[10px] text-muted-foreground font-normal">
         Drag either pendulum bob with your mouse to inject chaotic energy!
       </div>
     </div>

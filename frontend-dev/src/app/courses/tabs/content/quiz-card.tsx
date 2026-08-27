@@ -163,7 +163,7 @@ export function QuizCard({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <CircleHelp className="h-4 w-4 text-primary" />
-            <h4 className="font-semibold">{quiz.title}</h4>
+            <h4 className="text-base leading-5 font-medium">{quiz.title}</h4>
             <Badge variant="outline">{quiz.status}</Badge>
           </div>
           {quiz.instructions && <p className="mt-1 text-sm text-muted-foreground">{quiz.instructions}</p>}
@@ -231,7 +231,7 @@ export function QuizCard({
 
       {canManage && (
         <div className="space-y-2 border-t pt-3">
-          <p className="text-sm font-medium">Attempts</p>
+          <p className="text-[13px] leading-4 font-medium">Attempts</p>
           {attempts.map((attempt) => (
             <div key={attempt.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/30 px-3 py-2 text-sm">
               <span>Learner {attempt.userId.slice(0, 8)} · attempt {attempt.attemptNumber} · {attempt.status}</span>

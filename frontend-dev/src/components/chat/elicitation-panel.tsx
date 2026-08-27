@@ -118,7 +118,7 @@ export function ElicitationPanel({
           ref={headingRef}
           id={headingId}
           tabIndex={-1}
-          className="text-[14px] font-bold text-foreground max-w-[80%] leading-snug outline-none"
+          className="text-[14px] font-medium text-foreground max-w-[80%] leading-snug outline-none"
         >
           {currentQuestion.title}
         </h3>
@@ -167,7 +167,7 @@ export function ElicitationPanel({
             onClick={() => handleSelectOption(opt.label)}
             className="group relative flex items-center w-full p-2.5 rounded-xl hover:bg-muted transition-colors text-left"
           >
-            <div className="w-6 h-6 flex items-center justify-center bg-muted text-muted-foreground rounded-md text-[11px] font-bold mr-3 shrink-0">
+            <div className="w-6 h-6 flex items-center justify-center bg-muted text-muted-foreground rounded-md text-[11px] font-medium mr-3 shrink-0">
               {idx + 1}
             </div>
             <span className="text-[14px] flex-1 text-muted-foreground font-medium group-hover:text-foreground transition-colors">
@@ -196,7 +196,7 @@ export function ElicitationPanel({
               <Button 
                 type="submit" 
                 size="sm" 
-                className="h-7 text-[12px] font-bold rounded-lg px-3"
+                className="h-7 text-[12px] font-medium rounded-lg px-3"
               >
                 Send
               </Button>
@@ -206,7 +206,7 @@ export function ElicitationPanel({
                 size="sm" 
                 variant="secondary"
                 onClick={handleSkip}
-                className="h-7 text-[12px] font-bold rounded-lg px-3 border-none shadow-none"
+                className="h-7 text-[12px] font-medium rounded-lg px-3 border-none shadow-none"
               >
                 Skip
               </Button>

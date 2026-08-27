@@ -50,12 +50,12 @@ function ContentItemView({
   isArchived: boolean
 }) {
   if (item.kind === 'heading') {
-    return <h3 className="text-lg font-semibold">{item.title}</h3>
+    return <h3 className="text-base leading-5 font-medium">{item.title}</h3>
   }
   if (item.kind === 'page') {
     return (
       <div>
-        <h3 className="font-semibold">{item.title}</h3>
+        <h3 className="text-base leading-5 font-medium">{item.title}</h3>
         <div className="mt-2 text-sm"><MarkdownRenderer>{String(item.payload.body ?? '')}</MarkdownRenderer></div>
       </div>
     )
@@ -189,7 +189,7 @@ export function CourseContentTab({
     <div className="space-y-5 py-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold">Course content</h2>
+          <h2 className="text-base leading-5 font-medium">Course content</h2>
           <p className="text-sm text-muted-foreground">
             {content.canManage ? 'Organize pages, links, files, assignments, and quizzes into a student-facing outline.' : 'Work through the course outline in order.'}
           </p>
@@ -208,7 +208,7 @@ export function CourseContentTab({
           <div className="flex items-start gap-3 border-b bg-muted/30 p-4">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 id={`section-${section.id}`} className="text-xl font-semibold">{section.title}</h3>
+                <h3 id={`section-${section.id}`} className="text-base leading-5 font-medium">{section.title}</h3>
                 {content.canManage && <Badge variant="outline">{section.visibility}</Badge>}
               </div>
               {section.summary && <p className="mt-1 text-sm text-muted-foreground">{section.summary}</p>}

@@ -206,7 +206,7 @@ export function CreateAssignmentDialog({
               </div>
 
               <div className="grid gap-2">
-                <h2 className="text-muted-foreground text-sm">{t("assignments.resources")}</h2>
+                <h2 className="text-muted-foreground text-[13px] leading-4 font-medium">{t("assignments.resources")}</h2>
                 <div className="flex flex-row flex-wrap items-center gap-2">
                   {files.map((item) => (
                     <Button

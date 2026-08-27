@@ -50,7 +50,7 @@ export function FlowsTab({ courseId }: { courseId?: string }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-xl font-semibold">Flows</h3>
+      <h3 className="text-base leading-5 font-medium">Flows</h3>
       <DataTable data={flowsQuery.data ?? []} columns={columns} filterKey="name">
         <div className="pb-3">
           <DataTableSearch />

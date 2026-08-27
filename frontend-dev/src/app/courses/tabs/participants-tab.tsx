@@ -175,14 +175,14 @@ export function ParticipantsTab({
 
   return (
     <div className="space-y-4">
-      <h2 className="mb-3 text-xl font-semibold">{t("participants.instructors")}</h2>
+      <h2 className="mb-3 text-base leading-5 font-medium">{t("participants.instructors")}</h2>
       <DataTable data={instructors} columns={instructorColumns}>
         <DataTableContent>
           <DataTableEmpty>{t("participants.noInstructor")}</DataTableEmpty>
         </DataTableContent>
       </DataTable>
 
-      <h2 className="mb-2 text-xl font-semibold">{t("participants.students")}</h2>
+      <h2 className="mb-2 text-base leading-5 font-medium">{t("participants.students")}</h2>
       <DataTable data={students} columns={studentColumns}>
         <DataTableContent>
           <DataTableEmpty>

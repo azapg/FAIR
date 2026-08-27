@@ -149,7 +149,7 @@ export function RunsTab({ courseId }: { courseId?: string }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-xl font-semibold">{t("runs.title")}</h3>
+      <h3 className="text-base leading-5 font-medium">{t("runs.title")}</h3>
       <DataTable data={runs ?? []} columns={columns}>
         <DataTableContent>
           <DataTableEmpty>{t("runs.empty")}</DataTableEmpty>

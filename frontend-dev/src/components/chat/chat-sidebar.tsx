@@ -149,7 +149,7 @@ export function ChatSidebar({
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </Button>
           <div className="flex-1 flex items-center justify-center">
-            <span className="text-[10px] font-bold text-muted-foreground tracking-widest uppercase select-none opacity-40 [writing-mode:vertical-lr] rotate-180">
+            <span className="text-[10px] font-normal text-muted-foreground tracking-widest uppercase select-none opacity-40 [writing-mode:vertical-lr] rotate-180">
               Test System Panel
             </span>
           </div>
@@ -207,7 +207,7 @@ export function ChatSidebar({
             {activeTab === "scenarios" && (
               <div className="p-4 space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                  <label className="text-[13px] leading-4 font-medium text-muted-foreground uppercase">
                     Select Scenario
                   </label>
                   <div className="flex flex-col gap-1">
@@ -216,13 +216,13 @@ export function ChatSidebar({
                         key={scenario.id}
                         onClick={() => handleScenarioSelect(scenario.id)}
                         className={cn(
-                          "text-left px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex flex-col gap-0.5 w-full",
+                          "text-left px-3 py-2 rounded-xl text-[13px] leading-4 font-medium border transition-all flex flex-col gap-0.5 w-full",
                           selectedScenarioId === scenario.id
                             ? "bg-primary/5 border-primary/30 text-primary shadow-xs"
                             : "bg-transparent border-transparent hover:bg-muted text-muted-foreground"
                         )}
                       >
-                        <span className="text-foreground font-bold truncate">{scenario.title}</span>
+                        <span className="text-foreground font-medium truncate">{scenario.title}</span>
                         <span className="text-[10px] font-normal leading-normal opacity-85 line-clamp-2">
                           {scenario.description}
                         </span>
@@ -232,7 +232,7 @@ export function ChatSidebar({
                   
                   <div className="flex items-center space-x-2 mt-4 pt-2">
                     <Checkbox id="auto-debug" checked={autoDebug} onCheckedChange={(c) => setAutoDebug(!!c)} />
-                    <Label htmlFor="auto-debug" className="text-[11px] font-medium leading-none cursor-pointer">
+                    <Label htmlFor="auto-debug" className="text-[13px] leading-4 font-medium cursor-pointer">
                       Auto-switch & Play in Debug tab
                     </Label>
                   </div>
@@ -243,7 +243,7 @@ export function ChatSidebar({
             {activeTab === "debug" && (
               <div className="p-4 space-y-6 pb-20">
                 <div className="space-y-3">
-                  <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                  <label className="text-[13px] leading-4 font-medium text-muted-foreground uppercase">
                     Global State
                   </label>
                   <div className="space-y-2">
@@ -269,7 +269,7 @@ export function ChatSidebar({
 
                 <div className="space-y-3 border-t pt-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-muted-foreground uppercase">
+                    <label className="text-[13px] leading-4 font-medium text-muted-foreground uppercase">
                       Messages ({store.messages.length})
                     </label>
                     <div className="flex items-center gap-1">
@@ -281,7 +281,7 @@ export function ChatSidebar({
                         </SheetTrigger>
                         <SheetContent side="right" className="w-[400px] sm:w-[540px] p-0 flex flex-col h-full overflow-hidden">
                           <SheetHeader className="p-4 border-b flex-none space-y-0 text-left">
-                            <SheetTitle className="text-lg font-bold pr-6">Create Custom Message</SheetTitle>
+                            <SheetTitle className="text-base leading-5 font-medium pr-6">Create Custom Message</SheetTitle>
                           </SheetHeader>
                           
                           <div className="flex-1 overflow-y-auto p-6 space-y-5 pb-12">
@@ -329,7 +329,7 @@ export function ChatSidebar({
                             </div>
 
                             <div className="space-y-4 pt-4 border-t">
-                              <Label className="text-base font-semibold">Mock Add-ons</Label>
+                            <Label className="text-[13px] leading-4 font-medium">Mock Add-ons</Label>
                               
                               <div className="flex items-center space-x-2 pb-2">
                                 <Switch id="mock-times" checked={mockTimesAndSteps} onCheckedChange={setMockTimesAndSteps} />
@@ -463,7 +463,7 @@ export function ChatSidebar({
                                       <div className="flex flex-col gap-2">
                                         {mockEliOptions.map((opt, i) => (
                                           <div key={i} className="flex items-center gap-2">
-                                            <div className="bg-muted text-muted-foreground w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold shrink-0 border">
+                                            <div className="bg-muted text-muted-foreground w-6 h-6 rounded flex items-center justify-center text-[10px] font-normal shrink-0 border">
                                               {i + 1}
                                             </div>
                                             <Input 
@@ -653,7 +653,7 @@ export function ChatSidebar({
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-1.5">
                             <span className={cn(
-                              "text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md",
+                              "text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded-md",
                               msg.role === "user" ? "bg-blue-500/10 text-blue-500" : 
                               msg.role === "system" ? "bg-purple-500/10 text-purple-500" : "bg-primary/10 text-primary"
                             )}>
@@ -681,7 +681,7 @@ export function ChatSidebar({
                         <div className="text-[10px] text-muted-foreground flex justify-between">
                           <span>{msg.events?.length || 0} events</span>
                           {store.streamingMessageId === msg.id && (
-                            <span className="text-amber-500 font-semibold animate-pulse">Streaming</span>
+                            <span className="text-amber-500 font-medium animate-pulse">Streaming</span>
                           )}
                         </div>
                       </div>
@@ -694,7 +694,7 @@ export function ChatSidebar({
             {activeTab === "settings" && (
               <div className="p-4 space-y-6">
                 <div className="space-y-2 shrink-0">
-                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  <label className="text-[13px] leading-4 font-medium text-muted-foreground uppercase tracking-wider block">
                     UI Role View
                   </label>
                   <p className="text-[10px] text-muted-foreground mb-2 leading-relaxed">
@@ -706,7 +706,7 @@ export function ChatSidebar({
                         key={role}
                         onClick={() => setUserRole(role)}
                         className={cn(
-                          "py-1.5 text-[10px] font-bold rounded-lg capitalize transition-all cursor-pointer",
+                          "py-1.5 text-[10px] font-medium rounded-lg capitalize transition-all cursor-pointer",
                           userRole === role
                             ? "bg-background text-foreground shadow-xs border border-border/25"
                             : "text-muted-foreground hover:text-foreground"
@@ -724,7 +724,7 @@ export function ChatSidebar({
           {/* Bottom Fixed Panels based on Tab */}
           {activeTab === "debug" && (
             <div className="p-4 border-t space-y-3 shrink-0 bg-background/50">
-              <label className="text-[11px] font-bold text-muted-foreground uppercase block">
+              <label className="text-[13px] leading-4 font-medium text-muted-foreground uppercase block">
                 Simulation Control
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -747,7 +747,7 @@ export function ChatSidebar({
                 </Button>
               </div>
               <div className="bg-muted/40 p-3 rounded-xl border space-y-1">
-                <div className="text-[10px] text-muted-foreground flex justify-between font-semibold">
+                <div className="text-[10px] text-muted-foreground flex justify-between font-normal">
                   <span>Scenario progress:</span>
                   <span>
                     {playbackIndex} / {activeScenario.messages.length} turns

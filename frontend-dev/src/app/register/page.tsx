@@ -65,7 +65,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">{t('auth.checkYourEmail')}</h1>
+            <h1 className="text-base leading-5 font-medium">{t('auth.checkYourEmail')}</h1>
             <p className="text-sm text-muted-foreground">
               {verificationMessage} <br />
               <span className="font-medium text-foreground">{email}</span>
@@ -113,7 +113,7 @@ export default function RegisterPage() {
       <form onSubmit={onSubmit} className="flex flex-col gap-6">
         <FieldGroup>
           <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="text-2xl font-bold">{t('auth.welcome')}</h1>
+            <h1 className="text-base leading-5 font-medium">{t('auth.welcome')}</h1>
             <p className="text-sm text-balance text-muted-foreground">
               {registrationMode === 'allowlist'
                 ? t('auth.approvedEmailRegistration')

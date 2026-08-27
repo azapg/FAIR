@@ -43,14 +43,14 @@ export function StudentGradesTab({ courseId, enabled = true }: { courseId: strin
   return (
     <div className="min-w-0 space-y-5 py-4">
       <header>
-        <h2 className="text-2xl font-semibold">Grades</h2>
+        <h2 className="text-base leading-5 font-medium">Grades</h2>
         <p className="mt-1 text-sm text-muted-foreground">Only grades and feedback released to you appear here.</p>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="gap-3"><CardHeader><CardDescription>{data.currentGradeLabel}</CardDescription><CardTitle className="text-3xl">{data.total.percentage == null ? '—' : `${format(data.total.percentage)}%`}</CardTitle></CardHeader></Card>
-        <Card className="gap-3"><CardHeader><CardDescription>Released points</CardDescription><CardTitle className="text-3xl">{format(data.total.pointsEarned)}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">out of {format(data.total.pointsPossible)} possible now</CardContent></Card>
-        <Card className="gap-3"><CardHeader><CardDescription>Final grade</CardDescription><CardTitle className="text-lg">{data.finalGradeAvailable ? 'Available' : 'Not available yet'}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">{data.total.provisional ? `${data.total.missingEntryCount} item${data.total.missingEntryCount === 1 ? '' : 's'} missing or unreleased` : 'No unreleased items in this calculation'}</CardContent></Card>
+        <Card className="gap-3"><CardHeader><CardDescription>{data.currentGradeLabel}</CardDescription><CardTitle className="text-xl leading-6">{data.total.percentage == null ? '—' : `${format(data.total.percentage)}%`}</CardTitle></CardHeader></Card>
+        <Card className="gap-3"><CardHeader><CardDescription>Released points</CardDescription><CardTitle className="text-xl leading-6">{format(data.total.pointsEarned)}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">out of {format(data.total.pointsPossible)} possible now</CardContent></Card>
+        <Card className="gap-3"><CardHeader><CardDescription>Final grade</CardDescription><CardTitle>{data.finalGradeAvailable ? 'Available' : 'Not available yet'}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">{data.total.provisional ? `${data.total.missingEntryCount} item${data.total.missingEntryCount === 1 ? '' : 's'} missing or unreleased` : 'No unreleased items in this calculation'}</CardContent></Card>
       </div>
 
       {data.total.provisional && (
@@ -68,7 +68,7 @@ export function StudentGradesTab({ courseId, enabled = true }: { courseId: strin
       </Alert>
 
       <section aria-labelledby="grade-categories-heading">
-        <h3 id="grade-categories-heading" className="mb-3 text-lg font-semibold">Category totals</h3>
+        <h3 id="grade-categories-heading" className="mb-3 text-base leading-5 font-medium">Category totals</h3>
         {data.categories.length === 0 ? <p className="text-sm text-muted-foreground">No grade categories yet.</p> : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {data.categories.map((category) => {
@@ -76,7 +76,7 @@ export function StudentGradesTab({ courseId, enabled = true }: { courseId: strin
               return (
                 <Card key={category.id} className="min-w-0 gap-3">
                   <CardHeader><CardTitle className="break-words text-base">{category.name}</CardTitle><CardDescription>{category.weight == null ? 'Points-based' : `${format(category.weight)}% weight`}</CardDescription></CardHeader>
-                  <CardContent><div className="text-xl font-semibold">{total?.percentage == null ? '—' : `${format(total.percentage)}%`}</div><div className="mt-1 text-sm text-muted-foreground">{format(total?.pointsEarned)} / {format(total?.pointsPossible)} released points</div></CardContent>
+                  <CardContent><div className="text-base leading-5 font-medium">{total?.percentage == null ? '—' : `${format(total.percentage)}%`}</div><div className="mt-1 text-sm text-muted-foreground">{format(total?.pointsEarned)} / {format(total?.pointsPossible)} released points</div></CardContent>
                 </Card>
               )
             })}
@@ -85,7 +85,7 @@ export function StudentGradesTab({ courseId, enabled = true }: { courseId: strin
       </section>
 
       <section aria-labelledby="grade-items-heading">
-        <h3 id="grade-items-heading" className="mb-3 text-lg font-semibold">Grade items</h3>
+        <h3 id="grade-items-heading" className="mb-3 text-base leading-5 font-medium">Grade items</h3>
         {data.items.length === 0 ? (
           <Card><CardContent className="text-sm text-muted-foreground">No grade items have been released yet.</CardContent></Card>
         ) : (

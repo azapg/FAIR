@@ -67,7 +67,7 @@ export default function AssignmentsTab({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl">{t("assignments.title")}</h2>
+        <h2 className="text-base leading-5 font-medium">{t("assignments.title")}</h2>
       </div>
 
       <AssignmentsTable

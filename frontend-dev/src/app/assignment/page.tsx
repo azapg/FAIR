@@ -60,7 +60,7 @@ function StudentSubmissionSection({
   return (
     <div className="mb-5 space-y-3 rounded-lg border p-4">
       <div>
-        <h2 className="text-xl font-semibold">Your work</h2>
+        <h2 className="text-base leading-5 font-medium">Your work</h2>
         <p className="text-sm text-muted-foreground">
           {attempts.length === 0
             ? 'No submission yet.'
@@ -109,7 +109,7 @@ function InstructorSubmissionsSection({
   return (
     <div className={"space-y-3 mb-5"}>
       <div className={"flex justify-between items-center mb-3"}>
-        <h2 className={"text-xl font-semibold"}>{t("submissions.title")}</h2>
+        <h2 className={"text-base leading-5 font-medium"}>{t("submissions.title")}</h2>
       </div>
       <SubmissionsTable
         columns={columns}

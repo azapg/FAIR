@@ -124,7 +124,7 @@ export function ChatInput({ className, ...props }: React.ComponentProps<"textare
     return (
         <textarea
             className={cn(
-                "w-full bg-transparent border-none px-4 py-2 mt-1 outline-none resize-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[44px] max-h-[200px] text-[15px] text-foreground placeholder:text-muted-foreground",
+                "w-full bg-transparent border-none px-4 py-2 mt-1 outline-none resize-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[44px] max-h-[200px] text-sm text-foreground placeholder:text-muted-foreground",
                 className
             )}
             placeholder="Ask a follow up question..."
@@ -211,11 +211,11 @@ export function CanvaTriggerCard({
                     {icon ?? <Code className="w-5 h-5 opacity-70" />}
                 </div>
                 <div>
-                    <h4 className="font-semibold text-foreground text-[15px] leading-tight mb-1.5">{title}</h4>
+                    <h4 className="font-medium text-foreground text-[13px] leading-4 mb-1.5">{title}</h4>
                     <p className="text-muted-foreground text-[13px] font-medium tracking-wide">{type}</p>
                 </div>
             </div>
-            <button className="px-4 py-1.5 h-fit bg-transparent group-hover/canva:bg-background rounded-lg border border-border text-[13px] font-semibold transition-colors focus:ring-2 focus:ring-ring outline-none hover:bg-muted">
+            <button className="px-4 py-1.5 h-fit bg-transparent group-hover/canva:bg-background rounded-lg border border-border text-[13px] font-medium transition-colors focus:ring-2 focus:ring-ring outline-none hover:bg-muted">
                 {actionText}
             </button>
         </div>

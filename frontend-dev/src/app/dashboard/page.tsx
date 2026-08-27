@@ -86,7 +86,7 @@ export default function StudentDashboardPage() {
   return (
     <main className="min-w-0 space-y-6 px-4 py-6 sm:px-6">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+        <h1 className="text-base leading-5 font-medium">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">Your released grades, course progress, and work across active courses.</p>
       </header>
 
@@ -101,7 +101,7 @@ export default function StudentDashboardPage() {
       <section aria-labelledby="course-progress-heading">
         <div className="mb-3 flex items-center gap-2">
           <BookOpenCheck className="size-5" aria-hidden="true" />
-          <h2 id="course-progress-heading" className="text-xl font-semibold">Course progress</h2>
+          <h2 id="course-progress-heading" className="text-base leading-5 font-medium">Course progress</h2>
         </div>
         {data.courseProgress.length === 0 ? (
           <Card><CardContent className="text-sm text-muted-foreground">No active course progress yet.</CardContent></Card>
@@ -130,7 +130,7 @@ export default function StudentDashboardPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-end justify-between gap-2">
-                    <div><div className="text-xs text-muted-foreground">Current grade</div><div className="text-2xl font-semibold">{course.currentGrade == null ? '—' : `${number.format(course.currentGrade)}%`}</div></div>
+                    <div><div className="text-xs text-muted-foreground">Current grade</div><div className="text-xl leading-6 font-medium">{course.currentGrade == null ? '—' : `${number.format(course.currentGrade)}%`}</div></div>
                     {course.gradeIsProvisional && <Badge variant="outline">Provisional</Badge>}
                   </div>
                   <div className="text-xs text-muted-foreground">{number.format(course.pointsEarned)} / {number.format(course.pointsPossible)} released points</div>
@@ -143,18 +143,18 @@ export default function StudentDashboardPage() {
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <Card className="min-w-0">
-          <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><CalendarClock className="size-5" aria-hidden="true" />Overdue</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><CalendarClock className="size-5" aria-hidden="true" />Overdue</CardTitle></CardHeader>
           <CardContent><WorkList items={data.overdueWork} empty="Nothing overdue." /></CardContent>
         </Card>
         <Card className="min-w-0">
-          <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><CalendarClock className="size-5" aria-hidden="true" />Upcoming</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><CalendarClock className="size-5" aria-hidden="true" />Upcoming</CardTitle></CardHeader>
           <CardContent><WorkList items={data.upcomingWork} empty="No upcoming work." /></CardContent>
         </Card>
       </div>
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <Card className="min-w-0">
-          <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><MessageSquareText className="size-5" aria-hidden="true" />Returned feedback</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquareText className="size-5" aria-hidden="true" />Returned feedback</CardTitle></CardHeader>
           <CardContent>
             {data.returnedFeedback.length === 0 ? <p className="text-sm text-muted-foreground">No recently returned feedback.</p> : (
               <ul className="space-y-2">
@@ -176,7 +176,7 @@ export default function StudentDashboardPage() {
         </Card>
 
         <Card className="min-w-0">
-          <CardHeader><CardTitle className="text-lg">Recent course activity</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Recent course activity</CardTitle></CardHeader>
           <CardContent>
             {data.recentActivity.length === 0 ? <p className="text-sm text-muted-foreground">No recent activity.</p> : (
               <ul className="space-y-2">

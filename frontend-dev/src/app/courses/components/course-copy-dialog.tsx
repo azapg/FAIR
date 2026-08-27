@@ -227,7 +227,7 @@ export function CourseCopyDialog({
           </div>
 
           <fieldset className="grid gap-3">
-            <legend className="text-sm font-medium">Include</legend>
+            <legend className="text-[13px] leading-4 font-medium">Include</legend>
             <div className="grid gap-3 sm:grid-cols-2">
               {SELECTION_LABELS.map(({ key, label }) => (
                 <div className="flex items-start gap-2" key={key}>

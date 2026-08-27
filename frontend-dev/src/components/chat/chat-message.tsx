@@ -112,7 +112,7 @@ export const ChatMessage = React.memo(function ChatMessage({
       return codeParts.map((part, index) => {
         if (index % 2 === 1) {
           return (
-            <code key={`${keyPrefix}-code-${index}`} className="px-1.5 py-0.5 rounded bg-muted font-mono text-[13px] font-semibold text-primary/95 border border-border/40 select-all">
+            <code key={`${keyPrefix}-code-${index}`} className="px-1.5 py-0.5 rounded bg-muted font-mono text-[13px] font-normal text-primary/95 border border-border/40 select-all">
               {part}
             </code>
           )
@@ -121,7 +121,7 @@ export const ChatMessage = React.memo(function ChatMessage({
         return boldParts.map((subPart, subIndex) => {
           if (subIndex % 2 === 1) {
             return (
-              <strong key={`${keyPrefix}-bold-${index}-${subIndex}`} className="font-bold text-foreground">
+              <strong key={`${keyPrefix}-bold-${index}-${subIndex}`} className="font-medium text-foreground">
                 {subPart}
               </strong>
             )
@@ -152,8 +152,8 @@ export const ChatMessage = React.memo(function ChatMessage({
               <InlineCitationCardBody>
                 <div className="p-4 space-y-1.5 text-xs select-none">
                   <div className="flex items-center gap-1.5 justify-between border-b pb-1 mb-1">
-                    <span className="font-bold text-foreground truncate">{source.title}</span>
-                    <span className="font-mono font-bold bg-muted px-1.5 py-0.2 rounded border text-[9px] text-muted-foreground shrink-0">
+                    <span className="font-medium text-foreground truncate">{source.title}</span>
+                    <span className="font-mono font-normal bg-muted px-1.5 py-0.2 rounded border text-[9px] text-muted-foreground shrink-0">
                       [{source.index}]
                     </span>
                   </div>
@@ -204,14 +204,14 @@ export const ChatMessage = React.memo(function ChatMessage({
             <div className="mt-1 -mb-1 w-full select-none max-w-none z-10 relative">
               <Task open={isTaskOpen} onOpenChange={onTaskOpenChange}>
                 <TaskTrigger title={triggerTitle}>
-                  <div className="flex w-full cursor-pointer items-center text-sm font-semibold group/task hover:bg-muted/30 px-3 py-1.5 rounded-lg -mx-3 transition-all duration-200">
+                  <div className="flex w-full cursor-pointer items-center text-sm font-medium group/task hover:bg-muted/30 px-3 py-1.5 rounded-lg -mx-3 transition-all duration-200">
                     <div className={cn(
                       "transition-all duration-300 overflow-hidden flex items-center shrink-0",
                       taskTimer.completed || !personaLoaded ? "w-0 opacity-0 mr-0" : "w-6 opacity-100 mr-2"
                     )}>
                       <Persona className="w-6 h-6 shrink-0" state={personaState} variant="opal" onLoad={onPersonaLoad} />
                     </div>
-                    <p className={cn("text-xs font-semibold transition-colors duration-200", !taskTimer.completed ? "shimmer text-muted-foreground" : "text-muted-foreground")}>
+                    <p className={cn("text-xs font-normal transition-colors duration-200", !taskTimer.completed ? "shimmer text-muted-foreground" : "text-muted-foreground")}>
                       {triggerTitle}
                     </p>
                     <ChevronRight className="size-3.5 transition-transform group-data-[state=open]:rotate-90 text-muted-foreground/70 ml-2" />
@@ -293,11 +293,11 @@ export const ChatMessage = React.memo(function ChatMessage({
                     <Code className="w-4 h-4 opacity-70" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground text-xs leading-tight mb-1">{message.canvasContent.title}</h4>
-                    <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">{message.canvasContent.type}</p>
+                    <h4 className="font-medium text-foreground text-xs leading-tight mb-1">{message.canvasContent.title}</h4>
+                    <p className="text-muted-foreground text-[10px] uppercase font-medium tracking-wider">{message.canvasContent.type}</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="h-8 gap-1 text-[11px] font-semibold bg-background group-hover/canva:bg-muted transition-colors">
+                <Button variant="outline" size="sm" className="h-8 gap-1 text-[11px] font-medium bg-background group-hover/canva:bg-muted transition-colors">
                   Open Canvas <ExternalLink className="w-3 h-3" />
                 </Button>
               </div>
@@ -313,7 +313,7 @@ export const ChatMessage = React.memo(function ChatMessage({
             ) : (
               <div className="w-full">
                 {message.content && (
-                  <div className="w-full text-foreground/90 leading-relaxed text-[15px] select-text pt-0.5 pb-0">
+                  <div className="w-full text-foreground/90 leading-relaxed text-sm select-text pt-0.5 pb-0">
                     {renderContentText(message.content, message.sources)}
                   </div>
                 )}

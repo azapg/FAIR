@@ -59,7 +59,7 @@ function CategoryNavigation({
 
   return (
     <div className="space-y-1.5">
-      <p className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="px-2 text-[13px] leading-4 font-medium uppercase tracking-wide text-muted-foreground">
         {t(`settings.categories.${category}`)}
       </p>
       <div className="space-y-1">
@@ -100,7 +100,7 @@ function DesktopSettingsContent() {
       <aside className="min-w-0 bg-muted/30">
         <ScrollArea className="h-full">
           <div className="ml-auto w-full max-w-60 px-3 py-16">
-            <h2 className="mb-5 px-2 text-sm font-semibold">{t("settings.title")}</h2>
+            <h2 className="mb-5 px-2 text-base leading-5 font-medium">{t("settings.title")}</h2>
             <nav aria-label={t("settings.navigationLabel")} className="space-y-4">
               {SETTINGS_CATEGORY_ORDER.map((category) =>
                 category === "admin" ? (
@@ -145,7 +145,7 @@ function DesktopSettingsContent() {
           <span className="flex size-9 items-center justify-center rounded-full border-2 border-current transition-colors group-hover:text-foreground group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background">
             <X className="size-5" aria-hidden="true" />
           </span>
-          <span className="text-[10px] font-semibold uppercase tracking-wide" aria-hidden="true">
+          <span className="text-[10px] font-medium uppercase tracking-wide" aria-hidden="true">
             Esc
           </span>
         </DialogClose>
@@ -173,7 +173,7 @@ function MobileSettingsContent() {
 
             const sectionBlock = (
               <section key={category} className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <h2 className="text-[13px] leading-4 font-medium uppercase tracking-wide text-muted-foreground">
                   {t(`settings.categories.${category}`)}
                 </h2>
                 <div className="space-y-3">

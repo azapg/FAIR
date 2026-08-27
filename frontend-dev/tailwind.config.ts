@@ -10,15 +10,12 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Default body font - Host Grotesk
-        sans: ["var(--font-host-grotesk)", "system-ui", "sans-serif"],
-        // Headings font - Remark
+        // One restrained family for all application text.
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        // The serif token is reserved for the FAIR wordmark.
         serif: ["var(--font-remark)", "Georgia", "serif"],
         // Monospace for code
         mono: ["var(--font-geist-mono)", "Consolas", "monospace"],
-        // Explicit font families for granular control
-        "host-grotesk": ["var(--font-host-grotesk)", "sans-serif"],
-        remark: ["var(--font-remark)", "serif"],
       },
     },
   },
