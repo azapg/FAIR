@@ -4,6 +4,30 @@ const SWIPE_THRESHOLD_PX = 50;
 const DIRECTIONAL_RATIO = 1.2;
 const SCROLL_LOCK_PX = 10;
 
+const SIDEBAR_SWIPE_IGNORE_SELECTOR = '[data-sidebar-swipe="ignore"]';
+
+function hasHorizontalScroll(element: Element) {
+  const { overflowX } = window.getComputedStyle(element);
+  return (
+    (overflowX === "auto" || overflowX === "scroll") &&
+    element.scrollWidth > element.clientWidth
+  );
+}
+
+function shouldYieldToNestedGesture(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+
+  if (target.closest(SIDEBAR_SWIPE_IGNORE_SELECTOR)) return true;
+
+  let element: Element | null = target;
+  while (element && element !== document.documentElement) {
+    if (hasHorizontalScroll(element)) return true;
+    element = element.parentElement;
+  }
+
+  return false;
+}
+
 export function useSidebarSwipe({
   side,
   open,
@@ -17,6 +41,7 @@ export function useSidebarSwipe({
 }) {
   const startRef = React.useRef<{ x: number; y: number } | null>(null);
   const lockedRef = React.useRef(false);
+  const yieldedRef = React.useRef(false);
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -42,11 +67,12 @@ export function useSidebarSwipe({
       const touch = event.touches[0];
       startRef.current = { x: touch.clientX, y: touch.clientY };
       lockedRef.current = false;
+      yieldedRef.current = shouldYieldToNestedGesture(event.target);
     };
 
     const handleTouchMove = (event: TouchEvent) => {
       const start = startRef.current;
-      if (!start) return;
+      if (!start || yieldedRef.current) return;
       const touch = event.touches[0];
       if (!touch) return;
 
@@ -70,6 +96,7 @@ export function useSidebarSwipe({
           onOpenChange(!open);
           startRef.current = null;
           lockedRef.current = false;
+          yieldedRef.current = false;
         }
       }
     };
@@ -77,6 +104,7 @@ export function useSidebarSwipe({
     const handleTouchEnd = () => {
       startRef.current = null;
       lockedRef.current = false;
+      yieldedRef.current = false;
     };
 
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
