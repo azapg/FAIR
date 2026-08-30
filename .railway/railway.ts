@@ -41,6 +41,7 @@ export default defineRailway(() => {
       FAIR_RESEND_API_KEY: preserve(),
       FAIR_SESSION_COOKIE_SECURE: "1",
       FAIR_STORAGE_BACKEND: "local",
+      FORWARDED_ALLOW_IPS: "*",
       RAILWAY_HEALTHCHECK_TIMEOUT_SEC: "300",
       SECRET_KEY: preserve(),
     },
