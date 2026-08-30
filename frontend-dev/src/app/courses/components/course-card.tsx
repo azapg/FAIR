@@ -1,5 +1,5 @@
 
-import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
+import {Card, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -82,15 +82,20 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
 
   return (
     <Card
-      className="flex flex-col bg-amber-50 hover:bg-amber-100 dark:bg-amber-950 dark:hover:bg-amber-900  transition-colors relative cursor-pointer gap-3"
-      onClick={() => onClickAction?.(course.id)}
+      className="group relative flex min-h-48 cursor-pointer flex-col gap-0 overflow-hidden bg-[var(--course-surface)] py-0 outline-none hover:-translate-y-0.5 hover:shadow-[var(--shadow-raised)] focus-visible:ring-2 focus-visible:ring-ring/30"
     >
+      <button
+        type="button"
+        aria-label={course.name}
+        className="absolute inset-0 z-0 cursor-pointer rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:ring-inset"
+        onClick={() => onClickAction?.(course.id)}
+      />
       <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
         <Dialog open={open} onOpenChange={setOpen}>
           <AlertDialog onOpenChange={(isOpen) => { if (!isOpen) setConfirmName(""); }}>
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" tabIndex={0} aria-label={t("actions.courseActions")}>
+                <Button variant="ghost" size="icon" tabIndex={0} aria-label={t("actions.courseActions")} className="bg-[var(--course-surface)]/80 backdrop-blur-sm">
                   <MoreVertical className="w-5 h-5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -177,14 +182,18 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
         </Dialog>
       </div>
 
-      <CardHeader className="flex-1 flex flex-col items-start">
-        <CardTitle className="md:text-xl md:leading-6">{course.name}</CardTitle>
+      <CardHeader className="pointer-events-none relative z-[1] flex flex-1 flex-col items-start gap-2.5 px-5 pt-5 pr-14 pb-5">
+        <CardTitle className="text-[1.0625rem] leading-[1.3] font-semibold tracking-[-0.018em] text-balance">
+          {course.name}
+        </CardTitle>
+        {course.description && (
+          <CardDescription className="line-clamp-3 text-[0.8125rem] leading-[1.5] text-pretty">
+            {course.description}
+          </CardDescription>
+        )}
       </CardHeader>
-      <CardContent>
-        {course.description && <CardDescription>{course.description}</CardDescription>}
-      </CardContent>
-      <CardFooter>
-        <span className="text-sm text-muted-foreground">
+      <CardFooter className="pointer-events-none relative z-[1] border-t border-[var(--line-soft)] bg-[var(--course-surface-muted)] px-5 py-3.5">
+        <span className="text-xs leading-4 text-muted-foreground">
           {user && user.id === course.instructorId 
             ? t("courses.instructedByYou")
             : `${t("courses.instructor")}: ${course.instructorName}`

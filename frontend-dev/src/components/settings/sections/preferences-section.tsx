@@ -77,8 +77,9 @@ export function PreferencesSection() {
             <SelectValue placeholder={t("settings.fields.uiScale")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="default">{t("settings.interfaceSizes.default")}</SelectItem>
             <SelectItem value="compact">{t("settings.interfaceSizes.compact")}</SelectItem>
+            <SelectItem value="default">{t("settings.interfaceSizes.default")}</SelectItem>
+            <SelectItem value="comfortable">{t("settings.interfaceSizes.comfortable")}</SelectItem>
           </SelectContent>
         </Select>
       </div>

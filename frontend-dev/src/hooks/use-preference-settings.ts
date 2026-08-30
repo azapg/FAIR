@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/auth-context";
 
 export type ThemeMode = "system" | "light" | "dark";
 export type LanguageCode = "en" | "es";
-export type UiScale = "default" | "compact";
+export type UiScale = "compact" | "default" | "comfortable";
 
 const normalizeLanguage = (lang: string | undefined): LanguageCode =>
   lang?.toLowerCase().startsWith("es") ? "es" : "en";
