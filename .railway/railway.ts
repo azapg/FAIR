@@ -15,7 +15,7 @@ export default defineRailway(() => {
 
   const app = service("fair-platform", {
     source: github("azapg/FAIR", {
-      branch: "codex/railway-template-deployment",
+      branch: "canary",
     }),
     healthcheck: "/health",
     healthcheckTimeout: 300,
