@@ -55,9 +55,15 @@ FAIR_EMAIL_ENABLED=1
 FAIR_ENFORCE_EMAIL_VERIFICATION=1
 FAIR_SESSION_COOKIE_SECURE=1
 FAIR_STORAGE_BACKEND=local
+FORWARDED_ALLOW_IPS=*
 RAILWAY_HEALTHCHECK_TIMEOUT_SEC=300
 SECRET_KEY=${{secret(64)}}
 ```
+
+`FORWARDED_ALLOW_IPS=*` lets Uvicorn trust Railway's managed edge proxy so
+HTTPS redirects remain HTTPS. Use explicit trusted proxy addresses instead of
+`*` when adapting this configuration to infrastructure with a directly
+reachable application port.
 
 Before sharing the template URL, deploy it into a clean project and confirm the
 generated domain, fresh volume, migrations, first-administrator reset flow,

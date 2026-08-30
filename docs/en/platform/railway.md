@@ -48,6 +48,7 @@ FAIR_BASE_URL=https://your-service.up.railway.app
 FAIR_API_BASE_URL=https://your-service.up.railway.app
 FAIR_CORS_ORIGINS=https://your-service.up.railway.app
 FAIR_SESSION_COOKIE_SECURE=1
+FORWARDED_ALLOW_IPS=*
 
 SECRET_KEY=replace-with-a-generated-secret
 ```
@@ -56,6 +57,13 @@ The Railway template generates `SECRET_KEY`. It prompts the deployer for the
 Resend key, a sender whose exact domain is verified in Resend, and the initial
 administrator identity. Never commit or place the Resend key in a template
 default.
+
+`FORWARDED_ALLOW_IPS=*` allows Uvicorn to honor Railway's forwarded HTTPS
+metadata. Without it, automatic route redirects can point to `http://` and be
+blocked as mixed content by browsers. This wildcard is appropriate while the
+container is reachable only through Railway's managed edge; deployments that
+expose the application port directly should list only their trusted proxy
+addresses.
 
 ## First administrator
 
