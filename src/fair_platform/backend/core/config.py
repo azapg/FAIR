@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 DeploymentMode = Literal["COMMUNITY", "ENTERPRISE"]
 AdmissionModeValue = Literal["open", "allowlist", "invite_only"]
 INSECURE_DEFAULT_SECRET_KEY = "fair-insecure-default-key"
+DEFAULT_EMAIL_SENDER = "FairGrade Platform <platform@fairgradeproject.org>"
 
 
 def _parse_bool_env(raw: str | None, *, default: bool = False) -> bool:
@@ -129,6 +130,14 @@ def get_resend_api_key() -> str | None:
         return None
     normalized = raw.strip()
     return normalized or None
+
+
+def get_email_sender() -> str:
+    raw = os.getenv("FAIR_EMAIL_SENDER") or os.getenv("EMAIL_SENDER")
+    if raw is None:
+        return DEFAULT_EMAIL_SENDER
+    normalized = raw.strip()
+    return normalized or DEFAULT_EMAIL_SENDER
 
 
 BASE_URL = (

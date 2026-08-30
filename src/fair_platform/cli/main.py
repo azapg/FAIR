@@ -510,6 +510,9 @@ def db_migrate_sqlite_to_postgres(
 
 @app.command()
 def serve(
+    host: Annotated[
+        str, typer.Option("--host", help="Host interface to bind the server to")
+    ] = "127.0.0.1",
     port: Annotated[
         int, typer.Option("--port", "-p", help="Port to run the development server on")
     ] = 3000,
@@ -526,7 +529,7 @@ def serve(
 
         check_for_updates()
 
-    _run_server(host="127.0.0.1", port=port, headless=headless, dev=False)
+    _run_server(host=host, port=port, headless=headless, dev=False)
 
 
 @app.command()

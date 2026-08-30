@@ -27,6 +27,10 @@ For detailed installation instructions, troubleshooting, and more, visit the [do
 
 The supported LMS scope and deployment profiles are documented in [LMS MVP operations](docs/en/platform/lms-mvp.md). Copy [.env.example](.env.example) to `.env` to choose a profile.
 
+For a persistent single-service Railway deployment, including SQLite, local
+artifact storage, invite-only registration, and first-administrator bootstrap,
+see [Deploy FAIR on Railway](docs/en/platform/railway.md).
+
 ### Development Requirements
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
