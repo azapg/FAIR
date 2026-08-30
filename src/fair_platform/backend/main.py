@@ -43,6 +43,9 @@ from fair_platform.backend.api.routers.admin_access import (
     self_router as ai_access_router,
 )
 from fair_platform.backend.services.access_control import AccessPolicyError
+from fair_platform.backend.services.bootstrap_admin import (
+    bootstrap_admin_from_environment,
+)
 from fair_platform.backend.services.execution_outbox_dispatcher import (
     ExecutionOutboxDispatcher,
 )
@@ -102,6 +105,7 @@ async def lifespan(_ignored: FastAPI):
             "Starting without schema migration/bootstrap; runtime DB failures are likely. "
             "Set FAIR_AUTO_MIGRATE=1 (recommended) or FAIR_ALLOW_CREATE_ALL=1 for local-only bootstrap."
         )
+    bootstrap_admin_from_environment(SessionLocal)
     app.state.execution_outbox_dispatcher = ExecutionOutboxDispatcher(
         session_factory=SessionLocal,
     )
