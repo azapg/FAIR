@@ -5,5 +5,8 @@
   "scripts": {
     "build:sdk": "cd sdk/typescript && bun run build",
     "typecheck": "cd sdk/typescript && bun run typecheck && cd ../../extensions/core && bun run typecheck"
+  },
+  "devDependencies": {
+    "railway": "^3.11.0"
   }
 }
