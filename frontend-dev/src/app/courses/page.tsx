@@ -125,7 +125,7 @@ export default function CoursesPage() {
         }
       />
 
-      <div className={"px-6"}>
+      <div className="mx-auto w-full max-w-[1440px] px-6 sm:px-8">
         <CourseGrid
           courses={courses}
           isPending={isPending}

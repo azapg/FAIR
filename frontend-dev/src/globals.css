@@ -47,7 +47,7 @@
 }
 
 :root {
-    --radius: 0.625rem;
+    --radius: 0.75rem;
     --background: oklch(1 0 0);
     --foreground: #333333;
     --card: oklch(1 0 0);
@@ -63,6 +63,19 @@
     --accent: oklch(0.97 0 0);
     --accent-foreground: #333333;
     --destructive: oklch(0.577 0.245 27.325);
+
+    /* Layered surfaces and precise elevation for dense application UI. */
+    --surface-raised: var(--card);
+    --surface-subtle: var(--muted);
+    --field: var(--muted);
+    --line-soft: oklch(0.946 0 0);
+    --course-surface: oklch(0.995 0.004 85);
+    --course-surface-muted: oklch(0.976 0.009 83);
+    --shadow-hairline: 0 0 0 1px var(--line-soft);
+    --shadow-button: 0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 2px oklch(0 0 0 / 0.08), inset 0 1px 0 oklch(1 0 0 / 0.14);
+    --shadow-button-soft: 0 0 0 1px var(--line-soft), 0 1px 2px oklch(0 0 0 / 0.04);
+    --shadow-card: 0 0 0 1px var(--line-soft), 0 1px 2px oklch(0 0 0 / 0.035);
+    --shadow-raised: 0 0 0 1px var(--line-soft), 0 8px 22px oklch(0 0 0 / 0.07), 0 2px 6px oklch(0 0 0 / 0.04);
 
     /* Primary button variables */
     --primary-gradient: linear-gradient(0deg, var(--color-zinc-900), var(--color-zinc-700));
@@ -120,6 +133,18 @@
     --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.704 0.191 22.216);
 
+    --surface-raised: var(--card);
+    --surface-subtle: var(--muted);
+    --field: var(--muted);
+    --line-soft: oklch(1 0 0 / 10%);
+    --course-surface: oklch(0.215 0.005 75);
+    --course-surface-muted: oklch(0.235 0.01 75);
+    --shadow-hairline: 0 0 0 1px var(--line-soft);
+    --shadow-button: 0 0 0 1px oklch(1 0 0 / 0.1), 0 1px 2px oklch(0 0 0 / 0.3), inset 0 1px 0 oklch(1 0 0 / 0.08);
+    --shadow-button-soft: 0 0 0 1px oklch(1 0 0 / 0.1), 0 1px 2px oklch(0 0 0 / 0.24);
+    --shadow-card: 0 0 0 1px oklch(1 0 0 / 0.11), 0 1px 2px oklch(0 0 0 / 0.2), 0 2px 6px oklch(0 0 0 / 0.2);
+    --shadow-raised: 0 0 0 1px oklch(1 0 0 / 0.13), 0 8px 28px oklch(0 0 0 / 0.34);
+
     /* Primary button variables - dark mode */
     --primary-gradient: linear-gradient(0deg, var(--color-zinc-400), var(--color-zinc-200));
     --primary-hover: linear-gradient(0deg, var(--color-gray-400), var(--color-zinc-50));
@@ -160,22 +185,22 @@
 
 @layer base {
     html {
-        /*
-         * Scale rem-based UI like a comfortable browser zoom without
-         * changing the mobile baseline. Compact mode opts back down to 100%.
-         */
-        --ui-scale: 106.25%;
+        --ui-scale: 100%;
         font-size: var(--ui-scale);
     }
 
-    @media (min-width: 768px) {
-        html {
-            --ui-scale: 120%;
-        }
+    html.ui-scale-compact {
+        --ui-scale: 93.75%;
     }
 
-    html.ui-scale-compact {
-        --ui-scale: 100%;
+    html.ui-scale-comfortable {
+        --ui-scale: 106.25%;
+    }
+
+    @media (min-width: 768px) {
+        html.ui-scale-comfortable {
+            --ui-scale: 112.5%;
+        }
     }
 
     * {
@@ -194,9 +219,11 @@
     body {
         @apply bg-background text-foreground;
         font-family: var(--font-inter);
-        font-size: 14px;
+        font-size: 0.875rem;
         font-weight: 400;
-        line-height: 20px;
+        line-height: 1.5;
+        letter-spacing: 0;
+        font-feature-settings: "cv11", "ss01";
         font-synthesis: none;
     }
 }

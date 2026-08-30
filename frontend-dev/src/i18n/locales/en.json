@@ -132,7 +132,8 @@
     },
     "interfaceSizes": {
       "default": "Default",
-      "compact": "Compact"
+      "compact": "Compact",
+      "comfortable": "Comfortable"
     },
     "empty": {
       "title": "Section in development",

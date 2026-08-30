@@ -73,7 +73,7 @@ export default function LoginPage() {
       <form onSubmit={onSubmit} className="flex flex-col gap-6">
         <FieldGroup>
           <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="text-base leading-5 font-medium">{t('auth.welcomeBack')}</h1>
+            <h1 className="text-[1.5rem] leading-7 font-semibold tracking-[-0.025em]">{t('auth.welcomeBack')}</h1>
             <p className="text-sm text-balance text-muted-foreground">
               {t('auth.loginToFair')}
             </p>
@@ -122,7 +122,7 @@ export default function LoginPage() {
                 onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
                 disabled={loading}
               />
-              <Label htmlFor="remember-me" className="text-[13px] leading-4 font-normal cursor-pointer">
+              <Label htmlFor="remember-me" className="text-[0.8125rem] leading-4 font-normal cursor-pointer">
                 {t('auth.rememberMe')}
               </Label>
             </div>

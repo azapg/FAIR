@@ -92,6 +92,10 @@ function SettingsRuntime() {
 
   useEffect(() => {
     document.documentElement.classList.toggle("ui-scale-compact", resolvedUiScale === "compact");
+    document.documentElement.classList.toggle(
+      "ui-scale-comfortable",
+      resolvedUiScale === "comfortable",
+    );
   }, [resolvedUiScale]);
 
   useEffect(() => {

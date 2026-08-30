@@ -36,7 +36,7 @@ export function PageHeader({
     <>
       <header className="pointer-events-none fixed inset-x-0 top-4 z-40 px-6 sm:px-8 md:hidden">
         <div className="flex items-center gap-2">
-          <SidebarTrigger className="pointer-events-auto size-10 shrink-0 rounded-full border bg-background/80 shadow-sm backdrop-blur" />
+          <SidebarTrigger className="pointer-events-auto size-10 shrink-0 rounded-full border-border/70 bg-background/85 shadow-[var(--shadow-button-soft)] backdrop-blur-xl" />
           <div
             className={cn(
               "min-w-0 flex-1 transition-all duration-200",
@@ -46,8 +46,8 @@ export function PageHeader({
             )}
             aria-hidden={!isCollapsed}
           >
-            <div className="flex h-10 items-center rounded-full border bg-background/80 px-4 shadow-sm backdrop-blur">
-              <span className="truncate text-[13px] leading-4 font-medium">{title}</span>
+            <div className="flex h-10 items-center rounded-full border border-border/70 bg-background/85 px-4 shadow-[var(--shadow-button-soft)] backdrop-blur-xl">
+              <span className="truncate text-[0.8125rem] leading-4 font-medium">{title}</span>
             </div>
           </div>
           {barActions && (
@@ -57,17 +57,17 @@ export function PageHeader({
           )}
         </div>
       </header>
-      <div className="px-6 pt-16 sm:px-8 sm:pt-14 md:pt-6">
-        <div className="flex items-start justify-between gap-3">
+      <div className="mx-auto w-full max-w-[1440px] px-6 pt-16 sm:px-8 sm:pt-14 md:pt-8">
+        <div className="flex items-start justify-between gap-5">
           <div className="min-w-0">
             <h1
               ref={titleRef}
-              className="pb-1 text-base leading-5 font-medium md:text-xl md:leading-6"
+              className="text-xl leading-6 font-semibold tracking-[-0.02em] text-balance md:text-[1.625rem] md:leading-8"
             >
               {title}
             </h1>
             {description && (
-              <p className="text-sm text-muted-foreground">{description}</p>
+              <p className="mt-1.5 max-w-2xl text-sm leading-5 text-muted-foreground text-pretty">{description}</p>
             )}
           </div>
           {actions && (
