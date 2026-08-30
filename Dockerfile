@@ -23,6 +23,6 @@ COPY --from=frontend /app/frontend-dev/dist/ ./src/fair_platform/frontend/dist/
 
 RUN uv sync --frozen --no-dev
 
-EXPOSE 3000
+EXPOSE 8080
 
-CMD ["sh", "-c", "fair serve --host 0.0.0.0 --port ${PORT:-3000} --no-update-check"]
+CMD ["sh", "-c", "fair serve --host 0.0.0.0 --port ${PORT:-8080} --no-update-check"]
