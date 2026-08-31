@@ -3,7 +3,6 @@ Tests for enrollment feature — CRUD API, course/assignment visibility for enro
 and artifact permission checks based on enrollment.
 """
 
-import pytest
 from uuid import uuid4
 from datetime import datetime, timedelta
 
@@ -221,6 +220,7 @@ class TestSelfEnrollment:
         resp = test_client.post("/api/courses/", json={
             "name": "New Course",
             "description": "desc",
+            "iconKey": "chemistry",
             "instructor_id": str(prof.id),
         }, headers=headers)
 
@@ -228,6 +228,15 @@ class TestSelfEnrollment:
         body = resp.json()
         assert body.get("enrollmentCode")
         assert body.get("isEnrollmentEnabled") is True
+        assert body.get("iconKey") == "chemistry"
+
+        update = test_client.put(
+            f"/api/courses/{body['id']}",
+            json={"iconKey": "astronomy"},
+            headers=headers,
+        )
+        assert update.status_code == 200
+        assert update.json().get("iconKey") == "astronomy"
 
     def test_student_cannot_see_enrollment_settings(self, test_client, test_db):
         with test_db() as s:

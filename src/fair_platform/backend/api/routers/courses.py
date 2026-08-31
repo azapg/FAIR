@@ -70,6 +70,7 @@ def _course_to_response(
         "id": course.id,
         "name": course.name,
         "description": course.description,
+        "icon_key": course.icon_key,
         "instructor_id": course.instructor_id,
         "instructor_name": course.instructor.name if course.instructor else "",
         "assignments_count": len(course.assignments or []),
@@ -127,6 +128,7 @@ def create_course(
         id=uuid4(),
         name=course.name,
         description=course.description,
+        icon_key=course.icon_key,
         instructor_id=course.instructor_id,
         enrollment_code=enrollment_code,
         is_enrollment_enabled=True,
@@ -261,6 +263,7 @@ def get_course(
             "id": course.id,
             "name": course.name,
             "description": course.description,
+            "icon_key": course.icon_key,
             "instructor": course.instructor,
             "assignments": course.assignments or [],
             "flows": [_flow_read(flow) for flow in (course.flows or [])],
@@ -362,6 +365,8 @@ def update_course(
         course.name = payload.name
     if payload.description is not None:
         course.description = payload.description
+    if payload.icon_key is not None:
+        course.icon_key = payload.icon_key
     if payload.section is not None:
         course.section = payload.section
     if payload.term is not None:

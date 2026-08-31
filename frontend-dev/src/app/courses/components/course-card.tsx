@@ -23,6 +23,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useTranslation } from "react-i18next";
+import { CourseIcon } from "@/app/courses/course-icons";
+import { CourseIconPicker } from "@/app/courses/components/course-icon-picker";
 
 export type CourseCardProps = {
   course: Course;
@@ -42,6 +44,7 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
   const [mode, setMode] = useState<Mode>("edit");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [iconKey, setIconKey] = useState(course.iconKey);
 
   const [confirmName, setConfirmName] = useState("");
   const isConfirmCorrect = confirmName === course.name;
@@ -50,12 +53,14 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
     setMode("edit");
     setName(course.name);
     setDescription(course.description ?? "");
+    setIconKey(course.iconKey);
   };
 
   const setupClone = () => {
     setMode("clone");
     setName(course.name + " (Copy)");
     setDescription(course.description ?? "");
+    setIconKey(course.iconKey);
   };
 
   const isSubmitting = updateCourse.isPending || createCourse.isPending;
@@ -67,13 +72,14 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
     if (mode === "edit") {
       await updateCourse.mutateAsync({
         id: course.id,
-        data: { name: name.trim(), description: description.trim() || null },
+        data: { name: name.trim(), description: description.trim() || null, iconKey },
       });
     } else if (mode === "clone") {
       if (!user) return;
       await createCourse.mutateAsync({
         name: name.trim(),
         description: description.trim() || null,
+        iconKey,
         instructorId: user.id,
       });
     }
@@ -155,13 +161,16 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor={`course-name-${course.id}`}>{t("courses.name")}</Label>
-                <Input
-                  id={`course-name-${course.id}`}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t("courses.namePlaceholder")}
-                  required
-                />
+                <div className="flex items-center gap-2">
+                  <CourseIconPicker value={iconKey} onValueChange={setIconKey} />
+                  <Input
+                    id={`course-name-${course.id}`}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t("courses.namePlaceholder")}
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor={`course-description-${course.id}`}>{t("courses.description")}</Label>
@@ -183,6 +192,9 @@ export default function CourseCard({ course, onClickAction, onDeleteAction }: Co
       </div>
 
       <CardHeader className="pointer-events-none relative z-[1] flex flex-1 flex-col items-start gap-2.5 px-5 pt-5 pr-14 pb-5">
+        <span className="grid size-10 place-items-center rounded-[10px] bg-primary/10 text-primary">
+          <CourseIcon iconKey={course.iconKey} size={24} />
+        </span>
         <CardTitle className="text-[1.0625rem] leading-[1.3] font-semibold tracking-[-0.018em] text-balance">
           {course.name}
         </CardTitle>

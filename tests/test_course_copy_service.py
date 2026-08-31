@@ -42,6 +42,7 @@ def test_course_copy_deep_copies_authoring_graph_and_excludes_learners(
             name="Source",
             instructor_id=professor_user.id,
             enrollment_code="PRIVATE-CODE",
+            icon_key="chemistry",
         )
         rubric = Rubric(
             id=uuid4(),
@@ -130,6 +131,7 @@ def test_course_copy_deep_copies_authoring_graph_and_excludes_learners(
         assert destination.copied_from_id == source.id
         assert destination.enrollment_code is None
         assert destination.is_enrollment_enabled is False
+        assert destination.icon_key == "chemistry"
         memberships = db.query(Enrollment).filter_by(course_id=destination_id).all()
         assert [(row.user_id, str(row.role)) for row in memberships] == [
             (professor_user.id, "owner")
