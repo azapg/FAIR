@@ -25,7 +25,26 @@ A3_REVISION = "20260812_0031"
 def _seed_legacy_grade_data(database_url: str) -> dict[str, UUID]:
     engine = create_engine(database_url)
     users = Base.metadata.tables["users"]
-    courses = Base.metadata.tables["courses"]
+    current_courses = Base.metadata.tables["courses"]
+    courses = sa.table(
+        "courses",
+        *(
+            sa.column(column_name, current_courses.c[column_name].type)
+            for column_name in (
+                "id",
+                "name",
+                "description",
+                "instructor_id",
+                "enrollment_code",
+                "is_enrollment_enabled",
+                "section",
+                "term",
+                "is_archived",
+                "created_at",
+                "updated_at",
+            )
+        ),
+    )
     enrollments = Base.metadata.tables["enrollments"]
     assignments = Base.metadata.tables["assignments"]
     submitters = Base.metadata.tables["submitters"]
