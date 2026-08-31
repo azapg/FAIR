@@ -1,260 +1,637 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
-from datetime import datetime, timezone
+from __future__ import annotations
+
+import asyncio
+from datetime import datetime, timedelta, timezone
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, selectinload
 
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.api.schema.extension import (
+    CapabilityRead,
     ExtensionClientIssueRequest,
     ExtensionClientRead,
     ExtensionClientSecretRead,
     ExtensionClientUpdateRequest,
-    ExtensionRead,
-    ExtensionRegisterRequest,
+    GrantCreate,
+    GrantRead,
+    InstallationCreate,
+    InstallationRead,
+    InstallationStatusUpdate,
 )
 from fair_platform.backend.core.security.permissions import has_capability
-from fair_platform.backend.core.security.dependencies import require_extension_client
 from fair_platform.backend.data.database import session_dependency
-from fair_platform.backend.data.models import ExtensionClient
-from fair_platform.backend.data.models.user import User
+from fair_platform.backend.data.models import (
+    CapabilityDefinition,
+    Execution,
+    ExecutionDispatchOutbox,
+    ExtensionClient,
+    ExtensionGrant,
+    ExtensionInstallation,
+    ExtensionInstallationStatus,
+    GrantDecision,
+    User,
+)
+from fair_platform.backend.data.models.extension import ExtensionDeliveryMode
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
 from fair_platform.backend.services.extension_auth import issue_extension_secret
-from fair_platform.backend.services.extension_registry import (
-    ExtensionRegistration,
-    LocalExtensionRegistry,
+from fair_platform.backend.core.security.dependencies import require_extension_client
+from fair_platform.backend.services.execution_outbox import (
+    DispatchStateError,
+    acknowledge_dispatch,
+    claim_dispatch,
+    mark_dispatch_failed,
 )
-from fair_platform.backend.services.settings_validator import (
-    SettingsSchemaValidationError,
-    validate_settings_schema,
+from fair_platform.backend.services.execution_protocol import (
+    ExecutionProtocolError,
+    build_execution_command,
 )
+from fair_platform.backend.services.execution_lifecycle import expire_due_executions
+from fair_platform.backend.services.access_control import capability_cost_control
+from fair_platform.extension_sdk.contracts.extension import (
+    CapabilityManifest,
+    ExtensionManifest,
+)
+from fair_platform.extension_sdk.contracts.protocol import (
+    RunnerClaimRequest,
+    RunnerCommandAck,
+    RunnerCommandLease,
+)
+
 
 router = APIRouter()
 
 
-def get_extension_registry(request: Request) -> LocalExtensionRegistry:
-    registry = getattr(request.app.state, "extension_registry", None)
-    if registry is None:
-        registry = LocalExtensionRegistry()
-        request.app.state.extension_registry = registry
-    return registry
-
-
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=ExtensionRead)
-@router.post("/connect", status_code=status.HTTP_201_CREATED, response_model=ExtensionRead)
-async def register_extension(
-    payload: ExtensionRegisterRequest,
-    extension_client: ExtensionClient = Depends(require_extension_client(("extensions:connect",))),
-    registry: LocalExtensionRegistry = Depends(get_extension_registry),
-):
-    if extension_client.extension_id != payload.extension_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Extension id does not match authenticated extension",
+def _runner_installation(db: Session, client: ExtensionClient) -> ExtensionInstallation:
+    installation = db.scalar(
+        select(ExtensionInstallation).where(
+            ExtensionInstallation.extension_id == client.extension_id
         )
-    requested_scopes = sorted(
-        {
-            scope.strip()
-            for scope in (payload.requested_scopes or payload.capabilities)
-            if scope.strip()
-        }
     )
-    approved_scopes = sorted(set(extension_client.scopes or []))
-    effective_scopes = [scope for scope in requested_scopes if scope in approved_scopes]
-    metadata = dict(payload.metadata)
-    raw_plugins = metadata.get("plugins")
-    if raw_plugins is not None:
-        if not isinstance(raw_plugins, list):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=[
-                    {
-                        "type": "invalid_settings_schema",
-                        "plugin_id": payload.extension_id,
-                        "message": "metadata.plugins must be a list",
-                        "field_path": "plugins",
-                    }
-                ],
-            )
-        normalized_plugins: list[dict] = []
-        for index, raw_plugin in enumerate(raw_plugins):
-            if not isinstance(raw_plugin, dict):
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=[
-                        {
-                            "type": "invalid_settings_schema",
-                            "plugin_id": payload.extension_id,
-                            "message": "plugin metadata entry must be an object",
-                            "field_path": f"plugins[{index}]",
-                        }
-                    ],
-                )
-            plugin_id = (
-                raw_plugin.get("pluginId")
-                or raw_plugin.get("plugin_id")
-                or f"plugins[{index}]"
-            )
-            raw_settings_schema = (
-                raw_plugin.get("settingsSchema")
-                if "settingsSchema" in raw_plugin
-                else raw_plugin.get("settings_schema")
-            )
+    if (
+        installation is None
+        or _value(installation.status) != ExtensionInstallationStatus.enabled.value
+        or _value(installation.delivery_mode) != "runner"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Extension has no enabled runner installation",
+        )
+    return installation
+
+
+def _value(value: object) -> str:
+    return value.value if hasattr(value, "value") else str(value)
+
+
+def _require_admin(user: User) -> None:
+    if not has_capability(user, "admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+
+def _require_discovery(user: User) -> None:
+    if not has_capability(user, "discover_extension_capabilities"):
+        raise HTTPException(
+            status_code=403, detail="Extension capability discovery required"
+        )
+
+
+def _schema_uri(schema: dict, fallback: str) -> str:
+    return str(schema.get("$id") or fallback)
+
+
+def _capability_read(
+    row: CapabilityDefinition,
+    *,
+    db: Session | None = None,
+    user: User | None = None,
+) -> CapabilityRead:
+    snapshot = CapabilityManifest.model_validate(row.manifest_snapshot or {})
+    cost_control = (
+        capability_cost_control(
+            db,
+            capability_definition_id=row.id,
+            user_id=user.id if user is not None else None,
+        )
+        if db is not None
+        else None
+    )
+    return CapabilityRead(
+        **snapshot.model_dump(),
+        id=row.id,
+        installation_id=row.installation_id,
+        created_at=row.created_at,
+        cost_control=cost_control,
+    )
+
+
+def _installation_read(row: ExtensionInstallation) -> InstallationRead:
+    manifest = ExtensionManifest.model_validate(row.manifest) if row.manifest else None
+    return InstallationRead(
+        id=row.id,
+        extension_id=row.extension_id,
+        display_name=row.display_name,
+        version=row.version,
+        delivery_mode=_value(row.delivery_mode),
+        dispatch_url=row.dispatch_url,
+        health_url=row.health_url,
+        manifest_version=row.manifest_version,
+        status=_value(row.status),
+        manifest=manifest,
+        capabilities=[_capability_read(item) for item in row.capabilities],
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+def _grant_read(row: ExtensionGrant) -> GrantRead:
+    return GrantRead(
+        id=row.id,
+        installation_id=row.installation_id,
+        capability_definition_id=row.capability_definition_id,
+        course_id=row.course_id,
+        assignment_id=row.assignment_id,
+        effect=row.effect,
+        decision=_value(row.decision),
+        reason=row.reason,
+        granted_by_user_id=row.granted_by_user_id,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+def _client_read(row: ExtensionClient) -> ExtensionClientRead:
+    return ExtensionClientRead(
+        extension_id=row.extension_id,
+        scopes=list(row.scopes or []),
+        enabled=bool(row.enabled),
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+def _sync_capabilities(
+    db: Session,
+    installation: ExtensionInstallation,
+    manifest: ExtensionManifest,
+) -> None:
+    """Add any capability versions the manifest declares that we do not have.
+
+    Existing rows are never mutated or removed. A CapabilityDefinition id is
+    what Executions and Flow versions pin, so an Extension that ships a new
+    version adds a row rather than rewriting the one older work depends on.
+    """
+
+    existing = {
+        (item.capability_id, item.version) for item in installation.capabilities
+    }
+    for capability in manifest.capabilities:
+        identity = (capability.capability_id, capability.version)
+        if identity in existing:
+            continue
+        raw = capability.model_dump(by_alias=True, mode="json", exclude_none=True)
+        # Freeze only schemas that actually validate. Catching this at
+        # registration turns "your first chat message 422s" into a startup
+        # error naming the capability.
+        for field in ("inputSchema", "outputSchema"):
             try:
-                normalized_schema = validate_settings_schema(
-                    plugin_id=plugin_id,
-                    settings_schema=raw_settings_schema if raw_settings_schema is not None else {},
-                )
-            except SettingsSchemaValidationError as exc:
+                Draft202012Validator.check_schema(raw[field])
+            except SchemaError as exc:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=exc.issues,
+                    detail=(
+                        f"Capability {capability.capability_id!r} has an invalid "
+                        f"{field}: {exc.message}"
+                    ),
                 ) from exc
-            normalized_plugin = dict(raw_plugin)
-            normalized_plugin["settingsSchema"] = normalized_schema
-            normalized_plugins.append(normalized_plugin)
-        metadata["plugins"] = normalized_plugins
-
-    metadata["approved_scopes"] = approved_scopes
-    metadata["effective_scopes"] = effective_scopes
-
-    registration = await registry.register(
-        ExtensionRegistration(
-            extension_id=payload.extension_id,
-            webhook_url=payload.webhook_url,
-            intents=payload.intents,
-            capabilities=payload.capabilities,
-            metadata=metadata,
+        base = (
+            f"urn:fair:extension:{manifest.extension_id}"
+            f":capability:{capability.capability_id}:{capability.version}"
         )
-    )
-    return ExtensionRead(
-        extension_id=registration.extension_id,
-        webhook_url=registration.webhook_url,
-        intents=registration.intents,
-        capabilities=registration.capabilities,
-        requested_scopes=requested_scopes,
-        metadata=registration.metadata,
-        enabled=registration.enabled,
-    )
-
-
-@router.get("/", response_model=list[ExtensionRead])
-async def list_extensions(
-    registry: LocalExtensionRegistry = Depends(get_extension_registry),
-):
-    records = await registry.list()
-    return [
-        ExtensionRead(
-            extension_id=record.extension_id,
-            webhook_url=record.webhook_url,
-            intents=record.intents,
-            capabilities=record.capabilities,
-            requested_scopes=list(record.metadata.get("effective_scopes", []))
-            if isinstance(record.metadata, dict)
-            else [],
-            metadata=record.metadata,
-            enabled=record.enabled,
+        # Append to the loaded collection rather than only db.add()-ing: this
+        # function reads installation.capabilities above, so the collection is
+        # already populated and (with expire_on_commit=False) would otherwise
+        # stay stale for the caller that serializes the response.
+        installation.capabilities.append(
+            CapabilityDefinition(
+                installation_id=installation.id,
+                capability_id=capability.capability_id,
+                surface=capability.surface,
+                contract=capability.contract,
+                display_name=capability.display_name,
+                description=capability.description,
+                version=capability.version,
+                input_schema_uri=_schema_uri(raw["inputSchema"], f"{base}:input"),
+                output_schema_uri=_schema_uri(raw["outputSchema"], f"{base}:output"),
+                config_schema_uri=(
+                    _schema_uri(raw["configSchema"], f"{base}:config")
+                    if raw.get("configSchema")
+                    else None
+                ),
+                requested_scopes=capability.requested_scopes,
+                declared_effects=capability.declared_effects,
+                supports_streaming=capability.supports_streaming,
+                supports_cancellation=capability.supports_cancellation,
+                supports_resume=capability.supports_resume,
+                manifest_snapshot=raw,
+            )
         )
-        for record in records
-    ]
 
 
-@router.get("/admin/clients", response_model=list[ExtensionClientRead])
-def list_extension_clients(
+@router.put("/self/manifest", response_model=InstallationRead)
+def sync_own_manifest(
+    payload: InstallationCreate,
+    extension_client: ExtensionClient = Depends(
+        require_extension_client(("extensions:self",))
+    ),
     db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    if not has_capability(current_user, "admin"):
+) -> InstallationRead:
+    """Let a running Extension publish its own manifest.
+
+    This is what makes `createExtension(...).start()` a one-command developer
+    experience: the SDK derives the manifest from the code and syncs it on
+    boot, instead of a human hand-writing JSON Schema and an admin pasting it.
+
+    The credential fixes the identity -- an Extension can only ever describe
+    itself, never register or modify another one.
+    """
+
+    manifest = payload.manifest
+    if manifest.extension_id != extension_client.extension_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can manage extension clients",
+            detail="Manifest extensionId does not match the authenticated client",
         )
-    rows = db.query(ExtensionClient).order_by(ExtensionClient.extension_id.asc()).all()
-    return [
-        ExtensionClientRead(
-            extension_id=row.extension_id,
-            scopes=list(row.scopes or []),
-            enabled=bool(row.enabled),
-            created_at=row.created_at,
-            updated_at=row.updated_at,
-        )
-        for row in rows
-    ]
-
-
-@router.get("/admin/clients/{extension_id}", response_model=ExtensionClientRead)
-def get_extension_client(
-    extension_id: str,
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    if not has_capability(current_user, "admin"):
+    if manifest.delivery_mode != "runner":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can manage extension clients",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Self-registration supports runner delivery only",
         )
-    row = db.get(ExtensionClient, extension_id)
-    if row is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Extension client not found",
-        )
-    return ExtensionClientRead(
-        extension_id=row.extension_id,
-        scopes=list(row.scopes or []),
-        enabled=bool(row.enabled),
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+
+    installation = db.scalar(
+        select(ExtensionInstallation)
+        .options(selectinload(ExtensionInstallation.capabilities))
+        .where(ExtensionInstallation.extension_id == manifest.extension_id)
     )
-
-
-@router.patch("/admin/clients/{extension_id}", response_model=ExtensionClientRead)
-def update_extension_client(
-    extension_id: str,
-    payload: ExtensionClientUpdateRequest,
-    db: Session = Depends(session_dependency),
-    current_user: User = Depends(get_current_user),
-):
-    if not has_capability(current_user, "admin"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can manage extension clients",
+    if installation is None:
+        installation = ExtensionInstallation(
+            extension_id=manifest.extension_id,
+            delivery_mode=ExtensionDeliveryMode.runner,
+            status=ExtensionInstallationStatus.enabled,
         )
-    row = db.get(ExtensionClient, extension_id)
-    if row is None:
+        db.add(installation)
+        db.flush()
+
+    if _value(installation.status) == ExtensionInstallationStatus.revoked.value:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Extension client not found",
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This Extension installation was revoked",
         )
 
-    normalized_scopes = sorted({scope.strip() for scope in payload.scopes if scope.strip()})
-    row.scopes = normalized_scopes
-    row.enabled = payload.enabled
-    row.updated_at = datetime.now(timezone.utc)
-    db.add(row)
+    installation.display_name = manifest.display_name
+    installation.version = manifest.version
+    installation.manifest_version = manifest.manifest_version
+    installation.manifest = manifest.model_dump(
+        by_alias=True, mode="json", exclude_none=True
+    )
+    _sync_capabilities(db, installation, manifest)
     db.commit()
-    db.refresh(row)
-    return ExtensionClientRead(
-        extension_id=row.extension_id,
-        scopes=list(row.scopes or []),
-        enabled=bool(row.enabled),
-        created_at=row.created_at,
-        updated_at=row.updated_at,
+
+    return _installation_read(
+        db.scalar(
+            select(ExtensionInstallation)
+            .options(selectinload(ExtensionInstallation.capabilities))
+            .where(ExtensionInstallation.id == installation.id)
+        )
     )
 
 
 @router.post(
-    "/admin/clients",
+    "/installations",
+    response_model=InstallationRead,
     status_code=status.HTTP_201_CREATED,
-    response_model=ExtensionClientSecretRead,
 )
-def issue_extension_client_secret(
-    payload: ExtensionClientIssueRequest,
-    db: Session = Depends(session_dependency),
+def create_installation(
+    payload: InstallationCreate,
     current_user: User = Depends(get_current_user),
-):
-    if not has_capability(current_user, "admin"):
+    db: Session = Depends(session_dependency),
+) -> InstallationRead:
+    _require_admin(current_user)
+    manifest = payload.manifest
+    row = ExtensionInstallation(
+        extension_id=manifest.extension_id,
+        display_name=manifest.display_name,
+        version=manifest.version,
+        delivery_mode=manifest.delivery_mode,
+        dispatch_url=str(manifest.dispatch_url) if manifest.dispatch_url else None,
+        health_url=str(manifest.health_url) if manifest.health_url else None,
+        manifest_version=manifest.manifest_version,
+        manifest=manifest.model_dump(by_alias=True, mode="json", exclude_none=True),
+        status=ExtensionInstallationStatus.enabled,
+    )
+    db.add(row)
+    db.flush()
+    _sync_capabilities(db, row, manifest)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can manage extension clients",
+            status_code=409, detail="Extension installation already exists"
+        ) from exc
+    return _installation_read(
+        db.scalar(
+            select(ExtensionInstallation)
+            .options(selectinload(ExtensionInstallation.capabilities))
+            .where(ExtensionInstallation.id == row.id)
         )
+    )
+
+
+@router.post("/runner/commands/claim", response_model=None)
+async def claim_runner_command(
+    payload: RunnerClaimRequest,
+    extension_client: ExtensionClient = Depends(
+        require_extension_client(("runner:commands",))
+    ),
+    db: Session = Depends(session_dependency),
+) -> RunnerCommandLease | Response:
+    """Long-poll one durable command for a runner behind NAT."""
+
+    installation = _runner_installation(db, extension_client)
+    stop_at = datetime.now(timezone.utc) + timedelta(seconds=payload.wait_seconds)
+    while True:
+        expired_count = expire_due_executions(db)
+        dispatch = claim_dispatch(
+            db,
+            worker_id=f"runner:{installation.id}:{payload.runner_id}",
+            lease_seconds=payload.lease_seconds,
+            delivery_mode="runner",
+            installation_id=installation.id,
+        )
+        if dispatch is not None:
+            try:
+                command = build_execution_command(db, dispatch)
+            except ExecutionProtocolError as exc:
+                mark_dispatch_failed(
+                    db,
+                    dispatch.id,
+                    lease_id=dispatch.lease_id,
+                    error=str(exc),
+                    dead_letter=True,
+                )
+                db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=str(exc),
+                ) from exc
+            lease = RunnerCommandLease(
+                lease_id=dispatch.lease_id,
+                lease_expires_at=dispatch.lease_expires_at,
+                command=command,
+            )
+            db.commit()
+            return lease
+        if expired_count:
+            db.commit()
+        else:
+            db.rollback()
+        remaining = (stop_at - datetime.now(timezone.utc)).total_seconds()
+        if remaining <= 0:
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        await asyncio.sleep(min(0.25, remaining))
+
+
+@router.post(
+    "/runner/commands/{dispatch_id}/ack",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def acknowledge_runner_command(
+    dispatch_id: UUID,
+    payload: RunnerCommandAck,
+    extension_client: ExtensionClient = Depends(
+        require_extension_client(("runner:commands",))
+    ),
+    db: Session = Depends(session_dependency),
+) -> Response:
+    """Acknowledge only the exact lease a runner durably accepted."""
+
+    installation = _runner_installation(db, extension_client)
+    dispatch = db.get(ExecutionDispatchOutbox, dispatch_id)
+    execution = (
+        db.get(Execution, dispatch.execution_id) if dispatch is not None else None
+    )
+    if dispatch is None or execution is None:
+        raise HTTPException(status_code=404, detail="Runner command not found")
+    if execution.extension_installation_id != installation.id:
+        raise HTTPException(
+            status_code=403, detail="Runner command is owned by another installation"
+        )
+    try:
+        acknowledge_dispatch(db, dispatch.id, lease_id=payload.lease_id)
+        db.commit()
+    except DispatchStateError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/installations", response_model=list[InstallationRead])
+def list_installations(
+    include_disabled: bool = Query(False),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> list[InstallationRead]:
+    _require_discovery(current_user)
+    statement = (
+        select(ExtensionInstallation)
+        .options(selectinload(ExtensionInstallation.capabilities))
+        .order_by(ExtensionInstallation.extension_id)
+    )
+    if include_disabled:
+        _require_admin(current_user)
+    else:
+        statement = statement.where(
+            ExtensionInstallation.status == ExtensionInstallationStatus.enabled
+        )
+    return [_installation_read(row) for row in db.scalars(statement).unique()]
+
+
+@router.get("/installations/{installation_id}", response_model=InstallationRead)
+def get_installation(
+    installation_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> InstallationRead:
+    _require_discovery(current_user)
+    row = db.scalar(
+        select(ExtensionInstallation)
+        .options(selectinload(ExtensionInstallation.capabilities))
+        .where(ExtensionInstallation.id == installation_id)
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Extension installation not found")
+    if _value(row.status) != "enabled":
+        _require_admin(current_user)
+    return _installation_read(row)
+
+
+@router.patch("/installations/{installation_id}", response_model=InstallationRead)
+def update_installation_status(
+    installation_id: UUID,
+    payload: InstallationStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> InstallationRead:
+    _require_admin(current_user)
+    row = db.get(ExtensionInstallation, installation_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Extension installation not found")
+    row.status = ExtensionInstallationStatus(payload.status)
+    row.revoked_at = datetime.now(timezone.utc) if payload.status == "revoked" else None
+    db.commit()
+    db.refresh(row)
+    return _installation_read(row)
+
+
+@router.get("/capabilities", response_model=list[CapabilityRead])
+def list_capabilities(
+    installation_id: UUID | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> list[CapabilityRead]:
+    _require_discovery(current_user)
+    statement = (
+        select(CapabilityDefinition)
+        .join(ExtensionInstallation)
+        .where(ExtensionInstallation.status == ExtensionInstallationStatus.enabled)
+        .order_by(CapabilityDefinition.capability_id, CapabilityDefinition.version)
+    )
+    if installation_id:
+        statement = statement.where(
+            CapabilityDefinition.installation_id == installation_id
+        )
+    return [
+        _capability_read(row, db=db, user=current_user) for row in db.scalars(statement)
+    ]
+
+
+@router.get("/capabilities/{capability_id}", response_model=CapabilityRead)
+def get_capability(
+    capability_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> CapabilityRead:
+    _require_discovery(current_user)
+    row = db.scalar(
+        select(CapabilityDefinition)
+        .join(ExtensionInstallation)
+        .where(
+            CapabilityDefinition.id == capability_id,
+            ExtensionInstallation.status == ExtensionInstallationStatus.enabled,
+        )
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Capability not found")
+    return _capability_read(row, db=db, user=current_user)
+
+
+@router.post("/grants", response_model=GrantRead, status_code=status.HTTP_201_CREATED)
+def create_grant(
+    payload: GrantCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> GrantRead:
+    _require_admin(current_user)
+    installation = db.get(ExtensionInstallation, payload.installation_id)
+    if installation is None:
+        raise HTTPException(status_code=404, detail="Extension installation not found")
+    if payload.capability_definition_id:
+        capability = db.get(CapabilityDefinition, payload.capability_definition_id)
+        if capability is None or capability.installation_id != installation.id:
+            raise HTTPException(
+                status_code=422, detail="Capability does not belong to installation"
+            )
+        if payload.effect not in (capability.declared_effects or []):
+            raise HTTPException(
+                status_code=422, detail="Effect is not declared by capability"
+            )
+    values = payload.model_dump()
+    values["decision"] = GrantDecision(payload.decision)
+    row = ExtensionGrant(
+        **values,
+        granted_by_user_id=current_user.id,
+    )
+    db.add(row)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409, detail="Grant already exists for this scope"
+        ) from exc
+    db.refresh(row)
+    return _grant_read(row)
+
+
+@router.get("/grants", response_model=list[GrantRead])
+def list_grants(
+    installation_id: UUID | None = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> list[GrantRead]:
+    _require_admin(current_user)
+    statement = select(ExtensionGrant).order_by(
+        ExtensionGrant.created_at, ExtensionGrant.id
+    )
+    if installation_id:
+        statement = statement.where(ExtensionGrant.installation_id == installation_id)
+    return [_grant_read(row) for row in db.scalars(statement)]
+
+
+@router.delete("/grants/{grant_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_grant(
+    grant_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> None:
+    _require_admin(current_user)
+    row = db.get(ExtensionGrant, grant_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Grant not found")
+    db.delete(row)
+    db.commit()
+
+
+@router.get("/clients", response_model=list[ExtensionClientRead])
+def list_extension_clients(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> list[ExtensionClientRead]:
+    _require_admin(current_user)
+    return [
+        _client_read(row)
+        for row in db.scalars(
+            select(ExtensionClient).order_by(ExtensionClient.extension_id)
+        )
+    ]
+
+
+@router.post(
+    "/clients",
+    response_model=ExtensionClientSecretRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_extension_client(
+    payload: ExtensionClientIssueRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ExtensionClientSecretRead:
+    _require_admin(current_user)
     issued = issue_extension_secret(
         db,
         extension_id=payload.extension_id,
@@ -269,31 +646,56 @@ def issue_extension_client_secret(
     )
 
 
+@router.get("/clients/{extension_id}", response_model=ExtensionClientRead)
+def get_extension_client(
+    extension_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ExtensionClientRead:
+    _require_admin(current_user)
+    row = db.get(ExtensionClient, extension_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Extension client not found")
+    return _client_read(row)
+
+
+@router.patch("/clients/{extension_id}", response_model=ExtensionClientRead)
+def update_extension_client(
+    extension_id: str,
+    payload: ExtensionClientUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+) -> ExtensionClientRead:
+    _require_admin(current_user)
+    row = db.get(ExtensionClient, extension_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Extension client not found")
+    row.scopes = sorted({scope.strip() for scope in payload.scopes if scope.strip()})
+    row.enabled = payload.enabled
+    row.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(row)
+    return _client_read(row)
+
+
 @router.post(
-    "/admin/clients/{extension_id}/rotate",
+    "/clients/{extension_id}/rotate",
     response_model=ExtensionClientSecretRead,
 )
-def rotate_extension_client_secret(
+def rotate_extension_client(
     extension_id: str,
-    db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
-):
-    if not has_capability(current_user, "admin"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can manage extension clients",
-        )
-    existing = db.get(ExtensionClient, extension_id)
-    if existing is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Extension client not found",
-        )
+    db: Session = Depends(session_dependency),
+) -> ExtensionClientSecretRead:
+    _require_admin(current_user)
+    row = db.get(ExtensionClient, extension_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Extension client not found")
     issued = issue_extension_secret(
         db,
         extension_id=extension_id,
-        scopes=list(existing.scopes or []),
-        enabled=bool(existing.enabled),
+        scopes=list(row.scopes or []),
+        enabled=bool(row.enabled),
     )
     return ExtensionClientSecretRead(
         extension_id=issued.extension_id,
@@ -303,4 +705,4 @@ def rotate_extension_client_secret(
     )
 
 
-__all__ = ["router", "get_extension_registry"]
+__all__ = ["router"]

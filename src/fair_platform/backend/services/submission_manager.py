@@ -1,4 +1,5 @@
 from datetime import datetime
+import math
 from typing import Optional
 from uuid import UUID, uuid4
 
@@ -11,19 +12,28 @@ from fair_platform.backend.data.models.submission_event import (
     SubmissionEventType,
 )
 from fair_platform.backend.data.models.user import User
+from fair_platform.backend.services.gradebook import sync_released_submission_entry
 
 
 class SubmissionManager:
-
     def __init__(self, db: Session):
         self.db = db
+
+    @staticmethod
+    def _valid_score(score: float) -> float:
+        if not math.isfinite(score) or score < 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Score must be non-negative and finite",
+            )
+        return score
 
     def _log_event(
         self,
         submission_id: UUID,
         event_type: SubmissionEventType,
         actor_id: Optional[UUID] = None,
-        workflow_run_id: Optional[UUID] = None,
+        execution_id: Optional[UUID] = None,
         details: Optional[dict] = None,
     ) -> SubmissionEvent:
         event = SubmissionEvent(
@@ -31,7 +41,7 @@ class SubmissionManager:
             submission_id=submission_id,
             event_type=event_type,
             actor_id=actor_id,
-            workflow_run_id=workflow_run_id,
+            execution_id=execution_id,
             details=details,
         )
         self.db.add(event)
@@ -43,7 +53,7 @@ class SubmissionManager:
         submission_id: UUID,
         score: float,
         feedback: str,
-        workflow_run_id: UUID,
+        execution_id: UUID,
     ) -> Submission:
         sub = self.db.get(Submission, submission_id)
         if not sub:
@@ -52,6 +62,7 @@ class SubmissionManager:
                 detail="Submission not found",
             )
 
+        score = self._valid_score(score)
         sub.draft_score = score
         sub.draft_feedback = feedback
 
@@ -77,7 +88,7 @@ class SubmissionManager:
         self._log_event(
             submission_id=sub.id,
             event_type=event_type,
-            workflow_run_id=workflow_run_id,
+            execution_id=execution_id,
             details={
                 "score": score,
                 "feedback": feedback,
@@ -111,12 +122,18 @@ class SubmissionManager:
         submission_id: UUID,
         from_status: SubmissionStatus | str | None,
         to_status: SubmissionStatus | str,
-        workflow_run_id: Optional[UUID] = None,
+        execution_id: Optional[UUID] = None,
         actor_id: Optional[UUID] = None,
         reason: Optional[str] = None,
     ) -> SubmissionEvent | None:
-        from_value = from_status.value if isinstance(from_status, SubmissionStatus) else from_status
-        to_value = to_status.value if isinstance(to_status, SubmissionStatus) else to_status
+        from_value = (
+            from_status.value
+            if isinstance(from_status, SubmissionStatus)
+            else from_status
+        )
+        to_value = (
+            to_status.value if isinstance(to_status, SubmissionStatus) else to_status
+        )
         if from_value == to_value:
             return None
 
@@ -124,7 +141,7 @@ class SubmissionManager:
             submission_id=submission_id,
             event_type=SubmissionEventType.status_transitioned,
             actor_id=actor_id,
-            workflow_run_id=workflow_run_id,
+            execution_id=execution_id,
             details={
                 "from_status": from_value,
                 "to_status": to_value,
@@ -153,6 +170,8 @@ class SubmissionManager:
             )
 
         changes: dict = {}
+        if score is not None:
+            score = self._valid_score(score)
         if score is not None and score != sub.draft_score:
             changes["score"] = {"old": sub.draft_score, "new": score}
             sub.draft_score = score
@@ -189,11 +208,15 @@ class SubmissionManager:
                 detail="No draft data to publish",
             )
 
+        if sub.draft_score is not None:
+            self._valid_score(sub.draft_score)
+
         previous_status = sub.status
         sub.published_score = sub.draft_score
         sub.published_feedback = sub.draft_feedback
         sub.returned_at = datetime.utcnow()
         sub.status = SubmissionStatus.returned
+        sync_released_submission_entry(self.db, sub, actor)
 
         self._log_event(
             submission_id=sub.id,

@@ -1,10 +1,12 @@
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fair_platform.backend.api.schema.user import UserRead
 from fair_platform.backend.api.schema.assignment import AssignmentRead
-from fair_platform.backend.api.schema.workflow import WorkflowRead
+from fair_platform.backend.api.schema.flow import FlowRead
 from fair_platform.backend.api.schema.utils import schema_config
+from datetime import datetime
+from fair_platform.backend.data.models.enrollment import CourseMembershipRole
 
 
 class CourseBase(BaseModel):
@@ -12,7 +14,12 @@ class CourseBase(BaseModel):
     
     name: str
     description: Optional[str] = None
+    icon_key: str = Field(
+        default="book-open", min_length=1, max_length=64, pattern=r"^[a-z0-9-]+$"
+    )
     instructor_id: UUID
+    section: Optional[str] = None
+    term: Optional[str] = None
 
 
 class CourseCreate(CourseBase):
@@ -24,7 +31,12 @@ class CourseUpdate(BaseModel):
     
     name: Optional[str] = None
     description: Optional[str] = None
+    icon_key: Optional[str] = Field(
+        default=None, min_length=1, max_length=64, pattern=r"^[a-z0-9-]+$"
+    )
     instructor_id: Optional[UUID] = None
+    section: Optional[str] = None
+    term: Optional[str] = None
 
 
 class CourseRead(CourseBase):
@@ -33,6 +45,10 @@ class CourseRead(CourseBase):
     assignments_count: int
     enrollment_code: Optional[str] = None
     is_enrollment_enabled: Optional[bool] = None
+    is_archived: bool
+    created_at: datetime
+    updated_at: datetime
+    membership_role: Optional[CourseMembershipRole] = None
 
 
 class CourseDetailRead(BaseModel):
@@ -41,11 +57,18 @@ class CourseDetailRead(BaseModel):
     id: UUID
     name: str
     description: Optional[str] = None
+    icon_key: str = "book-open"
     instructor: UserRead
     assignments: List[AssignmentRead] = []
-    workflows: List[WorkflowRead] = []
+    flows: List[FlowRead] = []
     enrollment_code: Optional[str] = None
     is_enrollment_enabled: Optional[bool] = None
+    section: Optional[str] = None
+    term: Optional[str] = None
+    is_archived: bool
+    created_at: datetime
+    updated_at: datetime
+    membership_role: Optional[CourseMembershipRole] = None
 
 
 class CourseSettingsUpdate(BaseModel):

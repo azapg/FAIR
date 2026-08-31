@@ -33,7 +33,7 @@ export default function VerifyEmailPage() {
         const response = await api.post('/auth/verify-email/confirm', { token })
         if (!active) return
         if (response.data?.access_token && response.data?.user) {
-          setSession(response.data.access_token, response.data.user)
+          setSession(response.data.user)
         }
         setStatus('success')
       } catch (err) {
@@ -60,7 +60,7 @@ export default function VerifyEmailPage() {
       <AuthPageShell>
         <div className="flex flex-col items-center gap-4 text-center">
           <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
-          <h1 className="text-2xl font-bold">{t('auth.verifyingEmailTitle')}</h1>
+          <h1 className="text-base leading-5 font-medium">{t('auth.verifyingEmailTitle')}</h1>
           <p className="text-sm text-muted-foreground">{t('auth.verifyingEmailDescription')}</p>
         </div>
       </AuthPageShell>
@@ -72,7 +72,7 @@ export default function VerifyEmailPage() {
       <AuthPageShell>
         <div className="flex flex-col items-center gap-4 text-center">
           <CheckCircle2 className="h-10 w-10 text-primary" />
-          <h1 className="text-2xl font-bold">{t('auth.verifyEmailSuccessTitle')}</h1>
+          <h1 className="text-base leading-5 font-medium">{t('auth.verifyEmailSuccessTitle')}</h1>
           <p className="text-sm text-muted-foreground">{t('auth.verifyEmailSuccessDescription')}</p>
           <Button asChild className="w-full">
             <Link to="/courses">Continue</Link>
@@ -86,7 +86,7 @@ export default function VerifyEmailPage() {
     <AuthPageShell>
       <div className="flex flex-col items-center gap-4 text-center">
         <CircleAlert className="h-10 w-10 text-destructive" />
-        <h1 className="text-2xl font-bold">{t('auth.invalidVerifyTokenTitle')}</h1>
+        <h1 className="text-base leading-5 font-medium">{t('auth.invalidVerifyTokenTitle')}</h1>
         <p className="text-sm text-muted-foreground">{error ?? t('auth.invalidVerifyTokenDescription')}</p>
         <Button asChild variant="outline" className="w-full">
           <Link to="/login">{t('auth.backToLogin')}</Link>

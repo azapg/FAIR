@@ -47,7 +47,7 @@ export default function CourseGrid({ courses, isPending = false, isError = false
   )
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7 mt-6">
+    <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {isPending ? (
         Array.from({ length: 6 }, (_, i) => <CourseCardSkeleton key={i} />)
       ) : courses.length === 0 && !isError ? (

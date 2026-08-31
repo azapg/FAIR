@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
       <AuthPageShell>
         <div className="flex flex-col items-center gap-4 text-center">
           <CircleAlert className="h-10 w-10 text-destructive" />
-          <h1 className="text-2xl font-bold">{t('auth.invalidResetTokenTitle')}</h1>
+          <h1 className="text-base leading-5 font-medium">{t('auth.invalidResetTokenTitle')}</h1>
           <p className="text-sm text-muted-foreground">{t('auth.invalidResetTokenDescription')}</p>
           <Button asChild variant="outline" className="w-full">
             <Link to="/forgot-password">{t('auth.requestNewResetLink')}</Link>
@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
       <AuthPageShell>
         <div className="flex flex-col items-center gap-4 text-center">
           <CheckCircle2 className="h-10 w-10 text-primary" />
-          <h1 className="text-2xl font-bold">{t('auth.resetPasswordSuccessTitle')}</h1>
+          <h1 className="text-base leading-5 font-medium">{t('auth.resetPasswordSuccessTitle')}</h1>
           <p className="text-sm text-muted-foreground">{t('auth.resetPasswordSuccessDescription')}</p>
           <Button asChild className="w-full">
             <Link to="/login">{t('auth.backToLogin')}</Link>
@@ -76,7 +76,7 @@ export default function ResetPasswordPage() {
       <form onSubmit={onSubmit} className="flex flex-col gap-6">
         <FieldGroup>
           <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="text-2xl font-bold">{t('auth.resetPasswordTitle')}</h1>
+            <h1 className="text-base leading-5 font-medium">{t('auth.resetPasswordTitle')}</h1>
             <p className="text-sm text-balance text-muted-foreground">
               {t('auth.resetPasswordDescription')}
             </p>

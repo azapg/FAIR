@@ -1,36 +1,47 @@
 import os
 from datetime import datetime, timedelta, timezone
-from secrets import token_urlsafe
 from uuid import UUID, uuid4
 
-from fair_platform.backend.api.schema.user import AuthUserRead, UserCreate
-from fastapi import APIRouter, Depends, HTTPException, status
+from fair_platform.backend.api.schema.user import (
+    AuthUserRead,
+    ChangePasswordRequest,
+    RegistrationRequest,
+)
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 import bcrypt
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models import User
 from fair_platform.backend.data.models.user import UserRole
+from fair_platform.backend.data.models.user import normalize_email_address
 from fair_platform.backend.core.config import (
+    INSECURE_DEFAULT_SECRET_KEY,
     get_base_url,
     get_email_enabled,
     get_enforce_email_verification,
+    get_secret_key,
 )
 from fair_platform.backend.core.security.permissions import auth_user_payload
 from fair_platform.backend.api.schema.casing import to_camel_keys
 from fair_platform.backend.services.mailer import Mailer, get_mailer
+from fair_platform.backend.services.access_control import authorize_registration
 from dotenv import load_dotenv
+
 load_dotenv()
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login", auto_error=False)
 
-SECRET_KEY = os.getenv("SECRET_KEY") or "fair-insecure-default-key"
-if SECRET_KEY == "fair-insecure-default-key":
-    print("WARNING: Using insecure default SECRET_KEY. Set SECRET_KEY environment variable for better security.")
+SECRET_KEY = get_secret_key()
+if SECRET_KEY == INSECURE_DEFAULT_SECRET_KEY:
+    print(
+        "WARNING: Using insecure default SECRET_KEY. Set SECRET_KEY environment variable for better security."
+    )
 ALGORITHM = "HS256"
 DEFAULT_TOKEN_EXPIRE_HOURS = 24
 REMEMBER_ME_TOKEN_EXPIRE_DAYS = 31
@@ -42,9 +53,53 @@ RESEND_VERIFICATION_REQUEST_SENT_MESSAGE = (
 TOKEN_PURPOSE_PASSWORD_RESET = "password_reset"
 TOKEN_PURPOSE_VERIFY_EMAIL = "verify_email"
 TOKEN_PURPOSE_EXT_JOB = "ext_job"
+USER_SESSION_TOKEN_TYPE = "fair-user-session+jwt"
+ACTION_TOKEN_TYPE = "fair-action+jwt"
+EXTENSION_JOB_TOKEN_TYPE = "fair-extension-job+jwt"
 PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60
 VERIFY_EMAIL_TOKEN_EXPIRE_MINUTES = 30
 EXT_JOB_TOKEN_EXPIRE_HOURS = int(os.getenv("FAIR_EXT_JOB_TOKEN_EXPIRE_HOURS", "8"))
+SESSION_COOKIE_NAME = "fair_session"
+SESSION_COOKIE_PATH = "/api"
+
+
+def _session_cookie_secure() -> bool:
+    configured = os.getenv("FAIR_SESSION_COOKIE_SECURE")
+    if configured is not None:
+        return configured.strip().lower() in {"1", "true", "yes", "on"}
+    return get_base_url().lower().startswith("https://")
+
+
+def _set_session_cookie(
+    response: Response,
+    token: str,
+    *,
+    remember_me: bool,
+) -> None:
+    max_age = (
+        REMEMBER_ME_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+        if remember_me
+        else DEFAULT_TOKEN_EXPIRE_HOURS * 60 * 60
+    )
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        max_age=max_age,
+        httponly=True,
+        secure=_session_cookie_secure(),
+        samesite="lax",
+        path=SESSION_COOKIE_PATH,
+    )
+
+
+def _clear_session_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        httponly=True,
+        secure=_session_cookie_secure(),
+        samesite="lax",
+        path=SESSION_COOKIE_PATH,
+    )
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -65,16 +120,16 @@ class ResetPasswordConfirmRequest(TokenConfirmRequest):
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt"""
-    password_bytes = password.encode('utf-8')
+    password_bytes = password.encode("utf-8")
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password_bytes, salt)
-    return hashed.decode('utf-8')
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""
-    password_bytes = plain_password.encode('utf-8')
-    hashed_bytes = hashed_password.encode('utf-8')
+    password_bytes = plain_password.encode("utf-8")
+    hashed_bytes = hashed_password.encode("utf-8")
     return bcrypt.checkpw(password_bytes, hashed_bytes)
 
 
@@ -85,10 +140,15 @@ def create_access_token(data: dict, remember_me: bool = False):
         expires_delta = timedelta(days=REMEMBER_ME_TOKEN_EXPIRE_DAYS)
     else:
         expires_delta = timedelta(hours=DEFAULT_TOKEN_EXPIRE_HOURS)
-    
+
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        to_encode,
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+        headers={"typ": USER_SESSION_TOKEN_TYPE},
+    )
 
 
 def _create_action_token(
@@ -103,7 +163,12 @@ def _create_action_token(
         "purpose": purpose,
         "exp": datetime.now(timezone.utc) + expires_delta,
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+        headers={"typ": ACTION_TOKEN_TYPE},
+    )
 
 
 def create_extension_job_token(*, user_id: str, job_id: str, extension_id: str) -> str:
@@ -120,7 +185,12 @@ def create_extension_job_token(*, user_id: str, job_id: str, extension_id: str) 
         "purpose": TOKEN_PURPOSE_EXT_JOB,
         "exp": datetime.now(timezone.utc) + timedelta(hours=EXT_JOB_TOKEN_EXPIRE_HOURS),
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+        headers={"typ": EXTENSION_JOB_TOKEN_TYPE},
+    )
 
 
 def _decode_action_token(token: str, *, expected_purpose: str) -> dict:
@@ -154,14 +224,24 @@ def _build_verify_url(token: str) -> str:
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(session_dependency)
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
+    db: Session = Depends(session_dependency),
 ):
+    resolved_token = token or request.cookies.get(SESSION_COOKIE_NAME)
+    if not resolved_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        header = jwt.get_unverified_header(resolved_token)
+        if header.get("typ") != USER_SESSION_TOKEN_TYPE:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        payload = jwt.decode(resolved_token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("purpose") is not None:
+            raise HTTPException(status_code=401, detail="Invalid token")
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-    except JWTError:
+    except (JWTError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user = db.get(User, UUID(user_id))
@@ -172,27 +252,47 @@ def get_current_user(
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
-    user_in: UserCreate,
+    user_in: RegistrationRequest,
+    response: Response,
     db: Session = Depends(session_dependency),
     mailer: Mailer = Depends(get_mailer),
 ):
     """Register a new user with password hashing"""
-    existing = db.query(User).filter(User.email == user_in.email).first()
+    normalized_email = normalize_email_address(str(user_in.email))
+    existing = db.query(User).filter(User.normalized_email == normalized_email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    invitation = authorize_registration(
+        db,
+        normalized_email=normalized_email,
+        invite_token=user_in.invite_token,
+    )
     password_hash = hash_password(user_in.password)
-    
+
     user = User(
         id=uuid4(),
         name=user_in.name,
         email=user_in.email,
+        normalized_email=normalized_email,
         role=UserRole.user.value,
         password_hash=password_hash,
         is_verified=not get_email_enabled(),
     )
     db.add(user)
-    db.commit()
+    try:
+        # Insert the user before updating the invitation's foreign key. This
+        # keeps SQLite and PostgreSQL ordering identical without weakening the
+        # single registration transaction.
+        db.flush()
+        if invitation is not None:
+            invitation.redeemed_at = datetime.now(timezone.utc)
+            invitation.redeemed_by_user_id = user.id
+            db.add(invitation)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Email already registered") from exc
     db.refresh(user)
 
     if get_email_enabled() and not user.is_verified:
@@ -212,11 +312,11 @@ async def register(
             }
 
     access_token = create_access_token(
-        {"sub": str(user.id), "role": user.role},
-        remember_me=False
+        {"sub": str(user.id), "role": user.role}, remember_me=False
     )
     auth_user = auth_user_payload(user)
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
+    _set_session_cookie(response, access_token, remember_me=False)
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -226,15 +326,22 @@ async def register(
 
 @router.post("/login")
 def login(
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(session_dependency),
 ):
     """Login endpoint with proper password verification"""
-    user = db.query(User).filter(User.email == form_data.username).first()
+    try:
+        normalized_email = normalize_email_address(form_data.username)
+    except ValueError:
+        normalized_email = ""
+    user = db.query(User).filter(User.normalized_email == normalized_email).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not user.password_hash or not verify_password(form_data.password, user.password_hash):
+    if not user.password_hash or not verify_password(
+        form_data.password, user.password_hash
+    ):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     if get_enforce_email_verification() and not user.is_verified:
@@ -246,10 +353,34 @@ def login(
     remember_me = "remember_me" in form_data.scopes
 
     access_token = create_access_token(
-        {"sub": str(user.id), "role": user.role},
-        remember_me=remember_me
+        {"sub": str(user.id), "role": user.role}, remember_me=remember_me
     )
+    _set_session_cookie(response, access_token, remember_me=remember_me)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/logout")
+def logout(response: Response):
+    _clear_session_cookie(response)
+    return {"detail": "Logged out"}
+
+
+@router.post("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(session_dependency),
+):
+    """Change the authenticated user's password after verifying the current one."""
+    if not current_user.password_hash or not verify_password(
+        payload.current_password, current_user.password_hash
+    ):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    current_user.password_hash = hash_password(payload.new_password)
+    db.add(current_user)
+    db.commit()
+    return {"detail": "Password changed successfully"}
 
 
 @router.get("/me", response_model=AuthUserRead)
@@ -274,7 +405,8 @@ async def forgot_password(
             detail=EMAIL_DISABLED_MESSAGE,
         )
 
-    user = db.query(User).filter(User.email == payload.email).first()
+    normalized_email = normalize_email_address(str(payload.email))
+    user = db.query(User).filter(User.normalized_email == normalized_email).first()
     if user:
         reset_token = _create_action_token(
             user=user,
@@ -286,7 +418,9 @@ async def forgot_password(
             reset_url=_build_reset_url(reset_token),
         )
 
-    return {"detail": "If an account exists for this email, a reset message has been sent"}
+    return {
+        "detail": "If an account exists for this email, a reset message has been sent"
+    }
 
 
 @router.post("/resend-verification")
@@ -327,7 +461,8 @@ async def resend_verification_request(
             detail=EMAIL_DISABLED_MESSAGE,
         )
 
-    user = db.query(User).filter(User.email == payload.email).first()
+    normalized_email = normalize_email_address(str(payload.email))
+    user = db.query(User).filter(User.normalized_email == normalized_email).first()
     if user and not user.is_verified:
         verification_token = _create_action_token(
             user=user,
@@ -344,6 +479,7 @@ async def resend_verification_request(
 @router.post("/verify-email/confirm")
 async def verify_email_confirm(
     payload: TokenConfirmRequest,
+    response: Response,
     db: Session = Depends(session_dependency),
 ):
     token_data = _decode_action_token(
@@ -366,11 +502,11 @@ async def verify_email_confirm(
         detail = "Email verified successfully"
 
     access_token = create_access_token(
-        {"sub": str(user.id), "role": user.role},
-        remember_me=False
+        {"sub": str(user.id), "role": user.role}, remember_me=False
     )
     auth_user = auth_user_payload(user)
     auth_user["settings"] = to_camel_keys(auth_user.get("settings", {}))
+    _set_session_cookie(response, access_token, remember_me=False)
 
     return {
         "detail": detail,

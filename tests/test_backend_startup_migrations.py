@@ -1,6 +1,10 @@
 import pytest
 
 import fair_platform.backend.main as backend_main
+from fair_platform.backend.core.config import (
+    INSECURE_DEFAULT_SECRET_KEY,
+    validate_security_configuration,
+)
 
 
 def test_auto_migrate_enabled_by_default(monkeypatch):
@@ -21,21 +25,71 @@ def test_configured_cors_origins_from_env(monkeypatch):
     assert origins == ["https://a.example", "https://b.example"]
 
 
-def test_job_dispatcher_enabled_by_default(monkeypatch):
-    monkeypatch.delenv("FAIR_ENABLE_JOB_DISPATCHER", raising=False)
-    assert backend_main._is_job_dispatcher_enabled() is True
+def test_execution_dispatcher_enabled_by_default(monkeypatch):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.delenv("FAIR_ENABLE_EXECUTION_DISPATCHER", raising=False)
+    assert backend_main._is_execution_dispatcher_enabled() is True
+
+
+def test_enterprise_mode_rejects_default_secret(monkeypatch):
+    monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "ENTERPRISE")
+
+    with pytest.raises(RuntimeError, match="SECRET_KEY must be configured"):
+        validate_security_configuration(INSECURE_DEFAULT_SECRET_KEY)
+
+
+def test_enterprise_mode_requires_independent_dispatch_signing_key(monkeypatch):
+    monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "ENTERPRISE")
+    monkeypatch.delenv("FAIR_DISPATCH_SIGNING_PRIVATE_KEY", raising=False)
+
+    with pytest.raises(
+        RuntimeError,
+        match="FAIR_DISPATCH_SIGNING_PRIVATE_KEY must be configured",
+    ):
+        validate_security_configuration("configured-session-secret")
+
+
+def test_enterprise_mode_accepts_explicit_security_keys(monkeypatch):
+    monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "ENTERPRISE")
+    monkeypatch.setenv(
+        "FAIR_DISPATCH_SIGNING_PRIVATE_KEY",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    )
+    monkeypatch.setenv("FAIR_API_BASE_URL", "https://api.fair.example.edu")
+
+    validate_security_configuration("configured-session-secret")
+
+
+def test_enterprise_mode_rejects_insecure_api_origin(monkeypatch):
+    monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "ENTERPRISE")
+    monkeypatch.setenv(
+        "FAIR_DISPATCH_SIGNING_PRIVATE_KEY",
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    )
+    monkeypatch.setenv("FAIR_API_BASE_URL", "http://api.fair.example.edu")
+
+    with pytest.raises(RuntimeError, match="FAIR_API_BASE_URL must use HTTPS"):
+        validate_security_configuration("configured-session-secret")
+
+
+def test_community_mode_allows_local_default_secret(monkeypatch):
+    monkeypatch.setenv("FAIR_DEPLOYMENT_MODE", "COMMUNITY")
+
+    validate_security_configuration(INSECURE_DEFAULT_SECRET_KEY)
 
 
 @pytest.mark.parametrize("value", ["1", "true", "yes", "on", " TRUE "])
-def test_job_dispatcher_enabled_truthy_values(monkeypatch, value: str):
-    monkeypatch.setenv("FAIR_ENABLE_JOB_DISPATCHER", value)
-    assert backend_main._is_job_dispatcher_enabled() is True
+def test_execution_dispatcher_enabled_truthy_values(monkeypatch, value: str):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("FAIR_ENABLE_EXECUTION_DISPATCHER", value)
+    assert backend_main._is_execution_dispatcher_enabled() is True
 
 
 @pytest.mark.parametrize("value", ["0", "false", "no", "off", " FALSE ", ""])
-def test_job_dispatcher_disabled_values(monkeypatch, value: str):
-    monkeypatch.setenv("FAIR_ENABLE_JOB_DISPATCHER", value)
-    assert backend_main._is_job_dispatcher_enabled() is False
+def test_execution_dispatcher_disabled_values(monkeypatch, value: str):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("FAIR_ENABLE_EXECUTION_DISPATCHER", value)
+    assert backend_main._is_execution_dispatcher_enabled() is False
 
 
 @pytest.mark.parametrize("value", ["1", "true", "yes", "on", "TRUE", " Yes "])

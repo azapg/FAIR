@@ -11,23 +11,49 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DataTable, DataTableContent, DataTableEmpty } from "@/components/data-table";
+import {
+  EnrollmentSummary,
+  useCourseEnrollments,
+  useRemoveEnrollment,
+  useUpdateEnrollmentRole,
+} from "@/hooks/use-courses";
 
 type Instructor = {
   id: string;
+  enrollmentId?: string;
   name: string;
   email: string;
   role: string;
 };
 
-type Student = {
-  id: string;
-  name: string;
-  email: string;
-};
-
-export function ParticipantsTab({ instructor }: { instructor?: Instructor }) {
+export function ParticipantsTab({
+  courseId,
+  instructor,
+  canManageRoles,
+}: {
+  courseId: string;
+  instructor?: Instructor;
+  canManageRoles: boolean;
+}) {
   const { t } = useTranslation();
-  const instructors = useMemo(() => (instructor ? [instructor] : []), [instructor]);
+  const { data: memberships = [], isLoading } = useCourseEnrollments(courseId);
+  const removeEnrollment = useRemoveEnrollment(courseId);
+  const updateRole = useUpdateEnrollmentRole(courseId);
+  const assistants = memberships.filter((membership) => membership.role === 'assistant');
+  const instructors = useMemo(
+    () => [
+      ...(instructor ? [instructor] : []),
+      ...assistants.map((membership) => ({
+        id: membership.userId,
+        enrollmentId: membership.id,
+        name: membership.userName ?? 'Assistant',
+        email: membership.userEmail ?? '',
+        role: 'assistant',
+      })),
+    ],
+    [instructor, assistants],
+  );
+  const students = memberships.filter((membership) => membership.role === 'student');
 
   const instructorColumns = useMemo<ColumnDef<Instructor>[]>(
     () => [
@@ -61,59 +87,107 @@ export function ParticipantsTab({ instructor }: { instructor?: Instructor }) {
       {
         id: "actions",
         header: () => <div className="w-12 text-right">{t("actions.courseActions")}</div>,
-        cell: () => (
+        cell: ({ row }) => (
           <div className="text-right">
             <DropdownMenu>
               <DropdownMenuTrigger className="ml-auto flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
                 <Ellipsis className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled>View profile</DropdownMenuItem>
-                <DropdownMenuItem disabled>{t("common.edit")}</DropdownMenuItem>
+                {row.original.enrollmentId && canManageRoles ? (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => updateRole.mutate({
+                        id: row.original.enrollmentId!,
+                        role: 'student',
+                      })}
+                    >
+                      Make student
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => removeEnrollment.mutate(row.original.enrollmentId!)}
+                    >
+                      Remove from course
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem disabled>View profile</DropdownMenuItem>
+                    <DropdownMenuItem disabled>{t("common.edit")}</DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         ),
       },
     ],
-    [t],
+    [canManageRoles, removeEnrollment, t, updateRole],
   );
 
-  const studentColumns = useMemo<ColumnDef<Student>[]>(
+  const studentColumns = useMemo<ColumnDef<EnrollmentSummary>[]>(
     () => [
       {
-        accessorKey: "name",
+        accessorKey: "userName",
         header: t("participants.students"),
       },
       {
-        accessorKey: "email",
+        accessorKey: "userEmail",
         header: t("auth.email"),
       },
       {
         id: "description",
         header: t("courses.description"),
+        cell: ({ row }) => <span className="capitalize">{row.original.role}</span>,
       },
       {
         id: "actions",
         header: () => <div className="w-12 text-right">{t("actions.courseActions")}</div>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="ml-auto flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
+                <Ellipsis className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canManageRoles && (
+                  <DropdownMenuItem
+                    onClick={() => updateRole.mutate({ id: row.original.id, role: 'assistant' })}
+                  >
+                    Make assistant
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => removeEnrollment.mutate(row.original.id)}
+                >
+                  Remove from course
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ),
       },
     ],
-    [t],
+    [canManageRoles, removeEnrollment, t, updateRole],
   );
 
   return (
     <div className="space-y-4">
-      <h2 className="mb-3 text-xl font-semibold">{t("participants.instructors")}</h2>
+      <h2 className="mb-3 text-base leading-5 font-medium">{t("participants.instructors")}</h2>
       <DataTable data={instructors} columns={instructorColumns}>
         <DataTableContent>
           <DataTableEmpty>{t("participants.noInstructor")}</DataTableEmpty>
         </DataTableContent>
       </DataTable>
 
-      <h2 className="mb-2 text-xl font-semibold">{t("participants.students")}</h2>
-      <DataTable data={[]} columns={studentColumns}>
+      <h2 className="mb-2 text-base leading-5 font-medium">{t("participants.students")}</h2>
+      <DataTable data={students} columns={studentColumns}>
         <DataTableContent>
-          <DataTableEmpty>{t("participants.noStudents")}</DataTableEmpty>
+          <DataTableEmpty>
+            {isLoading ? t("common.loading") : t("participants.noStudents")}
+          </DataTableEmpty>
         </DataTableContent>
       </DataTable>
     </div>

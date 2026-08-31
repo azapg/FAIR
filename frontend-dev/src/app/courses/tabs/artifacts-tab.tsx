@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Assignment } from "@/hooks/use-assignments";
-import { Artifact, useArtifacts, useDeleteArtifact } from "@/hooks/use-artifacts";
+import { LmsArtifact, useArtifacts, useDeleteArtifact } from "@/hooks/use-artifacts";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -32,7 +32,7 @@ export function ArtifactsTab({
     return map;
   }, [assignments]);
 
-  const columns = useMemo<ColumnDef<Artifact>[]>(
+  const columns = useMemo<ColumnDef<LmsArtifact>[]>(
     () => [
       {
         accessorKey: "title",
@@ -82,7 +82,7 @@ export function ArtifactsTab({
     [assignmentNames, t],
   );
 
-  const archivedColumns = useMemo<ColumnDef<Artifact>[]>(
+  const archivedColumns = useMemo<ColumnDef<LmsArtifact>[]>(
     () => [
       {
         accessorKey: "title",
@@ -138,7 +138,7 @@ export function ArtifactsTab({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-xl font-semibold">{t("artifacts.title")}</h3>
+      <h3 className="text-base leading-5 font-medium">{t("artifacts.title")}</h3>
 
       <DataTable data={activeArtifacts} columns={columns} filterKey="title">
         <div className="pb-3">
@@ -151,7 +151,7 @@ export function ArtifactsTab({
 
       {archivedArtifacts.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-lg font-semibold">{t("artifacts.archivedTitle")}</h4>
+          <h4 className="text-base leading-5 font-medium">{t("artifacts.archivedTitle")}</h4>
           <DataTable data={archivedArtifacts} columns={archivedColumns}>
             <DataTableContent>
               <DataTableEmpty>{t("artifacts.empty")}</DataTableEmpty>

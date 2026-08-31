@@ -3,7 +3,6 @@ Tests for enrollment feature — CRUD API, course/assignment visibility for enro
 and artifact permission checks based on enrollment.
 """
 
-import pytest
 from uuid import uuid4
 from datetime import datetime, timedelta
 
@@ -21,13 +20,13 @@ from tests.conftest import get_auth_token
 def _make_users(session):
     """Create admin, professor and two students."""
     admin = User(id=uuid4(), name="Admin", email="admin@test.com",
-                 role=UserRole.admin, password_hash=hash_password("test_password_123"))
+                 role=UserRole.admin, password_hash=hash_password("test_password_123"), is_verified=True)
     prof = User(id=uuid4(), name="Professor", email="prof@test.com",
-                role=UserRole.professor, password_hash=hash_password("test_password_123"))
+                role=UserRole.professor, password_hash=hash_password("test_password_123"), is_verified=True)
     stu1 = User(id=uuid4(), name="Student One", email="stu1@test.com",
-                role=UserRole.student, password_hash=hash_password("test_password_123"))
+                role=UserRole.student, password_hash=hash_password("test_password_123"), is_verified=True)
     stu2 = User(id=uuid4(), name="Student Two", email="stu2@test.com",
-                role=UserRole.student, password_hash=hash_password("test_password_123"))
+                role=UserRole.student, password_hash=hash_password("test_password_123"), is_verified=True)
     session.add_all([admin, prof, stu1, stu2])
     session.commit()
     return admin, prof, stu1, stu2
@@ -221,6 +220,7 @@ class TestSelfEnrollment:
         resp = test_client.post("/api/courses/", json={
             "name": "New Course",
             "description": "desc",
+            "iconKey": "chemistry",
             "instructor_id": str(prof.id),
         }, headers=headers)
 
@@ -228,6 +228,15 @@ class TestSelfEnrollment:
         body = resp.json()
         assert body.get("enrollmentCode")
         assert body.get("isEnrollmentEnabled") is True
+        assert body.get("iconKey") == "chemistry"
+
+        update = test_client.put(
+            f"/api/courses/{body['id']}",
+            json={"iconKey": "astronomy"},
+            headers=headers,
+        )
+        assert update.status_code == 200
+        assert update.json().get("iconKey") == "astronomy"
 
     def test_student_cannot_see_enrollment_settings(self, test_client, test_db):
         with test_db() as s:
@@ -265,7 +274,7 @@ class TestEnrollmentVisibility:
             assignment = Assignment(
                 id=uuid4(), course_id=course.id, title="HW1",
                 description="Homework", deadline=datetime.now() + timedelta(days=7),
-                max_grade={"points": 100},
+                max_grade={"type": "points", "value": 100},
             )
             s.add(assignment)
             # Only enroll stu1
@@ -341,12 +350,12 @@ class TestArtifactEnrollmentPermissions:
 
         # Enrolled student can view
         headers = _auth(test_client, stu1.email)
-        resp = test_client.get(f"/api/artifacts/{art_id}", headers=headers)
+        resp = test_client.get(f"/api/v1/artifacts/{art_id}", headers=headers)
         assert resp.status_code == 200
 
         # Non-enrolled student cannot view
         headers = _auth(test_client, stu2.email)
-        resp = test_client.get(f"/api/artifacts/{art_id}", headers=headers)
+        resp = test_client.get(f"/api/v1/artifacts/{art_id}", headers=headers)
         assert resp.status_code == 403
 
 
@@ -367,10 +376,10 @@ class TestLimitedViewsAndOwnership:
         assert payload.get("enrollmentCode") is None
         assert payload.get("isEnrollmentEnabled") is None
         # Limited response should not expose instructor-only nested data.
-        assert "workflows" not in payload
+        assert "flows" not in payload
         assert "instructor" not in payload
 
-    def test_enrolled_user_cannot_list_workflows_for_foreign_course(self, test_client, test_db):
+    def test_enrolled_user_cannot_see_foreign_course_flows(self, test_client, test_db):
         with test_db() as s:
             _, prof, stu1, _ = _make_users(s)
             course = _make_course(s, prof)
@@ -378,8 +387,9 @@ class TestLimitedViewsAndOwnership:
             s.commit()
 
         headers = _auth(test_client, stu1.email)
-        resp = test_client.get(f"/api/workflows/?course_id={course.id}", headers=headers)
-        assert resp.status_code == 403
+        resp = test_client.get(f"/api/v1/flows?course_id={course.id}", headers=headers)
+        assert resp.status_code == 200
+        assert resp.json() == []
 
     def test_enrolled_user_cannot_create_assignment_in_foreign_course(self, test_client, test_db):
         with test_db() as s:
@@ -393,6 +403,7 @@ class TestLimitedViewsAndOwnership:
             "course_id": str(course.id),
             "title": "New Assignment",
             "description": "desc",
+            "max_grade": '{"type": "points", "value": 100}',
         }
         resp = test_client.post("/api/assignments/", data=payload, headers=headers)
         assert resp.status_code == 403

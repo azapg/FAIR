@@ -7,17 +7,23 @@ export type Course = {
   id: string
   name: string
   description?: string | null
+  iconKey: string
   instructorId: string
   instructorName?: string
   assignmentsCount: number
   enrollmentCode?: string | null
   isEnrollmentEnabled: boolean | null
+  section?: string | null
+  term?: string | null
+  isArchived: boolean
+  membershipRole?: 'owner' | 'assistant' | 'student' | null
 }
 
 export type CourseDetail = {
   id: string,
   name: string,
   description?: string | null,
+  iconKey: string,
   instructor: {
     id: string,
     name: string,
@@ -25,7 +31,7 @@ export type CourseDetail = {
     role: 'instructor' | 'admin' | 'user',
   },
   assignments: Assignment[],
-  workflows: {
+  flows: {
     id: string,
     name: string,
     description?: string | null,
@@ -34,15 +40,20 @@ export type CourseDetail = {
   }
   enrollmentCode?: string | null
   isEnrollmentEnabled: boolean | null
+  section?: string | null
+  term?: string | null
+  isArchived: boolean
+  membershipRole?: 'owner' | 'assistant' | 'student' | null
 }
 
 export type CreateCourseInput = {
   name: string
   description?: string | null
+  iconKey?: string
   instructorId: string
 }
 
-export type UpdateCourseInput = Partial<Pick<Course, 'name' | 'description'>>
+export type UpdateCourseInput = Partial<Pick<Course, 'name' | 'description' | 'iconKey'>>
 
 export type CourseSettingsInput = Partial<Pick<Course, 'isEnrollmentEnabled'>>
 
@@ -53,9 +64,70 @@ export type EnrollmentSummary = {
   enrolledAt: string
   userName?: string
   courseName?: string
+  userEmail?: string
+  role: 'owner' | 'assistant' | 'student'
+  status: 'active' | 'removed'
+  updatedAt: string
+}
+export type CourseCopySelection = {
+  content: boolean
+  assignments: boolean
+  rubrics: boolean
+  gradebook: boolean
+  quizzes: boolean
+  flows: boolean
 }
 
+export type CourseCopyPreview = {
+  copied: Record<string, number>
+  transformed: Record<string, number>
+  skipped: Record<string, number>
+  unsupported: Record<string, number>
+  datePolicy: 'clear' | 'shift'
+  dateShiftDays: number
+  warnings: string[]
+  objects: Array<{
+    sourceId: string
+    objectType: string
+    title: string
+    action: 'copy' | 'transform' | 'skip' | 'unsupported'
+    reason: string
+  }>
+}
+
+export type CourseCopyInput = {
+  name: string
+  description?: string | null
+  section?: string | null
+  term?: string | null
+  datePolicy: 'clear' | 'shift'
+  dateShiftDays: number
+  selection: CourseCopySelection
+  idempotencyKey: string
+}
+
+export type CourseCopyResult = {
+  jobId: string
+  destinationCourseId?: string | null
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  mapping: Record<string, Record<string, string>>
+  errorMessage?: string | null
+  startedAt?: string | null
+  completedAt?: string | null
+}
+
+export type CourseTemplateInput = Pick<
+  CourseCopyInput,
+  'datePolicy' | 'dateShiftDays' | 'selection'
+> & { name: string }
+
 export type ListParams = Record<string, string | number | boolean | null | undefined>
+
+export function hasStaffCourseMembership(courses: Course[]): boolean {
+  return courses.some(
+    (course) => course.membershipRole === 'owner' || course.membershipRole === 'assistant',
+  )
+}
 
 export const coursesKeys = {
   all: ['courses'] as const,
@@ -63,6 +135,11 @@ export const coursesKeys = {
   list: (params?: ListParams) => [...coursesKeys.lists(), { params }] as const,
   details: () => [...coursesKeys.all, 'detail'] as const,
   detail: (id: string) => [...coursesKeys.details(), id] as const,
+}
+
+export const enrollmentsKeys = {
+  all: ['enrollments'] as const,
+  course: (courseId: string) => [...enrollmentsKeys.all, 'course', courseId] as const,
 }
 
 const fetchCourses = async (params?: ListParams): Promise<Course[]> => {
@@ -98,9 +175,44 @@ const updateCourseSettingsApi = async (id: string, data: CourseSettingsInput): P
   const res = await api.patch(`/courses/${id}/settings`, data)
   return res.data
 }
+export const previewCourseCopy = async (
+  id: string,
+  data: CourseCopyInput,
+): Promise<CourseCopyPreview> =>
+  (await api.post(`/lms/courses/${id}/copy-preview`, data)).data
+
+export const copyCourse = async (
+  id: string,
+  data: CourseCopyInput,
+): Promise<CourseCopyResult> =>
+  (await api.post(`/lms/courses/${id}/copy`, data)).data
+
+export const saveCourseTemplate = async (
+  id: string,
+  data: CourseTemplateInput,
+): Promise<void> => {
+  await api.post(`/lms/courses/${id}/templates`, data)
+}
 
 const joinCourseByCode = async (code: string): Promise<EnrollmentSummary> => {
   const res = await api.post('/enrollments/join', { code })
+  return res.data
+}
+
+const fetchCourseEnrollments = async (courseId: string): Promise<EnrollmentSummary[]> => {
+  const res = await api.get('/enrollments', { params: { course_id: courseId } })
+  return res.data
+}
+
+const removeEnrollment = async (id: string): Promise<void> => {
+  await api.delete(`/enrollments/${id}`)
+}
+
+const updateEnrollmentRole = async (
+  id: string,
+  role: 'assistant' | 'student',
+): Promise<EnrollmentSummary> => {
+  const res = await api.patch(`/enrollments/${id}`, { role })
   return res.data
 }
 
@@ -219,5 +331,38 @@ export function useJoinCourseByCode() {
         description: error.message || 'Please verify the class code and try again'
       });
     }
+  })
+}
+
+export function useCourseEnrollments(courseId?: string, enabled = true) {
+  return useQuery({
+    queryKey: enrollmentsKeys.course(courseId ?? 'unknown'),
+    queryFn: () => fetchCourseEnrollments(courseId as string),
+    enabled: enabled && Boolean(courseId),
+  })
+}
+
+export function useRemoveEnrollment(courseId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: removeEnrollment,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: enrollmentsKeys.course(courseId) })
+      toast.success('Participant removed')
+    },
+    onError: (error: Error) => toast.error('Failed to remove participant', { description: error.message }),
+  })
+}
+
+export function useUpdateEnrollmentRole(courseId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, role }: { id: string; role: 'assistant' | 'student' }) =>
+      updateEnrollmentRole(id, role),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: enrollmentsKeys.course(courseId) })
+      toast.success('Participant role updated')
+    },
+    onError: (error: Error) => toast.error('Failed to update participant', { description: error.message }),
   })
 }

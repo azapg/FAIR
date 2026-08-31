@@ -1,18 +1,11 @@
 import {useState, FormEvent, useRef} from "react";
 import {Button} from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import {Dialog, DialogClose, DialogFooter, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
+import { ResponsiveDialogContent } from "@/components/ui/responsive-dialog";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Textarea} from "@/components/ui/textarea";
 import {Plus, FileText, X} from "lucide-react";
-import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
 import { Assignment, useCreateAssignment, type CreateAssignmentInput } from "@/hooks/use-assignments";
 import {CreateAssignmentForm, Grade} from "@/app/courses/tabs/assignments/assignments";
 import {useTranslation} from "react-i18next";
@@ -21,6 +14,9 @@ import { DOCS_BASE_URL } from "@/lib/constants";
 interface CreateAssignmentDialogProps {
   courseId?: string;
   onAssignmentCreated: (assignment: Assignment) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
 }
 
 interface FileItem {
@@ -28,25 +24,37 @@ interface FileItem {
   id: string;
 }
 
-export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: CreateAssignmentDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CreateAssignmentDialog({
+  courseId,
+  onAssignmentCreated,
+  open: controlledOpen,
+  onOpenChange,
+  showTrigger = true,
+}: CreateAssignmentDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    if (controlledOpen === undefined) {
+      setInternalOpen(next);
+    }
+    onOpenChange?.(next);
+  };
   const [form, setForm] = useState<CreateAssignmentForm>({
     title: "",
     description: "",
     dueDate: "",
-    gradeType: "",
-    gradeValue: "",
+    gradeValue: "100",
   });
 
   const [files, setFiles] = useState<FileItem[]>([]);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const {t, i18n} = useTranslation();
+  const {t} = useTranslation();
 
   const { mutateAsync: createAssignment, isPending } = useCreateAssignment();
 
   const resetForm = () => {
-    setForm({title: "", description: "", dueDate: "", gradeType: "", gradeValue: ""});
+    setForm({title: "", description: "", dueDate: "", gradeValue: "100"});
     setFiles([]);
     setSubmissionError(null);
   };
@@ -80,27 +88,12 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
       return;
     }
 
-    let totalPoints: Grade | undefined = undefined;
-    if (form.gradeType) {
-      switch (form.gradeType) {
-        case "points":
-        case "percentage": {
-          const num = Number(form.gradeValue);
-          if (Number.isFinite(num)) {
-            totalPoints = {type: form.gradeType, value: num};
-          }
-          break;
-        }
-        case "letter":
-          if (form.gradeValue.trim()) {
-            totalPoints = {type: "letter", value: form.gradeValue.trim()};
-          }
-          break;
-        case "pass_fail":
-          totalPoints = { type: "pass_fail", value: form.gradeValue === "pass" };
-          break;
-      }
+    const points = Number(form.gradeValue);
+    if (!Number.isFinite(points) || points <= 0) {
+      setSubmissionError(t("assignments.pointsRequired"));
+      return;
     }
+    const totalPoints: Grade = {type: "points", value: points};
 
     try {
       if (!courseId) {
@@ -112,7 +105,7 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
         title: form.title.trim(),
         description: form.description.trim() || null,
         deadline: form.dueDate || null,
-        maxGrade: totalPoints ?? null,
+        maxGrade: totalPoints,
         files: files.map(f => f.file),
       };
       
@@ -145,171 +138,134 @@ export function CreateAssignmentDialog({ courseId, onAssignmentCreated }: Create
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2"/>
-          {t("common.create")}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[60%] h-[90%]">
-        <DialogHeader>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="mr-2"/>
+            {t("common.create")}
+          </Button>
+        </DialogTrigger>
+      )}
+      <ResponsiveDialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden sm:max-w-2xl">
+        <DialogHeader className="shrink-0 pb-4">
           <DialogTitle>{t("assignments.newAssignment")}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="h-full w-full">
-          <form
-            className="grid gap-4"
-            onSubmit={handleSubmit}
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={handleSubmit}
+        >
+          <div
+            data-slot="assignment-form-scroll"
+            className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-3"
           >
-            <div className="grid gap-2">
-              <Label htmlFor="title">{t("assignments.titleLabel")}</Label>
-              <Input
-                id="title"
-                value={form.title}
-                onChange={e => setForm(f => ({...f, title: e.target.value}))}
-                required
-                placeholder={t("assignments.titlePlaceholder")}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="description">{t("assignments.description")}</Label>
-              <Textarea
-                id="description"
-                value={form.description}
-                onChange={e => setForm(f => ({...f, description: e.target.value}))}
-                placeholder={t("assignments.descriptionPlaceholder")}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="due">{t("assignments.dueDate")}</Label>
-              <Input
-                id="due"
-                type="date"
-                value={form.dueDate}
-                onChange={e => setForm(f => ({...f, dueDate: e.target.value}))}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="gradeType">{t("assignments.gradingType")}</Label>
-              <select
-                id="gradeType"
-                className="w-full rounded-md border px-3 py-2 text-sm"
-                value={form.gradeType}
-                onChange={e =>
-                  setForm(f => ({
-                    ...f,
-                    gradeType: e.target.value as Grade["type"] | "",
-                    gradeValue: "",
-                  }))
-                }
-              >
-                <option value="">{t("assignments.none")}</option>
-                <option value="points">{t("assignments.points")}</option>
-                <option value="percentage">{t("assignments.percentage")}</option>
-                <option value="letter">{t("assignments.letter")}</option>
-                <option value="pass_fail">{t("assignments.passFail")}</option>
-              </select>
-            </div>
-
-            {form.gradeType === "points" || form.gradeType === "percentage" ? (
+            <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="gradeValue">
-                  {form.gradeType === "points" ? t("assignments.points") : t("assignments.percentage")}
-                </Label>
+                <Label htmlFor="title">{t("assignments.titleLabel")}</Label>
+                <Input
+                  id="title"
+                  value={form.title}
+                  onChange={e => setForm(f => ({...f, title: e.target.value}))}
+                  required
+                  placeholder={t("assignments.titlePlaceholder")}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="description">{t("assignments.description")}</Label>
+                <Textarea
+                  id="description"
+                  className="min-h-28 max-h-64 resize-y overflow-y-auto"
+                  value={form.description}
+                  onChange={e => setForm(f => ({...f, description: e.target.value}))}
+                  placeholder={t("assignments.descriptionPlaceholder")}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="due">{t("assignments.dueDate")}</Label>
+                <Input
+                  id="due"
+                  type="date"
+                  value={form.dueDate}
+                  onChange={e => setForm(f => ({...f, dueDate: e.target.value}))}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="gradeValue">{t("assignments.totalPoints")}</Label>
                 <Input
                   id="gradeValue"
                   type="number"
+                  min="0"
                   step="any"
                   value={form.gradeValue}
                   onChange={e => setForm(f => ({...f, gradeValue: e.target.value}))}
-                  placeholder={form.gradeType === "points" ? "e.g., 100" : "e.g., 10"}
+                  placeholder="e.g., 100"
+                  required
                 />
               </div>
-            ) : form.gradeType === "letter" ? (
-              <div className="grid gap-2">
-                <Label htmlFor="gradeLetter">{t("assignments.letterGrade")}</Label>
-                <Input
-                  id="gradeLetter"
-                  value={form.gradeValue}
-                  onChange={e => setForm(f => ({...f, gradeValue: e.target.value}))}
-                  placeholder="e.g., A+"
-                />
-              </div>
-            ) : form.gradeType === "pass_fail" ? (
-              <div className="grid gap-2">
-                <Label htmlFor="pf">{t("assignments.result")}</Label>
-                <select
-                  id="pf"
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                  value={form.gradeValue}
-                  onChange={e => setForm(f => ({...f, gradeValue: e.target.value}))}
-                >
-                  <option value="">{t("assignments.select")}</option>
-                  <option value="pass">{t("assignments.pass")}</option>
-                  <option value="fail">{t("assignments.fail")}</option>
-                </select>
-              </div>
-            ) : null}
 
-            <div className="grid gap-2">
-              <h2 className="text-muted-foreground text-sm">{t("assignments.resources")}</h2>
-              <div className="flex flex-row flex-wrap gap-2 items-center">
-                {files.map((item) => (
+              <div className="grid gap-2">
+                <h2 className="text-muted-foreground text-[13px] leading-4 font-medium">{t("assignments.resources")}</h2>
+                <div className="flex flex-row flex-wrap items-center gap-2">
+                  {files.map((item) => (
+                    <Button
+                      key={item.id}
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      className="flex items-center gap-1"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span className="max-w-[200px] truncate">{item.file.name}</span>
+                      <X
+                        className="ml-1 h-3 w-3 cursor-pointer hover:text-destructive"
+                        onClick={() => removeFile(item.id)}
+                      />
+                    </Button>
+                  ))}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    multiple
+                    onChange={(e) => {
+                      handleFilePick(e.target.files);
+                      e.currentTarget.value = "";
+                    }}
+                  />
                   <Button
-                    key={item.id}
-                    variant="secondary"
+                    variant="ghost"
                     size="sm"
                     type="button"
-                    className="flex items-center gap-1"
+                    onClick={() => fileInputRef.current?.click()}
+                    title={t("assignments.addResources")}
                   >
-                    <FileText className="h-4 w-4" />
-                    <span className="max-w-[200px] truncate">{item.file.name}</span>
-                    <X
-                      className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive"
-                      onClick={() => removeFile(item.id)}
-                    />
+                    <Plus />
                   </Button>
-                ))}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  multiple
-                  onChange={(e) => {
-                    handleFilePick(e.target.files);
-                    e.currentTarget.value = "";
-                  }}
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  title={t("assignments.addResources")}
-                >
-                  <Plus />
-                </Button>
+                </div>
               </div>
+
+              {submissionError ? (
+                <div className="text-sm text-red-600 rounded-md border border-red-200 bg-red-50 p-3">
+                  {submissionError}
+                </div>
+              ) : null}
             </div>
+          </div>
 
-            {submissionError ? (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200">
-                {submissionError}
-              </div>
-            ) : null}
-
-            <DialogFooter>
-              <Button type="submit" disabled={isPending}>
-                {isPending ? t("assignments.creating") : t("common.add")}
+          <DialogFooter className="shrink-0 border-t pt-4">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isPending}>
+                {t("common.cancel")}
               </Button>
-            </DialogFooter>
-          </form>
-
-          <ScrollBar />
-        </ScrollArea>
-      </DialogContent>
+            </DialogClose>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? t("assignments.creating") : t("common.add")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </ResponsiveDialogContent>
     </Dialog>
   );
 }

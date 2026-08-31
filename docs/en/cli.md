@@ -97,12 +97,12 @@ fair db migrate-sqlite-to-postgres --to-postgres "postgresql://user:password@loc
     </Card>
     
     <Card
-      title="Workflows"
+      title="Extensions"
       icon="bolt"
-      href="/en/platform/workflows"
+      href="/en/extensions/overview"
       arrow="true"
       cta="Learn more"
     >
-      Learn how to automate grading using the platform you just started.
+      Learn how agents, graders, and other Capabilities connect to FAIR.
     </Card>
 </Columns>

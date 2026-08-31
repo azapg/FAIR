@@ -12,6 +12,8 @@ from fair_platform.backend.api.routers.auth import (
     SECRET_KEY,
     ALGORITHM,
     TOKEN_PURPOSE_EXT_JOB,
+    EXTENSION_JOB_TOKEN_TYPE,
+    USER_SESSION_TOKEN_TYPE,
     oauth2_scheme,
 )
 from fair_platform.backend.core.security.permissions import has_capability
@@ -23,7 +25,9 @@ from fair_platform.backend.services.extension_auth import authenticate_extension
 extension_bearer = HTTPBearer(auto_error=False)
 
 
-def require_capability(action: str) -> Callable[[Annotated[User, Depends(get_current_user)]], User]:
+def require_capability(
+    action: str,
+) -> Callable[[Annotated[User, Depends(get_current_user)]], User]:
     def _checker(current_user: Annotated[User, Depends(get_current_user)]) -> User:
         if not has_capability(current_user, action):
             raise HTTPException(
@@ -40,7 +44,9 @@ def require_extension_client(
 ) -> Callable[..., ExtensionClient]:
     def _dependency(
         extension_id: Annotated[str | None, Header(alias="X-FAIR-Extension-Id")] = None,
-        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(extension_bearer)] = None,
+        credentials: Annotated[
+            HTTPAuthorizationCredentials | None, Depends(extension_bearer)
+        ] = None,
         db: Session = Depends(session_dependency),
     ) -> ExtensionClient:
         resolved_extension_id = extension_id.strip() if extension_id else ""
@@ -70,7 +76,9 @@ def require_extension_client(
             )
         if required_scopes:
             granted_scopes = set(client.scopes or [])
-            missing_scopes = [scope for scope in required_scopes if scope not in granted_scopes]
+            missing_scopes = [
+                scope for scope in required_scopes if scope not in granted_scopes
+            ]
             if missing_scopes:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -101,6 +109,7 @@ def get_artifact_download_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        token_type = jwt.get_unverified_header(token).get("typ")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         raise credentials_exception
@@ -110,6 +119,13 @@ def get_artifact_download_user(
         raise credentials_exception
 
     purpose: str | None = payload.get("purpose")
+    expected_type = (
+        EXTENSION_JOB_TOKEN_TYPE
+        if purpose == TOKEN_PURPOSE_EXT_JOB
+        else USER_SESSION_TOKEN_TYPE
+    )
+    if token_type != expected_type:
+        raise credentials_exception
     if purpose is not None and purpose != TOKEN_PURPOSE_EXT_JOB:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -117,7 +133,9 @@ def get_artifact_download_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if purpose == TOKEN_PURPOSE_EXT_JOB and (not payload.get("job_id") or not payload.get("ext")):
+    if purpose == TOKEN_PURPOSE_EXT_JOB and (
+        not payload.get("job_id") or not payload.get("ext")
+    ):
         raise credentials_exception
 
     try:

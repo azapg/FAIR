@@ -54,34 +54,28 @@ If both are disabled, startup proceeds with a warning and no schema bootstrap (r
 - JSON document fields must use SQLAlchemy JSON with PostgreSQL JSONB variant.
 - Schema changes must be applied through Alembic migrations; avoid relying on runtime `create_all` for production schema evolution.
 
-### Job/Extension Communications (Current)
+## LMS deployment profiles
 
-As of February 27, 2026, the backend includes:
-- `/api/jobs` endpoints (create/state/update/stream)
-- `/api/extensions` endpoints (register/list)
-- a queue abstraction with local and Redis backends
-- a dispatcher service that forwards queued jobs to extension webhooks
+- Researcher/local: SQLite (`DATABASE_URL=sqlite:///fair.db`) and `FAIR_STORAGE_BACKEND=local`.
+- Institution: PostgreSQL and `FAIR_STORAGE_BACKEND=s3` with `S3_BUCKET_NAME` plus provider credentials/endpoint as needed.
+- `FAIR_STORAGE_BACKENDS=local,s3` supports a staged storage migration while selecting the write backend with `FAIR_STORAGE_BACKEND`.
 
-Key environment variables:
-```bash
-FAIR_JOB_QUEUE_BACKEND=local|redis          # default: local
-FAIR_REDIS_URL=redis://127.0.0.1:6379/0     # used when backend=redis
-FAIR_ENABLE_JOB_DISPATCHER=true|false       # default: true
-```
+See `docs/en/platform/lms-mvp.md` and the root `.env.example` for the complete MVP operations contract. The institutional target remains a modular monolith with durable external state; microservices and extreme-scale optimization are not required for this MVP.
 
-Set `FAIR_ENABLE_JOB_DISPATCHER=false` if you need to disable forwarding jobs to extension webhooks.
+### Execution/Extension communications
 
-Current scalability status:
-- Queue:
-  - `local` backend is single-process only (not horizontally scalable).
-  - `redis` backend supports multi-worker queue sharing and pub/sub updates.
-- Dispatcher:
-  - Can scale out by running multiple dispatcher instances against Redis queue.
-  - Retries exist, but advanced reliability (dead-letter queue, consumer groups, distributed
-    locking/claims, durable retry scheduling) is not implemented yet.
-- Extension registry:
-  - Current implementation is in-memory and process-local.
-  - For real multi-instance deployments, registry should move to shared persistent storage.
+The FAIR 1.0 boundary lives under `/api/v1`:
+
+- clients create and observe Executions rather than queue records;
+- Extension installations declare versioned capabilities and dispatch URLs;
+- contextual grants authorize declared effects;
+- a transactional database outbox leases and sends idempotent commands directly to enabled installations;
+- Extensions authenticate scoped event and Artifact calls back to FAIR;
+- ordered Execution Events are the durable progress and result record.
+
+Public Job, Plugin, and unversioned Extension routes have been removed. Outbox rows, leases, retries, and dead-letter state are internal delivery details.
+
+Platform-to-Extension request signing and delegated tokens remain contract-hardening work. Until signed dispatch is available, protect Extension dispatch endpoints with trusted transport and network controls.
 
 ## Adding Models
 1. Create model in `backend/data/models/`

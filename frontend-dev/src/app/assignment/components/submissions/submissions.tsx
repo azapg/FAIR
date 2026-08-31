@@ -1,4 +1,4 @@
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, type CellContext, type Table } from "@tanstack/react-table";
 import {
   Ellipsis,
   History,
@@ -12,7 +12,6 @@ import {
   CircleAlert,
   TriangleAlert,
   Circle,
-  BlocksIcon,
 } from "lucide-react";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,12 +28,16 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useWorkflowStore, Workflow } from "@/store/workflows-store";
-import { ExtensionPlugin } from "@/hooks/use-plugins";
-import { useWorkflows } from "@/hooks/use-workflows";
+import {
+  Flow,
+  latestPublishedVersion,
+  useFlows,
+  useStartFlow,
+} from "@/hooks/use-flows";
 import {
   SubmissionStatus,
   Submission,
+  hasUnpublishedDraft,
   useReturnSubmission,
   useUpdateSubmissionDraft,
 } from "@/hooks/use-submissions";
@@ -319,7 +322,7 @@ export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] 
     () => [
       ...(canManage ? [{
         id: "select",
-        header: ({ table }) => {
+        header: ({ table }: { table: Table<Submission> }) => {
           const all = table.getIsAllRowsSelected();
           const some = table.getIsSomeRowsSelected();
           const checkedValue: boolean | "indeterminate" = all
@@ -336,7 +339,7 @@ export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] 
             />
           );
         },
-        cell: ({ row }) => (
+        cell: ({ row }: CellContext<Submission, unknown>) => (
           <Checkbox
             onClick={(e) => e.stopPropagation()}
             checked={row.getIsSelected()}
@@ -391,13 +394,14 @@ export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] 
           if (!canManage) {
             return (
               <p className="block max-w-[240px] truncate">
-                {feedback || <p className="italic text-muted-foreground">{t("submissions.feedbackPlaceholder")}</p>}
+                {feedback || <span className="italic text-muted-foreground">{t("submissions.feedbackPlaceholder")}</span>}
               </p>
             );
           }
           return (
-            <p
-              className="block max-w-[240px] truncate cursor-pointer hover:underline hover:decoration-dotted hover:decoration-gray-500 hover:underline-offset-3"
+            <button
+              type="button"
+              className="block w-full max-w-[240px] truncate cursor-pointer text-left hover:underline hover:decoration-dotted hover:decoration-gray-500 hover:underline-offset-3"
               onClick={(e) => {
                 e.stopPropagation();
                 (info.table.options.meta as any)?.onFeedbackClick?.(
@@ -405,14 +409,14 @@ export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] 
                 );
               }}
             >
-              {feedback || <p className="italic text-muted-foreground">{t("submissions.feedbackPlaceholder")}</p>}
-            </p>
+              {feedback || <span className="italic text-muted-foreground">{t("submissions.feedbackPlaceholder")}</span>}
+            </button>
           );
         },
       },
       ...(canManage ? [{
         id: "actions",
-        cell: (info) => (
+        cell: (info: CellContext<Submission, unknown>) => (
           <SubmissionActionsCell submission={info.row.original} />
         ),
       }] : []),
@@ -423,35 +427,22 @@ export function useSubmissionColumns(canManage = true): ColumnDef<Submission>[] 
 
 function SubmissionActionsCell({ submission }: { submission: Submission }) {
   const { t } = useTranslation();
-  const { workflows } = useWorkflows();
-  const activeWorkflowId = useWorkflowStore((state) => state.activeWorkflowId);
+  const { data: flows = [] } = useFlows();
+  const startFlow = useStartFlow();
   const returnSubmission = useReturnSubmission();
 
-  const workflow = useMemo(() => {
-    if (activeWorkflowId)
-      return workflows.find((w) => w.id === activeWorkflowId);
-    return workflows[0];
-  }, [activeWorkflowId, workflows]);
-
-  const hasDraft =
-    submission.draftScore != null || submission.draftFeedback != null;
   const canReturn =
-    hasDraft && submission.status !== "returned" && !returnSubmission.isPending;
+    hasUnpublishedDraft(submission) && !returnSubmission.isPending;
 
-  function runPlugin(plugin?: ExtensionPlugin) {
-    if (!plugin) return;
-    console.log(
-      `Running plugin ${plugin.id}-${plugin.version} on submission ${submission.id} with workflow ${workflow?.id} and settings`,
-      plugin.settings,
-    );
-  }
-
-  function runWorkflow(wf?: Workflow) {
-    if (!wf) return;
-    console.log(
-      `Rerunning submission ${submission.id} with workflow ${wf.id}`,
-      wf,
-    );
+  function runFlow(flow?: Flow) {
+    const version = latestPublishedVersion(flow);
+    if (!flow || !version) return;
+    startFlow.mutate({
+      flowId: flow.id,
+      flowVersionId: version.id,
+      assignmentId: submission.assignmentId,
+      submissionIds: [submission.id],
+    });
   }
 
   return (
@@ -462,77 +453,32 @@ function SubmissionActionsCell({ submission }: { submission: Submission }) {
       <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className={"gap-2"}>
-            <BlocksIcon size={16} className={"text-muted-foreground"} />{" "}
-            {t("plugins.runPlugin")}
-          </DropdownMenuSubTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuSubContent>
-              {workflow?.plugins == undefined && (
-                <DropdownMenuItem disabled>
-                  {t("workflow.noPlugins")}
-                </DropdownMenuItem>
-              )}
-
-              {workflow &&
-                workflow?.plugins &&
-                workflow?.plugins?.transcriber && (
-                  <>
-                    <DropdownMenuItem
-                      onClick={(_) => runPlugin(workflow.plugins.transcriber)}
-                    >
-                      {workflow.plugins.transcriber.name}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-
-              {workflow && workflow?.plugins && workflow?.plugins?.grader && (
-                <>
-                  <DropdownMenuItem
-                    onClick={(_) => runPlugin(workflow.plugins.grader)}
-                  >
-                    {workflow.plugins.grader.name}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-
-              {workflow &&
-                workflow?.plugins &&
-                workflow?.plugins?.reviewer && (
-                  <>
-                    <DropdownMenuItem
-                      onClick={(_) => runPlugin(workflow.plugins.reviewer)}
-                    >
-                      {workflow.plugins.reviewer.name}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-            </DropdownMenuSubContent>
-          </DropdownMenuPortal>
-        </DropdownMenuSub>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger className={"gap-2"}>
             <ArrowRightLeft size={16} className={"text-muted-foreground"} />{" "}
             {t("actions.rerunWith")}
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent>
-              {workflows?.map((wf) => (
-                <DropdownMenuItem key={wf.id} onClick={(_) => runWorkflow(wf)}>
-                  {wf.name}
+              {flows.map((flow) => (
+                <DropdownMenuItem
+                  key={flow.id}
+                  onClick={() => runFlow(flow)}
+                  disabled={!latestPublishedVersion(flow)}
+                >
+                  {flow.name}
                 </DropdownMenuItem>
               ))}
-              {workflows?.length === 0 && (
+              {flows.length === 0 && (
                 <DropdownMenuItem disabled>
-                  {t("workflow.noWorkflows")}
+                  No flows available
                 </DropdownMenuItem>
               )}
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
-        <DropdownMenuItem onClick={(_) => runWorkflow((workflows || [])[0])}>
+        <DropdownMenuItem
+          onClick={() => runFlow(flows[0])}
+          disabled={!latestPublishedVersion(flows[0]) || startFlow.isPending}
+        >
           <Repeat /> {t("actions.rerun")}
         </DropdownMenuItem>
         <DropdownMenuItem>

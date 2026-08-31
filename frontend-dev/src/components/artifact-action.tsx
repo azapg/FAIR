@@ -9,7 +9,7 @@ import {
 import { ArrowUpRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Artifact } from "@/hooks/use-artifacts";
+import { LmsArtifact } from "@/hooks/use-artifacts";
 import api, { getApiBaseUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -18,7 +18,7 @@ import { PdfPreview } from "@/components/pdf-preview";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ArtifactActionProps = Omit<ComponentProps<typeof Button>, "onClick"> & {
-  artifact: Artifact;
+  artifact: Pick<LmsArtifact, "id" | "title" | "mime">;
   icon?: ComponentType<{ className?: string; size?: number }>;
   label?: ReactNode;
 };
@@ -106,7 +106,7 @@ export function ArtifactAction({
   const handleAction = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get(`/artifacts/${artifact.id}/download`, {
+      const response = await api.get(`/v1/artifacts/${artifact.id}/download`, {
         responseType: "json",
         headers: {
           Accept: "application/json",
@@ -204,7 +204,7 @@ export function ArtifactAction({
       {isPreviewable ? (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent showCloseButton className="flex h-[95vh] w-[95vw] max-w-7xl flex-col p-3 sm:max-w-7xl">
-            <DialogTitle className="text-sm font-semibold">
+            <DialogTitle className="text-[13px] leading-4 font-medium">
               {artifact.title}
             </DialogTitle>
             <div className="flex-1 overflow-auto rounded border p-3">
@@ -225,7 +225,7 @@ export function ArtifactAction({
       {isPdfArtifact ? (
         <Dialog open={pdfOpen} onOpenChange={handlePdfClose}>
           <DialogContent showCloseButton className="flex h-[95vh] w-[95vw] max-w-7xl flex-col p-3 sm:max-w-7xl">
-            <DialogTitle className="text-sm font-semibold">
+            <DialogTitle className="text-[13px] leading-4 font-medium">
               {artifact.title}
             </DialogTitle>
             <div className="mb-2 flex items-center justify-end">

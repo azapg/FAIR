@@ -1,17 +1,26 @@
 import {Button} from "@/components/ui/button";
-import {Plus} from "lucide-react";
+import {LogIn, Plus} from "lucide-react";
 import {useNavigate} from "react-router-dom";
 import {FormEvent, useState} from "react";
 import {useCourses, useCreateCourse, useDeleteCourse, Course, useJoinCourseByCode} from "@/hooks/use-courses";
 import {useAuth} from "@/contexts/auth-context";
 import CourseGrid from "@/app/courses/components/course-grid";
 import CourseFormDialog from "@/app/courses/components/course-form-dialog";
-import {BreadcrumbNav} from "@/components/breadcrumb-nav";
+import { PageHeader } from "@/components/page-header";
+import { FloatingNav, FloatingActionButton } from "@/components/floating-nav";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {useTranslation} from "react-i18next";
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
+import {Dialog, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
+import {ResponsiveDialogContent} from "@/components/ui/responsive-dialog";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import {usePermission} from "@/hooks/use-permission";
+import {DEFAULT_COURSE_ICON_KEY} from "@/app/courses/course-icons";
 
 export default function CoursesPage() {
   const navigate = useNavigate();
@@ -27,14 +36,18 @@ export default function CoursesPage() {
   const [joinCode, setJoinCode] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [iconKey, setIconKey] = useState(DEFAULT_COURSE_ICON_KEY);
 
   const courses: Course[] = data ?? [];
-  const canCreateCourses = isAuthenticated && usePermission("create_course");
-  const canJoinCourses = isAuthenticated && usePermission("join_course");
+  const hasCreateCoursePermission = usePermission("create_course");
+  const hasJoinCoursePermission = usePermission("join_course");
+  const canCreateCourses = isAuthenticated && hasCreateCoursePermission;
+  const canJoinCourses = isAuthenticated && hasJoinCoursePermission;
 
   const openCreateDialog = () => {
     setName("");
     setDescription("");
+    setIconKey(DEFAULT_COURSE_ICON_KEY);
     setOpen(true);
   };
 
@@ -52,11 +65,13 @@ export default function CoursesPage() {
     await createCourse.mutateAsync({
       name: name.trim(),
       description: description.trim() || null,
+      iconKey,
       instructorId: user.id,
     });
 
     setName("");
     setDescription("");
+    setIconKey(DEFAULT_COURSE_ICON_KEY);
     setOpen(false);
   };
 
@@ -80,49 +95,44 @@ export default function CoursesPage() {
   };
 
   return (
-    <main className="flex flex-col justify-center">
-      <div className={"py-2 px-5"}>
-        <BreadcrumbNav segments={[
-          {
-            label: t("courses.title"),
-            slug: "courses"
-          }
-        ]}/>
-      </div>
-      <div className="flex items-center justify-between px-6 pt-3">
-        <h1 className="text-3xl">{t("courses.yourCourses")}</h1>
+    <main className="flex flex-col justify-center pb-24 md:pb-0">
+      <PageHeader
+        title={t("courses.yourCourses")}
+        actions={
+          <div className="hidden gap-2 md:flex">
+            {canJoinCourses && (
+              <Button variant="outline" onClick={openJoinDialog}>
+                {t("courses.joinCourse")}
+              </Button>
+            )}
 
-        <div className="flex items-center gap-2">
-          {canJoinCourses && (
-            <Button variant="outline" onClick={openJoinDialog}>
-              {t("courses.joinCourse")}
-            </Button>
-          )}
+            {canCreateCourses && (
+              <CourseFormDialog
+                open={open}
+                onOpenChangeAction={setOpen}
+                mode="create"
+                name={name}
+                description={description}
+                iconKey={iconKey}
+                onNameChangeAction={setName}
+                onDescriptionChangeAction={setDescription}
+                onIconKeyChangeAction={setIconKey}
+                onSubmitAction={onSubmitCreateAction}
+                isSubmitting={createCourse.isPending}
+                isDisabled={createCourse.isPending || !isAuthenticated}
+                trigger={
+                  <Button onClick={openCreateDialog}>
+                    <Plus className="mr-2"/>
+                    {t("common.create")}
+                  </Button>
+                }
+              />
+            )}
+          </div>
+        }
+      />
 
-          {canCreateCourses && (
-            <CourseFormDialog
-              open={open}
-              onOpenChangeAction={setOpen}
-              mode="create"
-              name={name}
-              description={description}
-              onNameChangeAction={setName}
-              onDescriptionChangeAction={setDescription}
-              onSubmitAction={onSubmitCreateAction}
-              isSubmitting={createCourse.isPending}
-              isDisabled={createCourse.isPending || !isAuthenticated}
-              trigger={
-                <Button onClick={openCreateDialog}>
-                  <Plus className="mr-2"/>
-                  {t("common.create")}
-                </Button>
-              }
-            />
-          )}
-        </div>
-      </div>
-
-      <div className={"px-6"}>
+      <div className="mx-auto w-full max-w-[1440px] px-6 sm:px-8">
         <CourseGrid
           courses={courses}
           isPending={isPending}
@@ -138,8 +148,39 @@ export default function CoursesPage() {
         />
       </div>
 
+      <FloatingNav
+        items={[]}
+        value=""
+        onValueChange={() => {}}
+        action={
+          (canCreateCourses || canJoinCourses) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <FloatingActionButton aria-label={t("common.add")}>
+                  <Plus className="size-5" />
+                </FloatingActionButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" className="mb-2">
+                {canJoinCourses && (
+                  <DropdownMenuItem onClick={() => setJoinOpen(true)}>
+                    <LogIn />
+                    {t("courses.joinCourse")}
+                  </DropdownMenuItem>
+                )}
+                {canCreateCourses && (
+                  <DropdownMenuItem onClick={() => openCreateDialog()}>
+                    <Plus />
+                    {t("courses.createCourse")}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
+        }
+      />
+
       <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
-        <DialogContent>
+        <ResponsiveDialogContent>
           <DialogHeader>
             <DialogTitle>{t("courses.joinCourse")}</DialogTitle>
           </DialogHeader>
@@ -165,7 +206,7 @@ export default function CoursesPage() {
               </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
+        </ResponsiveDialogContent>
       </Dialog>
     </main>
   );

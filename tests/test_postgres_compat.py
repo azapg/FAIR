@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Iterator
 
@@ -22,7 +23,13 @@ from fair_platform.backend.data.models.submission_event import (
 )
 from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.user import User
-from fair_platform.backend.data.models.workflow import Workflow
+from fair_platform.backend.services.execution_store import (
+    ExecutionStoreError,
+    append_execution_event,
+    create_execution,
+)
+from fair_platform.backend.services.execution_projection import append_and_project_event
+from fair_platform.backend.data.models.execution import Execution, ExecutionEvent
 
 
 def _normalize_postgres_url(raw_url: str) -> str:
@@ -80,7 +87,9 @@ def postgres_database_url() -> Iterator[str]:
         test_engine = create_engine(test_url, future=True)
         test_engine.dispose()
 
-        admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT", future=True)
+        admin_engine = create_engine(
+            admin_url, isolation_level="AUTOCOMMIT", future=True
+        )
         with admin_engine.connect() as conn:
             conn.execute(
                 text(
@@ -103,11 +112,26 @@ def test_postgres_json_columns_are_jsonb(postgres_database_url: str) -> None:
         ("assignments", "max_grade"),
         ("artifacts", "meta"),
         ("users", "settings"),
-        ("workflows", "steps"),
-        ("workflow_runs", "logs"),
+        ("flow_versions", "definition"),
+        ("flow_versions", "capability_pins"),
+        ("executions", "input"),
+        ("execution_events", "payload"),
+        ("extension_installations", "manifest"),
+        ("artifact_versions", "provenance"),
         ("submission_events", "details"),
-        ("submission_results", "grading_meta"),
         ("rubrics", "content"),
+        ("organizations", "attributes"),
+        ("external_identifiers", "attributes"),
+        ("course_items", "payload"),
+        ("completion_rules", "config"),
+        ("availability_rules", "config"),
+        ("user_item_completions", "evidence"),
+        ("grade_categories", "calculation_policy"),
+        ("grade_items", "calculation_policy"),
+        ("grade_items", "release_policy"),
+        ("calendar_events", "recurrence"),
+        ("notification_preferences", "config"),
+        ("activity_events", "payload"),
     ]
 
     with engine.connect() as conn:
@@ -128,6 +152,68 @@ def test_postgres_json_columns_are_jsonb(postgres_database_url: str) -> None:
             assert row[0] == "jsonb"
 
     engine.dispose()
+
+
+def test_postgres_serializes_competing_terminal_outcomes(
+    postgres_database_url: str,
+) -> None:
+    """The Execution row lock permits exactly one terminal outcome."""
+
+    engine = create_engine(postgres_database_url, future=True)
+    with Session(engine) as session:
+        user = User(
+            id=uuid.uuid4(),
+            name="Terminal Race User",
+            email=f"terminal-race-{uuid.uuid4()}@example.test",
+            role="admin",
+            password_hash=None,
+        )
+        session.add(user)
+        session.flush()
+        execution = create_execution(
+            session,
+            kind="agent",
+            initiated_by_user_id=user.id,
+        )
+        execution_id = execution.id
+        session.commit()
+
+    def terminate(event_type: str) -> str:
+        with Session(engine) as session:
+            try:
+                append_and_project_event(
+                    session,
+                    execution_id=execution_id,
+                    producer_source="postgres-race",
+                    producer_event_id=event_type,
+                    event_type=event_type,
+                    schema_uri=f"urn:fair:event:{event_type}:v1",
+                    payload={},
+                )
+                session.commit()
+                return "accepted"
+            except ExecutionStoreError:
+                session.rollback()
+                return "rejected"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(
+            pool.map(terminate, ("execution.completed", "execution.failed"))
+        )
+    assert sorted(outcomes) == ["accepted", "rejected"]
+
+    with Session(engine) as session:
+        execution = session.get(Execution, execution_id)
+        events = list(
+            session.query(ExecutionEvent).filter(
+                ExecutionEvent.execution_id == execution_id
+            )
+        )
+        assert execution.status in {"completed", "failed"}
+        assert len(events) == 1
+        assert events[0].type == f"execution.{execution.status}"
+    engine.dispose()
+
 
 def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
     engine = create_engine(postgres_database_url, future=True)
@@ -154,44 +240,13 @@ def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
         session.add(course)
         session.flush()
 
-        workflow = Workflow(
-            id=uuid.uuid4(),
-            course_id=course.id,
-            name="Workflow",
-            description=None,
-            created_by=user.id,
-            created_at=datetime.utcnow(),
-            updated_at=None,
-            archived=False,
-            steps=[
-                {
-                    "id": "step-0-review",
-                    "order": 0,
-                    "pluginType": "reviewer",
-                    "plugin": {
-                        "pluginId": "mock.reviewer",
-                        "extensionId": "mock.extension",
-                        "name": "Reviewer",
-                        "pluginType": "reviewer",
-                        "action": "plugin.review",
-                        "settingsSchema": {"type": "object"},
-                        "metadata": {},
-                        "settings": {"threshold": 0.8},
-                    },
-                    "settings": {"threshold": 0.8},
-                }
-            ],
-        )
-        session.add(workflow)
-        session.flush()
-
         assignment = Assignment(
             id=uuid.uuid4(),
             course_id=course.id,
             title="A1",
             description=None,
             deadline=None,
-            max_grade={"value": 100},
+            max_grade={"type": "points", "value": 100},
         )
         session.add(assignment)
         session.flush()
@@ -213,7 +268,6 @@ def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
             created_by_id=user.id,
             submitted_at=datetime.utcnow(),
             status=SubmissionStatus.submitted,
-            official_run_id=None,
             draft_score=None,
             draft_feedback=None,
             published_score=None,
@@ -223,12 +277,31 @@ def test_postgres_fk_and_cascade_behavior(postgres_database_url: str) -> None:
         session.add(submission)
         session.flush()
 
+        execution = create_execution(
+            session,
+            kind="capability",
+            initiated_by_user_id=user.id,
+            course_id=course.id,
+            assignment_id=assignment.id,
+            submission_ids=[submission.id],
+            input={"source": "postgres-compat"},
+        )
+        append_execution_event(
+            session,
+            execution_id=execution.id,
+            producer_source="postgres-compat",
+            producer_event_id="event-1",
+            event_type="execution.started",
+            schema_uri="urn:fair:event:execution.started:v1",
+            payload={"status": "running"},
+        )
+
         event = SubmissionEvent(
             id=uuid.uuid4(),
             submission_id=submission.id,
             event_type=SubmissionEventType.submission_submitted,
             actor_id=user.id,
-            workflow_run_id=None,
+            execution_id=execution.id,
             details={"status": "submitted"},
             created_at=datetime.utcnow(),
         )

@@ -177,25 +177,25 @@ export function MarkdownRenderer({
           rehypePlugins={[rehypeKatex]}
           components={{
             h1: ({ node, ...props }) => (
-              <h1 className={cn('text-2xl', !compact && 'mb-4')} {...props} />
+              <h1 className={cn('text-base leading-5 font-medium', !compact && 'mb-4')} {...props} />
             ),
             p: ({ node, ...props }) => (
               <p className={cn('leading-relaxed', !compact && 'mb-4')} {...props} />
             ),
             h2: ({ node, ...props }) => (
-              <h2 className={cn('text-xl', !compact && 'mb-3')} {...props} />
+              <h2 className={cn('text-base leading-5 font-medium', !compact && 'mb-3')} {...props} />
             ),
             h3: ({ node, ...props }) => (
-              <h3 className={cn('text-lg', !compact && 'mb-2')} {...props} />
+              <h3 className={cn('text-base leading-5 font-medium', !compact && 'mb-2')} {...props} />
             ),
             h4: ({ node, ...props }) => (
-              <h4 className={cn('text-base', !compact && 'mb-2')} {...props} />
+              <h4 className={cn('text-[13px] leading-4 font-medium', !compact && 'mb-2')} {...props} />
             ),
             h5: ({ node, ...props }) => (
-              <h5 className={cn('text-sm', !compact && 'mb-2')} {...props} />
+              <h5 className={cn('text-[13px] leading-4 font-medium', !compact && 'mb-2')} {...props} />
             ),
             h6: ({ node, ...props }) => (
-              <h6 className={cn('text-sm', !compact && 'mb-2')} {...props} />
+              <h6 className={cn('text-[13px] leading-4 font-medium', !compact && 'mb-2')} {...props} />
             ),
             ul: ({ node, ...props }) => (
               <ul className={cn('list-disc list-inside space-y-1', !compact && 'mb-4')} {...props} />
@@ -207,7 +207,7 @@ export function MarkdownRenderer({
               />
             ),
             li: ({ node, ...props }) => <li className="leading-relaxed" {...props} />,
-            strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
+            strong: ({ node, ...props }) => <strong className="font-medium" {...props} />,
             em: ({ node, ...props }) => <em className="italic" {...props} />,
             code: ({ node, ...props }) => (
               <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono" {...props} />
