@@ -8,6 +8,7 @@ function course(overrides: Partial<Course>): Course {
   return {
     id: 'course-1',
     name: 'Course',
+    iconKey: 'book-open',
     instructorId: 'instructor-1',
     assignmentsCount: 0,
     isEnrollmentEnabled: false,

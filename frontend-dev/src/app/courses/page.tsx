@@ -20,6 +20,7 @@ import {ResponsiveDialogContent} from "@/components/ui/responsive-dialog";
 import {Label} from "@/components/ui/label";
 import {Input} from "@/components/ui/input";
 import {usePermission} from "@/hooks/use-permission";
+import {DEFAULT_COURSE_ICON_KEY} from "@/app/courses/course-icons";
 
 export default function CoursesPage() {
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ export default function CoursesPage() {
   const [joinCode, setJoinCode] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [iconKey, setIconKey] = useState(DEFAULT_COURSE_ICON_KEY);
 
   const courses: Course[] = data ?? [];
   const hasCreateCoursePermission = usePermission("create_course");
@@ -45,6 +47,7 @@ export default function CoursesPage() {
   const openCreateDialog = () => {
     setName("");
     setDescription("");
+    setIconKey(DEFAULT_COURSE_ICON_KEY);
     setOpen(true);
   };
 
@@ -62,11 +65,13 @@ export default function CoursesPage() {
     await createCourse.mutateAsync({
       name: name.trim(),
       description: description.trim() || null,
+      iconKey,
       instructorId: user.id,
     });
 
     setName("");
     setDescription("");
+    setIconKey(DEFAULT_COURSE_ICON_KEY);
     setOpen(false);
   };
 
@@ -108,8 +113,10 @@ export default function CoursesPage() {
                 mode="create"
                 name={name}
                 description={description}
+                iconKey={iconKey}
                 onNameChangeAction={setName}
                 onDescriptionChangeAction={setDescription}
+                onIconKeyChangeAction={setIconKey}
                 onSubmitAction={onSubmitCreateAction}
                 isSubmitting={createCourse.isPending}
                 isDisabled={createCourse.isPending || !isAuthenticated}

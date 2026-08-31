@@ -83,6 +83,7 @@ import {
 } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { Can } from "@/components/can";
+import { CourseIcon } from "@/app/courses/course-icons";
 import {
   useNotifications,
   useReadAllNotifications,
@@ -214,6 +215,26 @@ function SidebarPreferencesMenu({
       </Collapsible>
     </>
   );
+}
+
+const courseIconBackgrounds = [
+  "from-rose-400 to-orange-500",
+  "from-sky-400 to-indigo-500",
+  "from-emerald-400 to-teal-500",
+  "from-violet-400 to-fuchsia-500",
+  "from-amber-400 to-rose-500",
+  "from-cyan-400 to-blue-500",
+  "from-lime-400 to-emerald-500",
+  "from-pink-400 to-purple-500",
+] as const;
+
+function getCourseIconBackground(courseId: string) {
+  const hash = Array.from(courseId).reduce(
+    (value, character) => (value * 31 + character.charCodeAt(0)) >>> 0,
+    0,
+  );
+
+  return courseIconBackgrounds[hash % courseIconBackgrounds.length];
 }
 
 function NotificationsInbox() {
@@ -580,8 +601,16 @@ export function AppSidebar({
                         {courses.slice(0, 3).map((course) => (
                           <SidebarMenuSubItem key={course.id}>
                             <SidebarMenuSubButton asChild>
-                              <Link to={`/courses/${course.id}`}>
-                                <span>{course.name}</span>
+                              <Link
+                                to={`/courses/${course.id}`}
+                                className="group/course h-8 gap-2.5"
+                              >
+                                <span
+                                  className={`grid size-6 shrink-0 place-items-center rounded-full border border-white/15 bg-gradient-to-br text-white shadow-[var(--shadow-button)] transition-transform duration-150 ease-out group-hover/course:-translate-y-px group-active/course:translate-y-0 group-active/course:scale-[0.96] ${getCourseIconBackground(course.id)}`}
+                                >
+                                  <CourseIcon iconKey={course.iconKey} size={14} />
+                                </span>
+                                <span className="truncate">{course.name}</span>
                               </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>

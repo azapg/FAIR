@@ -1056,6 +1056,7 @@ def _copy_graph(
             if payload.description is not None
             else source.description
         ),
+        icon_key=source.icon_key,
         instructor_id=actor_id,
         organization_id=source.organization_id,
         section=payload.section,

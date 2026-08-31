@@ -7,6 +7,7 @@ export type Course = {
   id: string
   name: string
   description?: string | null
+  iconKey: string
   instructorId: string
   instructorName?: string
   assignmentsCount: number
@@ -22,6 +23,7 @@ export type CourseDetail = {
   id: string,
   name: string,
   description?: string | null,
+  iconKey: string,
   instructor: {
     id: string,
     name: string,
@@ -47,10 +49,11 @@ export type CourseDetail = {
 export type CreateCourseInput = {
   name: string
   description?: string | null
+  iconKey?: string
   instructorId: string
 }
 
-export type UpdateCourseInput = Partial<Pick<Course, 'name' | 'description'>>
+export type UpdateCourseInput = Partial<Pick<Course, 'name' | 'description' | 'iconKey'>>
 
 export type CourseSettingsInput = Partial<Pick<Course, 'isEnrollmentEnabled'>>
 

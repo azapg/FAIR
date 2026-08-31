@@ -38,6 +38,9 @@ class Course(Base):
     id: Mapped[UUID] = mapped_column(_UUID, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    icon_key: Mapped[str] = mapped_column(
+        String(64), default="book-open", server_default="book-open", nullable=False
+    )
     instructor_id: Mapped[UUID] = mapped_column(
         _UUID, ForeignKey("users.id"), nullable=False
     )

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { CreateAssignmentDialog } from "@/app/courses/tabs/assignments/create-assignment-dialog";
+import { CourseIcon } from "@/app/courses/course-icons";
 type CourseTab = "timeline" | "stream" | "content" | "assignments" | "grades" | "gradebook" | "participants" | "runs" | "artifacts" | "flows" | "capabilities";
 
 export default function CourseDetailPage() {
@@ -118,7 +119,14 @@ export default function CourseDetailPage() {
   return (
     <div className="flex flex-col pb-24 md:pb-0">
       <PageHeader
-        title={course.name}
+        title={
+          <span className="flex items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-[10px] bg-primary/10 text-primary">
+              <CourseIcon iconKey={course.iconKey} size={24} />
+            </span>
+            <span>{course.name}</span>
+          </span>
+        }
         description={course.description}
         actions={
           isInstructorView && courseId ? (

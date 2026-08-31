@@ -5,6 +5,7 @@ export default function CourseCardSkeleton() {
   return (
     <Card className="h-48 cursor-wait gap-0 overflow-hidden bg-[var(--course-surface)] py-0">
       <CardHeader className="flex flex-1 flex-col items-start gap-3 px-5 pt-5">
+        <Skeleton className="size-10 rounded-[10px]" />
         <CardTitle>
           <Skeleton className="h-5 w-32 rounded-md" />
         </CardTitle>

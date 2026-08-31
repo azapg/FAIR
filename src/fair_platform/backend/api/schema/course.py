@@ -1,6 +1,6 @@
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fair_platform.backend.api.schema.user import UserRead
 from fair_platform.backend.api.schema.assignment import AssignmentRead
 from fair_platform.backend.api.schema.flow import FlowRead
@@ -14,6 +14,9 @@ class CourseBase(BaseModel):
     
     name: str
     description: Optional[str] = None
+    icon_key: str = Field(
+        default="book-open", min_length=1, max_length=64, pattern=r"^[a-z0-9-]+$"
+    )
     instructor_id: UUID
     section: Optional[str] = None
     term: Optional[str] = None
@@ -28,6 +31,9 @@ class CourseUpdate(BaseModel):
     
     name: Optional[str] = None
     description: Optional[str] = None
+    icon_key: Optional[str] = Field(
+        default=None, min_length=1, max_length=64, pattern=r"^[a-z0-9-]+$"
+    )
     instructor_id: Optional[UUID] = None
     section: Optional[str] = None
     term: Optional[str] = None
@@ -51,6 +57,7 @@ class CourseDetailRead(BaseModel):
     id: UUID
     name: str
     description: Optional[str] = None
+    icon_key: str = "book-open"
     instructor: UserRead
     assignments: List[AssignmentRead] = []
     flows: List[FlowRead] = []

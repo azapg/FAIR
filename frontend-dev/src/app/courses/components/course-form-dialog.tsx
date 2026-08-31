@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { CourseIconPicker } from "@/app/courses/components/course-icon-picker";
 
 export type CourseFormMode = "create" | "edit" | "clone";
 
@@ -15,8 +16,10 @@ export type CourseFormDialogProps = {
   mode: CourseFormMode;
   name: string;
   description: string;
+  iconKey: string;
   onNameChangeAction: (value: string) => void;
   onDescriptionChangeAction: (value: string) => void;
+  onIconKeyChangeAction: (value: string) => void;
   onSubmitAction: (e: React.FormEvent) => void;
   isSubmitting?: boolean;
   isDisabled?: boolean;
@@ -29,8 +32,10 @@ export default function CourseFormDialog({
   mode,
   name,
   description,
+  iconKey,
   onNameChangeAction,
   onDescriptionChangeAction,
+  onIconKeyChangeAction,
   onSubmitAction,
   isSubmitting = false,
   isDisabled = false,
@@ -62,13 +67,16 @@ export default function CourseFormDialog({
         <form onSubmit={onSubmitAction} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="course-name">{t("courses.name")}</Label>
-            <Input
-              id="course-name"
-              value={name}
-              onChange={(e) => onNameChangeAction(e.target.value)}
-              placeholder={t("courses.namePlaceholder")}
-              required
-            />
+            <div className="flex items-center gap-2">
+              <CourseIconPicker value={iconKey} onValueChange={onIconKeyChangeAction} />
+              <Input
+                id="course-name"
+                value={name}
+                onChange={(e) => onNameChangeAction(e.target.value)}
+                placeholder={t("courses.namePlaceholder")}
+                required
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="course-description">{t("courses.description")}</Label>
