@@ -66,7 +66,11 @@ import {
 import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
-import { usePreferenceSettings } from "@/hooks/use-preference-settings";
+import {
+  type LanguageCode,
+  type ThemeMode,
+  usePreferenceSettings,
+} from "@/hooks/use-preference-settings";
 import { IfSetting } from "@/components/if-setting";
 import { AppSearch } from "@/components/app-search";
 import {
@@ -88,7 +92,129 @@ import {
 const languages = [
   { code: "en", name: "English" },
   { code: "es", name: "Español" },
-];
+] satisfies { code: LanguageCode; name: string }[];
+
+function SidebarPreferencesMenu({
+  effectiveLanguage,
+  effectiveTheme,
+  isMobile,
+  setLanguagePreference,
+  setThemePreference,
+}: {
+  effectiveLanguage: LanguageCode;
+  effectiveTheme: ThemeMode;
+  isMobile: boolean;
+  setLanguagePreference: (language: LanguageCode) => void;
+  setThemePreference: (theme: ThemeMode) => void;
+}) {
+  const { t } = useTranslation();
+  const [mobileSection, setMobileSection] = useState<
+    "theme" | "language" | null
+  >(null);
+  const themeContentId = useId();
+  const languageContentId = useId();
+
+  const themeOptions = (
+    <DropdownMenuRadioGroup
+      value={effectiveTheme}
+      onValueChange={(value) => setThemePreference(value as ThemeMode)}
+    >
+      <DropdownMenuRadioItem value="light">
+        {t("theme.light")}
+      </DropdownMenuRadioItem>
+      <DropdownMenuRadioItem value="dark">
+        {t("theme.dark")}
+      </DropdownMenuRadioItem>
+      <DropdownMenuRadioItem value="system">
+        {t("theme.system")}
+      </DropdownMenuRadioItem>
+    </DropdownMenuRadioGroup>
+  );
+  const languageOptions = (
+    <DropdownMenuRadioGroup
+      value={effectiveLanguage}
+      onValueChange={(value) => setLanguagePreference(value as LanguageCode)}
+    >
+      {languages.map((language) => (
+        <DropdownMenuRadioItem key={language.code} value={language.code}>
+          {language.name}
+        </DropdownMenuRadioItem>
+      ))}
+    </DropdownMenuRadioGroup>
+  );
+
+  if (!isMobile) {
+    return (
+      <>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="flex items-center">
+            <span>{t("menu.theme")}</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>{themeOptions}</DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="flex items-center">
+            <span>{t("menu.language")}</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>{languageOptions}</DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Collapsible open={mobileSection === "theme"}>
+        <DropdownMenuItem
+          aria-controls={themeContentId}
+          aria-expanded={mobileSection === "theme"}
+          className="flex items-center"
+          onSelect={(event) => {
+            event.preventDefault();
+            setMobileSection((section) =>
+              section === "theme" ? null : "theme",
+            );
+          }}
+        >
+          <span>{t("menu.theme")}</span>
+          <ChevronRight
+            className={`ml-auto transition-transform duration-200 ${mobileSection === "theme" ? "rotate-90" : ""}`}
+          />
+        </DropdownMenuItem>
+        <CollapsibleContent
+          id={themeContentId}
+          className="border-border/60 mx-1 mb-1 border-l pl-1"
+        >
+          {themeOptions}
+        </CollapsibleContent>
+      </Collapsible>
+      <Collapsible open={mobileSection === "language"}>
+        <DropdownMenuItem
+          aria-controls={languageContentId}
+          aria-expanded={mobileSection === "language"}
+          className="flex items-center"
+          onSelect={(event) => {
+            event.preventDefault();
+            setMobileSection((section) =>
+              section === "language" ? null : "language",
+            );
+          }}
+        >
+          <span>{t("menu.language")}</span>
+          <ChevronRight
+            className={`ml-auto transition-transform duration-200 ${mobileSection === "language" ? "rotate-90" : ""}`}
+          />
+        </DropdownMenuItem>
+        <CollapsibleContent
+          id={languageContentId}
+          className="border-border/60 mx-1 mb-1 border-l pl-1"
+        >
+          {languageOptions}
+        </CollapsibleContent>
+      </Collapsible>
+    </>
+  );
+}
 
 function NotificationsInbox() {
   const { t } = useTranslation();
@@ -210,7 +336,7 @@ function NavMain({
           <span>{t("nav.inbox")}</span>
         </SidebarMenuButton>
         {unreadCount > 0 && (
-          <SidebarMenuBadge className="!right-4 rounded-full bg-primary px-1.5 text-xs !text-primary-foreground">
+          <SidebarMenuBadge className="rounded-full bg-primary px-1.5 text-xs !text-primary-foreground">
             {unreadCount}
           </SidebarMenuBadge>
         )}
@@ -269,10 +395,14 @@ export function AppSidebar({
   side?: "left" | "right";
 }) {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user: authUser, isAuthenticated, logout } = useAuth();
-  const { effectiveTheme, setThemePreference, setLanguagePreference } =
-    usePreferenceSettings();
+  const {
+    effectiveLanguage,
+    effectiveTheme,
+    setLanguagePreference,
+    setThemePreference,
+  } = usePreferenceSettings();
   const isMobile = useIsMobile();
   const { data: courses = [], isLoading: coursesLoading } = useCourses();
   const { data: eligibilityCourses = [], isLoading: eligibilityCoursesLoading } =
@@ -316,11 +446,6 @@ export function AppSidebar({
   const userName = authUser?.name || t("header.profile");
   const userEmail = authUser?.email || "user@example.com";
 
-  const currentLanguage =
-    languages.find((lang) =>
-      i18n.language?.toLowerCase().startsWith(lang.code),
-    ) ?? languages[0];
-
   const sidebarStyle = {
     ...(style ?? {}),
     ["--sidebar-width" as string]:
@@ -329,7 +454,9 @@ export function AppSidebar({
         : isSidebarMobile
           ? "20rem"
           : sidebarWidth,
-    ["--app-sidebar-main-width" as string]: sidebarWidth,
+    ["--app-sidebar-main-width" as string]: isSidebarMobile
+      ? sidebarWidth
+      : `calc(${sidebarWidth} - 1rem)`,
   } as React.CSSProperties;
 
   return (
@@ -445,7 +572,7 @@ export function AppSidebar({
                       <BookOpen />
                       <span>{t("sidebar.courses.title")}</span>
                       <ChevronRight
-                        className={`ml-auto md:mr-3 transition-transform duration-200 ${coursesOpen ? "rotate-90" : ""}`}
+                        className={`ml-auto transition-transform duration-200 ${coursesOpen ? "rotate-90" : ""}`}
                       />
                     </SidebarMenuButton>
                     <CollapsibleContent id={coursesContentId}>
@@ -500,7 +627,7 @@ export function AppSidebar({
                       <FileText />
                       <span>{t("sidebar.assignments.title")}</span>
                       <ChevronRight
-                        className={`ml-auto md:mr-3 transition-transform duration-200 ${assignmentsOpen ? "rotate-90" : ""}`}
+                        className={`ml-auto transition-transform duration-200 ${assignmentsOpen ? "rotate-90" : ""}`}
                       />
                     </SidebarMenuButton>
                     <CollapsibleContent id={assignmentsContentId}>
@@ -573,12 +700,12 @@ export function AppSidebar({
                               {userEmail}
                             </span>
                           </div>
-                          <ChevronsUpDown className="ml-auto md:mr-3 size-4 group-data-[collapsible=icon]:hidden" />
+                          <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
                         </SidebarMenuButton>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
                         className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                        side={isMobile ? "bottom" : "right"}
+                        side="top"
                         align="end"
                         sideOffset={4}
                       >
@@ -607,51 +734,13 @@ export function AppSidebar({
                           <span>{t("menu.account")}</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="flex items-center">
-                            <span>{t("menu.theme")}</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            <DropdownMenuRadioGroup
-                              value={effectiveTheme}
-                              onValueChange={(value) =>
-                                setThemePreference(value as "light" | "dark" | "system")
-                              }
-                            >
-                              <DropdownMenuRadioItem value="light">
-                                {t("theme.light")}
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="dark">
-                                {t("theme.dark")}
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="system">
-                                {t("theme.system")}
-                              </DropdownMenuRadioItem>
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="flex items-center">
-                            <span>{t("menu.language")}</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            <DropdownMenuRadioGroup
-                              value={currentLanguage.code}
-                              onValueChange={(value) =>
-                                setLanguagePreference(value as "en" | "es")
-                              }
-                            >
-                              {languages.map((lang) => (
-                                <DropdownMenuRadioItem
-                                  key={lang.code}
-                                  value={lang.code}
-                                >
-                                  {lang.name}
-                                </DropdownMenuRadioItem>
-                              ))}
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
+                        <SidebarPreferencesMenu
+                          effectiveLanguage={effectiveLanguage}
+                          effectiveTheme={effectiveTheme}
+                          isMobile={isSidebarMobile}
+                          setLanguagePreference={setLanguagePreference}
+                          setThemePreference={setThemePreference}
+                        />
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => {
