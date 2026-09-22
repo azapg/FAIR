@@ -17,8 +17,18 @@ __all__ = [
     "get_session",
     "init_db",
     "get_database_url",
+    "normalize_database_url",
     "session_dependency",
 ]
+
+
+def normalize_database_url(url: str) -> str:
+    normalized = url.strip()
+    if normalized.startswith("postgres://"):
+        return "postgresql+psycopg://" + normalized[len("postgres://") :]
+    if normalized.startswith("postgresql://"):
+        return "postgresql+psycopg://" + normalized[len("postgresql://") :]
+    return normalized
 
 
 def get_database_url() -> str:
@@ -26,11 +36,7 @@ def get_database_url() -> str:
     if not url:
         print("Using SQLite since DATABASE_URL is not set")
         return f"sqlite:///{storage.local_db_path}"
-    if url.startswith("postgres://"):
-        return "postgresql+psycopg://" + url[len("postgres://") :]
-    if url.startswith("postgresql://"):
-        return "postgresql+psycopg://" + url[len("postgresql://") :]
-    return url
+    return normalize_database_url(url)
 
 
 DATABASE_URL = get_database_url()
