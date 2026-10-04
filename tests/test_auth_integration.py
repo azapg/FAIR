@@ -77,6 +77,59 @@ class TestAuthenticationFlow:
         )
         assert "Invalid credentials" in login_response.json()["detail"]
 
+    def test_login_sets_httponly_cookie_and_cookie_authenticates_me(
+        self, test_client: TestClient, student_user
+    ):
+        response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+
+        assert response.status_code == 200
+        cookie = response.headers["set-cookie"]
+        assert "fair_session=" in cookie
+        assert "HttpOnly" in cookie
+        assert "SameSite=lax" in cookie
+        assert "Path=/api" in cookie
+
+        me_response = test_client.get("/api/auth/me")
+        assert me_response.status_code == 200
+        assert me_response.json()["email"] == student_user.email
+
+    def test_login_cookie_is_secure_for_https_base_url(
+        self, test_client: TestClient, student_user, monkeypatch
+    ):
+        monkeypatch.setenv("FAIR_BASE_URL", "https://fair.example.edu")
+        response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+
+        assert response.status_code == 200
+        assert "Secure" in response.headers["set-cookie"]
+
+    def test_logout_clears_cookie_while_bearer_auth_still_works(
+        self, test_client: TestClient, student_user
+    ):
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        token = login_response.json()["access_token"]
+
+        logout_response = test_client.post("/api/auth/logout")
+        assert logout_response.status_code == 200
+        assert 'fair_session=""' in logout_response.headers["set-cookie"]
+        assert "Max-Age=0" in logout_response.headers["set-cookie"]
+        assert test_client.get("/api/auth/me").status_code == 401
+
+        bearer_response = test_client.get(
+            "/api/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert bearer_response.status_code == 200
+        assert bearer_response.json()["email"] == student_user.email
+
     def test_login_with_nonexistent_user_fails(self, test_client: TestClient):
         """
         Test that login fails for non-existent users.
@@ -148,9 +201,7 @@ class TestAuthenticationFlow:
             json=user_data,
         )
 
-        assert response.status_code == 201, (
-            f"User creation failed: {response.text}"
-        )
+        assert response.status_code == 201, f"User creation failed: {response.text}"
 
         response_data = response.json()
 
@@ -169,14 +220,46 @@ class TestAuthenticationFlow:
         assert "name" in user, "Name should be in response"
         assert "role" in user, "Role should be in response"
 
-    def test_auth_me_capabilities_matrix_by_role_and_mode(self, test_client: TestClient, test_db, monkeypatch):
+    def test_auth_me_capabilities_matrix_by_role_and_mode(
+        self, test_client: TestClient, test_db, monkeypatch
+    ):
         scenarios = [
-            ("COMMUNITY", UserRole.admin.value, {"manage_users", "cleanup_orphaned_artifacts"}, set()),
-            ("ENTERPRISE", UserRole.admin.value, {"manage_users", "cleanup_orphaned_artifacts"}, set()),
-            ("COMMUNITY", UserRole.instructor.value, {"create_workflow", "read_workflow_runs"}, {"cleanup_orphaned_artifacts"}),
-            ("ENTERPRISE", UserRole.instructor.value, {"create_workflow", "read_workflow_runs"}, {"cleanup_orphaned_artifacts"}),
-            ("COMMUNITY", UserRole.user.value, {"join_course", "create_workflow", "read_workflow_runs"}, set()),
-            ("ENTERPRISE", UserRole.user.value, {"join_course"}, {"create_workflow", "read_workflow_runs"}),
+            (
+                "COMMUNITY",
+                UserRole.admin.value,
+                {"manage_users", "cleanup_orphaned_artifacts"},
+                set(),
+            ),
+            (
+                "ENTERPRISE",
+                UserRole.admin.value,
+                {"manage_users", "cleanup_orphaned_artifacts"},
+                set(),
+            ),
+            (
+                "COMMUNITY",
+                UserRole.instructor.value,
+                {"create_flow", "read_executions"},
+                {"cleanup_orphaned_artifacts"},
+            ),
+            (
+                "ENTERPRISE",
+                UserRole.instructor.value,
+                {"create_flow", "read_executions"},
+                {"cleanup_orphaned_artifacts"},
+            ),
+            (
+                "COMMUNITY",
+                UserRole.user.value,
+                {"join_course", "create_flow", "read_executions"},
+                set(),
+            ),
+            (
+                "ENTERPRISE",
+                UserRole.user.value,
+                {"join_course"},
+                {"create_flow", "read_executions"},
+            ),
         ]
 
         for mode, role, expected_present, expected_missing in scenarios:
@@ -214,7 +297,9 @@ class TestAuthenticationFlow:
             for capability in expected_missing:
                 assert capability not in capabilities
 
-    def test_auth_me_normalizes_legacy_role_aliases_from_db(self, test_client: TestClient, test_db):
+    def test_auth_me_normalizes_legacy_role_aliases_from_db(
+        self, test_client: TestClient, test_db
+    ):
         with test_db() as session:
             legacy_student = User(
                 id=uuid4(),
@@ -252,7 +337,9 @@ class TestAuthenticationFlow:
             payload = me_response.json()
             assert payload["role"] == expected_role
 
-    def test_auth_me_preferences_are_loaded_from_user_settings(self, test_client: TestClient, test_db):
+    def test_auth_me_preferences_are_loaded_from_user_settings(
+        self, test_client: TestClient, test_db
+    ):
         email = f"settings-{uuid4()}@test.com"
         with test_db() as session:
             user = User(
@@ -281,7 +368,9 @@ class TestAuthenticationFlow:
         payload = me_response.json()
         assert payload["settings"]["preferences"]["interfaceMode"] == "expert"
 
-    def test_user_can_get_and_update_own_settings(self, test_client: TestClient, student_user, test_db):
+    def test_user_can_get_and_update_own_settings(
+        self, test_client: TestClient, student_user, test_db
+    ):
         login_response = test_client.post(
             "/api/auth/login",
             data={"username": student_user.email, "password": "test_password_123"},
@@ -320,7 +409,9 @@ class TestAuthenticationFlow:
                 "ui": {"show_tips": False},
             }
 
-    def test_user_settings_patch_rejects_conflicting_casing(self, test_client: TestClient, student_user):
+    def test_user_settings_patch_rejects_conflicting_casing(
+        self, test_client: TestClient, student_user
+    ):
         login_response = test_client.post(
             "/api/auth/login",
             data={"username": student_user.email, "password": "test_password_123"},
@@ -343,13 +434,21 @@ class TestAuthenticationFlow:
             headers=headers,
         )
         assert update_response.status_code == 422
-        assert "Conflicting keys normalize to 'interface_mode'" in update_response.json()["detail"]
+        assert (
+            "Conflicting keys normalize to 'interface_mode'"
+            in update_response.json()["detail"]
+        )
 
-    def test_system_config_exposes_email_capability(self, test_client: TestClient, monkeypatch):
+    def test_system_config_exposes_email_capability(
+        self, test_client: TestClient, monkeypatch
+    ):
         monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
         response = test_client.get("/api/v1/system/config")
         assert response.status_code == 200
-        assert response.json() == {"features": {"email_enabled": True}}
+        assert response.json() == {
+            "features": {"email_enabled": True, "ai_controls_enabled": False},
+            "registration": {"mode": "open", "invite_required": False},
+        }
 
     def test_system_config_enables_email_when_resend_key_present(
         self,
@@ -360,7 +459,10 @@ class TestAuthenticationFlow:
         monkeypatch.setenv("RESEND_API_KEY", "re_live_example")
         response = test_client.get("/api/v1/system/config")
         assert response.status_code == 200
-        assert response.json() == {"features": {"email_enabled": True}}
+        assert response.json() == {
+            "features": {"email_enabled": True, "ai_controls_enabled": False},
+            "registration": {"mode": "open", "invite_required": False},
+        }
 
     def test_register_auto_verifies_when_email_disabled(
         self, test_client: TestClient, test_db, monkeypatch
@@ -371,7 +473,9 @@ class TestAuthenticationFlow:
         assert response.status_code == 201
 
         with test_db() as session:
-            created = session.query(User).filter(User.email == user_data["email"]).first()
+            created = (
+                session.query(User).filter(User.email == user_data["email"]).first()
+            )
             assert created is not None
             assert created.is_verified is True
 
@@ -384,7 +488,9 @@ class TestAuthenticationFlow:
         assert response.status_code == 201
 
         with test_db() as session:
-            created = session.query(User).filter(User.email == user_data["email"]).first()
+            created = (
+                session.query(User).filter(User.email == user_data["email"]).first()
+            )
             assert created is not None
             assert created.is_verified is False
 
@@ -426,7 +532,10 @@ class TestAuthenticationFlow:
             data={"username": email, "password": password},
         )
         assert login_response.status_code == 403
-        assert login_response.json()["detail"] == "Please verify your email before signing in"
+        assert (
+            login_response.json()["detail"]
+            == "Please verify your email before signing in"
+        )
 
     def test_login_allows_unverified_user_when_enforcement_disabled(
         self, test_client: TestClient, test_db, monkeypatch
@@ -477,7 +586,9 @@ class TestAuthenticationFlow:
                 expires_delta=timedelta(hours=1),
             )
 
-        verify_response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        verify_response = test_client.post(
+            "/api/auth/verify-email/confirm", json={"token": token}
+        )
         assert verify_response.status_code == 200
 
         login_response = test_client.post(
@@ -495,7 +606,9 @@ class TestAuthenticationFlow:
             json={"email": "student@test.com"},
         )
         assert response.status_code == 400
-        assert response.json()["detail"] == "Email services are disabled on this instance"
+        assert (
+            response.json()["detail"] == "Email services are disabled on this instance"
+        )
 
     def test_resend_verification_returns_400_when_email_disabled(
         self, test_client: TestClient, student_user, monkeypatch
@@ -513,7 +626,9 @@ class TestAuthenticationFlow:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert response.status_code == 400
-        assert response.json()["detail"] == "Email services are disabled on this instance"
+        assert (
+            response.json()["detail"] == "Email services are disabled on this instance"
+        )
 
     def test_public_resend_verification_request_returns_400_when_email_disabled(
         self,
@@ -526,7 +641,9 @@ class TestAuthenticationFlow:
             json={"email": "student@test.com"},
         )
         assert response.status_code == 400
-        assert response.json()["detail"] == "Email services are disabled on this instance"
+        assert (
+            response.json()["detail"] == "Email services are disabled on this instance"
+        )
 
     def test_public_resend_verification_request_uses_generic_response_and_only_sends_for_unverified(
         self,
@@ -567,9 +684,7 @@ class TestAuthenticationFlow:
             )
             session.commit()
 
-        generic_message = (
-            "If an account exists and requires verification, a verification email has been sent"
-        )
+        generic_message = "If an account exists and requires verification, a verification email has been sent"
         for email in ("missing@test.com", verified_email, unverified_email):
             response = test_client.post(
                 "/api/auth/resend-verification-request",
@@ -582,7 +697,9 @@ class TestAuthenticationFlow:
         assert sent[0][0] == unverified_email
         assert "verify-email?token=" in sent[0][1]
 
-    def test_verify_email_confirm_marks_user_verified(self, test_client: TestClient, test_db):
+    def test_verify_email_confirm_marks_user_verified(
+        self, test_client: TestClient, test_db
+    ):
         with test_db() as session:
             user = User(
                 id=uuid4(),
@@ -600,7 +717,9 @@ class TestAuthenticationFlow:
                 expires_delta=timedelta(hours=1),
             )
 
-        response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        response = test_client.post(
+            "/api/auth/verify-email/confirm", json={"token": token}
+        )
         assert response.status_code == 200
         assert response.json()["detail"] == "Email verified successfully"
 
@@ -627,11 +746,15 @@ class TestAuthenticationFlow:
                 expires_delta=timedelta(hours=1),
             )
 
-        first_response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        first_response = test_client.post(
+            "/api/auth/verify-email/confirm", json={"token": token}
+        )
         assert first_response.status_code == 200
         assert first_response.json()["detail"] == "Email verified successfully"
 
-        second_response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        second_response = test_client.post(
+            "/api/auth/verify-email/confirm", json={"token": token}
+        )
         assert second_response.status_code == 200
         assert second_response.json()["detail"] == "Email already verified"
         assert "access_token" in second_response.json()
@@ -658,7 +781,9 @@ class TestAuthenticationFlow:
                 expires_delta=timedelta(hours=1),
             )
 
-        verify_response = test_client.post("/api/auth/verify-email/confirm", json={"token": token})
+        verify_response = test_client.post(
+            "/api/auth/verify-email/confirm", json={"token": token}
+        )
         assert verify_response.status_code == 200
         access_token = verify_response.json()["access_token"]
 
@@ -669,7 +794,9 @@ class TestAuthenticationFlow:
         assert me_response.status_code == 200
         assert me_response.json()["email"] == user.email
 
-    def test_reset_password_confirm_updates_password_hash(self, test_client: TestClient, test_db):
+    def test_reset_password_confirm_updates_password_hash(
+        self, test_client: TestClient, test_db
+    ):
         email = f"reset-{uuid4()}@test.com"
         with test_db() as session:
             user = User(
@@ -701,7 +828,93 @@ class TestAuthenticationFlow:
         )
         assert login_response.status_code == 200
 
-    def test_verify_and_reset_confirm_reject_invalid_tokens(self, test_client: TestClient):
+    def test_authenticated_user_can_change_password(
+        self, test_client: TestClient, student_user
+    ):
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+
+        change_response = test_client.post(
+            "/api/auth/change-password",
+            json={
+                "currentPassword": "test_password_123",
+                "newPassword": "new_password_123",
+            },
+        )
+        assert change_response.status_code == 200
+        assert change_response.json()["detail"] == "Password changed successfully"
+
+        old_password_login = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert old_password_login.status_code == 401
+
+        new_password_login = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "new_password_123"},
+        )
+        assert new_password_login.status_code == 200
+
+    def test_change_password_rejects_wrong_current_password(
+        self, test_client: TestClient, student_user
+    ):
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+
+        change_response = test_client.post(
+            "/api/auth/change-password",
+            json={
+                "currentPassword": "wrong_password",
+                "newPassword": "new_password_123",
+            },
+        )
+        assert change_response.status_code == 400
+        assert change_response.json()["detail"] == "Current password is incorrect"
+
+        unchanged_password_login = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert unchanged_password_login.status_code == 200
+
+    def test_change_password_requires_authentication(self, test_client: TestClient):
+        response = test_client.post(
+            "/api/auth/change-password",
+            json={
+                "currentPassword": "test_password_123",
+                "newPassword": "new_password_123",
+            },
+        )
+        assert response.status_code == 401
+
+    def test_change_password_validates_new_password_length(
+        self, test_client: TestClient, student_user
+    ):
+        login_response = test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        )
+        assert login_response.status_code == 200
+
+        response = test_client.post(
+            "/api/auth/change-password",
+            json={
+                "currentPassword": "test_password_123",
+                "newPassword": "short",
+            },
+        )
+        assert response.status_code == 422
+
+    def test_verify_and_reset_confirm_reject_invalid_tokens(
+        self, test_client: TestClient
+    ):
         verify_response = test_client.post(
             "/api/auth/verify-email/confirm",
             json={"token": "invalid-token"},

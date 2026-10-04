@@ -5,7 +5,7 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from fair_platform.backend.core.config import get_resend_api_key
+from fair_platform.backend.core.config import get_email_sender, get_resend_api_key
 from fair_platform.backend.services.email_provider import (
     ConsoleEmailProvider,
     EmailProvider,
@@ -31,7 +31,9 @@ def create_email_template_environment() -> Environment:
     template_dir = _resolve_email_templates_dir()
     return Environment(
         loader=FileSystemLoader(template_dir),
-        autoescape=select_autoescape(default_for_string=True, enabled_extensions=("html", "xml")),
+        autoescape=select_autoescape(
+            default_for_string=True, enabled_extensions=("html", "xml")
+        ),
     )
 
 
@@ -58,12 +60,24 @@ class Mailer:
             html_content=html_content,
         )
 
+    async def send_invitation(self, email: str, invite_url: str) -> None:
+        template = self.template_env.get_template("invite.html")
+        html_content = template.render(invite_url=invite_url)
+        await self.provider.send_email(
+            to=email,
+            subject="Your FAIR registration invitation",
+            html_content=html_content,
+        )
+
 
 def get_mailer() -> Mailer:
     resend_api_key = get_resend_api_key()
     provider: EmailProvider
     if resend_api_key:
-        provider = ResendEmailProvider(api_key=resend_api_key)
+        provider = ResendEmailProvider(
+            api_key=resend_api_key,
+            sender=get_email_sender(),
+        )
     else:
         provider = ConsoleEmailProvider()
 

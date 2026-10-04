@@ -1,51 +1,12 @@
-/* CSS Variables for font families */
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+/* Keep the application type system on one quiet, neutral family. */
 :root {
-    --font-host-grotesk: 'Host Grotesk', sans-serif;
-    --font-remark: 'Remark', serif;
+    --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-remark: 'Remark', Georgia, serif;
 }
 
-/* Host Grotesk font face definitions */
-@font-face {
-    font-family: 'Host Grotesk';
-    src: url('/fonts/host-grotesk/HostGrotesk-Light.ttf') format('truetype');
-    font-weight: 300;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Host Grotesk';
-    src: url('/fonts/host-grotesk/HostGrotesk-Regular.ttf') format('truetype');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Host Grotesk';
-    src: url('/fonts/host-grotesk/HostGrotesk-Medium.ttf') format('truetype');
-    font-weight: 500;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Host Grotesk';
-    src: url('/fonts/host-grotesk/HostGrotesk-SemiBold.ttf') format('truetype');
-    font-weight: 600;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'Host Grotesk';
-    src: url('/fonts/host-grotesk/HostGrotesk-Bold.ttf') format('truetype');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-}
-
-/* Remark font face definitions */
+/* The product wordmark is a brand asset, not application UI typography. */
 @font-face {
     font-family: 'Remark';
     src: url('/fonts/remark/LTRemark-Regular.otf') format('opentype');

@@ -3,14 +3,18 @@ from typing import Optional, Union
 import secrets
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import or_
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload, selectinload
 
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.user import User
-from fair_platform.backend.data.models.enrollment import Enrollment
+from fair_platform.backend.data.models.enrollment import (
+    CourseMembershipRole,
+    Enrollment,
+    EnrollmentStatus,
+)
 from fair_platform.backend.api.schema.course import (
     CourseCreate,
     CourseRead,
@@ -20,11 +24,15 @@ from fair_platform.backend.api.schema.course import (
 )
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.core.security.permissions import (
-    has_capability,
-    has_capability_and_owner,
-)
+from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.core.security.dependencies import require_capability
+from fair_platform.backend.services.course_access import (
+    can_manage_course,
+    can_own_course,
+    can_view_course,
+    course_role,
+)
+from fair_platform.backend.services.gradebook import ensure_default_category
 
 router = APIRouter()
 
@@ -53,16 +61,27 @@ def _generate_unique_enrollment_code(db: Session) -> str:
     )
 
 
-def _course_to_response(course: Course, include_code: bool) -> dict:
+def _course_to_response(
+    course: Course,
+    include_code: bool,
+    membership_role: CourseMembershipRole | None = None,
+) -> dict:
     return {
         "id": course.id,
         "name": course.name,
         "description": course.description,
+        "icon_key": course.icon_key,
         "instructor_id": course.instructor_id,
         "instructor_name": course.instructor.name if course.instructor else "",
         "assignments_count": len(course.assignments or []),
         "enrollment_code": course.enrollment_code if include_code else None,
         "is_enrollment_enabled": course.is_enrollment_enabled if include_code else None,
+        "section": course.section,
+        "term": course.term,
+        "is_archived": course.is_archived,
+        "created_at": course.created_at,
+        "updated_at": course.updated_at,
+        "membership_role": membership_role,
     }
 
 
@@ -109,11 +128,25 @@ def create_course(
         id=uuid4(),
         name=course.name,
         description=course.description,
+        icon_key=course.icon_key,
         instructor_id=course.instructor_id,
         enrollment_code=enrollment_code,
         is_enrollment_enabled=True,
+        section=course.section,
+        term=course.term,
     )
     db.add(db_course)
+    db.flush()
+    ensure_default_category(db, db_course.id)
+    db.add(
+        Enrollment(
+            id=uuid4(),
+            user_id=course.instructor_id,
+            course_id=db_course.id,
+            role=CourseMembershipRole.owner,
+            status=EnrollmentStatus.active,
+        )
+    )
     db.commit()
     db.refresh(db_course)
     return _course_to_response(db_course, include_code=True)
@@ -124,6 +157,7 @@ def list_courses(
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
     instructor_id: Optional[UUID] = None,
+    include_archived: bool = Query(False),
 ):
     is_admin = has_capability(current_user, "update_any_course")
     if is_admin:
@@ -134,9 +168,11 @@ def list_courses(
 
         if instructor_id is not None:
             query = query.filter(Course.instructor_id == instructor_id)
+        if not include_archived:
+            query = query.filter(Course.is_archived.is_(False))
         courses = query.all()
         return [
-            _course_to_response(c, include_code=True)
+            _course_to_response(c, include_code=True, membership_role=course_role(db, c, current_user))
             for c in courses
         ]
 
@@ -146,18 +182,29 @@ def list_courses(
             db.query(Course)
             .options(joinedload(Course.instructor), selectinload(Course.assignments))
             .join(Enrollment, Enrollment.course_id == Course.id)
-            .filter(Enrollment.user_id == current_user.id)
+            .filter(
+                Enrollment.user_id == current_user.id,
+                Enrollment.status == EnrollmentStatus.active,
+            )
             .all()
         )
+        if not include_archived:
+            courses = [course for course in courses if not course.is_archived]
         return [
-            _course_to_response(c, include_code=False)
+            _course_to_response(c, include_code=False, membership_role=course_role(db, c, current_user))
             for c in courses
         ]
 
     courses = (
         db.query(Course)
         .options(joinedload(Course.instructor), selectinload(Course.assignments))
-        .outerjoin(Enrollment, Enrollment.course_id == Course.id)
+        .outerjoin(
+            Enrollment,
+            and_(
+                Enrollment.course_id == Course.id,
+                Enrollment.status == EnrollmentStatus.active,
+            ),
+        )
         .filter(
             or_(
                 Course.instructor_id == current_user.id,
@@ -167,8 +214,14 @@ def list_courses(
         .distinct()
         .all()
     )
+    if not include_archived:
+        courses = [course for course in courses if not course.is_archived]
     return [
-        _course_to_response(c, include_code=(c.instructor_id == current_user.id))
+        _course_to_response(
+            c,
+            include_code=can_manage_course(db, c, current_user),
+            membership_role=course_role(db, c, current_user),
+        )
         for c in courses
     ]
 
@@ -185,7 +238,7 @@ def get_course(
         .options(
             joinedload(Course.instructor),
             selectinload(Course.assignments),
-            selectinload(Course.workflows),
+            selectinload(Course.flows),
         )
         .filter(Course.id == course_id)
         .first()
@@ -195,45 +248,48 @@ def get_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    is_admin = has_capability(current_user, "update_any_course")
-    owns_course = course.instructor_id == current_user.id
-    can_manage_course = is_admin or owns_course
-
-    if not can_manage_course:
-        enrollment = (
-            db.query(Enrollment)
-            .filter(
-                Enrollment.user_id == current_user.id,
-                Enrollment.course_id == course_id,
-            )
-            .first()
+    manages_course = can_manage_course(db, course, current_user)
+    if not can_view_course(db, course, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only active course members or admin can view this course",
         )
-        if not enrollment:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only enrolled users, the course owner, or admin can view this course",
-            )
 
-    include_code = can_manage_course
-    if detailed and can_manage_course:
-        from fair_platform.backend.api.routers.workflows import _db_workflow_to_read
+    include_code = manages_course
+    if detailed and manages_course:
+        from fair_platform.backend.api.routers.flows import _flow_read
 
         return {
             "id": course.id,
             "name": course.name,
             "description": course.description,
+            "icon_key": course.icon_key,
             "instructor": course.instructor,
             "assignments": course.assignments or [],
-            "workflows": [_db_workflow_to_read(workflow) for workflow in (course.workflows or [])],
+            "flows": [_flow_read(flow) for flow in (course.flows or [])],
             "enrollment_code": course.enrollment_code if include_code else None,
             "is_enrollment_enabled": course.is_enrollment_enabled if include_code else None,
+            "section": course.section,
+            "term": course.term,
+            "is_archived": course.is_archived,
+            "created_at": course.created_at,
+            "updated_at": course.updated_at,
+            "membership_role": course_role(db, course, current_user),
         }
 
-    if detailed and not can_manage_course:
+    if detailed and not manages_course:
         # Limited view for enrolled/non-owner users.
-        return _course_to_response(course, include_code=False)
+        return _course_to_response(
+            course,
+            include_code=False,
+            membership_role=course_role(db, course, current_user),
+        )
 
-    return _course_to_response(course, include_code=include_code)
+    return _course_to_response(
+        course,
+        include_code=include_code,
+        membership_role=course_role(db, course, current_user),
+    )
 
 
 @router.put("/{course_id}", response_model=CourseRead)
@@ -254,13 +310,15 @@ def update_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_and_owner(current_user, "update_own_course", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this course",
         )
 
     if payload.instructor_id is not None:
+        if not can_own_course(db, course, current_user):
+            raise HTTPException(status_code=403, detail="Only the course owner or admin can transfer ownership")
         instructor = db.get(User, payload.instructor_id)
         if not instructor:
             raise HTTPException(
@@ -276,6 +334,30 @@ def update_course(
                 detail="This user cannot be assigned as course owner",
             )
 
+        previous_owner = (
+            db.query(Enrollment)
+            .filter(Enrollment.course_id == course.id, Enrollment.user_id == course.instructor_id)
+            .first()
+        )
+        if previous_owner is None:
+            previous_owner = Enrollment(
+                id=uuid4(), user_id=course.instructor_id, course_id=course.id
+            )
+            db.add(previous_owner)
+        previous_owner.role = CourseMembershipRole.assistant
+        previous_owner.status = EnrollmentStatus.active
+        next_owner = (
+            db.query(Enrollment)
+            .filter(Enrollment.course_id == course.id, Enrollment.user_id == payload.instructor_id)
+            .first()
+        )
+        if next_owner is None:
+            next_owner = Enrollment(
+                id=uuid4(), user_id=payload.instructor_id, course_id=course.id
+            )
+            db.add(next_owner)
+        next_owner.role = CourseMembershipRole.owner
+        next_owner.status = EnrollmentStatus.active
         course.instructor_id = payload.instructor_id
         course.instructor = instructor
 
@@ -283,6 +365,12 @@ def update_course(
         course.name = payload.name
     if payload.description is not None:
         course.description = payload.description
+    if payload.icon_key is not None:
+        course.icon_key = payload.icon_key
+    if payload.section is not None:
+        course.section = payload.section
+    if payload.term is not None:
+        course.term = payload.term
 
     db.add(course)
     db.commit()
@@ -308,7 +396,7 @@ def reset_enrollment_code(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_and_owner(current_user, "manage_course_settings_own", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can reset this code",
@@ -340,7 +428,7 @@ def update_course_settings(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_and_owner(current_user, "manage_course_settings_own", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update course settings",
@@ -370,15 +458,51 @@ def delete_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_and_owner(current_user, "delete_own_course", course.instructor_id):
+    if not can_own_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the course instructor or admin can delete this course",
+            detail="Only the course owner or admin can archive this course",
         )
 
-    db.delete(course)
+    course.is_archived = True
+    course.is_enrollment_enabled = False
     db.commit()
     return None
+
+
+@router.post("/{course_id}/archive", response_model=CourseRead)
+def archive_course(
+    course_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    course = db.get(Course, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    if not can_own_course(db, course, current_user):
+        raise HTTPException(status_code=403, detail="Only the course owner or admin can archive this course")
+    course.is_archived = True
+    course.is_enrollment_enabled = False
+    db.commit()
+    db.refresh(course)
+    return _course_to_response(course, include_code=True)
+
+
+@router.post("/{course_id}/reopen", response_model=CourseRead)
+def reopen_course(
+    course_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    course = db.get(Course, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    if not can_own_course(db, course, current_user):
+        raise HTTPException(status_code=403, detail="Only the course owner or admin can reopen this course")
+    course.is_archived = False
+    db.commit()
+    db.refresh(course)
+    return _course_to_response(course, include_code=True)
 
 
 __all__ = ["router"]

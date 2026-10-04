@@ -8,6 +8,7 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
+  SidebarMenuBadge,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
@@ -16,7 +17,7 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { ComponentProps } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -36,7 +37,10 @@ import {
   MessageCircleQuestionMarkIcon,
   ClipboardList,
   Puzzle,
+  ListTodo,
+  LayoutDashboard,
 } from "lucide-react";
+import { Menu02Icon } from "hugeicons-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -44,7 +48,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useCourses } from "@/hooks/use-courses";
+import { hasStaffCourseMembership, useCourses } from "@/hooks/use-courses";
 import { useAllAssignments } from "@/hooks/use-assignments";
 import {
   DropdownMenu,
@@ -62,17 +66,13 @@ import {
 import UserAvatar from "@/components/user-avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
-import { usePreferenceSettings } from "@/hooks/use-preference-settings";
-import { IfSetting } from "@/components/if-setting";
 import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+  type LanguageCode,
+  type ThemeMode,
+  usePreferenceSettings,
+} from "@/hooks/use-preference-settings";
+import { IfSetting } from "@/components/if-setting";
+import { AppSearch } from "@/components/app-search";
 import {
   Empty,
   EmptyContent,
@@ -83,14 +83,195 @@ import {
 } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { Can } from "@/components/can";
+import { CourseIcon } from "@/app/courses/course-icons";
+import {
+  useNotifications,
+  useReadAllNotifications,
+  useReadNotification,
+} from "@/hooks/use-communication";
 
 const languages = [
   { code: "en", name: "English" },
   { code: "es", name: "Español" },
-];
+] satisfies { code: LanguageCode; name: string }[];
 
-function InboxEmptyState() {
+function SidebarPreferencesMenu({
+  effectiveLanguage,
+  effectiveTheme,
+  isMobile,
+  setLanguagePreference,
+  setThemePreference,
+}: {
+  effectiveLanguage: LanguageCode;
+  effectiveTheme: ThemeMode;
+  isMobile: boolean;
+  setLanguagePreference: (language: LanguageCode) => void;
+  setThemePreference: (theme: ThemeMode) => void;
+}) {
   const { t } = useTranslation();
+  const [mobileSection, setMobileSection] = useState<
+    "theme" | "language" | null
+  >(null);
+  const themeContentId = useId();
+  const languageContentId = useId();
+
+  const themeOptions = (
+    <DropdownMenuRadioGroup
+      value={effectiveTheme}
+      onValueChange={(value) => setThemePreference(value as ThemeMode)}
+    >
+      <DropdownMenuRadioItem value="light">
+        {t("theme.light")}
+      </DropdownMenuRadioItem>
+      <DropdownMenuRadioItem value="dark">
+        {t("theme.dark")}
+      </DropdownMenuRadioItem>
+      <DropdownMenuRadioItem value="system">
+        {t("theme.system")}
+      </DropdownMenuRadioItem>
+    </DropdownMenuRadioGroup>
+  );
+  const languageOptions = (
+    <DropdownMenuRadioGroup
+      value={effectiveLanguage}
+      onValueChange={(value) => setLanguagePreference(value as LanguageCode)}
+    >
+      {languages.map((language) => (
+        <DropdownMenuRadioItem key={language.code} value={language.code}>
+          {language.name}
+        </DropdownMenuRadioItem>
+      ))}
+    </DropdownMenuRadioGroup>
+  );
+
+  if (!isMobile) {
+    return (
+      <>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="flex items-center">
+            <span>{t("menu.theme")}</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>{themeOptions}</DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="flex items-center">
+            <span>{t("menu.language")}</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>{languageOptions}</DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Collapsible open={mobileSection === "theme"}>
+        <DropdownMenuItem
+          aria-controls={themeContentId}
+          aria-expanded={mobileSection === "theme"}
+          className="flex items-center"
+          onSelect={(event) => {
+            event.preventDefault();
+            setMobileSection((section) =>
+              section === "theme" ? null : "theme",
+            );
+          }}
+        >
+          <span>{t("menu.theme")}</span>
+          <ChevronRight
+            className={`ml-auto transition-transform duration-200 ${mobileSection === "theme" ? "rotate-90" : ""}`}
+          />
+        </DropdownMenuItem>
+        <CollapsibleContent
+          id={themeContentId}
+          className="border-border/60 mx-1 mb-1 border-l pl-1"
+        >
+          {themeOptions}
+        </CollapsibleContent>
+      </Collapsible>
+      <Collapsible open={mobileSection === "language"}>
+        <DropdownMenuItem
+          aria-controls={languageContentId}
+          aria-expanded={mobileSection === "language"}
+          className="flex items-center"
+          onSelect={(event) => {
+            event.preventDefault();
+            setMobileSection((section) =>
+              section === "language" ? null : "language",
+            );
+          }}
+        >
+          <span>{t("menu.language")}</span>
+          <ChevronRight
+            className={`ml-auto transition-transform duration-200 ${mobileSection === "language" ? "rotate-90" : ""}`}
+          />
+        </DropdownMenuItem>
+        <CollapsibleContent
+          id={languageContentId}
+          className="border-border/60 mx-1 mb-1 border-l pl-1"
+        >
+          {languageOptions}
+        </CollapsibleContent>
+      </Collapsible>
+    </>
+  );
+}
+
+const courseIconBackgrounds = [
+  "from-rose-400 to-orange-500",
+  "from-sky-400 to-indigo-500",
+  "from-emerald-400 to-teal-500",
+  "from-violet-400 to-fuchsia-500",
+  "from-amber-400 to-rose-500",
+  "from-cyan-400 to-blue-500",
+  "from-lime-400 to-emerald-500",
+  "from-pink-400 to-purple-500",
+] as const;
+
+function getCourseIconBackground(courseId: string) {
+  const hash = Array.from(courseId).reduce(
+    (value, character) => (value * 31 + character.charCodeAt(0)) >>> 0,
+    0,
+  );
+
+  return courseIconBackgrounds[hash % courseIconBackgrounds.length];
+}
+
+function NotificationsInbox() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { data: notifications = [], isLoading } = useNotifications();
+  const readNotification = useReadNotification();
+  const readAll = useReadAllNotifications();
+
+  if (isLoading) return <div className="p-6 text-sm text-muted-foreground">Loading notifications…</div>;
+
+  if (notifications.length > 0) {
+    return (
+      <div className="p-3">
+        <div className="mb-2 flex justify-end">
+          <Button size="sm" variant="ghost" onClick={() => readAll.mutate()}>Mark all read</Button>
+        </div>
+        <div className="space-y-2">
+          {notifications.map((notification) => (
+            <button
+              type="button"
+              key={notification.id}
+              className={`w-full rounded-md border p-3 text-left ${notification.readAt ? 'opacity-70' : 'bg-sidebar-accent'}`}
+              onClick={() => {
+                if (!notification.readAt) readNotification.mutate(notification.id);
+                if (notification.link) navigate(notification.link);
+              }}
+            >
+              <div className="text-sm font-medium">{notification.title}</div>
+              {notification.body && <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{notification.body}</div>}
+              <div className="mt-2 text-xs text-muted-foreground">{new Date(notification.createdAt).toLocaleString()}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Empty className="h-full rounded-none border-0 p-6 md:p-8">
@@ -112,11 +293,15 @@ function NavMain({
   onInboxToggle,
   isSearchOpen,
   onSearchClick,
+  unreadCount,
+  showStudentDashboard,
 }: {
   isInboxOpen: boolean;
   onInboxToggle: () => void;
   isSearchOpen: boolean;
   onSearchClick: () => void;
+  unreadCount: number;
+  showStudentDashboard: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -130,7 +315,27 @@ function NavMain({
         </SidebarMenuButton>
       </SidebarMenuItem>
 
+      {showStudentDashboard && (
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild tooltip="Dashboard">
+            <Link to="/dashboard">
+              <LayoutDashboard />
+              <span>Dashboard</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      )}
+
       {/*search*/}
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="To-do">
+          <Link to="/todo">
+            <ListTodo />
+            <span>To-do</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+
       <SidebarMenuItem>
         <SidebarMenuButton
           tooltip={t("nav.search")}
@@ -151,6 +356,11 @@ function NavMain({
           <InboxIcon />
           <span>{t("nav.inbox")}</span>
         </SidebarMenuButton>
+        {unreadCount > 0 && (
+          <SidebarMenuBadge className="rounded-full bg-primary px-1.5 text-xs !text-primary-foreground">
+            {unreadCount}
+          </SidebarMenuBadge>
+        )}
       </SidebarMenuItem>
     </SidebarMenu>
   );
@@ -206,26 +416,40 @@ export function AppSidebar({
   side?: "left" | "right";
 }) {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user: authUser, isAuthenticated, logout } = useAuth();
-  const { effectiveTheme, setThemePreference, setLanguagePreference } =
-    usePreferenceSettings();
+  const {
+    effectiveLanguage,
+    effectiveTheme,
+    setLanguagePreference,
+    setThemePreference,
+  } = usePreferenceSettings();
   const isMobile = useIsMobile();
-  const { data: courses = [] } = useCourses();
+  const { data: courses = [], isLoading: coursesLoading } = useCourses();
+  const { data: eligibilityCourses = [], isLoading: eligibilityCoursesLoading } =
+    useCourses({ include_archived: true }, Boolean(authUser));
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
-  const { setOpen, state, isMobile: isSidebarMobile, openMobile } = useSidebar();
+  const { data: notifications = [] } = useNotifications(isAuthenticated);
+  const unreadCount = notifications.filter((notification) => !notification.readAt).length;
+  const {
+    setOpen,
+    state,
+    isMobile: isSidebarMobile,
+    openMobile,
+    width: sidebarWidth = "20rem",
+  } = useSidebar();
   const [showAllAssignments, setShowAllAssignments] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [coursesOpen, setCoursesOpen] = useState(true);
   const [assignmentsOpen, setAssignmentsOpen] = useState(false);
-
-  const handleSearchInputDebounced = (query: string) => {
-    void query;
-  };
+  const coursesContentId = useId();
+  const assignmentsContentId = useId();
+  const showStudentDashboard = !coursesLoading
+    && !eligibilityCoursesLoading
+    && authUser?.role === 'user'
+    && !hasStaffCourseMembership(eligibilityCourses);
 
   useEffect(() => {
     if (state !== "expanded") {
@@ -239,28 +463,21 @@ export function AppSidebar({
     }
   }, [isSidebarMobile, openMobile]);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      handleSearchInputDebounced(searchQuery);
-    }, 250);
-
-    return () => clearTimeout(timeout);
-  }, [searchQuery]);
-
   const displayTitle = t("header.title");
   const userName = authUser?.name || t("header.profile");
   const userEmail = authUser?.email || "user@example.com";
 
-  const currentLanguage =
-    languages.find((lang) =>
-      i18n.language?.toLowerCase().startsWith(lang.code),
-    ) ?? languages[0];
-
   const sidebarStyle = {
     ...(style ?? {}),
-    ["--sidebar-width" as string]: !isSidebarMobile && inboxOpen ? "40rem" : "20rem",
-    ["--app-sidebar-main-width" as string]: "20rem",
+    ["--sidebar-width" as string]:
+      !isSidebarMobile && inboxOpen
+        ? `calc(${sidebarWidth} + 20rem)`
+        : isSidebarMobile
+          ? "20rem"
+          : sidebarWidth,
+    ["--app-sidebar-main-width" as string]: isSidebarMobile
+      ? sidebarWidth
+      : `calc(${sidebarWidth} - 1rem)`,
   } as React.CSSProperties;
 
   return (
@@ -297,7 +514,7 @@ export function AppSidebar({
             <SidebarSeparator className="mx-0" />
           </SidebarHeader>
           <ScrollArea className="h-full">
-            <InboxEmptyState />
+            <NotificationsInbox />
           </ScrollArea>
         </div>
       ) : (
@@ -305,12 +522,20 @@ export function AppSidebar({
         <SidebarHeader className="pb-0 pt-4">
           <SidebarMenu>
             <SidebarMenuItem>
-              <Link to="/" aria-label={displayTitle}>
+              <Link
+                to="/"
+                aria-label={state === "collapsed" ? "Open sidebar" : displayTitle}
+                title={state === "collapsed" ? "Open sidebar" : displayTitle}
+                className="group/brand"
+                onClick={(event) => {
+                  if (state === "collapsed") {
+                    event.preventDefault();
+                    setOpen(true);
+                  }
+                }}
+              >
                 <div className="flex items-center justify-center">
-                  <h1
-                    className="text-2xl font-serif font-semibold text-foreground cursor-pointer"
-                    onClick={() => navigate("/")}
-                  >
+                  <h1 className="text-2xl font-serif font-semibold text-foreground cursor-pointer">
                     <span className="transition-[opacity,transform,margin] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:hidden">
                       {displayTitle}
                     </span>
@@ -318,7 +543,8 @@ export function AppSidebar({
                       aria-hidden="true"
                       className="hidden ml-0 transition-[opacity,transform,margin] duration-200 ease-linear group-data-[collapsible=icon]:inline group-data-[collapsible=icon]:opacity-100"
                     >
-                      F
+                      <span className="group-hover/brand:hidden">F</span>
+                      <Menu02Icon className="hidden size-5 group-hover/brand:inline" />
                     </span>
                   </h1>
                 </div>
@@ -340,6 +566,8 @@ export function AppSidebar({
                   setOpen(true);
                   setInboxOpen((current) => !current);
                 }}
+                unreadCount={unreadCount}
+                showStudentDashboard={showStudentDashboard}
               />
             </SidebarGroupContent>
           </SidebarGroup>
@@ -351,6 +579,8 @@ export function AppSidebar({
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       tooltip={t("sidebar.courses.title")}
+                      aria-expanded={coursesOpen}
+                      aria-controls={coursesContentId}
                       onClick={() => {
                         if (state === "collapsed") {
                           setOpen(true);
@@ -366,13 +596,21 @@ export function AppSidebar({
                         className={`ml-auto transition-transform duration-200 ${coursesOpen ? "rotate-90" : ""}`}
                       />
                     </SidebarMenuButton>
-                    <CollapsibleContent>
+                    <CollapsibleContent id={coursesContentId}>
                       <SidebarMenuSub>
                         {courses.slice(0, 3).map((course) => (
                           <SidebarMenuSubItem key={course.id}>
                             <SidebarMenuSubButton asChild>
-                              <Link to={`/courses/${course.id}`}>
-                                <span>{course.name}</span>
+                              <Link
+                                to={`/courses/${course.id}`}
+                                className="group/course h-8 gap-2.5"
+                              >
+                                <span
+                                  className={`grid size-6 shrink-0 place-items-center rounded-full border border-white/15 bg-gradient-to-br text-white shadow-[var(--shadow-button)] transition-transform duration-150 ease-out group-hover/course:-translate-y-px group-active/course:translate-y-0 group-active/course:scale-[0.96] ${getCourseIconBackground(course.id)}`}
+                                >
+                                  <CourseIcon iconKey={course.iconKey} size={14} />
+                                </span>
+                                <span className="truncate">{course.name}</span>
                               </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
@@ -404,6 +642,8 @@ export function AppSidebar({
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       tooltip={t("sidebar.assignments.title")}
+                      aria-expanded={assignmentsOpen}
+                      aria-controls={assignmentsContentId}
                       onClick={() => {
                         if (state === "collapsed") {
                           setOpen(true);
@@ -419,7 +659,7 @@ export function AppSidebar({
                         className={`ml-auto transition-transform duration-200 ${assignmentsOpen ? "rotate-90" : ""}`}
                       />
                     </SidebarMenuButton>
-                    <CollapsibleContent>
+                    <CollapsibleContent id={assignmentsContentId}>
                       <SidebarMenuSub>
                         {(showAllAssignments
                           ? assignments
@@ -494,7 +734,7 @@ export function AppSidebar({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
                         className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                        side={isMobile ? "bottom" : "right"}
+                        side="top"
                         align="end"
                         sideOffset={4}
                       >
@@ -523,51 +763,13 @@ export function AppSidebar({
                           <span>{t("menu.account")}</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="flex items-center">
-                            <span>{t("menu.theme")}</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            <DropdownMenuRadioGroup
-                              value={effectiveTheme}
-                              onValueChange={(value) =>
-                                setThemePreference(value as "light" | "dark" | "system")
-                              }
-                            >
-                              <DropdownMenuRadioItem value="light">
-                                {t("theme.light")}
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="dark">
-                                {t("theme.dark")}
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="system">
-                                {t("theme.system")}
-                              </DropdownMenuRadioItem>
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="flex items-center">
-                            <span>{t("menu.language")}</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            <DropdownMenuRadioGroup
-                              value={currentLanguage.code}
-                              onValueChange={(value) =>
-                                setLanguagePreference(value as "en" | "es")
-                              }
-                            >
-                              {languages.map((lang) => (
-                                <DropdownMenuRadioItem
-                                  key={lang.code}
-                                  value={lang.code}
-                                >
-                                  {lang.name}
-                                </DropdownMenuRadioItem>
-                              ))}
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
+                        <SidebarPreferencesMenu
+                          effectiveLanguage={effectiveLanguage}
+                          effectiveTheme={effectiveTheme}
+                          isMobile={isSidebarMobile}
+                          setLanguagePreference={setLanguagePreference}
+                          setThemePreference={setThemePreference}
+                        />
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => {
@@ -616,52 +818,16 @@ export function AppSidebar({
             </div>
           </div>
           <ScrollArea className="h-full">
-            <InboxEmptyState />
+            <NotificationsInbox />
           </ScrollArea>
         </aside>
       )}
       </div>
-      <CommandDialog
+      <AppSearch
         open={searchOpen}
-        onOpenChange={(open) => {
-          setSearchOpen(open);
-          if (!open) {
-            setSearchQuery("");
-            setDebouncedSearchQuery("");
-          }
-        }}
-      >
-        <Command>
-          <CommandInput
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-            placeholder={t("nav.search")}
-          />
-          <CommandList>
-            <CommandEmpty>{t("common.noResults")}</CommandEmpty>
-            <CommandGroup heading="Suggestions">
-              <CommandItem
-                onSelect={() => {
-                  setSearchOpen(false);
-                  navigate("/courses");
-                }}
-              >
-                <BookOpen />
-                <span>Go to courses</span>
-              </CommandItem>
-              <CommandItem
-                onSelect={() => {
-                  setSearchOpen(false);
-                  setSettingsOpen(true);
-                }}
-              >
-                <SettingsIcon />
-                <span>Open settings</span>
-              </CommandItem>
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </CommandDialog>
+        onOpenChange={setSearchOpen}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} isMobile={isMobile} />
       <SidebarRail />
     </Sidebar>

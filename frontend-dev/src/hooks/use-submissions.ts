@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { Artifact } from "@/hooks/use-artifacts"
+import { LmsArtifact } from "@/hooks/use-artifacts"
 import { toast } from 'sonner'
 
 export type CanonicalSubmissionEventType =
@@ -27,11 +27,12 @@ export type SubmissionEvent = {
   submissionId: string
   eventType: SubmissionEventType
   actor?: { name: string } | null
-  workflowRun?: {
+  execution?: {
     id: string
-    status: "pending" | "running" | "success" | "failure" | "cancelled"
-    workflow?: { name: string } | null
-    runner?: { name: string } | null
+    status: "queued" | "running" | "waiting" | "completed" | "failed" | "cancelled" | "expired"
+    kind: "agent" | "action" | "flow" | "flow_step" | "tool" | "system"
+    capabilityId?: string | null
+    flowVersionId?: string | null
   } | null
   details?: Record<string, unknown> | null
   createdAt: string
@@ -59,21 +60,6 @@ export type Submitter = {
   role: string
 }
 
-export type SubmissionResult = {
-  id: string
-  submissionId: string
-  workflowRunId: string
-
-  transcription?: string | null
-  transcriptionConfidence?: number | null
-  transcribedAt?: string | null
-
-  score?: number | null
-  feedback?: string | null
-  gradedAt?: string | null
-  gradingMeta?: Record<string, unknown> | null
-}
-
 export type Submission = {
   id: string
   assignmentId: string
@@ -81,14 +67,14 @@ export type Submission = {
   submitter?: Submitter
   submittedAt: string
   status: SubmissionStatus
-  officialRunId?: string | null
-  officialResult?: SubmissionResult | null
   draftScore?: number | null
   draftFeedback?: string | null
   publishedScore?: number | null
   publishedFeedback?: string | null
   returnedAt?: string | null
-  artifacts: Artifact[]
+  artifacts: LmsArtifact[]
+  attemptNumber: number
+  isLate: boolean
 }
 
 export type CreateSubmissionInput = {
@@ -98,6 +84,12 @@ export type CreateSubmissionInput = {
   files?: File[]           // New files to upload
 }
 
+export type CreateStudentSubmissionInput = {
+  assignment_id: string
+  artifact_ids?: string[]
+  files?: File[]
+}
+
 export type UpdateSubmissionInput = {
   artifact_ids?: string[]
 }
@@ -105,6 +97,19 @@ export type UpdateSubmissionInput = {
 export type UpdateSubmissionDraftInput = {
   score?: number | null
   feedback?: string | null
+}
+
+export function hasUnpublishedDraft(submission: Submission): boolean {
+  const hasDraft =
+    submission.draftScore != null || submission.draftFeedback != null
+
+  return (
+    hasDraft &&
+    (
+      submission.draftScore !== submission.publishedScore ||
+      submission.draftFeedback !== submission.publishedFeedback
+    )
+  )
 }
 
 export const submissionsKeys = {
@@ -170,10 +175,23 @@ const createSubmission = async (data: CreateSubmissionInput): Promise<Submission
     })
   }
 
-  const res = await api.post('/submissions', formData, {
+  const res = await api.post('/submissions/synthetic', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
+  })
+  return res.data
+}
+
+const createStudentSubmission = async (data: CreateStudentSubmissionInput): Promise<Submission> => {
+  const formData = new FormData()
+  formData.append('assignment_id', data.assignment_id)
+  if (data.artifact_ids?.length) {
+    formData.append('artifact_ids', JSON.stringify(data.artifact_ids))
+  }
+  data.files?.forEach((file) => formData.append('files', file))
+  const res = await api.post('/submissions', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   })
   return res.data
 }
@@ -239,6 +257,18 @@ export function useCreateSubmission() {
         description: error.message || 'Something went wrong'
       });
     }
+  })
+}
+
+export function useCreateStudentSubmission() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: createStudentSubmission,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      toast.success('Assignment submitted')
+    },
+    onError: (error: Error) => toast.error('Failed to submit assignment', { description: error.message }),
   })
 }
 

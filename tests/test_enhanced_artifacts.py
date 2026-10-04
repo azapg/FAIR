@@ -144,7 +144,7 @@ class TestEnhancedArtifactModel:
                 title="Test Assignment",
                 description="Test assignment description",
                 deadline=datetime.now() + timedelta(days=7),
-                max_grade={"points": 100}
+                max_grade={"type": "points", "value": 100}
             )
             session.add(assignment)
             session.commit()

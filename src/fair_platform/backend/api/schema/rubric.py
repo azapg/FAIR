@@ -7,8 +7,6 @@ from fair_platform.backend.api.schema.utils import schema_config
 from fair_platform.extension_sdk.contracts.rubric import (
     RubricContent,
     RubricCriterion,
-    RubricGenerateResponse,
-    RubricJobRequest,
 )
 
 
@@ -36,16 +34,10 @@ class RubricRead(BaseModel):
     created_at: datetime
 
 
-class RubricGenerateRequest(RubricJobRequest):
-    model_config = schema_config
-
 __all__ = [
     "RubricCriterion",
     "RubricContent",
-    "RubricJobRequest",
     "RubricCreate",
     "RubricUpdate",
     "RubricRead",
-    "RubricGenerateRequest",
-    "RubricGenerateResponse",
 ]

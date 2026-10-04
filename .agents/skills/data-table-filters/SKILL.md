@@ -1,0 +1,258 @@
+---
+name: data-table-filters
+description: >
+  Install and extend data-table-filters — a React data table system with faceted filters
+  (checkbox, input, slider, timerange), sorting, infinite scroll, virtualization, and BYOS
+  state management. Delivered as 11 shadcn registry blocks installable via
+  `npx shadcn@latest add`. Use when: (1) installing data-table-filters from the shadcn
+  registry, (2) adding extension blocks (command palette, AI filters, cell renderers, sheet panel,
+  store adapters, schema system, Drizzle helpers, query layer), (3) configuring store
+  adapters (nuqs/zustand/memory), (4) generating table schemas from a data model,
+  (5) wiring up server-side filtering with Drizzle ORM, (6) connecting the React Query
+  fetch layer, (7) auto-inferring schemas from raw JSON data with DataTableAuto / inferSchemaFromJSON,
+  (8) adding AI-powered natural language filtering, (9) exposing tables as MCP endpoints for AI agents,
+  (10) troubleshooting integration issues.
+  Triggers on mentions of "data-table-filters", "data-table.openstatus.dev",
+  "data-table-filters.com", filterable data
+  tables with shadcn, DataTableAuto, auto-infer, AI filters, MCP server, or any of the registry block names.
+---
+
+# Data Table Filters
+
+A shadcn registry for building filterable, sortable data tables with infinite scroll and virtualization. Start with the core block, then extend with optional blocks for command palette, cell renderers, sheet panels, store adapters, schema generation, Drizzle ORM helpers, and React Query integration.
+
+## Registry Blocks
+
+Install any block via `npx shadcn@latest add <url>`. The CLI handles dependencies, path rewriting, and CSS variable injection.
+
+| Block                            | Install URL                                           | What it adds                                                                                                               |
+| -------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **data-table**                   | `https://data-table.openstatus.dev/r/data-table.json` | Core: table engine, store, 4 filter types, memory adapter (55 files)                                                       |
+| **data-table-filter-command**    | `.../r/data-table-filter-command.json`                | Command palette with history + keyboard shortcuts                                                                          |
+| **data-table-cell**              | `.../r/data-table-cell.json`                          | 12 cell renderers (text, code, number, bar, heatmap, gauge, badge, boolean, star, status-code, level-indicator, timestamp) |
+| **data-table-sheet**             | `.../r/data-table-sheet.json`                         | Row detail side panel (auto-installs cells)                                                                                |
+| **data-table-nuqs**              | `.../r/data-table-nuqs.json`                          | nuqs URL state adapter                                                                                                     |
+| **data-table-zustand**           | `.../r/data-table-zustand.json`                       | zustand state adapter                                                                                                      |
+| **data-table-schema**            | `.../r/data-table-schema.json`                        | Declarative schema system with `col.*` factories                                                                           |
+| **data-table-drizzle**           | `.../r/data-table-drizzle.json`                       | Drizzle ORM server-side helpers (auto-installs schema)                                                                     |
+| **data-table-query**             | `.../r/data-table-query.json`                         | React Query infinite query integration                                                                                     |
+| **data-table-filter-command-ai** | `.../r/data-table-filter-command-ai.json`             | AI-powered natural language → filter inference (provider-agnostic)                                                         |
+| **data-table-mcp**               | `.../r/data-table-mcp.json`                           | MCP server endpoint for AI agents (stateless, serverless-compatible)                                                       |
+
+All URLs use base `https://data-table.openstatus.dev`.
+
+## Quick Start
+
+1. Run `scripts/detect-stack.sh` to detect the user's project setup
+2. Install core: `npx shadcn@latest add https://data-table.openstatus.dev/r/data-table.json`
+3. Scaffold a minimal working table (see below)
+4. Extend with additional blocks as needed
+
+> **Next.js?** Use the [data-table-filters repo](https://github.com/openstatushq/data-table-filters) as a reference — it's a full Next.js app with all blocks wired up.
+
+### Minimal Working Table (Memory Adapter)
+
+> **Note:** `DataTableInfinite` internally renders `DataTableProvider`, which already wraps children with `ControlsProvider` and `DataTableStoreSync`. You do NOT need to add these separately. The only wrapper you need is `DataTableStoreProvider` (for the BYOS adapter).
+
+```tsx
+"use client";
+import { DataTableInfinite } from "@/components/data-table/data-table-infinite";
+import type { DataTableFilterField } from "@/components/data-table/types";
+import { useMemoryAdapter } from "@/lib/store/adapters/memory";
+import { DataTableStoreProvider } from "@/lib/store/provider/DataTableStoreProvider";
+import type { ColumnDef } from "@tanstack/react-table";
+
+const columns: ColumnDef<YourData>[] = [
+  /* user's columns */
+];
+const filterFields: DataTableFilterField<YourData>[] = [
+  /* user's filters */
+];
+
+export function MyTable({ data }: { data: YourData[] }) {
+  const adapter = useMemoryAdapter(/* schema definition */);
+  return (
+    <DataTableStoreProvider adapter={adapter}>
+      <DataTableInfinite
+        columns={columns}
+        data={data}
+        filterFields={filterFields}
+      />
+    </DataTableStoreProvider>
+  );
+}
+```
+
+## Wiring Extension Blocks
+
+After installing a block via `npx shadcn@latest add`, wire it into the table.
+
+### Command Palette → `commandSlot`
+
+```tsx
+<DataTableInfinite
+  commandSlot={<DataTableFilterCommand schema={schema} tableId="my-table" />}
+/>
+```
+
+### Sheet Detail Panel → `sheetSlot`
+
+```tsx
+<DataTableInfinite
+  sheetSlot={
+    <DataTableSheetDetails title="Details">{content}</DataTableSheetDetails>
+  }
+/>
+```
+
+### Floating Bar (Bulk Actions) → `floatingBarSlot`
+
+Add `col.select()` to the schema to enable multi-row selection with checkboxes. Wrap actions in `DataTableFloatingBar` — it reads selection state from context (same pattern as `DataTableSheetDetails` for `sheetSlot`).
+
+```tsx
+// In table-schema.tsx
+export const tableSchema = createTableSchema({
+  select: col.select().size(37),
+  // ... other columns
+});
+
+// In client.tsx
+import { DataTableFloatingBar } from "@/components/data-table/data-table-floating-bar";
+
+<DataTableInfinite
+  floatingBarSlot={
+    <DataTableFloatingBar>
+      {({ rows }) => (
+        <Button variant="outline" size="sm" onClick={() => console.log(rows)}>
+          Export ({rows.length})
+        </Button>
+      )}
+    </DataTableFloatingBar>
+  }
+/>;
+```
+
+### Cell Renderers → column definitions
+
+```tsx
+import { DataTableCellBadge } from "@/components/data-table/data-table-cell";
+// Use in columnDef.cell
+```
+
+### Custom Filter Types → `FILTER_COMPONENTS`
+
+All 4 filter types ship with core. To add custom types:
+
+```tsx
+import { FILTER_COMPONENTS } from "@/components/data-table/data-table-filter-controls";
+FILTER_COMPONENTS.myCustom = MyCustomFilterComponent;
+```
+
+### AI Command Palette → `commandSlot`
+
+```tsx
+<DataTableInfinite
+  commandSlot={
+    <DataTableFilterAICommand
+      schema={filterSchema.definition}
+      tableSchema={tableSchema.definition}
+      api="/api/ai-filters"
+      tableId="my-table"
+    />
+  }
+/>
+```
+
+Requires an API route that streams AI results. See [references/ai-filters.md](references/ai-filters.md).
+
+### All Slot Props
+
+`DataTableInfinite` accepts: `commandSlot`, `sheetSlot`, `toolbarActions`, `chartSlot`, `footerSlot`, `floatingBarSlot`.
+
+See [references/component-catalog.md](references/component-catalog.md) for full wiring details.
+
+## Store Adapter Configuration
+
+- **memory** (default) — Ephemeral, zero config. For prototyping, embedded components, builders.
+- **nuqs** — URL state. Shareable links, bookmarkable filters. Requires framework setup.
+- **zustand** — Client state. For existing zustand apps, complex app state.
+
+Install adapter block, swap in provider. See [references/store-adapters.md](references/store-adapters.md).
+
+## Schema Generation
+
+Install: `npx shadcn@latest add .../r/data-table-schema.json`
+
+Map data model → `createTableSchema` + `col.*`:
+
+- `string` → `col.string().filterable("input")`
+- `number` → `col.number().filterable("slider", { min, max })`
+- `boolean` → `col.boolean().filterable("checkbox")`
+- `Date` → `col.timestamp().filterable("timerange")`
+- `enum` → `col.enum(values).filterable("checkbox")`
+
+- `select` → `col.select()` (checkbox row selection, not filterable)
+
+Presets: `col.presets.logLevel()`, `.httpStatus()`, `.duration()`, `.timestamp()`, `.traceId()`, `.pathname()`, `.httpMethod()`.
+
+See [references/schema-api.md](references/schema-api.md).
+
+## Auto-Infer (Zero-Config from JSON)
+
+For raw JSON data with no predefined schema, use `DataTableAuto` or the lower-level `inferSchemaFromJSON` + `createTableSchema.fromJSON` pipeline. This auto-generates columns, filters, sheet fields, and column visibility from the data itself.
+
+### DataTableAuto Component
+
+Drop-in component — pass JSON data, get a fully functional table:
+
+```tsx
+import { DataTableAuto } from "@/components/data-table/data-table-auto";
+import data from "./data.json";
+
+export default function Page() {
+  return <DataTableAuto data={data} />;
+}
+```
+
+Includes command palette and sheet detail panel out of the box. See the `/auto` route in this repo for a working example.
+
+### Lower-Level API
+
+```tsx
+import { inferSchemaFromJSON } from "@/lib/table-schema/infer";
+import { createTableSchema } from "@/lib/table-schema";
+
+const schemaJson = inferSchemaFromJSON(data);
+const { definition } = createTableSchema.fromJSON(schemaJson);
+```
+
+See [references/auto-infer.md](references/auto-infer.md) for inference heuristics, smart enhancements, and customization.
+
+## Server-Side Integration
+
+Install: `npx shadcn@latest add .../r/data-table-drizzle.json`
+
+Scaffold route handler with `createDrizzleHandler({ db, table, columnMapping, cursorColumn, schema })`.
+
+For non-Drizzle ORMs: implement response shape `{ data, facets, totalRowCount, filterRowCount, nextCursor, prevCursor }`.
+
+See [references/drizzle-integration.md](references/drizzle-integration.md).
+
+## Fetch Layer
+
+Install: `npx shadcn@latest add .../r/data-table-query.json`
+
+Wire `createDataTableQueryOptions({ queryKeyPrefix, apiEndpoint, searchParamsSerializer })`.
+
+See [references/fetch-layer.md](references/fetch-layer.md).
+
+## Troubleshooting
+
+- **Missing CSS vars**: Core injects `--color-success/warning/error/info`. Check cssVars applied to CSS.
+- **Import path mismatches**: shadcn CLI rewrites `@/` paths per `components.json` aliases.
+- **nuqs: silent failure or crash**: Two required setup steps — `<NuqsAdapter>` in root layout AND `<Suspense>` around the table component. See [references/store-adapters.md](references/store-adapters.md).
+- **nuqs: filters not applied from URL on load**: Pass server-parsed search params as `initialState` to the nuqs adapter. See the SSR Hydration section in [references/store-adapters.md](references/store-adapters.md).
+- **nuqs: phantom filters with empty string**: Use `field.string()` (null default), not `field.string().default("")`.
+- **Sheet dropdown missing**: `SheetField.type` must match the filter type (not `"readonly"`) to get the filter dropdown. Use `generateSheetFields()` to auto-derive from filter config.
+- **Filter not rendering**: Verify filter type string matches `FILTER_COMPONENTS` key.
+- **Tailwind v4**: Registry targets v4. Class syntax differs from v3.

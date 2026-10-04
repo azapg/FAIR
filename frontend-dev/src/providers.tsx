@@ -3,13 +3,12 @@ import {queryClient} from "@/lib/query-client";
 import {AuthProvider} from "@/contexts/auth-context";
 import {ThemeProvider} from "@/components/theme-provider"
 import {ReactNode, useEffect} from "react";
-import {SessionSocketProvider} from "@/contexts/session-socket-context";
 import {useVersionCheck} from "@/hooks/use-version";
 import { useTheme } from "@/components/theme-provider";
 import { useTranslation } from "react-i18next";
 import { useLocalPreference } from "@/hooks/use-local-preference";
 import { useUserSetting } from "@/hooks/use-user-settings";
-import type { LanguageCode, ThemeMode } from "@/hooks/use-preference-settings";
+import type { LanguageCode, ThemeMode, UiScale } from "@/hooks/use-preference-settings";
 import api from "@/lib/api";
 
 
@@ -30,6 +29,8 @@ function SettingsRuntime() {
     useLocalPreference<boolean | undefined>("ui.simpleView");
   const { value: localDevMode, setValue: setLocalDevMode } =
     useLocalPreference<boolean | undefined>("ui.devMode");
+  const { value: localUiScale, setValue: setLocalUiScale } =
+    useLocalPreference<UiScale | undefined>("ui.uiScale");
   const { setValue: setLocalEmailEnabled } =
     useLocalPreference<boolean>("features.emailEnabled");
 
@@ -37,11 +38,13 @@ function SettingsRuntime() {
   const languageServer = useUserSetting<LanguageCode>("preferences.language", "en").value;
   const simpleViewServer = useUserSetting<boolean>("preferences.simpleView", false).value;
   const devModeServer = useUserSetting<boolean>("preferences.devMode", false).value;
+  const uiScaleServer = useUserSetting<UiScale>("preferences.uiScale", "default").value;
 
   const resolvedTheme = localTheme ?? themeServer;
   const resolvedLanguage = localLanguage ?? languageServer;
   const resolvedSimpleView = localSimpleView ?? simpleViewServer;
   const resolvedDevMode = localDevMode ?? devModeServer;
+  const resolvedUiScale = localUiScale ?? uiScaleServer;
 
   useEffect(() => {
     if (localTheme === undefined) {
@@ -88,6 +91,14 @@ function SettingsRuntime() {
   }, [resolvedDevMode]);
 
   useEffect(() => {
+    document.documentElement.classList.toggle("ui-scale-compact", resolvedUiScale === "compact");
+    document.documentElement.classList.toggle(
+      "ui-scale-comfortable",
+      resolvedUiScale === "comfortable",
+    );
+  }, [resolvedUiScale]);
+
+  useEffect(() => {
     let active = true;
     const loadSystemConfig = async () => {
       try {
@@ -112,15 +123,13 @@ function SettingsRuntime() {
 export function Providers({children}: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionSocketProvider>
-        <ThemeProvider defaultTheme={"system"}>
-          <AuthProvider>
-            <VersionChecker />
-            <SettingsRuntime />
-            {children}
-          </AuthProvider>
-        </ThemeProvider>
-      </SessionSocketProvider>
+      <ThemeProvider defaultTheme={"system"}>
+        <AuthProvider>
+          <VersionChecker />
+          <SettingsRuntime />
+          {children}
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

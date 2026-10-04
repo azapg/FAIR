@@ -3,21 +3,18 @@ title: Inicio Rápido
 description: Cómo empezar con la Plataforma FAIR
 ---
 
-Esta página muestra la forma más rápida de comenzar a usar la **Plataforma FAIR**. Puedes probar nuestra instancia comunitaria en [platform.fairgradeproject.org](https://platform.fairgradeproject.org) o instalarla localmente en tu máquina. Ambas son, y siempre serán, completamente gratuitas.
+Esta página muestra la forma confiable más rápida de comenzar a usar la **Plataforma FAIR**: instalar la aplicación de código abierto localmente u operar tu propio despliegue.
 
 <Card
-title="Instancia Comunitaria"
-href="https://platform.fairgradeproject.org"
-arrow="true"
-cta="Explorar la instancia comunitaria"
+title="Estado de la instancia comunitaria pública"
 img="/assets/showcase.png"
 horizontal>
-Nuestra instancia comunitaria te permite explorar FAIR inmediatamente. Es la forma más rápida para educadores e investigadores de probar las funcionalidades sin necesidad de usar la terminal.
+La antigua instancia comunitaria pública de FAIR no está disponible actualmente. Es posible que se vuelva a desplegar en el futuro, pero su disponibilidad pública no está garantizada. Usa una instalación local o gestionada por un operador cuando necesites acceso confiable.
 </Card>
 
 ## ¿Qué debería usar?
-* La instancia comunitaria es perfecta para quienes quieren ver rápidamente la interfaz o comenzar a experimentar con las funcionalidades de inmediato.
-* La Instalación Local es ideal para instituciones que quieren control total sobre sus datos, o desarrolladores que buscan crear módulos personalizados y contribuir al proyecto.
+* Una instalación local es la vía disponible más rápida para evaluación, desarrollo e investigación reproducible.
+* Un despliegue gestionado por un operador es apropiado para instituciones que necesitan servicio duradero, registro controlado y límites explícitos de uso de IA.
 
 Para uso local, FAIR está diseñado para ser ligero: solo necesita un comando para instalar y un comando para ejecutar. No se requiere experiencia previa en programación.
 
@@ -65,7 +62,7 @@ Instalar FAIR es un proceso simple de tres pasos.
 
 
 ## La CLI
-El comando `fair` es tu punto de entrada para gestionar la plataforma. Puedes encontrar una lista completa de capacidades en nuestra [documentación de CLI](/en/cli).
+El comando `fair` es tu punto de entrada para gestionar la plataforma. Puedes encontrar una lista completa de capacidades en nuestra [documentación de CLI](/es/cli). Los operadores de instancias compartidas también deben revisar [Controles de admisión y costos de IA](/es/platform/access-controls).
 
 ## Solución de problemas
 Si algo no se ve correcto durante la instalación, consulta nuestra [guía de solución de problemas](/en/troubleshooting) o abre un issue en nuestro [GitHub](https://github.com/azapg/fair).

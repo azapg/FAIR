@@ -5,8 +5,9 @@ import logging
 
 import resend
 
+from fair_platform.backend.core.config import DEFAULT_EMAIL_SENDER
+
 logger = logging.getLogger(__name__)
-DEFAULT_EMAIL_SENDER = "FairGrade Platform <platform@fairgradeproject.org>"
 RESEND_API_ERROR = getattr(
     resend.exceptions,
     "APIError",

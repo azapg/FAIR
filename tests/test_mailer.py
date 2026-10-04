@@ -21,9 +21,14 @@ def test_get_mailer_uses_console_provider_without_resend_key(monkeypatch) -> Non
 def test_get_mailer_uses_resend_provider_with_resend_key(monkeypatch) -> None:
     monkeypatch.delenv("FAIR_RESEND_API_KEY", raising=False)
     monkeypatch.setenv("RESEND_API_KEY", "re_live_example")
+    monkeypatch.setenv(
+        "FAIR_EMAIL_SENDER",
+        "Example FAIR <platform@example.com>",
+    )
     mailer = get_mailer()
     assert isinstance(mailer.provider, ResendEmailProvider)
     assert mailer.provider.api_key == "re_live_example"
+    assert mailer.provider.sender == "Example FAIR <platform@example.com>"
 
 
 def test_resolve_email_templates_dir_contains_expected_templates() -> None:

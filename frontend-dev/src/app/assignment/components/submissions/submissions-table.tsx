@@ -17,13 +17,13 @@ import {
   DataTable,
   DataTableContent,
   DataTableEmpty,
-  DataTablePagination,
   DataTableSearch,
   useDataTableContext,
 } from "@/components/data-table";
 import {
   Submission,
   SubmissionStatus,
+  hasUnpublishedDraft,
   useReturnSubmissions,
 } from "@/hooks/use-submissions";
 import { SubmissionSheet } from "@/app/assignment/components/submissions/submission-sheet";
@@ -32,7 +32,6 @@ import { DOCS_BASE_URL } from "@/lib/constants";
 interface DataTableProps {
   columns: ColumnDef<Submission>[];
   data: Submission[];
-  onCreateSubmission?: () => void;
   canManage?: boolean;
 }
 
@@ -71,11 +70,7 @@ const SUBMISSION_VIEWS: Array<{
   },
 ];
 
-export function EmptyTableState({
-  onCreateSubmission,
-}: {
-  onCreateSubmission?: () => void;
-}) {
+export function EmptyTableState() {
   const { t } = useTranslation();
 
   return (
@@ -91,11 +86,6 @@ export function EmptyTableState({
       </EmptyHeader>
       <EmptyContent className="items-start lg:items-center">
         <div className="flex gap-2">
-          {onCreateSubmission && (
-            <Button variant="outline" onClick={onCreateSubmission}>
-              {t("submissions.addSubmissions")}
-            </Button>
-          )}
           <Button
             variant="link"
             asChild
@@ -130,11 +120,7 @@ function SubmissionsToolbar({
   const returnableSubmissionIds = table
     .getSelectedRowModel()
     .rows.map((row) => row.original)
-    .filter(
-      (submission) =>
-        submission.status !== "returned" &&
-        (submission.draftScore != null || submission.draftFeedback != null),
-    )
+    .filter(hasUnpublishedDraft)
     .map((submission) => submission.id);
 
   const hasReturnableSelection = returnableSubmissionIds.length > 0;
@@ -167,7 +153,6 @@ function SubmissionsToolbar({
 export function SubmissionsTable({
   columns,
   data,
-  onCreateSubmission,
   canManage = true,
 }: DataTableProps) {
   const { t } = useTranslation();
@@ -213,7 +198,6 @@ export function SubmissionsTable({
         columns={columns}
         filterKey="submitter.name"
         enableRowSelection={canManage}
-        enablePagination
         onRowSelectionChange={setRowSelection}
         state={{ rowSelection }}
         meta={{ onFeedbackClick }}
@@ -228,13 +212,9 @@ export function SubmissionsTable({
 
         <DataTableContent>
           <DataTableEmpty>
-            <EmptyTableState
-              onCreateSubmission={canManage ? onCreateSubmission : undefined}
-            />
+            <EmptyTableState />
           </DataTableEmpty>
         </DataTableContent>
-
-        <DataTablePagination />
       </DataTable>
 
       <SubmissionSheet

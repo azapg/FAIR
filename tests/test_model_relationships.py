@@ -44,7 +44,7 @@ class TestModelRelationships:
                 title="Implement a Web API",
                 description="Create a FastAPI application with authentication",
                 deadline=datetime.now() + timedelta(days=14),
-                max_grade={"points": 100},
+                max_grade={"type": "points", "value": 100},
             )
             session.add(assignment)
             session.commit()
@@ -117,7 +117,7 @@ class TestModelRelationships:
                 course_id=uuid4(),  # Non-existent course ID
                 title="Orphaned Assignment",
                 deadline=datetime.now() + timedelta(days=7),
-                max_grade={"points": 50},
+                max_grade={"type": "points", "value": 50},
             )
             session.add(assignment)
 
@@ -184,7 +184,7 @@ class TestModelRelationships:
                 course_id=course.id,
                 title="Future Assignment",
                 deadline=future_deadline,
-                max_grade={"points": 100},
+                max_grade={"type": "points", "value": 100},
             )
             session.add(assignment)
             session.commit()

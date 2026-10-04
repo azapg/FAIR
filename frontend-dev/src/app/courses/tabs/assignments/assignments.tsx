@@ -8,16 +8,15 @@ import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 import {Ellipsis, Pencil, Trash2} from "lucide-react";
 
 export type Grade = {
-  type: "percentage" | "points" | "letter" | "pass_fail";
-  value: number | string | boolean;
+  type: "points";
+  value: number;
 }
 
 export type CreateAssignmentForm = {
   title: string;
   description: string;
   dueDate: string; // yyyy-mm-dd
-  gradeType: Grade["type"] | "";
-  gradeValue: string; // number/letter/pass|fail as string
+  gradeValue: string;
 }
 
 export function useAssignmentColumns(options?: {
@@ -70,18 +69,7 @@ export function useAssignmentColumns(options?: {
       cell: info => {
         const grade = info.getValue() as Grade | undefined;
         if (!grade) return t("assignments.na");
-        switch (grade.type) {
-          case "percentage":
-            return `${grade.value}%`;
-          case "points":
-            return `${grade.value} pts`;
-          case "letter":
-            return grade.value;
-          case "pass_fail":
-            return (grade.value as boolean) ? t("assignments.pass") : t("assignments.fail");
-          default:
-          return t("assignments.na");
-        }
+        return `${grade.value} pts`;
       }
     },
     ];

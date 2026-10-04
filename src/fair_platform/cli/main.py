@@ -1,4 +1,6 @@
 import multiprocessing
+import os
+import signal
 import subprocess
 import tomllib
 import json
@@ -6,13 +8,18 @@ import sqlite3
 from collections import OrderedDict
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from uuid import uuid4
 
 import typer
 from typing_extensions import Annotated
 from fair_platform.backend.data.migrations import build_alembic_config
 from fair_platform.backend.api.routers.auth import hash_password
 from fair_platform.backend.data.database import SessionLocal
-from fair_platform.backend.data.models.user import User
+from fair_platform.backend.data.models.user import (
+    User,
+    UserRole,
+    normalize_email_address,
+)
 
 
 def _get_version() -> str:
@@ -34,6 +41,7 @@ def _get_version() -> str:
 
 __version__ = _get_version()
 _PROCESS_POLL_INTERVAL_SECONDS = 0.5
+_CREATE_NEW_PROCESS_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
 _DATA_TABLE_ORDER = [
     "users",
     "plugins",
@@ -88,14 +96,21 @@ def _run_server(host: str, port: int, headless: bool, dev: bool) -> None:
 
 def _start_backend_process(port: int, headless: bool) -> multiprocessing.Process:
     ctx = multiprocessing.get_context("spawn")
-    process = ctx.Process(target=_run_backend, kwargs={"port": port, "headless": headless})
+    process = ctx.Process(
+        target=_run_backend, kwargs={"port": port, "headless": headless}
+    )
     process.start()
     return process
 
 
 def _start_frontend_process(frontend_dir: Path) -> subprocess.Popen:
     try:
-        return subprocess.Popen(["bun", "dev"], cwd=frontend_dir)
+        process_options = (
+            {"creationflags": _CREATE_NEW_PROCESS_GROUP}
+            if _is_windows()
+            else {"start_new_session": True}
+        )
+        return subprocess.Popen(["bun", "dev"], cwd=frontend_dir, **process_options)
     except FileNotFoundError as exc:
         typer.echo(
             "Error: bun is required to run the frontend dev server. Install Bun from https://bun.sh."
@@ -112,14 +127,38 @@ def _stop_backend(process: multiprocessing.Process) -> None:
         process.join(timeout=5)
 
 
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+
 def _stop_frontend(process: subprocess.Popen) -> None:
-    if process.poll() is None:
-        process.terminate()
+    if process.poll() is not None:
+        return
+
+    if _is_windows():
+        subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
+        return
+
+    try:
+        process_group = os.getpgid(process.pid)
+        os.killpg(process_group, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        os.killpg(process_group, signal.SIGKILL)
+        process.wait(timeout=5)
 
 
 def version_callback(value: bool):
@@ -131,8 +170,94 @@ def version_callback(value: bool):
 app = typer.Typer()
 db_app = typer.Typer(help="Manage database migrations")
 users_app = typer.Typer(help="Manage users")
+ext_app = typer.Typer(help="Manage extensions")
 app.add_typer(db_app, name="db")
 app.add_typer(users_app, name="users")
+app.add_typer(ext_app, name="ext")
+
+
+@ext_app.command("bootstrap")
+def ext_bootstrap(
+    extension_id: Annotated[str, typer.Argument(help="e.g. fair.demo.tutor")],
+    effects: Annotated[
+        str,
+        typer.Option(
+            "--allow",
+            help="Comma-separated effects to grant platform-wide, e.g. feedback:write",
+        ),
+    ] = "",
+):
+    """Issue a runner credential for an Extension and allow its effects.
+
+    This is the one-time step before `bun run dev` in an extension project.
+    It prints the secret once -- FAIR only stores its hash.
+    """
+    from fair_platform.backend.services.extension_auth import issue_extension_secret
+    from fair_platform.backend.data.models.extension import (
+        ExtensionGrant,
+        GrantDecision,
+    )
+
+    requested = [item.strip() for item in effects.split(",") if item.strip()]
+    with SessionLocal() as session:
+        issued = issue_extension_secret(
+            session,
+            extension_id=extension_id,
+            # Exactly two powers: claim its own work, and describe itself.
+            # Educational data is never reachable with this credential.
+            scopes=["runner:commands", "extensions:self"],
+            enabled=True,
+        )
+
+        installation = _find_installation(session, extension_id)
+        for effect in requested:
+            if installation is None:
+                break
+            exists = any(
+                grant.effect == effect
+                and grant.capability_definition_id is None
+                and grant.course_id is None
+                and grant.assignment_id is None
+                for grant in installation.grants
+            )
+            if not exists:
+                session.add(
+                    ExtensionGrant(
+                        installation_id=installation.id,
+                        effect=effect,
+                        decision=GrantDecision.allow,
+                        reason="granted by `fair ext bootstrap`",
+                    )
+                )
+        session.commit()
+
+    typer.echo(f"Extension:  {issued.extension_id}")
+    typer.echo(f"Secret:     {issued.secret}")
+    typer.echo(f"Scopes:     {', '.join(issued.scopes)}")
+    if requested:
+        if installation is None:
+            typer.echo(
+                "Effects:    deferred -- start the Extension once so it can "
+                "sync its manifest, then re-run this command to grant them."
+            )
+        else:
+            typer.echo(f"Effects:    {', '.join(requested)} (allowed platform-wide)")
+    typer.echo("")
+    typer.echo("Add these to your extension's .env:")
+    typer.echo("  FAIR_PLATFORM_URL=http://127.0.0.1:8000")
+    typer.echo(f"  FAIR_EXTENSION_SECRET={issued.secret}")
+
+
+def _find_installation(session, extension_id: str):
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from fair_platform.backend.data.models import ExtensionInstallation
+
+    return session.scalar(
+        select(ExtensionInstallation)
+        .options(selectinload(ExtensionInstallation.grants))
+        .where(ExtensionInstallation.extension_id == extension_id)
+    )
 
 
 @app.callback()
@@ -242,7 +367,9 @@ def _migrate_sqlite_to_postgres(
     sqlite_conn.row_factory = sqlite3.Row
     migrated: OrderedDict[str, int] = OrderedDict()
 
-    pg_dsn_for_psycopg = normalized_target.replace("postgresql+psycopg://", "postgresql://", 1)
+    pg_dsn_for_psycopg = normalized_target.replace(
+        "postgresql+psycopg://", "postgresql://", 1
+    )
     pg_conn = psycopg.connect(pg_dsn_for_psycopg)
     pg_conn.autocommit = False
 
@@ -285,7 +412,9 @@ def _migrate_sqlite_to_postgres(
                 cols = list(rows[0].keys())
                 quoted_cols = ", ".join(f'"{c}"' for c in cols)
                 placeholders = ", ".join(["%s"] * len(cols))
-                insert_sql = f'INSERT INTO "{table}" ({quoted_cols}) VALUES ({placeholders})'
+                insert_sql = (
+                    f'INSERT INTO "{table}" ({quoted_cols}) VALUES ({placeholders})'
+                )
                 if on_conflict == "skip":
                     insert_sql += " ON CONFLICT DO NOTHING"
 
@@ -306,7 +435,9 @@ def _migrate_sqlite_to_postgres(
                                     parsed = v
                             else:
                                 parsed = v
-                            converted.append(Jsonb(parsed) if dtype == "jsonb" else parsed)
+                            converted.append(
+                                Jsonb(parsed) if dtype == "jsonb" else parsed
+                            )
                         elif dtype == "boolean" and isinstance(v, int):
                             converted.append(bool(v))
                         else:
@@ -352,10 +483,12 @@ def db_migrate_sqlite_to_postgres(
         str, typer.Option("--on-conflict", help="error|skip conflict handling")
     ] = "error",
     dry_run: Annotated[
-        bool, typer.Option("--dry-run", help="Parse and validate rows, but do not persist")
+        bool,
+        typer.Option("--dry-run", help="Parse and validate rows, but do not persist"),
     ] = False,
     verify: Annotated[
-        bool, typer.Option("--verify", help="Validate destination row counts after copy")
+        bool,
+        typer.Option("--verify", help="Validate destination row counts after copy"),
     ] = False,
 ):
     if on_conflict not in {"error", "skip"}:
@@ -377,6 +510,9 @@ def db_migrate_sqlite_to_postgres(
 
 @app.command()
 def serve(
+    host: Annotated[
+        str, typer.Option("--host", help="Host interface to bind the server to")
+    ] = "127.0.0.1",
     port: Annotated[
         int, typer.Option("--port", "-p", help="Port to run the development server on")
     ] = 3000,
@@ -390,20 +526,25 @@ def serve(
     # Check for updates unless disabled
     if not no_update_check:
         from fair_platform.utils.version import check_for_updates
+
         check_for_updates()
 
-    _run_server(host="127.0.0.1", port=port, headless=headless, dev=False)
+    _run_server(host=host, port=port, headless=headless, dev=False)
 
 
 @app.command()
 def dev(
-    port: Annotated[int, typer.Option("--port", "-p", help="Backend port to use")] = 8000,
+    port: Annotated[
+        int, typer.Option("--port", "-p", help="Backend port to use")
+    ] = 8000,
     no_frontend: Annotated[
         bool, typer.Option("--no-frontend", help="Disable frontend dev server")
     ] = False,
     no_headless: Annotated[
         bool,
-        typer.Option("--no-headless", help="Serve the bundled frontend from the backend"),
+        typer.Option(
+            "--no-headless", help="Serve the bundled frontend from the backend"
+        ),
     ] = False,
 ):
     frontend_process = None
@@ -448,8 +589,16 @@ def reset_user_password(
         ),
     ],
 ):
+    try:
+        normalized_email = normalize_email_address(email)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
     with SessionLocal() as session:
-        user = session.query(User).filter(User.email == email).first()
+        user = (
+            session.query(User)
+            .filter(User.normalized_email == normalized_email)
+            .first()
+        )
         if user is None:
             typer.echo(f"User not found: {email}")
             raise typer.Exit(code=1)
@@ -459,6 +608,53 @@ def reset_user_password(
         session.commit()
 
     typer.echo(f"Password reset for {email}")
+
+
+@users_app.command("create-admin")
+def create_admin_user(
+    email: Annotated[str, typer.Argument(help="Email for the administrator")],
+    name: Annotated[str, typer.Option("--name", help="Administrator display name")],
+    password: Annotated[
+        str,
+        typer.Option(
+            "--password",
+            help="Password for the account",
+            prompt=True,
+            hide_input=True,
+            confirmation_prompt=True,
+        ),
+    ],
+):
+    """Create the first verified administrator without using public registration."""
+    if len(password) < 8:
+        raise typer.BadParameter("password must be at least 8 characters")
+    try:
+        normalized_email = normalize_email_address(email)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    with SessionLocal() as session:
+        existing = (
+            session.query(User)
+            .filter(User.normalized_email == normalized_email)
+            .first()
+        )
+        if existing is not None:
+            typer.echo(f"User already exists: {normalized_email}")
+            raise typer.Exit(code=1)
+        user = User(
+            id=uuid4(),
+            name=name.strip(),
+            email=email.strip(),
+            normalized_email=normalized_email,
+            role=UserRole.admin.value,
+            password_hash=hash_password(password),
+            is_verified=True,
+        )
+        session.add(user)
+        session.commit()
+
+    typer.echo(f"Administrator created: {normalized_email}")
 
 
 if __name__ == "__main__":

@@ -30,6 +30,25 @@ class InterruptingBackendProcess(StubBackendProcess):
         raise KeyboardInterrupt
 
 
+class StubFrontendProcess:
+    pid = 4321
+
+    def __init__(self):
+        self.returncode = None
+        self.wait_calls = []
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        self.wait_calls.append(timeout)
+        self.returncode = 0
+        return self.returncode
+
+    def kill(self):
+        self.returncode = -9
+
+
 def test_dev_command_runs_backend_only_when_frontend_disabled(monkeypatch):
     runner = CliRunner()
     backend_calls = {}
@@ -110,6 +129,40 @@ def test_dev_command_handles_keyboard_interrupt(monkeypatch):
     assert backend in stopped
 
 
+def test_frontend_starts_in_a_separate_windows_process_group(monkeypatch, tmp_path):
+    captured = {}
+    frontend = StubFrontendProcess()
+
+    def fake_popen(command, **kwargs):
+        captured["command"] = command
+        captured["kwargs"] = kwargs
+        return frontend
+
+    monkeypatch.setattr(cli_main, "_is_windows", lambda: True)
+    monkeypatch.setattr(cli_main.subprocess, "Popen", fake_popen)
+
+    assert cli_main._start_frontend_process(tmp_path) is frontend
+    assert captured["command"] == ["bun", "dev"]
+    assert captured["kwargs"]["creationflags"] == cli_main._CREATE_NEW_PROCESS_GROUP
+
+
+def test_frontend_shutdown_kills_windows_process_tree(monkeypatch):
+    frontend = StubFrontendProcess()
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+
+    monkeypatch.setattr(cli_main, "_is_windows", lambda: True)
+    monkeypatch.setattr(cli_main.subprocess, "run", fake_run)
+
+    cli_main._stop_frontend(frontend)
+
+    assert calls[0][0] == ["taskkill", "/PID", "4321", "/T", "/F"]
+    assert calls[0][1]["check"] is False
+    assert frontend.wait_calls == [5]
+
+
 def test_db_upgrade_command_invokes_alembic(monkeypatch):
     runner = CliRunner()
     captured = {}
@@ -181,7 +234,10 @@ def test_db_migrate_sqlite_to_postgres_invokes_copy(monkeypatch):
 
     assert result.exit_code == 0
     assert captured["from_sqlite"] == Path("new.db")
-    assert captured["to_postgres"] == "postgresql://postgres:postgres@localhost:55432/postgres"
+    assert (
+        captured["to_postgres"]
+        == "postgresql://postgres:postgres@localhost:55432/postgres"
+    )
     assert captured["on_conflict"] == "skip"
     assert captured["dry_run"] is True
     assert captured["verify"] is True
@@ -233,6 +289,7 @@ class _FakeSession:
     def __init__(self, user):
         self.user = user
         self.committed = False
+        self.added = []
 
     def __enter__(self):
         return self
@@ -243,8 +300,8 @@ class _FakeSession:
     def query(self, _model):
         return _FakeQuery(self.user)
 
-    def add(self, _item):
-        return None
+    def add(self, item):
+        self.added.append(item)
 
     def commit(self):
         self.committed = True
@@ -262,7 +319,9 @@ def test_users_reset_password_updates_hash(monkeypatch):
     fake_session = _FakeSession(fake_user)
 
     monkeypatch.setattr(cli_main, "SessionLocal", lambda: fake_session)
-    monkeypatch.setattr(cli_main, "hash_password", lambda password: f"hashed::{password}")
+    monkeypatch.setattr(
+        cli_main, "hash_password", lambda password: f"hashed::{password}"
+    )
 
     result = runner.invoke(
         cli_main.app,
@@ -273,6 +332,38 @@ def test_users_reset_password_updates_hash(monkeypatch):
     assert fake_user.password_hash == "hashed::new-secret"
     assert fake_session.committed is True
     assert "Password reset for student@test.com" in result.output
+
+
+def test_users_create_admin_bootstraps_verified_account(monkeypatch):
+    runner = CliRunner()
+    fake_session = _FakeSession(None)
+
+    monkeypatch.setattr(cli_main, "SessionLocal", lambda: fake_session)
+    monkeypatch.setattr(
+        cli_main, "hash_password", lambda password: f"hashed::{password}"
+    )
+
+    result = runner.invoke(
+        cli_main.app,
+        [
+            "users",
+            "create-admin",
+            "ADMIN@EXAMPLE.edu",
+            "--name",
+            "Bootstrap Admin",
+            "--password",
+            "safe-password",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert fake_session.committed is True
+    assert len(fake_session.added) == 1
+    created = fake_session.added[0]
+    assert created.normalized_email == "admin@example.edu"
+    assert created.role == "admin"
+    assert created.is_verified is True
+    assert created.password_hash == "hashed::safe-password"
 
 
 def test_users_reset_password_returns_error_for_unknown_email(monkeypatch):

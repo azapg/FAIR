@@ -35,6 +35,7 @@ frontend-dev/pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 frontend-dev/.vercel
@@ -73,3 +74,7 @@ docs/dist
 
 # misc
 docs/.DS_Store
+
+# Extension SDK workspace (bun)
+node_modules/
+sdk/typescript/dist

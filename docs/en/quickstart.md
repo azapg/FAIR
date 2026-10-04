@@ -3,21 +3,18 @@ title: Quickstart
 description: How to get started with FAIR Platform
 ---
 
-This page shows the fastest way to start using **FAIR Platform**. You can either try our community instance at [platform.fairgradeproject.org](https://platform.fairgradeproject.org) or install it locally on your machine. Both are, and will always be, completely free.
+This page shows the fastest dependable way to start using **FAIR Platform**: install the open-source application locally or operate your own deployment.
 
 <Card
-title="Community Instance"
-href="https://platform.fairgradeproject.org"
-arrow="true"
-cta="Explore the community instance"
+title="Public community instance status"
 img="/assets/showcase.png"
 horizontal>
-Our community instance lets you explore FAIR immediately. It’s the quickest way for educators and researchers to test features without needing to touch a terminal.
+FAIR's former public community instance is currently offline. It may be redeployed in the future, but public availability is not guaranteed. Use a local or operator-managed deployment when you need reliable access.
 </Card>
 
 ## What should I use?
-* The community instance is perfect for those who want a quick look at the interface or want to start experimenting with features right away.
-* The Local Installation is ideal for institutions that want full control over their data, or developers looking to build custom modules and contribute to the project.
+* A local installation is the quickest available route for evaluation, development, and reproducible research.
+* An operator-managed deployment is appropriate for institutions that need durable service, controlled registration, and explicit AI usage limits.
 
 For local use, FAIR is designed to be lightweight: it only needs one command to install and one command to run. No prior programming experience is required.
 
@@ -65,7 +62,7 @@ Installing FAIR is a simple three-step process.
     
     
 ## The CLI
-The `fair` command is your entry point for managing the platform. You can find a full list of capabilities in our [CLI documentation](/en/cli).
+The `fair` command is your entry point for managing the platform. You can find a full list of capabilities in our [CLI documentation](/en/cli). Operators of shared instances should also review [Admission and AI cost controls](/en/platform/access-controls).
 
 ## Troubleshooting
 If something doesn't look right during installation, please refer to our [troubleshooting guide](/en/troubleshooting) or open an issue on our [GitHub](https://github.com/azapg/fair).

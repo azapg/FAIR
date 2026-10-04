@@ -24,13 +24,14 @@ import { DOCS_BASE_URL } from "@/lib/constants"
 interface DataTableProps {
   columns: ColumnDef<Assignment>[]
   data: Assignment[]
+  courseId?: string
 }
 
 export function AssignmentsTable({
   columns,
   data,
-  onCreateAssignment,
-}: DataTableProps & { onCreateAssignment?: () => void }) {
+  courseId,
+}: DataTableProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -41,7 +42,11 @@ export function AssignmentsTable({
       filterKey="title"
       onRowClick={(row) => {
         if (row.id) {
-          navigate(row.id, { relative: "path" })
+          if (courseId) {
+            navigate(`/courses/${courseId}/assignments/${row.id}`)
+          } else {
+            navigate(row.id, { relative: "path" })
+          }
         }
       }}
     >
@@ -63,11 +68,6 @@ export function AssignmentsTable({
             </EmptyHeader>
             <EmptyContent className="items-start lg:items-center">
               <div className="flex gap-2">
-                {onCreateAssignment && (
-                  <Button variant="outline" onClick={onCreateAssignment}>
-                    {t("assignments.createAssignment")}
-                  </Button>
-                )}
                 <Button
                   variant="link"
                   asChild

@@ -39,7 +39,8 @@ class TestAtomicSubmissionCreation:
                 name="Professor",
                 email="prof@test.com",
                 role=UserRole.professor,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
             
             student_id = uuid4()
@@ -48,7 +49,8 @@ class TestAtomicSubmissionCreation:
                 name="Student",
                 email="student@test.com",
                 role=UserRole.student,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
             
             session.add_all([professor, student])
@@ -69,7 +71,7 @@ class TestAtomicSubmissionCreation:
                 title="Test Assignment",
                 description="Assignment for submission testing",
                 deadline=datetime.now() + timedelta(days=7),
-                max_grade={"points": 100}
+                max_grade={"type": "points", "value": 100}
             )
             session.add(assignment)
             session.commit()
@@ -252,7 +254,8 @@ class TestAtomicSubmissionCreation:
                 name="Other Professor",
                 email="other_prof@test.com",
                 role=UserRole.professor,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
             
             session.add(other_prof)
@@ -313,7 +316,8 @@ class TestAtomicSubmissionCreation:
                 name="Professor",
                 email="prof@test.com",
                 role=UserRole.professor,
-                password_hash=hash_password("test_password_123")
+                password_hash=hash_password("test_password_123"),
+                is_verified=True,
             )
             
             session.add(professor)
@@ -334,7 +338,7 @@ class TestAtomicSubmissionCreation:
                 title="Past Due Assignment",
                 description="Assignment with past deadline",
                 deadline=datetime.now() - timedelta(days=1),  # Past deadline
-                max_grade={"points": 100}
+                max_grade={"type": "points", "value": 100}
             )
             session.add(assignment)
             session.commit()
@@ -579,14 +583,14 @@ class TestAtomicSubmissionCreation:
         artifact_id = artifact["id"]
         
         # Test student can access their submission artifact
-        response = test_client.get(f"/api/artifacts/{artifact_id}", headers=headers)
+        response = test_client.get(f"/api/v1/artifacts/{artifact_id}", headers=headers)
         assert response.status_code == 200
         
         # Test professor can access submission artifact
         prof_token = get_auth_token(test_client, data["professor_email"])
         prof_headers = {"Authorization": f"Bearer {prof_token}"}
         
-        response = test_client.get(f"/api/artifacts/{artifact_id}", headers=prof_headers)
+        response = test_client.get(f"/api/v1/artifacts/{artifact_id}", headers=prof_headers)
         assert response.status_code == 200
 
     # TODO(2026-02-05): Disabled failing test `test_submission_timestamps_and_metadata`. See tests/TODO.md.

@@ -1,32 +1,56 @@
 from uuid import UUID, uuid4
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Form
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    status,
+    UploadFile,
+    File,
+    Form,
+)
+from pydantic import ValidationError
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.data.models.assignment import (
     Assignment,
+    AssignmentStatus,
 )
 from fair_platform.backend.data.models.submission import Submission
 from fair_platform.backend.data.models.course import Course
+from fair_platform.backend.data.models.rubric import Rubric
 from fair_platform.backend.data.models.artifact import ArtifactStatus, AccessLevel
 from fair_platform.backend.api.schema.assignment import (
     AssignmentRead,
     AssignmentUpdate,
+    AssignmentStatusUpdate,
+    PointsGrade,
 )
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.core.security.permissions import (
-    has_capability,
-    has_capability_and_owner,
-)
+from fair_platform.backend.core.security.permissions import has_capability
 from fair_platform.backend.data.models.user import User
-from fair_platform.backend.data.models.enrollment import Enrollment
+from fair_platform.backend.data.models.enrollment import (
+    CourseMembershipRole,
+    Enrollment,
+    EnrollmentStatus,
+)
 from fair_platform.backend.services.artifact_manager import get_artifact_manager
+from fair_platform.backend.services.course_access import can_manage_course
+from fair_platform.backend.services.course_content_service import CourseContentService
+from fair_platform.backend.services.notifications import notify_course_members
+from fair_platform.backend.services.gradebook import (
+    delete_assignment_grade_item,
+    ensure_assignment_grade_item,
+)
 
 router = APIRouter()
+
 
 @router.post("/", response_model=AssignmentRead, status_code=status.HTTP_201_CREATED)
 async def create_assignment(
@@ -34,9 +58,11 @@ async def create_assignment(
     title: str = Form(...),
     description: str = Form(None),
     deadline: str = Form(None),
-    max_grade: str = Form(None),
+    max_grade: str = Form(...),
     artifact_ids: str = Form(None),
     files: List[UploadFile] = File(None),
+    allow_resubmissions: bool = Form(True),
+    rubric_id: UUID | None = Form(None),
     db: Session = Depends(session_dependency),
     current_user: User = Depends(get_current_user),
 ):
@@ -52,7 +78,7 @@ async def create_assignment(
     - title: Assignment title (required)
     - description: Optional description text
     - deadline: Optional deadline in ISO format (YYYY-MM-DDTHH:MM:SS)
-    - max_grade: Optional JSON object with grade structure: {"type": "points", "value": 100}
+    - max_grade: JSON object with point scale: {"type": "points", "value": 100}
     - artifact_ids: Optional JSON array of existing artifact UUIDs: ["uuid1", "uuid2"]
     - files: Optional list of files to upload as new artifacts
     """
@@ -61,22 +87,25 @@ async def create_assignment(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
-    if not has_capability_and_owner(current_user, "create_assignment", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can create assignments",
         )
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
+        )
 
     try:
-        max_grade_dict = None
-        if max_grade:
-            try:
-                max_grade_dict = json.loads(max_grade)
-            except json.JSONDecodeError:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid max_grade JSON. Expected format: {\"type\": \"points\", \"value\": 100}"
-                )
+        try:
+            max_grade_dict = PointsGrade.model_validate_json(max_grade).model_dump()
+        except (ValidationError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Invalid max_grade. Expected {"type": "points", "value": <positive number>}',
+            )
 
         existing_artifact_ids = []
         if artifact_ids:
@@ -87,7 +116,7 @@ async def create_assignment(
             except (json.JSONDecodeError, ValueError) as e:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}"
+                    detail=f"Invalid artifact_ids JSON. Expected array of UUIDs: {str(e)}",
                 )
 
         deadline_dt = None
@@ -97,8 +126,24 @@ async def create_assignment(
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid deadline format. Use ISO format (YYYY-MM-DDTHH:MM:SS)"
+                    detail="Invalid deadline format. Use ISO format (YYYY-MM-DDTHH:MM:SS)",
                 )
+
+        rubric = db.get(Rubric, rubric_id) if rubric_id is not None else None
+        if rubric_id is not None and rubric is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Rubric not found",
+            )
+        if (
+            rubric is not None
+            and rubric.created_by_id != current_user.id
+            and not has_capability(current_user, "admin")
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the rubric owner can attach it to an assignment",
+            )
 
         assignment = Assignment(
             id=uuid4(),
@@ -107,20 +152,26 @@ async def create_assignment(
             description=description,
             deadline=deadline_dt,
             max_grade=max_grade_dict,
+            status=AssignmentStatus.draft,
+            allow_resubmissions=allow_resubmissions,
+            rubric_id=rubric_id,
         )
         db.add(assignment)
         db.flush()
+        ensure_assignment_grade_item(db, assignment)
 
         manager = get_artifact_manager(db)
 
         if existing_artifact_ids:
             for artifact_id in existing_artifact_ids:
                 try:
-                    manager.attach_to_assignment(UUID(artifact_id), assignment.id, current_user)
+                    manager.attach_to_assignment(
+                        UUID(artifact_id), assignment.id, current_user
+                    )
                 except ValueError:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Invalid artifact ID format: {artifact_id}"
+                        detail=f"Invalid artifact ID format: {artifact_id}",
                     )
 
         if files:
@@ -146,7 +197,7 @@ async def create_assignment(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create assignment: {str(e)}"
+            detail=f"Failed to create assignment: {str(e)}",
         )
 
 
@@ -168,31 +219,41 @@ def list_assignments(
 
     if has_capability(current_user, "view_all_assignments"):
         return query.all()
-    elif not has_capability(current_user, "create_assignment"):
-        # Students see assignments from courses they are enrolled in
-        assignments = (
-            query.join(Course)
-            .join(Enrollment, Enrollment.course_id == Course.id)
-            .filter(Enrollment.user_id == current_user.id)
-            .all()
+    assignments = (
+        query.join(Course)
+        .outerjoin(
+            Enrollment,
+            and_(
+                Enrollment.course_id == Course.id,
+                Enrollment.user_id == current_user.id,
+                Enrollment.status == EnrollmentStatus.active,
+            ),
         )
-        return assignments
-    else:
-        # Instructors in community mode can also see courses where they are enrolled.
-        assignments = (
-            query.join(Course)
-            .outerjoin(Enrollment, Enrollment.course_id == Course.id)
-            .filter(
-                (Course.instructor_id == current_user.id)
-                | (Enrollment.user_id == current_user.id)
+        .filter(
+            or_(
+                Course.instructor_id == current_user.id,
+                and_(
+                    Enrollment.role == CourseMembershipRole.assistant,
+                    Enrollment.user_id == current_user.id,
+                ),
+                and_(
+                    Enrollment.user_id == current_user.id,
+                    Assignment.status == AssignmentStatus.published,
+                ),
             )
-            .distinct()
-            .all()
         )
-        return assignments
+        .distinct()
+        .all()
+    )
+    return assignments
+
 
 @router.get("/{assignment_id}", response_model=AssignmentRead)
-def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency), current_user: User = Depends(get_current_user)):
+def get_assignment(
+    assignment_id: UUID,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
     assignment = db.get(Assignment, assignment_id)
     if not assignment:
         raise HTTPException(
@@ -205,12 +266,13 @@ def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_and_owner(current_user, "manage_assignment", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         enrollment = (
             db.query(Enrollment)
             .filter(
                 Enrollment.user_id == current_user.id,
                 Enrollment.course_id == course.id,
+                Enrollment.status == EnrollmentStatus.active,
             )
             .first()
         )
@@ -219,6 +281,8 @@ def get_assignment(assignment_id: UUID, db: Session = Depends(session_dependency
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only the course instructor, admin, or enrolled users can view this assignment",
             )
+        if assignment.status != AssignmentStatus.published:
+            raise HTTPException(status_code=404, detail="Assignment not found")
 
     return assignment
 
@@ -242,10 +306,15 @@ def update_assignment(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
 
-    if not has_capability_and_owner(current_user, "manage_assignment", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can update this assignment",
+        )
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
         )
 
     if payload.title is not None:
@@ -255,9 +324,26 @@ def update_assignment(
     if payload.deadline is not None:
         assignment.deadline = payload.deadline
     if payload.max_grade is not None:
-        assignment.max_grade = payload.max_grade
+        assignment.max_grade = payload.max_grade.model_dump()
+    if payload.allow_resubmissions is not None:
+        assignment.allow_resubmissions = payload.allow_resubmissions
+    if "rubric_id" in payload.model_fields_set:
+        rubric = db.get(Rubric, payload.rubric_id) if payload.rubric_id else None
+        if payload.rubric_id is not None and rubric is None:
+            raise HTTPException(status_code=400, detail="Rubric not found")
+        if (
+            rubric is not None
+            and rubric.created_by_id != current_user.id
+            and not has_capability(current_user, "admin")
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Only the rubric owner can attach it to an assignment",
+            )
+        assignment.rubric_id = payload.rubric_id
 
     db.add(assignment)
+    ensure_assignment_grade_item(db, assignment)
     db.commit()
 
     # TODO: Handle artifact updates if provided in payload
@@ -284,25 +370,70 @@ def delete_assignment(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Course not found"
         )
 
-    if not has_capability_and_owner(current_user, "manage_assignment", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can delete this assignment",
         )
+    if course.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Archived courses are read-only",
+        )
 
-    submissions = (
-        db.query(Submission)
-        .filter(Submission.assignment_id == assignment_id)
-        .all()
-    )
-    for submission in submissions:
-        submission.artifacts.clear()
-        submission.runs.clear()
-        db.delete(submission)
+    try:
+        CourseContentService(db).remove_resource_links("assignment", assignment_id)
+        submissions = (
+            db.query(Submission)
+            .filter(Submission.assignment_id == assignment_id)
+            .all()
+        )
+        for submission in submissions:
+            submission.artifacts.clear()
+            submission.runs.clear()
+            db.delete(submission)
 
-    db.delete(assignment)
-    db.commit()
+        delete_assignment_grade_item(db, assignment)
+        db.delete(assignment)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return None
+
+
+@router.patch("/{assignment_id}/status", response_model=AssignmentRead)
+def update_assignment_status(
+    assignment_id: UUID,
+    payload: AssignmentStatusUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    assignment = db.get(Assignment, assignment_id)
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    course = db.get(Course, assignment.course_id)
+    if not course or not can_manage_course(db, course, current_user):
+        raise HTTPException(
+            status_code=403, detail="Only course staff can change publication status"
+        )
+    if course.is_archived:
+        raise HTTPException(status_code=400, detail="Archived courses are read-only")
+    assignment.status = payload.status
+    if payload.status == AssignmentStatus.published and assignment.published_at is None:
+        assignment.published_at = datetime.now(timezone.utc)
+        notify_course_members(
+            db,
+            course_id=course.id,
+            kind="assignment_published",
+            title=f"New assignment: {assignment.title}",
+            body=assignment.description,
+            link=f"/courses/{course.id}/assignments/{assignment.id}",
+            exclude_user_id=current_user.id,
+        )
+    db.commit()
+    db.refresh(assignment)
+    return assignment
 
 
 __all__ = ["router"]

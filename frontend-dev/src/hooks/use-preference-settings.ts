@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/auth-context";
 
 export type ThemeMode = "system" | "light" | "dark";
 export type LanguageCode = "en" | "es";
+export type UiScale = "compact" | "default" | "comfortable";
 
 const normalizeLanguage = (lang: string | undefined): LanguageCode =>
   lang?.toLowerCase().startsWith("es") ? "es" : "en";
@@ -21,21 +22,25 @@ export function usePreferenceSettings() {
   const localLanguage = useLocalPreference<LanguageCode | undefined>("ui.language").value;
   const localSimpleView = useLocalPreference<boolean | undefined>("ui.simpleView").value;
   const localDevMode = useLocalPreference<boolean | undefined>("ui.devMode").value;
+  const localUiScale = useLocalPreference<UiScale | undefined>("ui.uiScale").value;
 
   const setLocalTheme = useLocalPreference<ThemeMode>("ui.theme").setValue;
   const setLocalLanguage = useLocalPreference<LanguageCode>("ui.language").setValue;
   const setLocalSimpleView = useLocalPreference<boolean>("ui.simpleView").setValue;
   const setLocalDevMode = useLocalPreference<boolean>("ui.devMode").setValue;
+  const setLocalUiScale = useLocalPreference<UiScale>("ui.uiScale").setValue;
 
   const serverTheme = useUserSetting<ThemeMode>("preferences.theme", "system").value;
   const serverLanguage = useUserSetting<LanguageCode>("preferences.language", "en").value;
   const serverSimpleView = useUserSetting<boolean>("preferences.simpleView", false).value;
   const serverDevMode = useUserSetting<boolean>("preferences.devMode", false).value;
+  const serverUiScale = useUserSetting<UiScale>("preferences.uiScale", "default").value;
 
   const effectiveTheme = localTheme ?? serverTheme ?? (theme as ThemeMode);
   const effectiveLanguage = localLanguage ?? serverLanguage ?? normalizeLanguage(i18n.language);
   const effectiveSimpleView = localSimpleView ?? serverSimpleView ?? false;
   const effectiveDevMode = localDevMode ?? serverDevMode ?? false;
+  const effectiveUiScale = localUiScale ?? serverUiScale ?? "default";
 
   const setThemePreference = (nextTheme: ThemeMode) => {
     setTheme(nextTheme);
@@ -67,15 +72,24 @@ export function usePreferenceSettings() {
     }
   };
 
+  const setUiScalePreference = (nextUiScale: UiScale) => {
+    setLocalUiScale(nextUiScale);
+    if (isAuthenticated) {
+      updateSetting.mutate({ path: "preferences.uiScale", value: nextUiScale });
+    }
+  };
+
   return {
     effectiveTheme,
     effectiveLanguage,
     effectiveSimpleView,
     effectiveDevMode,
+    effectiveUiScale,
     setThemePreference,
     setLanguagePreference,
     setSimpleViewPreference,
     setDevModePreference,
+    setUiScalePreference,
     isSaving: updateSetting.isPending,
   };
 }

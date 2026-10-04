@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+
 import appdirs
 
 
@@ -7,7 +9,12 @@ class PlatformStorage:
         self.app_name = "fair-platform"
         self.app_author = "fair-group"
 
-        self.data_dir = Path(appdirs.user_data_dir(self.app_name, self.app_author))
+        configured_data_dir = os.getenv("FAIR_DATA_DIR", "").strip()
+        self.data_dir = (
+            Path(configured_data_dir).expanduser()
+            if configured_data_dir
+            else Path(appdirs.user_data_dir(self.app_name, self.app_author))
+        )
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         self.config_dir = Path(appdirs.user_config_dir(self.app_name, self.app_author))

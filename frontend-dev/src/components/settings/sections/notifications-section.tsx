@@ -59,7 +59,7 @@ export function NotificationsSection() {
     >
       {NOTIFICATION_GROUPS.map((group) => (
         <div key={group.titleKey} className="space-y-2">
-          <h4 className="text-sm font-semibold text-foreground">{t(group.titleKey)}</h4>
+          <h4 className="text-[13px] leading-4 font-medium text-foreground">{t(group.titleKey)}</h4>
           <div className="space-y-1">
             {group.items.map((item) => {
               const path = `notifications.${item.key}`;
