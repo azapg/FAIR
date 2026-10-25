@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
@@ -90,12 +90,14 @@ def require_extension_client(
 
 
 def get_artifact_download_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(session_dependency),
 ) -> User:
     """Auth dependency for the artifact download endpoint.
 
-    Accepts two token types:
+    Uses normal session authentication for cookie-only browser requests.
+    Explicit bearer credentials accept two token types:
     1. Regular user session JWT (no 'purpose' claim) — standard login token.
     2. Extension job delegation token ('purpose': 'ext_job') — issued at job
        creation, encodes the user on whose behalf the extension is acting.
@@ -103,6 +105,11 @@ def get_artifact_download_user(
     Rejects any other purpose-bearing tokens (e.g. password_reset, verify_email).
     The resolved User is the real user; can_view() will enforce their permissions.
     """
+    if token is None:
+        # Reuse session validation, including its JWT type/purpose restrictions.
+        # Delegation tokens remain explicit bearer credentials, never cookies.
+        return get_current_user(request=request, token=None, db=db)
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
