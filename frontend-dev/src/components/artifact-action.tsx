@@ -49,7 +49,8 @@ const isSameOrigin = (url: string) => {
 
 const resolveDownloadUrl = (url: string) => {
   try {
-    return new URL(url, getApiBaseUrl()).toString();
+    const apiBase = new URL(getApiBaseUrl(), window.location.origin);
+    return new URL(url, apiBase).toString();
   } catch (error) {
     return url;
   }
