@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fair_platform.backend.api.routers.auth import hash_password
 from fair_platform.backend.data.models.assignment import Assignment, AssignmentStatus
@@ -381,3 +381,192 @@ def test_latest_attempt_and_submission_deletion_keep_grade_entry_in_parity(
     assert blocked.status_code == 400
     with test_db() as session:
         assert session.query(GradeEntry).one().source_id == older_id
+
+
+def _create_attempt(client, assignment, headers):
+    response = client.post(
+        "/api/submissions", data={"assignment_id": str(assignment.id)}, headers=headers
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def _return_attempt(client, submission_id, headers, score=80):
+    response = client.patch(
+        f"/api/submissions/{submission_id}/draft",
+        json={"score": score, "feedback": f"Private feedback {score}"},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    response = client.post(f"/api/submissions/{submission_id}/return", headers=headers)
+    assert response.status_code == 200, response.text
+
+
+def _assert_current_grade(client, course, staff, learner, score, submission_id=None):
+    book = client.get(f"/api/lms/courses/{course.id}/gradebook", headers=staff).json()
+    row = book["rows"][0]
+    cell = row["itemCells"][0]
+    assert cell["pointsEarned"] == score
+    assert cell["sourceId"] == submission_id
+    assert cell["releaseState"] == ("absent" if score is None else "released")
+    grades = client.get(f"/api/lms/courses/{course.id}/grades", headers=learner).json()
+    assert grades["items"][0]["pointsEarned"] == score
+    assert grades["items"][0]["submissionId"] == submission_id
+    dashboard = client.get("/api/lms/student/dashboard", headers=learner).json()
+    progress = dashboard["courseProgress"][0]
+    for total in [row["courseTotal"], grades["total"]]:
+        assert total["percentage"] == score
+        assert total["provisional"] == (score is None)
+        assert total["gradedItemCount"] == (0 if score is None else 1)
+        assert total["pointsPossible"] == (0 if score is None else 100)
+    assert progress["currentGrade"] == score
+    assert progress["gradeIsProvisional"] == (score is None)
+    return row, grades
+
+
+def test_resubmission_clears_obsolete_grade_until_latest_attempt_is_returned(
+    test_client, test_db
+):
+    with test_db() as session:
+        owner, _, student, _, course, assignment, _ = _setup(session)
+    staff, learner = _auth(test_client, owner), _auth(test_client, student)
+    first = _create_attempt(test_client, assignment, learner)
+    _return_attempt(test_client, first["id"], staff)
+    _assert_current_grade(test_client, course, staff, learner, 80, first["id"])
+
+    second = _create_attempt(test_client, assignment, learner)
+    assert second["attemptNumber"] == 2
+    row, _ = _assert_current_grade(test_client, course, staff, learner, None)
+    assert row["cells"][0]["state"] == "submitted"
+    assert row["cells"][0]["score"] is None
+    assert row["cells"][0]["attemptCount"] == 2
+    with test_db() as session:
+        assert session.query(GradeEntry).count() == 0
+
+    draft = test_client.patch(
+        f"/api/submissions/{second['id']}/draft",
+        json={"score": 95, "feedback": "Private revision feedback"},
+        headers=staff,
+    )
+    assert draft.status_code == 200
+    _, grades = _assert_current_grade(test_client, course, staff, learner, None)
+    assert grades["items"][0]["note"] is None
+    for path in [
+        f"/api/submissions/{second['id']}",
+        f"/api/submissions/?assignment_id={assignment.id}",
+    ]:
+        response = test_client.get(path, headers=learner)
+        assert response.status_code == 200
+        assert "Private revision feedback" not in response.text
+        submissions = (
+            response.json() if isinstance(response.json(), list) else [response.json()]
+        )
+        assert all(
+            s["draftScore"] is None and s["draftFeedback"] is None for s in submissions
+        )
+
+    # Returning an older attempt must not restore its now-obsolete grade.
+    _return_attempt(test_client, first["id"], staff, score=70)
+    _assert_current_grade(test_client, course, staff, learner, None)
+    returned = test_client.post(
+        f"/api/submissions/{second['id']}/return", headers=staff
+    )
+    assert returned.status_code == 200
+    _assert_current_grade(test_client, course, staff, learner, 95, second["id"])
+    _return_attempt(test_client, first["id"], staff, score=60)
+    _assert_current_grade(test_client, course, staff, learner, 95, second["id"])
+    assert (
+        test_client.delete(f"/api/submissions/{first['id']}", headers=staff).status_code
+        == 204
+    )
+    _assert_current_grade(test_client, course, staff, learner, 95, second["id"])
+
+
+def test_rejected_or_failed_resubmission_preserves_released_grade(
+    test_client, test_db, monkeypatch
+):
+    from fair_platform.backend.api.routers import submissions as router
+
+    with test_db() as session:
+        owner, _, student, _, course, assignment, _ = _setup(session)
+    staff, learner = _auth(test_client, owner), _auth(test_client, student)
+    first = _create_attempt(test_client, assignment, learner)
+    _return_attempt(test_client, first["id"], staff)
+    with test_db() as session:
+        session.get(Assignment, assignment.id).allow_resubmissions = False
+        session.commit()
+    rejected = test_client.post(
+        "/api/submissions", data={"assignment_id": str(assignment.id)}, headers=learner
+    )
+    assert rejected.status_code == 409
+    _assert_current_grade(test_client, course, staff, learner, 80, first["id"])
+    with test_db() as session:
+        session.get(Assignment, assignment.id).allow_resubmissions = True
+        session.commit()
+
+    invalid_artifact = test_client.post(
+        "/api/submissions",
+        data={"assignment_id": str(assignment.id), "artifact_ids": '["invalid"]'},
+        headers=learner,
+    )
+    assert invalid_artifact.status_code == 400
+    _assert_current_grade(test_client, course, staff, learner, 80, first["id"])
+
+    original_sync = router.sync_assignment_user_grade_entry
+
+    def fail_after_sync(*args, **kwargs):
+        original_sync(*args, **kwargs)
+        raise RuntimeError("Simulated failure after grade synchronization")
+
+    monkeypatch.setattr(router, "sync_assignment_user_grade_entry", fail_after_sync)
+    failed = test_client.post(
+        "/api/submissions", data={"assignment_id": str(assignment.id)}, headers=learner
+    )
+    assert failed.status_code == 500
+    with test_db() as session:
+        assert session.query(Submission).count() == 1
+        assert session.query(GradeEntry).one().source_id == UUID(first["id"])
+    _assert_current_grade(test_client, course, staff, learner, 80, first["id"])
+
+
+def test_synthetic_submission_does_not_clear_a_real_learners_grade(
+    test_client, test_db
+):
+    with test_db() as session:
+        owner, _, student, _, course, assignment, _ = _setup(session)
+    staff, learner = _auth(test_client, owner), _auth(test_client, student)
+    first = _create_attempt(test_client, assignment, learner)
+    _return_attempt(test_client, first["id"], staff)
+    synthetic = test_client.post(
+        "/api/submissions/synthetic",
+        data={"assignment_id": str(assignment.id), "submitter_name": student.name},
+        headers=staff,
+    )
+    assert synthetic.status_code == 201
+    _assert_current_grade(test_client, course, staff, learner, 80, first["id"])
+
+
+def test_concurrent_resubmissions_keep_canonical_latest_grade(test_client, test_db):
+    from concurrent.futures import ThreadPoolExecutor
+
+    with test_db() as session:
+        owner, _, student, _, course, assignment, _ = _setup(session)
+    staff, learner = _auth(test_client, owner), _auth(test_client, student)
+    first = _create_attempt(test_client, assignment, learner)
+    _return_attempt(test_client, first["id"], staff)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        attempts = list(
+            pool.map(
+                lambda _: _create_attempt(test_client, assignment, learner), range(2)
+            )
+        )
+    _assert_current_grade(test_client, course, staff, learner, None)
+    # Concurrent requests can share an attempt number; the existing canonical
+    # time/UUID tie-breakers must determine which evidence can be released.
+    older, latest = sorted(
+        attempts, key=lambda s: (s["attemptNumber"], s["submittedAt"], s["id"])
+    )
+    _return_attempt(test_client, older["id"], staff, score=70)
+    _assert_current_grade(test_client, course, staff, learner, None)
+    _return_attempt(test_client, latest["id"], staff, score=95)
+    _assert_current_grade(test_client, course, staff, learner, 95, latest["id"])
