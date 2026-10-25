@@ -221,6 +221,13 @@ async def create_submission(
             artifact_count=len(sub.artifacts),
         )
 
+        if submitter.user_id is not None and not submitter.is_synthetic:
+            # The new attempt was flushed above: with autoflush=False the
+            # canonical query must see it before clearing older released points.
+            sync_assignment_user_grade_entry(
+                db, assignment, submitter.user_id, current_user
+            )
+
         db.commit()
         db.refresh(sub)
         return sub

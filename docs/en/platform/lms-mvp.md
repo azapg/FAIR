@@ -37,6 +37,8 @@ FAIR is LMS-complete at an MVP level when a teacher and a student can complete t
 - The learner's latest attempt is authoritative. Returning an older attempt does
   not replace a newer attempt's state, and deleting an attempt atomically
   reprojects the next latest attempt or clears the released entry.
+  Creating a new learner attempt clears obsolete released evidence in the same
+  transaction; current grades become provisional until that attempt is returned.
 - A category weight is a percentage. If any category uses weights, all relevant
   categories should be weighted and the configured total should equal 100.
 - Missing or unreleased entries are **not treated as zero**. Category and course
@@ -55,6 +57,20 @@ CSV exchange, partial credit, and question analytics. The wider MVP does not
 include standards/outcomes, attendance, SIS/LTI integrations, advanced analytics,
 group assignments, peer review, microservices, or multi-region scaling. AI graders
 and learning agents can integrate with this foundation but are not required for LMS behavior.
+
+### Existing resubmission grades
+
+Migration `20261025_0037` repairs the stale entries left by learner resubmissions
+before creation synchronized the gradebook. Reads alone do not repair those
+entries. It removes only released, submission-sourced entries for an active
+student's assignment when the source is an older real attempt and the canonical
+latest real attempt has no released points or excuse. It uses the same attempt
+number, submission time, and ID ordering as runtime synchronization.
+
+Manual and quiz items, unreleased entries, and valid latest released grades are
+preserved. Original submissions, published scores, and feedback are unchanged.
+Downgrading does not restore obsolete derived entries. This repair runs with the
+normal database upgrade.
 
 ## Researcher/local profile
 

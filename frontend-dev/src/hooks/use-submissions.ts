@@ -266,6 +266,7 @@ export function useCreateStudentSubmission() {
     mutationFn: createStudentSubmission,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: ['lms'] })
       toast.success('Assignment submitted')
     },
     onError: (error: Error) => toast.error('Failed to submit assignment', { description: error.message }),
@@ -384,6 +385,7 @@ export function useReturnSubmission() {
     onSuccess: (_, submissionId) => {
       queryClient.invalidateQueries({ queryKey: submissionsKeys.detail(submissionId) })
       queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: ['lms'] })
       toast.success('Submission returned successfully');
     },
     onError: (error: Error) => {
@@ -406,6 +408,7 @@ export function useReturnSubmissions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: ['lms'] })
       toast.success('Submissions returned successfully');
     },
     onError: (error: Error) => {
@@ -423,6 +426,7 @@ export function useDeleteSubmission() {
     mutationFn: deleteSubmission,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: submissionsKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: ['lms'] })
       toast.success('Submission deleted successfully');
     },
     onError: (error: Error) => {
