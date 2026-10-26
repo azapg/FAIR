@@ -32,6 +32,8 @@ import {
   type CourseCopySelection,
 } from '@/hooks/use-courses'
 
+import { useReleaseFeatures } from '@/hooks/use-release-features'
+
 const DEFAULT_SELECTION: CourseCopySelection = {
   content: true,
   assignments: true,
@@ -54,7 +56,8 @@ const SELECTION_LABELS: Array<{
 ]
 
 function errorDetail(error: unknown, fallback: string): string {
-  const detail = (error as AxiosError<{ detail?: string }>)?.response?.data?.detail
+  const detail = (error as AxiosError<{ detail?: string }>)?.response?.data
+    ?.detail
   return detail ?? fallback
 }
 
@@ -72,7 +75,9 @@ function SummaryGroup({
     <div>
       <p className="font-medium">{label}</p>
       <p className="text-muted-foreground">
-        {entries.map(([key, count]) => `${count} ${key.replaceAll('_', ' ')}`).join(', ')}
+        {entries
+          .map(([key, count]) => `${count} ${key.replaceAll('_', ' ')}`)
+          .join(', ')}
       </p>
     </div>
   )
@@ -85,16 +90,32 @@ export function CourseCopyDialog({
   courseId: string
   name: string
 }) {
+  const flags = useReleaseFeatures()
   const [open, setOpen] = useState(false)
   const [nextName, setNextName] = useState(`${name} copy`)
   const [datePolicy, setDatePolicy] = useState<'clear' | 'shift'>('clear')
   const [dateShiftDays, setDateShiftDays] = useState(0)
-  const [selection, setSelection] = useState<CourseCopySelection>(DEFAULT_SELECTION)
+  const [selection, setSelection] =
+    useState<CourseCopySelection>(DEFAULT_SELECTION)
   const [preview, setPreview] = useState<CourseCopyPreview | null>(null)
   const [previewSignature, setPreviewSignature] = useState<string | null>(null)
   const [copyResult, setCopyResult] = useState<CourseCopyResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [idempotencyKey, setIdempotencyKey] = useState('')
+
+  const enabledSelection = {
+    ...selection,
+    content: selection.content && flags.course_content,
+    quizzes: selection.quizzes && flags.course_content,
+    gradebook: selection.gradebook && flags.gradebook,
+    flows: selection.flows && flags.extensions,
+  }
+  const visibleSelections = SELECTION_LABELS.filter(
+    ({ key }) =>
+      ((key !== 'content' && key !== 'quizzes') || flags.course_content) &&
+      (key !== 'gradebook' || flags.gradebook) &&
+      (key !== 'flows' || flags.extensions),
+  )
 
   const resetPreview = () => {
     setPreview(null)
@@ -107,19 +128,22 @@ export function CourseCopyDialog({
     name: nextName.trim(),
     datePolicy,
     dateShiftDays: datePolicy === 'shift' ? dateShiftDays : 0,
-    selection,
+    selection: enabledSelection,
     idempotencyKey: idempotencyKey || crypto.randomUUID(),
   })
   const configurationSignature = JSON.stringify({
     name: nextName.trim(),
     datePolicy,
     dateShiftDays: datePolicy === 'shift' ? dateShiftDays : 0,
-    selection,
+    selection: enabledSelection,
   })
   const hasFreshPreview =
     preview !== null && previewSignature === configurationSignature
 
-  const updateSelection = (key: keyof CourseCopySelection, checked: boolean) => {
+  const updateSelection = (
+    key: keyof CourseCopySelection,
+    checked: boolean,
+  ) => {
     setSelection((current) => {
       const next = { ...current, [key]: checked }
       if (key === 'content' && !checked) next.quizzes = false
@@ -184,7 +208,7 @@ export function CourseCopyDialog({
         name: nextName.trim(),
         datePolicy,
         dateShiftDays: datePolicy === 'shift' ? dateShiftDays : 0,
-        selection,
+        selection: enabledSelection,
       })
       toast.success('Private course template saved')
     } catch (error) {
@@ -196,7 +220,7 @@ export function CourseCopyDialog({
 
   const valid =
     nextName.trim().length > 0 &&
-    Object.values(selection).some(Boolean) &&
+    Object.values(enabledSelection).some(Boolean) &&
     (datePolicy === 'clear' || Number.isInteger(dateShiftDays))
 
   return (
@@ -208,14 +232,17 @@ export function CourseCopyDialog({
         <DialogHeader>
           <DialogTitle>Copy course into a new draft</DialogTitle>
           <DialogDescription>
-            Choose the authoring material to reuse, review every transformation, then
-            create a private draft. Learner work and grades are never copied.
+            Choose the authoring material to reuse, review every transformation,
+            then create a private draft. Learner work and grades are never
+            copied.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-5">
           <div className="grid gap-2">
-            <Label htmlFor="course-copy-name">New course or template name</Label>
+            <Label htmlFor="course-copy-name">
+              New course or template name
+            </Label>
             <Input
               id="course-copy-name"
               value={nextName}
@@ -227,9 +254,11 @@ export function CourseCopyDialog({
           </div>
 
           <fieldset className="grid gap-3">
-            <legend className="text-[13px] leading-4 font-medium">Include</legend>
+            <legend className="text-[13px] leading-4 font-medium">
+              Include
+            </legend>
             <div className="grid gap-3 sm:grid-cols-2">
-              {SELECTION_LABELS.map(({ key, label }) => (
+              {visibleSelections.map(({ key, label }) => (
                 <div className="flex items-start gap-2" key={key}>
                   <Checkbox
                     id={`course-copy-${key}`}
@@ -287,8 +316,8 @@ export function CourseCopyDialog({
 
           <p className="text-muted-foreground text-sm">
             Always excluded: enrollments, invite codes, submissions, attempts,
-            comments, grade entries, notifications, activity, secrets, and execution
-            state.
+            comments, grade entries, notifications, activity, secrets, and
+            execution state.
           </p>
 
           {hasFreshPreview && preview && (
@@ -310,11 +339,19 @@ export function CourseCopyDialog({
               {preview.objects?.length > 0 && (
                 <div className="max-h-48 space-y-2 overflow-y-auto border-t pt-3">
                   {preview.objects.map((item) => (
-                    <div className="grid grid-cols-[5rem_1fr] gap-2" key={`${item.objectType}-${item.sourceId}`}>
-                      <span className="font-medium capitalize">{item.action}</span>
+                    <div
+                      className="grid grid-cols-[5rem_1fr] gap-2"
+                      key={`${item.objectType}-${item.sourceId}`}
+                    >
+                      <span className="font-medium capitalize">
+                        {item.action}
+                      </span>
                       <span>
                         {item.title}
-                        <span className="text-muted-foreground"> — {item.reason}</span>
+                        <span className="text-muted-foreground">
+                          {' '}
+                          — {item.reason}
+                        </span>
                       </span>
                     </div>
                   ))}
@@ -329,7 +366,9 @@ export function CourseCopyDialog({
             >
               <p className="font-medium">The copy was rolled back safely.</p>
               <p>{copyResult.errorMessage ?? 'No partial course was kept.'}</p>
-              <p className="mt-1 text-xs">Job {copyResult.jobId} can be retried.</p>
+              <p className="mt-1 text-xs">
+                Job {copyResult.jobId} can be retried.
+              </p>
             </div>
           )}
         </div>

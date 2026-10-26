@@ -249,3 +249,63 @@ describe("Course navigation", () => {
     expect(screen.getByRole("tab", { name: "Grades" })).toBeInTheDocument();
   });
 });
+
+const releaseState = vi.hoisted(() => ({ nightly: true }));
+vi.mock("@/hooks/use-release-features", () => ({
+  useReleaseFeatures: () => ({
+    isPending: false,
+    channel: releaseState.nightly ? "nightly" : "stable",
+    todo: releaseState.nightly,
+    inbox: releaseState.nightly,
+    extensions: releaseState.nightly,
+    course_content: releaseState.nightly,
+    gradebook: releaseState.nightly,
+    dashboard: releaseState.nightly,
+  }),
+}));
+
+describe("Stable course navigation", () => {
+  beforeEach(() => {
+    releaseState.nightly = false;
+    state.ready = true;
+    state.owner = true;
+  });
+  afterEach(() => {
+    cleanup();
+    releaseState.nightly = true;
+  });
+  it.each(["content", "gradebook", "runs", "flows", "capabilities"])(
+    "redirects hidden %s deep links to Stream",
+    async (tab) => {
+      mount(`/courses/course-1/${tab}`);
+      await waitFor(() =>
+        expect(screen.getByTestId("location")).toHaveTextContent(
+          "/courses/course-1/stream",
+        ),
+      );
+      expect(screen.getAllByRole("tab")).toHaveLength(3);
+      expect(
+        screen.queryByRole("tab", { name: "Content" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("tab", { name: "Gradebook" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    },
+  );
+  it("hides learner grade summaries and preserves assignments", async () => {
+    state.owner = false;
+    mount("/courses/course-1/grades");
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/courses/course-1/stream",
+      ),
+    );
+    expect(
+      screen.queryByRole("tab", { name: "Grades" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "tabs.assignments" }),
+    ).toBeInTheDocument();
+  });
+});

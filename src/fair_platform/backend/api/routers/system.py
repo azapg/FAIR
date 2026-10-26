@@ -6,6 +6,11 @@ from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.services.access_control import resolve_platform_policy
 from fair_platform.backend.services.dispatch_signing import get_dispatch_signer
 
+from fair_platform.backend.core.releases import (
+    get_release_channel,
+    get_release_features,
+)
+
 router = APIRouter()
 
 
@@ -13,7 +18,9 @@ router = APIRouter()
 def get_system_config(db: Session = Depends(session_dependency)):
     policy = resolve_platform_policy(db)
     return {
+        "release_channel": get_release_channel(),
         "features": {
+            **get_release_features(),
             "email_enabled": get_email_enabled(),
             "ai_controls_enabled": policy.ai_controls_enabled,
         },

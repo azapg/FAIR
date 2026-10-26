@@ -446,7 +446,16 @@ class TestAuthenticationFlow:
         response = test_client.get("/api/v1/system/config")
         assert response.status_code == 200
         assert response.json() == {
-            "features": {"email_enabled": True, "ai_controls_enabled": False},
+            "release_channel": "stable",
+            "features": {
+                "email_enabled": True,
+                "ai_controls_enabled": False,
+                "todo": False,
+                "inbox": False,
+                "extensions": False,
+                "course_content": False,
+                "gradebook": False,
+            },
             "registration": {"mode": "open", "invite_required": False},
         }
 
@@ -460,7 +469,16 @@ class TestAuthenticationFlow:
         response = test_client.get("/api/v1/system/config")
         assert response.status_code == 200
         assert response.json() == {
-            "features": {"email_enabled": True, "ai_controls_enabled": False},
+            "release_channel": "stable",
+            "features": {
+                "email_enabled": True,
+                "ai_controls_enabled": False,
+                "todo": False,
+                "inbox": False,
+                "extensions": False,
+                "course_content": False,
+                "gradebook": False,
+            },
             "registration": {"mode": "open", "invite_required": False},
         }
 

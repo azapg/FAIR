@@ -86,3 +86,38 @@ describe("Course settings", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+const releaseState = vi.hoisted(() => ({ nightly: true }));
+vi.mock("@/hooks/use-release-features", () => ({
+  useReleaseFeatures: () => ({
+    isPending: false,
+    channel: releaseState.nightly ? "nightly" : "stable",
+    todo: releaseState.nightly,
+    inbox: releaseState.nightly,
+    extensions: releaseState.nightly,
+    course_content: releaseState.nightly,
+    gradebook: releaseState.nightly,
+    dashboard: releaseState.nightly,
+  }),
+}));
+
+describe("Stable settings", () => {
+  afterEach(() => {
+    cleanup();
+    releaseState.nightly = true;
+  });
+  it("hides extension management and preserves course settings", () => {
+    releaseState.nightly = false;
+    mount();
+    expect(
+      screen.queryByRole("button", { name: "Flows" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Runs" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Capabilities" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Course name")).toHaveValue("Biology");
+  });
+});

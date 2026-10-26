@@ -1,3 +1,4 @@
+import { useReleaseFeatures } from "@/hooks/use-release-features";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -186,9 +187,16 @@ export function StreamTab({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [localComposerOpen, setLocalComposerOpen] = useState(false);
-  const [filter, setFilter] = useState<StreamFilter>("all");
+  const flags = useReleaseFeatures();
+  const [requestedFilter, setFilter] = useState<StreamFilter>("all");
+  const filter =
+    requestedFilter === "materials" && !flags.course_content
+      ? "all"
+      : requestedFilter;
   const postsQuery = useCoursePosts(courseId);
-  const contentQuery = useCourseContent(courseId);
+  const contentQuery = useCourseContent(
+    flags.course_content ? courseId : undefined,
+  );
   const createPost = useCreateCoursePost(courseId);
   const showComposer = canPost && (composerOpen ?? localComposerOpen);
   const setComposer = (open: boolean) => {
@@ -257,7 +265,9 @@ export function StreamTab({
         </article>
       ),
     }));
-  const materials = (contentQuery.data?.sections ?? [])
+  const materials = (
+    flags.course_content ? (contentQuery.data?.sections ?? []) : []
+  )
     .filter((section) => section.visibility === "published")
     .flatMap((section) => section.items)
     .filter(
@@ -311,7 +321,9 @@ export function StreamTab({
       filter === "announcements" ||
       filter === "materials") &&
       postsQuery.isPending) ||
-    ((filter === "all" || filter === "materials") && contentQuery.isPending) ||
+    (flags.course_content &&
+      (filter === "all" || filter === "materials") &&
+      contentQuery.isPending) ||
     ((filter === "all" || filter === "assignments") && assignmentsLoading);
   const errors = [
     {
@@ -327,7 +339,9 @@ export function StreamTab({
     },
     {
       show:
-        (filter === "all" || filter === "materials") && contentQuery.isError,
+        flags.course_content &&
+        (filter === "all" || filter === "materials") &&
+        contentQuery.isError,
       label: "Materials",
       retry: () => {
         void contentQuery.refetch();
@@ -370,11 +384,15 @@ export function StreamTab({
                 value={filter}
                 onValueChange={(value) => setFilter(value as StreamFilter)}
               >
-                {Object.entries(FILTERS).map(([value, label]) => (
-                  <DropdownMenuRadioItem key={value} value={value}>
-                    {label}
-                  </DropdownMenuRadioItem>
-                ))}
+                {Object.entries(FILTERS)
+                  .filter(
+                    ([value]) => flags.course_content || value !== "materials",
+                  )
+                  .map(([value, label]) => (
+                    <DropdownMenuRadioItem key={value} value={value}>
+                      {label}
+                    </DropdownMenuRadioItem>
+                  ))}
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>

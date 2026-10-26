@@ -15,7 +15,7 @@ export default defineRailway(() => {
 
   const app = service("fair-platform", {
     source: github("azapg/FAIR", {
-      branch: "canary",
+      branch: "main",
     }),
     healthcheck: "/health",
     healthcheckTimeout: 300,
@@ -25,6 +25,7 @@ export default defineRailway(() => {
     },
     env: {
       DATABASE_URL: "sqlite:////data/fair.db",
+      FAIR_RELEASE_CHANNEL: "stable",
       FAIR_ADMISSION_MODE: "invite_only",
       FAIR_AI_CONTROLS_ENABLED: "false",
       FAIR_API_BASE_URL: preserve(),

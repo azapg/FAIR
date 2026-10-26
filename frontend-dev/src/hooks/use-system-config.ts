@@ -2,8 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 
 import api from "@/lib/api";
 
+export type ReleaseFeature =
+  "todo" | "inbox" | "extensions" | "course_content" | "gradebook";
+
 export type SystemConfig = {
+  release_channel: "stable" | "nightly";
   features: {
+    todo: boolean;
+    inbox: boolean;
+    extensions: boolean;
+    course_content: boolean;
+    gradebook: boolean;
     email_enabled: boolean;
     ai_controls_enabled: boolean;
   };

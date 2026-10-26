@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { CourseCopyDialog } from './course-copy-dialog'
@@ -34,17 +40,21 @@ describe('CourseCopyDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy course' }))
 
     expect(screen.getByRole('button', { name: 'Preview copy' })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Create draft copy' })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'Create draft copy' }),
+    ).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview copy' }))
 
-    expect(await screen.findByLabelText('Course copy preview')).toHaveTextContent(
-      '2 assignments',
-    )
+    expect(
+      await screen.findByLabelText('Course copy preview'),
+    ).toHaveTextContent('2 assignments')
     expect(screen.getByLabelText('Course copy preview')).toHaveTextContent(
       'One protected file item cannot be copied.',
     )
-    expect(screen.getByRole('button', { name: 'Create draft copy' })).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Create draft copy' }),
+    ).toBeTruthy()
 
     expect(mocks.previewCourseCopy).toHaveBeenCalledWith(
       'course-1',
@@ -63,7 +73,9 @@ describe('CourseCopyDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy course' }))
     fireEvent.click(screen.getByRole('button', { name: 'Preview copy' }))
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Create draft copy' })).not.toBeDisabled(),
+      expect(
+        screen.getByRole('button', { name: 'Create draft copy' }),
+      ).not.toBeDisabled(),
     )
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Flow definitions' }))
@@ -78,7 +90,9 @@ describe('CourseCopyDialog', () => {
     render(<CourseCopyDialog courseId="course-1" name="Source" />)
     fireEvent.click(screen.getByRole('button', { name: 'Copy course' }))
     fireEvent.click(screen.getByRole('checkbox', { name: 'Flow definitions' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save private template' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save private template' }),
+    )
 
     await waitFor(() =>
       expect(mocks.saveCourseTemplate).toHaveBeenCalledWith('course-1', {
@@ -102,11 +116,71 @@ describe('CourseCopyDialog', () => {
     render(<CourseCopyDialog courseId="course-1" name="Source" />)
     fireEvent.click(screen.getByRole('button', { name: 'Copy course' }))
     fireEvent.click(screen.getByRole('button', { name: 'Preview copy' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Create draft copy' }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Create draft copy' }),
+    )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'A source item changed during copy.',
     )
     expect(screen.getByRole('button', { name: 'Retry safe copy' })).toBeTruthy()
+  })
+})
+
+const releaseState = vi.hoisted(() => ({ nightly: true }))
+vi.mock('@/hooks/use-release-features', () => ({
+  useReleaseFeatures: () => ({
+    isPending: false,
+    channel: releaseState.nightly ? 'nightly' : 'stable',
+    todo: releaseState.nightly,
+    inbox: releaseState.nightly,
+    extensions: releaseState.nightly,
+    course_content: releaseState.nightly,
+    gradebook: releaseState.nightly,
+    dashboard: releaseState.nightly,
+  }),
+}))
+
+describe('Stable course copies', () => {
+  afterEach(() => {
+    cleanup()
+    releaseState.nightly = true
+  })
+  it('hides experimental options and excludes them from copy and template requests', async () => {
+    releaseState.nightly = false
+    mocks.previewCourseCopy.mockResolvedValue({
+      copied: {},
+      transformed: {},
+      skipped: {},
+      unsupported: {},
+      warnings: [],
+    })
+    render(<CourseCopyDialog courseId="course-1" name="Source" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Copy course' }))
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Preview copy' }))
+    const selection = {
+      content: false,
+      quizzes: false,
+      flows: false,
+      gradebook: false,
+      assignments: true,
+      rubrics: true,
+    }
+    await waitFor(() =>
+      expect(mocks.previewCourseCopy).toHaveBeenLastCalledWith(
+        'course-1',
+        expect.objectContaining({ selection }),
+      ),
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save private template' }),
+    )
+    await waitFor(() =>
+      expect(mocks.saveCourseTemplate).toHaveBeenLastCalledWith(
+        'course-1',
+        expect.objectContaining({ selection }),
+      ),
+    )
   })
 })

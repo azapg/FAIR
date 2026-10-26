@@ -17,14 +17,16 @@ Values represented with `preserve()` must be supplied through the Railway
 template or service variables. This keeps the Resend key, application secret,
 administrator identity, sender, and public origins out of source control.
 
-The infrastructure source follows `canary`, FAIR's deployment branch.
+The infrastructure source follows `main` (Stable). Use `nightly` with
+`FAIR_RELEASE_CHANNEL=nightly` for experimental deployments. See
+[release channels](../docs/en/development/release-channels.md).
 
 ## Template composer contract
 
 The public template must not inherit values from a maintainer deployment. Use
 the following configuration when generating or updating it:
 
-- GitHub source: `canary`;
+- GitHub source: `main`;
 - one generated HTTP domain routed to the container's port `8080`;
 - health check `/health` with a 300-second timeout;
 - one 5 GB volume mounted at `/data`; and
@@ -43,6 +45,7 @@ Template-managed values are:
 
 ```env
 DATABASE_URL=sqlite:////data/fair.db
+FAIR_RELEASE_CHANNEL=stable
 FAIR_ADMISSION_MODE=invite_only
 FAIR_AI_CONTROLS_ENABLED=false
 FAIR_API_BASE_URL=https://${{ RAILWAY_PUBLIC_DOMAIN }}

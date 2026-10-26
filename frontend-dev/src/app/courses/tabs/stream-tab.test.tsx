@@ -277,3 +277,40 @@ describe("Course stream", () => {
     expect(html).toContain("Class code");
   });
 });
+
+const releaseState = vi.hoisted(() => ({ nightly: true }));
+vi.mock("@/hooks/use-release-features", () => ({
+  useReleaseFeatures: () => ({
+    isPending: false,
+    channel: releaseState.nightly ? "nightly" : "stable",
+    todo: releaseState.nightly,
+    inbox: releaseState.nightly,
+    extensions: releaseState.nightly,
+    course_content: releaseState.nightly,
+    gradebook: releaseState.nightly,
+    dashboard: releaseState.nightly,
+  }),
+}));
+
+describe("Stable stream", () => {
+  afterEach(() => {
+    cleanup();
+    releaseState.nightly = true;
+  });
+  it("keeps announcements and assignments without course-content cards or errors", () => {
+    releaseState.nightly = false;
+    mocks.contentError = true;
+    mount();
+    expect(
+      screen.queryByText("Prompting: a practical guide"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Build your first AI prototype"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Materials could not/)).not.toBeInTheDocument();
+    openFilter();
+    expect(
+      screen.queryByRole("menuitemradio", { name: "Materials" }),
+    ).not.toBeInTheDocument();
+  });
+});

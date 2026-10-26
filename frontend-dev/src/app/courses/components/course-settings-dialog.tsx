@@ -1,3 +1,4 @@
+import { useReleaseFeatures } from "@/hooks/use-release-features";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -43,12 +44,7 @@ import type { Assignment } from "@/hooks/use-assignments";
 import { CourseCopyDialog } from "./course-copy-dialog";
 
 export type CourseSettingsSection =
-  | "general"
-  | "enrollment"
-  | "runs"
-  | "flows"
-  | "capabilities"
-  | "artifacts";
+  "general" | "enrollment" | "runs" | "flows" | "capabilities" | "artifacts";
 const ADVANCED: { id: CourseSettingsSection; label: string }[] = [
   { id: "flows", label: "Flows" },
   { id: "runs", label: "Runs" },
@@ -72,7 +68,11 @@ export function CourseSettingsDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const [section, setSection] = useState<CourseSettingsSection>(
+  const flags = useReleaseFeatures();
+  const advanced = ADVANCED.filter(
+    (item) => flags.extensions || item.id === "artifacts",
+  );
+  const [requestedSection, setSection] = useState<CourseSettingsSection>(
     initialSection === "enrollment" && !enrollmentControls
       ? "general"
       : initialSection,
@@ -91,9 +91,10 @@ export function CourseSettingsDialog({
       ? [{ id: "enrollment" as const, label: "Enrollment" }]
       : []),
   ];
-  const selected = [...mainSections, ...ADVANCED].find(
-    (s) => s.id === section,
-  )!;
+  const selected =
+    [...mainSections, ...advanced].find((s) => s.id === requestedSection) ??
+    mainSections[0];
+  const section = selected.id;
 
   async function changeArchive() {
     setArchivePending(true);
@@ -180,7 +181,7 @@ export function CourseSettingsDialog({
                     className="flex flex-col gap-3 md:gap-5"
                   >
                     {navGroup("Course", mainSections)}
-                    {navGroup("Advanced", ADVANCED)}
+                    {navGroup("Advanced", advanced)}
                   </nav>
                 </div>
               </ScrollArea>

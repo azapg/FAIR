@@ -39,6 +39,8 @@ import { StudentGradesTab } from "../tabs/student-grades-tab";
 import { ParticipantsTab } from "../tabs/participants-tab";
 import { ArtifactsTab } from "../tabs/artifacts-tab";
 
+import { useReleaseFeatures } from "@/hooks/use-release-features";
+
 const ADVANCED_TABS = ["runs", "flows", "capabilities", "artifacts"] as const;
 
 export default function CourseDetailPage() {
@@ -46,6 +48,7 @@ export default function CourseDetailPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
+  const flags = useReleaseFeatures();
   const canManageAnyCourseSettings = usePermission(
     "manage_course_settings_any",
   );
@@ -82,15 +85,18 @@ export default function CourseDetailPage() {
     !course?.isArchived;
   const advancedSection =
     isInstructorView &&
+    (flags.extensions || tab === "artifacts") &&
     ADVANCED_TABS.includes(tab as (typeof ADVANCED_TABS)[number])
       ? (tab as CourseSettingsSection)
       : undefined;
   const primaryTabs = [
     "stream",
-    "content",
+    ...(flags.course_content ? ["content"] : []),
     "assignments",
-    ...(isInstructorView ? ["gradebook", "participants"] : []),
-    ...(isLearnerView ? ["grades"] : []),
+    ...(isInstructorView
+      ? [...(flags.gradebook ? ["gradebook"] : []), "participants"]
+      : []),
+    ...(isLearnerView && flags.gradebook ? ["grades"] : []),
     ...(!isInstructorView ? ["artifacts"] : []),
   ];
   const validTab = primaryTabs.includes(tab ?? "") || !!advancedSection;
@@ -98,10 +104,19 @@ export default function CourseDetailPage() {
   const basePath = `/courses/${courseId}`;
 
   useEffect(() => {
-    if (!course || isLoading || isError || !courseId) return;
+    if (!course || isLoading || isError || !courseId || flags.isPending) return;
     if (!validTab || tab === "timeline")
       navigate(`/courses/${courseId}/stream`, { replace: true });
-  }, [course, isLoading, isError, courseId, tab, validTab, navigate]);
+  }, [
+    course,
+    isLoading,
+    isError,
+    courseId,
+    tab,
+    validTab,
+    navigate,
+    flags.isPending,
+  ]);
 
   if (isLoading)
     return (
@@ -137,15 +152,19 @@ export default function CourseDetailPage() {
   const canPost = isInstructorView && !course.isArchived;
   const navItems: FloatingNavItem[] = [
     { value: "stream", label: "Stream", icon: MessageSquare },
-    { value: "content", label: "Content", icon: BookOpen },
+    ...(flags.course_content
+      ? [{ value: "content", label: "Content", icon: BookOpen }]
+      : []),
     { value: "assignments", label: t("tabs.assignments"), icon: ClipboardList },
     ...(isInstructorView
       ? [
-          { value: "gradebook", label: "Gradebook", icon: GraduationCap },
+          ...(flags.gradebook
+            ? [{ value: "gradebook", label: "Gradebook", icon: GraduationCap }]
+            : []),
           { value: "participants", label: t("tabs.participants"), icon: Users },
         ]
       : []),
-    ...(isLearnerView
+    ...(isLearnerView && flags.gradebook
       ? [{ value: "grades", label: "Grades", icon: GraduationCap }]
       : []),
     ...(!isInstructorView
@@ -221,7 +240,7 @@ export default function CourseDetailPage() {
                 <CourseStreamSidebar
                   courseId={courseId}
                   assignments={assignments}
-                  canReview={isInstructorView}
+                  canReview={isInstructorView && flags.gradebook}
                   enrollmentControls={enrollmentControls}
                 />
               </div>
@@ -237,15 +256,17 @@ export default function CourseDetailPage() {
               }
             />
           </TabsContent>
-          <TabsContent value="content">
-            <CourseContentTab
-              courseId={courseId}
-              canManage={isInstructorView}
-              isArchived={course.isArchived}
-              assignments={assignments}
-            />
-          </TabsContent>
-          {isInstructorView && (
+          {flags.course_content && (
+            <TabsContent value="content">
+              <CourseContentTab
+                courseId={courseId}
+                canManage={isInstructorView}
+                isArchived={course.isArchived}
+                assignments={assignments}
+              />
+            </TabsContent>
+          )}
+          {isInstructorView && flags.gradebook && (
             <TabsContent value="gradebook">
               <GradebookTab
                 courseId={courseId}
@@ -264,7 +285,7 @@ export default function CourseDetailPage() {
               />
             </TabsContent>
           )}
-          {isLearnerView && (
+          {isLearnerView && flags.gradebook && (
             <TabsContent value="grades">
               <StudentGradesTab
                 courseId={courseId}

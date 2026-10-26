@@ -1,14 +1,16 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { useStudentTodo } = vi.hoisted(() => ({ useStudentTodo: vi.fn() }))
 
 vi.mock('@/hooks/use-lms', () => ({ useStudentTodo }))
 
 import TodoPage from './page'
+import { SidebarProvider } from '@/components/ui/sidebar'
 
 describe('TodoPage', () => {
+  afterEach(cleanup)
   beforeEach(() => useStudentTodo.mockReset())
 
   it('links missing and submitted work to the assignment', () => {
@@ -26,7 +28,7 @@ describe('TodoPage', () => {
       }],
     })
 
-    render(<MemoryRouter><TodoPage /></MemoryRouter>)
+    render(<MemoryRouter><SidebarProvider><TodoPage /></SidebarProvider></MemoryRouter>)
 
     expect(screen.getByRole('heading', { name: 'To-do' })).toBeInTheDocument()
     expect(screen.getByText('Cell diagram')).toBeInTheDocument()
@@ -39,7 +41,7 @@ describe('TodoPage', () => {
 
   it('shows an all caught up state', () => {
     useStudentTodo.mockReturnValue({ isLoading: false, data: [] })
-    render(<MemoryRouter><TodoPage /></MemoryRouter>)
+    render(<MemoryRouter><SidebarProvider><TodoPage /></SidebarProvider></MemoryRouter>)
     expect(screen.getByText('You are all caught up.')).toBeInTheDocument()
   })
 })

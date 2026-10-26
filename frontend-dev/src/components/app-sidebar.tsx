@@ -1,3 +1,4 @@
+import { useReleaseFeatures } from "@/hooks/use-release-features";
 import {
   Sidebar,
   SidebarContent,
@@ -41,10 +42,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { Menu02Icon } from "hugeicons-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/auth-context";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -244,28 +242,42 @@ function NotificationsInbox() {
   const readNotification = useReadNotification();
   const readAll = useReadAllNotifications();
 
-  if (isLoading) return <div className="p-6 text-sm text-muted-foreground">Loading notifications…</div>;
+  if (isLoading)
+    return (
+      <div className="p-6 text-sm text-muted-foreground">
+        Loading notifications…
+      </div>
+    );
 
   if (notifications.length > 0) {
     return (
       <div className="p-3">
         <div className="mb-2 flex justify-end">
-          <Button size="sm" variant="ghost" onClick={() => readAll.mutate()}>Mark all read</Button>
+          <Button size="sm" variant="ghost" onClick={() => readAll.mutate()}>
+            Mark all read
+          </Button>
         </div>
         <div className="space-y-2">
           {notifications.map((notification) => (
             <button
               type="button"
               key={notification.id}
-              className={`w-full rounded-md border p-3 text-left ${notification.readAt ? 'opacity-70' : 'bg-sidebar-accent'}`}
+              className={`w-full rounded-md border p-3 text-left ${notification.readAt ? "opacity-70" : "bg-sidebar-accent"}`}
               onClick={() => {
-                if (!notification.readAt) readNotification.mutate(notification.id);
+                if (!notification.readAt)
+                  readNotification.mutate(notification.id);
                 if (notification.link) navigate(notification.link);
               }}
             >
               <div className="text-sm font-medium">{notification.title}</div>
-              {notification.body && <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{notification.body}</div>}
-              <div className="mt-2 text-xs text-muted-foreground">{new Date(notification.createdAt).toLocaleString()}</div>
+              {notification.body && (
+                <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                  {notification.body}
+                </div>
+              )}
+              <div className="mt-2 text-xs text-muted-foreground">
+                {new Date(notification.createdAt).toLocaleString()}
+              </div>
             </button>
           ))}
         </div>
@@ -282,8 +294,7 @@ function NotificationsInbox() {
         <EmptyTitle>{t("inbox.empty.title")}</EmptyTitle>
         <EmptyDescription>{t("inbox.empty.description")}</EmptyDescription>
       </EmptyHeader>
-      <EmptyContent>
-      </EmptyContent>
+      <EmptyContent></EmptyContent>
     </Empty>
   );
 }
@@ -304,6 +315,7 @@ function NavMain({
   showStudentDashboard: boolean;
 }) {
   const { t } = useTranslation();
+  const flags = useReleaseFeatures();
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -326,7 +338,7 @@ function NavMain({
         </SidebarMenuItem>
       )}
 
-      {/*search*/}
+      {flags.todo && (
       <SidebarMenuItem>
         <SidebarMenuButton asChild tooltip="To-do">
           <Link to="/todo">
@@ -335,6 +347,7 @@ function NavMain({
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
+      )}
 
       <SidebarMenuItem>
         <SidebarMenuButton
@@ -347,6 +360,7 @@ function NavMain({
         </SidebarMenuButton>
       </SidebarMenuItem>
 
+      {flags.inbox && (
       <SidebarMenuItem>
         <SidebarMenuButton
           tooltip={t("nav.inbox")}
@@ -362,12 +376,14 @@ function NavMain({
           </SidebarMenuBadge>
         )}
       </SidebarMenuItem>
+      )}
     </SidebarMenu>
   );
 }
 
 function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
   const { t } = useTranslation();
+  const flags = useReleaseFeatures();
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -379,7 +395,10 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
         </SidebarMenuButton>
       </SidebarMenuItem>
       <SidebarMenuItem>
-        <SidebarMenuButton tooltip={t("nav.settings")} onClick={onSettingsClick}>
+        <SidebarMenuButton
+          tooltip={t("nav.settings")}
+          onClick={onSettingsClick}
+        >
           <SettingsIcon />
           <span>{t("nav.settings")}</span>
         </SidebarMenuButton>
@@ -387,12 +406,17 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
       {/*Help*/}
       <SidebarMenuItem>
         <SidebarMenuButton asChild tooltip={t("nav.help")}>
-          <a href="https://docs.fairgradeproject.org" target="_blank" rel="noreferrer">
+          <a
+            href="https://docs.fairgradeproject.org"
+            target="_blank"
+            rel="noreferrer"
+          >
             <MessageCircleQuestionMarkIcon />
             <span>{t("nav.help")}</span>
           </a>
         </SidebarMenuButton>
       </SidebarMenuItem>
+      {flags.extensions && (
       <Can I="admin">
         <SidebarMenuItem>
           <SidebarMenuButton asChild tooltip={t("nav.extensions")}>
@@ -403,6 +427,7 @@ function NavSecondary({ onSettingsClick }: { onSettingsClick: () => void }) {
           </SidebarMenuButton>
         </SidebarMenuItem>
       </Can>
+      )}
     </SidebarMenu>
   );
 }
@@ -426,11 +451,18 @@ export function AppSidebar({
   } = usePreferenceSettings();
   const isMobile = useIsMobile();
   const { data: courses = [], isLoading: coursesLoading } = useCourses();
-  const { data: eligibilityCourses = [], isLoading: eligibilityCoursesLoading } =
-    useCourses({ include_archived: true }, Boolean(authUser));
+  const {
+    data: eligibilityCourses = [],
+    isLoading: eligibilityCoursesLoading,
+  } = useCourses({ include_archived: true }, Boolean(authUser));
   const { data: assignments = [] } = useAllAssignments(isAuthenticated);
-  const { data: notifications = [] } = useNotifications(isAuthenticated);
-  const unreadCount = notifications.filter((notification) => !notification.readAt).length;
+  const flags = useReleaseFeatures();
+  const { data: notifications = [] } = useNotifications(
+    isAuthenticated && flags.inbox,
+  );
+  const unreadCount = notifications.filter(
+    (notification) => !notification.readAt,
+  ).length;
   const {
     setOpen,
     state,
@@ -446,10 +478,12 @@ export function AppSidebar({
   const [assignmentsOpen, setAssignmentsOpen] = useState(false);
   const coursesContentId = useId();
   const assignmentsContentId = useId();
-  const showStudentDashboard = !coursesLoading
-    && !eligibilityCoursesLoading
-    && authUser?.role === 'user'
-    && !hasStaffCourseMembership(eligibilityCourses);
+  const showStudentDashboard =
+    flags.dashboard &&
+    !coursesLoading &&
+    !eligibilityCoursesLoading &&
+    authUser?.role === "user" &&
+    !hasStaffCourseMembership(eligibilityCourses);
 
   useEffect(() => {
     if (state !== "expanded") {
@@ -470,7 +504,7 @@ export function AppSidebar({
   const sidebarStyle = {
     ...(style ?? {}),
     ["--sidebar-width" as string]:
-      !isSidebarMobile && inboxOpen
+      !isSidebarMobile && flags.inbox && inboxOpen
         ? `calc(${sidebarWidth} + 20rem)`
         : isSidebarMobile
           ? "20rem"
@@ -489,7 +523,7 @@ export function AppSidebar({
       {...props}
     >
       <div className="flex h-full w-full overflow-hidden">
-      {isSidebarMobile && inboxOpen ? (
+        {isSidebarMobile && flags.inbox && inboxOpen ? (
         <div className="flex h-full w-full flex-col">
           <SidebarHeader className="pb-0 pt-4">
             <div className="flex items-center gap-2 px-2">
@@ -524,8 +558,12 @@ export function AppSidebar({
             <SidebarMenuItem>
               <Link
                 to="/"
-                aria-label={state === "collapsed" ? "Open sidebar" : displayTitle}
-                title={state === "collapsed" ? "Open sidebar" : displayTitle}
+                    aria-label={
+                      state === "collapsed" ? "Open sidebar" : displayTitle
+                    }
+                    title={
+                      state === "collapsed" ? "Open sidebar" : displayTitle
+                    }
                 className="group/brand"
                 onClick={(event) => {
                   if (state === "collapsed") {
@@ -538,6 +576,11 @@ export function AppSidebar({
                   <h1 className="text-2xl font-serif font-semibold text-foreground cursor-pointer">
                     <span className="transition-[opacity,transform,margin] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:hidden">
                       {displayTitle}
+                          {flags.channel === "nightly" && (
+                            <span className="ml-2 font-sans text-xs font-normal text-muted-foreground">
+                              Nightly
+                            </span>
+                          )}
                     </span>
                     <span
                       aria-hidden="true"
@@ -554,7 +597,6 @@ export function AppSidebar({
           <SidebarSeparator className="mx-0" />
         </SidebarHeader>
         <ScrollArea className="overflow-y-auto h-full">
-
         <SidebarContent className="gap-0">
           <SidebarGroup>
             <SidebarGroupContent>
@@ -575,7 +617,11 @@ export function AppSidebar({
             <SidebarGroupLabel>{t("sidebar.classes")}</SidebarGroupLabel>
             <SidebarGroupContent className="flex flex-col">
               <SidebarMenu>
-                <Collapsible open={coursesOpen} onOpenChange={setCoursesOpen} className="group/collapsible">
+                      <Collapsible
+                        open={coursesOpen}
+                        onOpenChange={setCoursesOpen}
+                        className="group/collapsible"
+                      >
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       tooltip={t("sidebar.courses.title")}
@@ -608,9 +654,14 @@ export function AppSidebar({
                                 <span
                                   className={`grid size-6 shrink-0 place-items-center rounded-full border border-white/15 bg-gradient-to-br text-white shadow-[var(--shadow-button)] transition-transform duration-150 ease-out group-hover/course:-translate-y-px group-active/course:translate-y-0 group-active/course:scale-[0.96] ${getCourseIconBackground(course.id)}`}
                                 >
-                                  <CourseIcon iconKey={course.iconKey} size={14} />
+                                        <CourseIcon
+                                          iconKey={course.iconKey}
+                                          size={14}
+                                        />
+                                      </span>
+                                      <span className="truncate">
+                                        {course.name}
                                 </span>
-                                <span className="truncate">{course.name}</span>
                               </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
@@ -638,7 +689,11 @@ export function AppSidebar({
                   </SidebarMenuItem>
                 </Collapsible>
 
-                <Collapsible open={assignmentsOpen} onOpenChange={setAssignmentsOpen} className="group/collapsible">
+                      <Collapsible
+                        open={assignmentsOpen}
+                        onOpenChange={setAssignmentsOpen}
+                        className="group/collapsible"
+                      >
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       tooltip={t("sidebar.assignments.title")}
@@ -675,13 +730,18 @@ export function AppSidebar({
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         ))}
-                        {assignments.length > 3 && !showAllAssignments && (
+                              {assignments.length > 3 &&
+                                !showAllAssignments && (
                           <SidebarMenuSubItem>
                             <SidebarMenuSubButton
                               className="text-muted-foreground"
-                              onClick={() => setShowAllAssignments(true)}
+                                      onClick={() =>
+                                        setShowAllAssignments(true)
+                                      }
                             >
-                              <span>{t("sidebar.assignments.showMore")}</span>
+                                      <span>
+                                        {t("sidebar.assignments.showMore")}
+                                      </span>
                               <span className="text-muted-foreground">
                                 <Plus className="h-4 w-4" />
                               </span>
@@ -698,7 +758,9 @@ export function AppSidebar({
 
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>
-              <NavSecondary onSettingsClick={() => setSettingsOpen(true)} />
+                    <NavSecondary
+                      onSettingsClick={() => setSettingsOpen(true)}
+                    />
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
@@ -801,7 +863,7 @@ export function AppSidebar({
         </SidebarFooter>
       </div>
       )}
-      {inboxOpen && (
+        {flags.inbox && inboxOpen && (
         <aside className="hidden border-l bg-sidebar md:flex md:flex-col">
           <div className="border-b p-4">
             <div className="flex items-center">
@@ -828,7 +890,11 @@ export function AppSidebar({
         onOpenChange={setSearchOpen}
         onOpenSettings={() => setSettingsOpen(true)}
       />
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} isMobile={isMobile} />
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        isMobile={isMobile}
+      />
       <SidebarRail />
     </Sidebar>
   );
