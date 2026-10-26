@@ -447,6 +447,7 @@ class TestAuthenticationFlow:
         assert response.status_code == 200
         assert response.json() == {
             "release_channel": "stable",
+            "authentication": {"providers": []},
             "features": {
                 "email_enabled": True,
                 "ai_controls_enabled": False,
@@ -470,6 +471,7 @@ class TestAuthenticationFlow:
         assert response.status_code == 200
         assert response.json() == {
             "release_channel": "stable",
+            "authentication": {"providers": []},
             "features": {
                 "email_enabled": True,
                 "ai_controls_enabled": False,

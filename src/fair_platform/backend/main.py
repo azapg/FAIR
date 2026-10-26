@@ -18,6 +18,7 @@ from fair_platform.backend.api.routers.courses import router as courses_router
 from fair_platform.backend.api.routers.assignments import router as assignments_router
 from fair_platform.backend.api.routers.submissions import router as submissions_router
 from fair_platform.backend.api.routers.auth import router as auth_router
+from fair_platform.backend.api.routers.oidc import router as oidc_router
 from fair_platform.backend.api.routers.version import router as version_router
 from fair_platform.backend.api.routers.rubrics import router as rubrics_router
 from fair_platform.backend.api.routers.enrollments import router as enrollments_router
@@ -151,6 +152,7 @@ app.include_router(courses_router, prefix="/api/courses", tags=["courses"])
 app.include_router(assignments_router, prefix="/api/assignments", tags=["assignments"])
 app.include_router(submissions_router, prefix="/api/submissions", tags=["submissions"])
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(oidc_router, prefix="/api/auth/oidc", tags=["auth"])
 app.include_router(version_router, prefix="/api", tags=["version"])
 app.include_router(rubrics_router, prefix="/api/rubrics", tags=["rubrics"])
 app.include_router(enrollments_router, prefix="/api/enrollments", tags=["enrollments"])

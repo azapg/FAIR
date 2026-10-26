@@ -165,6 +165,20 @@ def authorize_registration(
     normalized_email: str,
     invite_token: str | None,
 ) -> RegistrationInvite | None:
+    return authorize_registration_with_invite_hash(
+        session,
+        normalized_email=normalized_email,
+        invite_hash=_invite_hash(invite_token) if invite_token and len(invite_token) <= 512 else None,
+    )
+
+
+def authorize_registration_with_invite_hash(
+    session: Session,
+    *,
+    normalized_email: str,
+    invite_hash: str | None,
+) -> RegistrationInvite | None:
+    """Internal variant for server-owned OAuth transactions; never accept a public digest."""
     mode = resolve_platform_policy(session).admission_mode
     if mode is AdmissionMode.open:
         return None
@@ -192,7 +206,7 @@ def authorize_registration(
             detail="Registration is not available for this email address.",
         )
 
-    if not invite_token or len(invite_token) > 512:
+    if not invite_hash:
         raise AccessPolicyError(
             status_code=403,
             code="registration_not_permitted",
@@ -200,7 +214,7 @@ def authorize_registration(
         )
     invitation = session.scalar(
         select(RegistrationInvite)
-        .where(RegistrationInvite.token_hash == _invite_hash(invite_token))
+        .where(RegistrationInvite.token_hash == invite_hash)
         .with_for_update()
     )
     now = datetime.now(timezone.utc)

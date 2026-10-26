@@ -6,6 +6,7 @@ export type ReleaseFeature =
   "todo" | "inbox" | "extensions" | "course_content" | "gradebook";
 
 export type SystemConfig = {
+  authentication?: { providers: string[] };
   release_channel: "stable" | "nightly";
   features: {
     todo: boolean;

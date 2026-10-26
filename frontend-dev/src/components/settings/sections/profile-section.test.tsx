@@ -1,16 +1,22 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const { apiPost, toastSuccess } = vi.hoisted(() => ({
+const { apiPost, apiGet, toastSuccess } = vi.hoisted(() => ({
   apiPost: vi.fn(),
+  apiGet: vi.fn(),
   toastSuccess: vi.fn(),
 }));
 
-vi.mock("@/lib/api", () => ({ default: { post: apiPost } }));
+vi.mock("@/lib/api", () => ({ default: { post: apiPost, get: apiGet } }));
+vi.mock("@/hooks/use-system-config", () => ({
+  useSystemConfig: () => ({ data: { authentication: { providers: ['google'] } } }),
+}));
 vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
 vi.mock("@/contexts/auth-context", () => ({
   useAuth: () => ({
     user: {
+      id: 'test-user',
       name: "Test User",
       email: "test@example.com",
     },
@@ -41,6 +47,11 @@ vi.mock("react-i18next", () => ({
         "auth.currentPassword": "Current password",
         "auth.newPassword": "New password",
         "auth.confirmPassword": "Confirm password",
+        "auth.connectGoogle": "Connect Google",
+        "auth.continueWithGoogle": "Continue with Google",
+        "auth.connectGoogleDescription": "Confirm your password, then choose Google.",
+        "auth.googleLinkFailed": "Check your password and try again.",
+        "auth.googleConnected": "Connected",
         "common.cancel": "Cancel",
         "common.or": "or",
       })[key] ?? key,
@@ -49,17 +60,25 @@ vi.mock("react-i18next", () => ({
 
 import { ProfileSection } from "./profile-section";
 
+function renderProfile() {
+  return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <ProfileSection />
+  </QueryClientProvider>);
+}
+
 afterEach(() => {
+  cleanup();
   vi.clearAllMocks();
 });
 
 describe("ProfileSection password change", () => {
   beforeEach(() => {
+    apiGet.mockResolvedValue({ data: { hasPassword: true, providers: [] } });
     apiPost.mockResolvedValue({ data: { detail: "Password changed successfully" } });
   });
 
   it("opens the change-password form and submits the password fields", async () => {
-    render(<ProfileSection />);
+    renderProfile();
 
     fireEvent.click(screen.getByRole("button", { name: "Change password" }));
     expect(screen.getByRole("dialog", { name: "Change your password" })).toBeInTheDocument();
@@ -88,7 +107,7 @@ describe("ProfileSection password change", () => {
   });
 
   it("does not submit when the new passwords do not match", () => {
-    render(<ProfileSection />);
+    renderProfile();
     fireEvent.click(document.getElementById("settings-profile-password")!);
 
     fireEvent.change(screen.getByLabelText("Current password"), {
@@ -104,5 +123,23 @@ describe("ProfileSection password change", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("New passwords must match.");
     expect(apiPost).not.toHaveBeenCalled();
+  });
+
+  it("connects Google only after confirming the current password", async () => {
+    apiPost.mockRejectedValueOnce(new Error('incorrect password'));
+    renderProfile();
+    fireEvent.click(await screen.findByRole('button', { name: 'Connect Google' }));
+    fireEvent.change(screen.getByLabelText('Current password'), { target: { value: 'confirmation' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/auth/oidc/google/link', { currentPassword: 'confirmation' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Check your password');
+  });
+
+  it("shows a Google-only account without a change-password action", async () => {
+    apiGet.mockResolvedValue({ data: { hasPassword: false, providers: ['google'] } });
+    renderProfile();
+    expect(await screen.findByText('Connected')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change password' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Connect Google' })).not.toBeInTheDocument();
   });
 });

@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
 import { AuthPageShell } from '@/components/auth/auth-page-shell'
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import { ArrowLeft, ExternalLink, Mail } from 'lucide-react'
 import { useSystemConfig } from '@/hooks/use-system-config'
 
@@ -122,6 +123,8 @@ export default function RegisterPage() {
                   : t('auth.createYourAccount')}
             </p>
           </div>
+          <GoogleSignInButton inviteToken={inviteToken || undefined}
+            disabled={loading || (invitationRequired && !inviteToken)} />
           <Field>
             <FieldLabel htmlFor="name">{t('auth.name')}</FieldLabel>
             <Input

@@ -1,4 +1,5 @@
 from .user import User, UserRole
+from .external_identity import ExternalIdentity, OIDCTransaction
 from .access_control import (
     AdmissionMode,
     AdmissionRule,
@@ -130,6 +131,8 @@ from .lms_quiz import (
 )
 
 __all__ = [
+    "ExternalIdentity",
+    "OIDCTransaction",
     "User",
     "UserRole",
     "AdmissionMode",

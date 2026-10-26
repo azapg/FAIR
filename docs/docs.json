@@ -49,8 +49,6 @@
                 "pages": [
                   "en/introduction",
                   "en/quickstart",
-                  "en/cli",
-                  "en/troubleshooting",
                   "en/roadmap"
                 ]
               },
@@ -63,16 +61,31 @@
                   "en/platform/quizzes",
                   "en/platform/student-dashboard",
                   "en/platform/assignments",
-                  "en/platform/lms-primitives",
                   "en/platform/flows",
                   "en/platform/integrations",
-                  "en/platform/access-controls",
                   "en/platform/settings"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Developers & IT",
+            "icon": "wrench",
+            "groups": [
+              {
+                "group": "Setup and administration",
+                "pages": [
+                  "en/development/installation",
+                  "en/development/google-sign-in",
+                  "en/platform/access-controls",
+                  "en/cli",
+                  "en/troubleshooting"
                 ]
               },
               {
                 "group": "Development",
                 "pages": [
+                  "en/platform/lms-primitives",
                   "en/api-reference/releases",
                   "en/api-reference/migrations",
                   "en/api-reference/dev-env",
@@ -149,20 +162,37 @@
                 "pages": [
                   "es/introduction",
                   "es/quickstart",
-                  "es/cli",
-                  "es/troubleshooting",
                   "es/roadmap"
                 ]
               },
               {
                 "group": "Plataforma",
                 "pages": [
-                  "es/platform/extension-architecture",
-                  "es/platform/foundational-api",
                   "es/platform/flows",
                   "es/platform/integrations",
-                  "es/platform/access-controls",
                   "es/platform/settings"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Desarrolladores y TI",
+            "icon": "wrench",
+            "groups": [
+              {
+                "group": "Instalación y administración",
+                "pages": [
+                  "es/development/installation",
+                  "es/platform/access-controls",
+                  "es/cli",
+                  "es/troubleshooting"
+                ]
+              },
+              {
+                "group": "Arquitectura",
+                "pages": [
+                  "es/platform/extension-architecture",
+                  "es/platform/foundational-api"
                 ]
               }
             ]

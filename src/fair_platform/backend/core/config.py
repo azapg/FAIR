@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass, field
 from typing import Literal
 from urllib.parse import urlparse
 
@@ -66,6 +67,7 @@ def validate_security_configuration(secret_key: str | None = None) -> None:
     get_admission_mode_override()
     get_ai_controls_enabled_override()
     resolved_secret = secret_key or get_secret_key()
+    get_google_login_config()
     if get_deployment_mode() != "ENTERPRISE":
         return
     if resolved_secret == INSECURE_DEFAULT_SECRET_KEY:
@@ -160,3 +162,70 @@ API_BASE_URL = (
 def get_api_base_url() -> str:
     raw = os.getenv("FAIR_API_BASE_URL") or API_BASE_URL
     return raw.strip().rstrip("/")
+
+
+@dataclass(frozen=True)
+class OIDCProviderConfig:
+    key: str
+    issuer: str
+    discovery_url: str
+    client_id: str
+    client_secret: str = field(repr=False)
+    callback_url: str
+    frontend_url: str
+    secure: bool
+
+
+def get_google_login_config() -> OIDCProviderConfig | None:
+    client_id = os.getenv("FAIR_GOOGLE_CLIENT_ID", "").strip()
+    client_secret = os.getenv("FAIR_GOOGLE_CLIENT_SECRET", "").strip()
+    if not client_id and not client_secret:
+        return None
+    if not client_id or not client_secret:
+        raise RuntimeError(
+            "Set both FAIR_GOOGLE_CLIENT_ID and FAIR_GOOGLE_CLIENT_SECRET"
+        )
+    if get_secret_key() == INSECURE_DEFAULT_SECRET_KEY or len(get_secret_key()) < 32:
+        raise RuntimeError(
+            "Google login requires a SECRET_KEY of at least 32 characters"
+        )
+
+    frontend_url, api_url = get_base_url(), get_api_base_url()
+    if (
+        urlparse(api_url).scheme == "https"
+        and _parse_strict_bool_env("FAIR_SESSION_COOKIE_SECURE") is False
+    ):
+        raise RuntimeError(
+            "FAIR_SESSION_COOKIE_SECURE cannot be disabled for HTTPS Google login"
+        )
+    for name, value in (
+        ("FAIR_BASE_URL", frontend_url),
+        ("FAIR_API_BASE_URL", api_url),
+    ):
+        parsed = urlparse(value)
+        if (
+            not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+            or parsed.path not in {"", "/"}
+            or parsed.scheme not in {"http", "https"}
+            or (
+                parsed.scheme != "https"
+                and parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+            )
+        ):
+            raise RuntimeError(
+                f"{name} must be an HTTPS origin (HTTP is allowed on localhost)"
+            )
+    return OIDCProviderConfig(
+        key="google",
+        issuer="https://accounts.google.com",
+        discovery_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_id=client_id,
+        client_secret=client_secret,
+        callback_url=f"{api_url}/api/auth/oidc/google/callback",
+        frontend_url=frontend_url,
+        secure=urlparse(api_url).scheme == "https",
+    )

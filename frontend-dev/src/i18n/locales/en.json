@@ -260,6 +260,17 @@
     }
   },
   "auth": {
+    "continueWithGoogle": "Continue with Google",
+    "connectGoogle": "Connect Google",
+    "googleConnected": "Connected",
+    "connectGoogleDescription": "Confirm your password, then choose the Google account with the same email.",
+    "googleLinkFailed": "Check your password and try again.",
+    "googleErrors": {
+      "cancelled": "Google sign-in was cancelled. You can try again.",
+      "account_link_required": "Sign in with your password, then connect Google in Settings → Profile using the same email.",
+      "registration_not_permitted": "This account needs an approved email or a valid invitation. Open your invitation link to register.",
+      "try_again": "Google sign-in failed. Please try again."
+    },
     "welcomeBack": "Welcome back",
     "loginToFair": "Login to The Fair Platform",
     "welcome": "Welcome",
