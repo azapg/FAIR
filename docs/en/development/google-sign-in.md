@@ -37,6 +37,8 @@ account-linking instructions, see [Google sign-in](/en/platform/integrations).
    Partial credentials or insecure origins fail startup with an actionable error.
    HTTP is supported only for localhost development. The frontend and API should
    be on the same site so browser cookie restrictions do not block sessions.
+   HTTPS Google login also rejects an explicit `FAIR_SESSION_COOKIE_SECURE=false`
+   override, so a development setting cannot silently weaken session cookies.
 
 The Google project does not need Classroom or Drive enabled for login. FAIR asks
 only for `openid email profile`, exchanges the code on the server, and discards
@@ -44,6 +46,7 @@ Google tokens after validating the identity. This flow uses a redirect, without
 loading Google's browser SDK. Regular Google web-client creation is done in the
 Cloud Console; `gcloud iam oauth-clients` serves a different Cloud OAuth use case,
 and the former IAP OAuth administration commands are retired.
+
 ## Recovery and rollout
 
 Password reset retains its current behavior: when email services are enabled, it

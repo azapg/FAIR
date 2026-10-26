@@ -182,20 +182,43 @@ def get_google_login_config() -> OIDCProviderConfig | None:
     if not client_id and not client_secret:
         return None
     if not client_id or not client_secret:
-        raise RuntimeError("Set both FAIR_GOOGLE_CLIENT_ID and FAIR_GOOGLE_CLIENT_SECRET")
+        raise RuntimeError(
+            "Set both FAIR_GOOGLE_CLIENT_ID and FAIR_GOOGLE_CLIENT_SECRET"
+        )
     if get_secret_key() == INSECURE_DEFAULT_SECRET_KEY or len(get_secret_key()) < 32:
-        raise RuntimeError("Google login requires a SECRET_KEY of at least 32 characters")
+        raise RuntimeError(
+            "Google login requires a SECRET_KEY of at least 32 characters"
+        )
 
     frontend_url, api_url = get_base_url(), get_api_base_url()
-    for name, value in (("FAIR_BASE_URL", frontend_url), ("FAIR_API_BASE_URL", api_url)):
+    if (
+        urlparse(api_url).scheme == "https"
+        and _parse_strict_bool_env("FAIR_SESSION_COOKIE_SECURE") is False
+    ):
+        raise RuntimeError(
+            "FAIR_SESSION_COOKIE_SECURE cannot be disabled for HTTPS Google login"
+        )
+    for name, value in (
+        ("FAIR_BASE_URL", frontend_url),
+        ("FAIR_API_BASE_URL", api_url),
+    ):
         parsed = urlparse(value)
         if (
-            not parsed.hostname or parsed.username or parsed.password
-            or parsed.query or parsed.fragment or parsed.path not in {"", "/"}
+            not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+            or parsed.path not in {"", "/"}
             or parsed.scheme not in {"http", "https"}
-            or (parsed.scheme != "https" and parsed.hostname not in {"localhost", "127.0.0.1", "::1"})
+            or (
+                parsed.scheme != "https"
+                and parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+            )
         ):
-            raise RuntimeError(f"{name} must be an HTTPS origin (HTTP is allowed on localhost)")
+            raise RuntimeError(
+                f"{name} must be an HTTPS origin (HTTP is allowed on localhost)"
+            )
     return OIDCProviderConfig(
         key="google",
         issuer="https://accounts.google.com",

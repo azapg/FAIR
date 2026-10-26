@@ -61,6 +61,10 @@ def google(monkeypatch, signing_key):
     provider = {"claims": {}, "omit": set(), "token_requests": 0}
 
     def handle(request):
+        if provider.get("unavailable") and request.url.path.endswith(
+            "openid-configuration"
+        ):
+            raise httpx.ConnectError("Provider unavailable", request=request)
         if request.url.path.endswith("openid-configuration"):
             return httpx.Response(
                 200,
@@ -76,6 +80,8 @@ def google(monkeypatch, signing_key):
             return httpx.Response(200, json={"keys": [public_jwk]})
         if request.url.path == "/token":
             provider["token_requests"] += 1
+            if provider.get("token_error"):
+                return httpx.Response(400, json={"error": "invalid_grant"})
             body = parse_qs(request.content.decode())
             verifier = body["code_verifier"][0]
             challenge = (
@@ -85,7 +91,10 @@ def google(monkeypatch, signing_key):
             )
             assert challenge == provider["challenge"]
             assert body["redirect_uri"] == [
-                "http://localhost:8000/api/auth/oidc/google/callback"
+                provider.get(
+                    "callback_url",
+                    "http://localhost:8000/api/auth/oidc/google/callback",
+                )
             ]
             now = int(time.time())
             claims = {
@@ -115,6 +124,7 @@ def google(monkeypatch, signing_key):
                     "access_token": "discard-me",
                     "token_type": "Bearer",
                     "expires_in": 3600,
+                    **provider.get("token_overrides", {}),
                 },
             )
         raise AssertionError(f"Unexpected provider URL: {request.url.path}")
@@ -483,3 +493,296 @@ def test_configuration_cookie_is_secure_and_host_headers_cannot_change_callback(
         "https://api.example.edu/api/auth/oidc/google/callback"
     ]
     assert get_google_login_config().frontend_url == "https://fair.example.edu"
+
+
+@pytest.mark.parametrize("phase", ["discovery", "exchange", "missing_token"])
+def test_provider_failure_is_recoverable_without_creating_accounts(
+    test_client, test_db, google, phase
+):
+    if phase == "discovery":
+        google["unavailable"] = True
+        response = test_client.post(f"{ROOT}/google/start", json={}, headers=ORIGIN)
+        assert response.status_code == 503
+        assert oidc.BINDING_COOKIE not in test_client.cookies
+    else:
+        state = begin(test_client, google)
+        if phase == "exchange":
+            google["token_error"] = True
+        else:
+            google["token_overrides"] = {"id_token": ""}
+        assert (
+            callback(test_client, state)
+            .headers["location"]
+            .endswith("google_error=try_again")
+        )
+        assert oidc.BINDING_COOKIE not in test_client.cookies
+    with test_db() as db:
+        assert db.scalar(select(func.count()).select_from(User)) == 0
+        assert db.scalar(select(func.count()).select_from(OIDCTransaction)) == 0
+    google.update(unavailable=False, token_error=False, token_overrides={})
+    assert (
+        callback(test_client, begin(test_client, google)).headers["location"]
+        == "http://localhost:3000/"
+    )
+
+
+def test_second_tab_replaces_first_without_losing_the_new_login(test_client, google):
+    old_state = begin(test_client, google)
+    current_state = begin(test_client, google)
+    assert callback(test_client, old_state).headers["location"].endswith("try_again")
+    assert (
+        callback(test_client, current_state).headers["location"]
+        == "http://localhost:3000/"
+    )
+
+
+def test_allowlist_accepts_case_insensitive_email_but_not_subdomains(
+    test_client, test_db, google, admin_user, monkeypatch
+):
+    from fair_platform.backend.data.models import AdmissionRule
+
+    monkeypatch.setenv("FAIR_ADMISSION_MODE", "allowlist")
+    with test_db() as db:
+        db.add(
+            AdmissionRule(
+                kind="domain",
+                normalized_value="example.edu",
+                created_by_user_id=admin_user.id,
+            )
+        )
+        db.commit()
+    google["claims"]["email"] = "New@sub.example.edu"
+    assert (
+        callback(test_client, begin(test_client, google))
+        .headers["location"]
+        .endswith("registration_not_permitted")
+    )
+    google["claims"]["email"] = "New@EXAMPLE.edu"
+    assert (
+        callback(test_client, begin(test_client, google)).headers["location"]
+        == "http://localhost:3000/"
+    )
+
+
+def test_policy_is_rechecked_when_it_changes_during_google_redirect(
+    test_client, test_db, google, monkeypatch
+):
+    state = begin(test_client, google)
+    monkeypatch.setenv("FAIR_ADMISSION_MODE", "invite_only")
+    assert (
+        callback(test_client, state)
+        .headers["location"]
+        .endswith("registration_not_permitted")
+    )
+    with test_db() as db:
+        assert db.scalar(select(func.count()).select_from(User)) == 0
+
+
+def test_disabled_google_keeps_existing_sessions_and_password_fallback(
+    test_client, test_db, google, student_user, monkeypatch
+):
+    google["claims"]["email"] = student_user.email
+    test_client.post(
+        "/api/auth/login",
+        data={"username": student_user.email, "password": "test_password_123"},
+    )
+    state = begin(
+        test_client, google, {"currentPassword": "test_password_123"}, "/google/link"
+    )
+    assert callback(test_client, state).headers["location"] == "http://localhost:3000/"
+    monkeypatch.delenv("FAIR_GOOGLE_CLIENT_ID")
+    monkeypatch.delenv("FAIR_GOOGLE_CLIENT_SECRET")
+    assert (
+        test_client.get("/api/v1/system/config").json()["authentication"]["providers"]
+        == []
+    )
+    assert test_client.get("/api/auth/me").json()["id"] == str(student_user.id)
+    test_client.post("/api/auth/logout")
+    assert (
+        test_client.post(
+            "/api/auth/login",
+            data={"username": student_user.email, "password": "test_password_123"},
+        ).status_code
+        == 200
+    )
+    with test_db() as db:
+        assert db.scalar(select(func.count()).select_from(ExternalIdentity)) == 1
+
+
+def test_google_only_user_can_recover_a_password_without_losing_google(
+    test_client, test_db, google, monkeypatch
+):
+    from fair_platform.backend.services.mailer import Mailer
+
+    assert (
+        callback(test_client, begin(test_client, google)).headers["location"]
+        == "http://localhost:3000/"
+    )
+    user_id = test_client.get("/api/auth/me").json()["id"]
+    test_client.post("/api/auth/logout")
+    assert (
+        test_client.post(
+            "/api/auth/login",
+            data={"username": "new@example.edu", "password": "anything"},
+        ).status_code
+        == 401
+    )
+    assert (
+        test_client.post(
+            "/api/auth/forgot-password", json={"email": "new@example.edu"}
+        ).status_code
+        == 400
+    )
+    monkeypatch.setenv("FAIR_EMAIL_ENABLED", "1")
+    messages = []
+
+    async def capture(self, user, reset_url):
+        messages.append(reset_url)
+
+    monkeypatch.setattr(Mailer, "send_password_reset", capture)
+    assert (
+        test_client.post(
+            "/api/auth/forgot-password", json={"email": "new@example.edu"}
+        ).status_code
+        == 200
+    )
+    token = parse_qs(urlparse(messages[0]).query)["token"][0]
+    assert (
+        test_client.post(
+            "/api/auth/reset-password/confirm",
+            json={"token": token, "password": "recovered-password-123"},
+        ).status_code
+        == 200
+    )
+    assert (
+        test_client.post(
+            "/api/auth/login",
+            data={"username": "new@example.edu", "password": "recovered-password-123"},
+        ).status_code
+        == 200
+    )
+    assert test_client.get("/api/auth/me").json()["id"] == user_id
+    assert test_client.get(f"{ROOT}/identities").json() == {
+        "hasPassword": True,
+        "providers": ["google"],
+    }
+    test_client.post("/api/auth/logout")
+    assert (
+        callback(test_client, begin(test_client, google)).headers["location"]
+        == "http://localhost:3000/"
+    )
+    assert test_client.get("/api/auth/me").json()["id"] == user_id
+
+
+@pytest.mark.parametrize("password", ["x" * 100, "é" * 40])
+def test_link_handles_passwords_exceeding_bcrypt_byte_limit(
+    test_client, google, student_user, password
+):
+    test_client.post(
+        "/api/auth/login",
+        data={"username": student_user.email, "password": "test_password_123"},
+    )
+    response = test_client.post(
+        f"{ROOT}/google/link", json={"currentPassword": password}, headers=ORIGIN
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Current password is incorrect"
+
+
+def test_https_google_rollout_rejects_insecure_session_override(google, monkeypatch):
+    monkeypatch.setenv("FAIR_BASE_URL", "https://fair.example.edu")
+    monkeypatch.setenv("FAIR_API_BASE_URL", "https://api.fair.example.edu")
+    monkeypatch.setenv("FAIR_SESSION_COOKIE_SECURE", "0")
+    with pytest.raises(RuntimeError, match="FAIR_SESSION_COOKIE_SECURE"):
+        validate_security_configuration()
+
+
+def test_google_does_not_grant_roles_and_link_preserves_course_ownership(
+    test_client, test_db, google, professor_user
+):
+    from uuid import uuid4
+    from fair_platform.backend.data.models import Course
+
+    google["claims"].update(email=professor_user.email, role="admin", groups=["admin"])
+    with test_db() as db:
+        course = Course(
+            id=uuid4(), name="Existing course", instructor_id=professor_user.id
+        )
+        db.add(course)
+        db.commit()
+        course_id = course.id
+    test_client.post(
+        "/api/auth/login",
+        data={"username": professor_user.email, "password": "test_password_123"},
+    )
+    state = begin(
+        test_client, google, {"currentPassword": "test_password_123"}, "/google/link"
+    )
+    assert callback(test_client, state).headers["location"] == "http://localhost:3000/"
+    me = test_client.get("/api/auth/me").json()
+    assert me["id"] == str(professor_user.id) and me["role"] == "instructor"
+    courses = test_client.get("/api/courses/").json()
+    assert any(
+        c["id"] == str(course_id) and c["membershipRole"] == "owner" for c in courses
+    )
+    test_client.post("/api/auth/logout")
+    google["claims"].update(sub="unrelated-subject", email="brand-new@example.edu")
+    assert (
+        callback(test_client, begin(test_client, google)).headers["location"]
+        == "http://localhost:3000/"
+    )
+    assert test_client.get("/api/auth/me").json()["role"] == "user"
+
+
+def test_link_cannot_replace_another_users_google_identity(
+    test_client, test_db, google, student_user
+):
+    assert (
+        callback(test_client, begin(test_client, google)).headers["location"]
+        == "http://localhost:3000/"
+    )
+    original_user_id = test_client.get("/api/auth/me").json()["id"]
+    test_client.post("/api/auth/logout")
+    test_client.post(
+        "/api/auth/login",
+        data={"username": student_user.email, "password": "test_password_123"},
+    )
+    google["claims"]["email"] = student_user.email
+    state = begin(
+        test_client, google, {"currentPassword": "test_password_123"}, "/google/link"
+    )
+    assert (
+        callback(test_client, state)
+        .headers["location"]
+        .endswith("account_link_required")
+    )
+    assert test_client.get("/api/auth/me").json()["id"] == str(student_user.id)
+    with test_db() as db:
+        assert str(db.scalar(select(ExternalIdentity)).user_id) == original_user_id
+        assert db.scalar(select(func.count()).select_from(ExternalIdentity)) == 1
+
+
+def test_session_cookie_is_secure_and_expires_after_one_day_on_https(
+    test_client, google, monkeypatch
+):
+    monkeypatch.setenv("FAIR_BASE_URL", "https://fair.example.edu")
+    monkeypatch.setenv("FAIR_API_BASE_URL", "https://api.example.edu")
+    google["callback_url"] = "https://api.example.edu/api/auth/oidc/google/callback"
+    test_client.base_url = httpx.URL("https://api.example.edu")
+    response = test_client.post(
+        f"{ROOT}/google/start", json={}, headers={"Origin": "https://fair.example.edu"}
+    )
+    params = parse_qs(urlparse(response.json()["authorizationUrl"]).query)
+    google["nonce"] = params["nonce"][0]
+    google["challenge"] = params["code_challenge"][0]
+    response = callback(test_client, params["state"][0])
+    assert response.headers["location"] == "https://fair.example.edu/"
+    session_cookie = next(
+        c
+        for c in response.headers.get_list("set-cookie")
+        if c.startswith("fair_session=")
+    )
+    assert all(
+        flag in session_cookie
+        for flag in ("Secure", "HttpOnly", "SameSite=lax", "Max-Age=86400")
+    )

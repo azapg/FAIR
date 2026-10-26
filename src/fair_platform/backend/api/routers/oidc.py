@@ -99,9 +99,14 @@ async def google_link(
     user: User = Depends(get_current_user),
     db: Session = Depends(session_dependency),
 ):
-    if not user.password_hash or not verify_password(
-        payload.current_password, user.password_hash
-    ):
+    try:
+        valid_password = bool(user.password_hash) and verify_password(
+            payload.current_password, user.password_hash
+        )
+    except ValueError:
+        # bcrypt rejects oversized UTF-8 passwords; treat them as bad credentials.
+        valid_password = False
+    if not valid_password:
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     return await _start(request, response, db, user_id=user.id)
 

@@ -24,5 +24,11 @@ The OAuth client is not approved for production, and no deployment was performed
 User help lives in `docs/en/platform/integrations.md`; setup and recovery are in
 `docs/en/development/google-sign-in.md` under the separate Developers & IT tab.
 
+Before merge, expanded validation passed 58 Google-flow tests, 118 existing
+regressions, 57 PostgreSQL/migration/startup checks (some startup overlap), and
+multiple actual browser journeys. Two fixes cover oversized link-password input
+and an insecure HTTPS cookie override. See
+`docs/validation/google-sign-in/edge-cases.md` for the repeatable fixture and evidence.
+
 Plan 009 covers Google login now. Enterprise SSO, Classroom permissions, and
 Moodle launches/sync remain future work with explicit boundaries in that plan.
