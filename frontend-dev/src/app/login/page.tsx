@@ -11,6 +11,7 @@ import { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
 import { IfSetting } from '@/components/if-setting'
 import { AuthPageShell } from '@/components/auth/auth-page-shell'
+import { GoogleSignInButton } from '@/components/auth/google-sign-in-button'
 import api from '@/lib/api'
 import { useSystemConfig } from '@/hooks/use-system-config'
 
@@ -25,6 +26,18 @@ export default function LoginPage() {
   const [showResendVerification, setShowResendVerification] = React.useState(false)
   const [resendingVerification, setResendingVerification] = React.useState(false)
   const [resendVerificationSent, setResendVerificationSent] = React.useState(false)
+  const [googleError] = React.useState(() => {
+    const value = new URLSearchParams(window.location.search).get('google_error')
+    return value && ['cancelled', 'account_link_required', 'registration_not_permitted', 'try_again'].includes(value)
+      ? value : null
+  })
+
+  React.useEffect(() => {
+    if (!googleError) return
+    const url = new URL(window.location.href)
+    url.searchParams.delete('google_error')
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+  }, [googleError])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -78,6 +91,8 @@ export default function LoginPage() {
               {t('auth.loginToFair')}
             </p>
           </div>
+          {googleError && <FieldDescription role="alert">{t(`auth.googleErrors.${googleError}`)}</FieldDescription>}
+          <GoogleSignInButton rememberMe={rememberMe} disabled={loading} />
           <Field>
             <FieldLabel htmlFor="email">{t('auth.email')}</FieldLabel>
             <Input

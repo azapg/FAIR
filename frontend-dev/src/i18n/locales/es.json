@@ -260,6 +260,17 @@
     }
   },
   "auth": {
+    "continueWithGoogle": "Continuar con Google",
+    "connectGoogle": "Conectar Google",
+    "googleConnected": "Conectado",
+    "connectGoogleDescription": "Confirma tu contraseña y elige la cuenta de Google con el mismo correo.",
+    "googleLinkFailed": "Verifica tu contraseña e inténtalo de nuevo.",
+    "googleErrors": {
+      "cancelled": "Se canceló el inicio con Google. Puedes intentarlo de nuevo.",
+      "account_link_required": "Inicia sesión con tu contraseña y conecta Google en Ajustes → Perfil con el mismo correo.",
+      "registration_not_permitted": "Esta cuenta necesita un correo aprobado o una invitación válida. Abre el enlace de tu invitación para registrarte.",
+      "try_again": "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+    },
     "welcomeBack": "Bienvenido de nuevo",
     "loginToFair": "Inicia sesión en The Fair Platform",
     "welcome": "Bienvenido",

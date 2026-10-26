@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { ResponsiveDialogContent } from "@/components/ui/responsive-dialog";
 import { SettingsSectionCard } from "@/components/settings/sections/settings-section-card";
 import api from "@/lib/api";
+import { GoogleAccount, useSignInMethods } from "@/components/auth/google-account";
+import { useSystemConfig } from "@/hooks/use-system-config";
 
 type PasswordError = { detail?: string };
 
@@ -151,6 +153,8 @@ function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialogProps)
 export function ProfileSection() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const methods = useSignInMethods();
+  const systemConfig = useSystemConfig();
   const [random, setRandom] = useState<number | null>(null);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const userName = user?.name ?? t("header.profile");
@@ -189,7 +193,7 @@ export function ProfileSection() {
         </Button>
       </div>
 
-      <div className="flex items-center justify-between">
+      {methods.data?.hasPassword !== false && <div className="flex items-center justify-between">
         <span className="text-sm font-medium">{t("settings.fields.password")}</span>
         <Button
           id="settings-profile-password"
@@ -198,7 +202,10 @@ export function ProfileSection() {
         >
           {t("settings.sections.profile.changePassword")}
         </Button>
-      </div>
+      </div>}
+
+      {systemConfig.data?.authentication?.providers.includes('google') && methods.data &&
+        <GoogleAccount connected={methods.data.providers.includes('google')} />}
 
       <ChangePasswordDialog
         open={changePasswordOpen}

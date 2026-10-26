@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from fair_platform.backend.core.config import get_email_enabled
+from fair_platform.backend.core.config import get_email_enabled, get_google_login_config
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.services.access_control import resolve_platform_policy
 from fair_platform.backend.services.dispatch_signing import get_dispatch_signer
@@ -19,6 +19,7 @@ def get_system_config(db: Session = Depends(session_dependency)):
     policy = resolve_platform_policy(db)
     return {
         "release_channel": get_release_channel(),
+        "authentication": {"providers": ["google"] if get_google_login_config() else []},
         "features": {
             **get_release_features(),
             "email_enabled": get_email_enabled(),

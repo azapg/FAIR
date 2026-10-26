@@ -5,6 +5,7 @@ import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from datetime import timedelta, timezone
 from typing import Iterator
 
 import pytest
@@ -23,6 +24,8 @@ from fair_platform.backend.data.models.submission_event import (
 )
 from fair_platform.backend.data.models.submitter import Submitter
 from fair_platform.backend.data.models.user import User
+from fair_platform.backend.data.models.external_identity import ExternalIdentity, OIDCTransaction
+from fair_platform.backend.services.oidc import claim_transaction, digest
 from fair_platform.backend.services.execution_store import (
     ExecutionStoreError,
     append_execution_event,
@@ -38,6 +41,48 @@ def _normalize_postgres_url(raw_url: str) -> str:
     if raw_url.startswith("postgresql://"):
         return "postgresql+psycopg://" + raw_url[len("postgresql://") :]
     return raw_url
+
+
+def test_postgres_oidc_claims_and_identity_constraints(postgres_database_url):
+    from sqlalchemy.exc import IntegrityError
+
+    engine = create_engine(postgres_database_url)
+    user_id = uuid.uuid4()
+    with Session(engine) as db:
+        db.add(User(id=user_id, name="Google user", email="oidc-pg@example.edu",
+                    role="user", password_hash=None, is_verified=True))
+        db.flush()
+        db.add(ExternalIdentity(user_id=user_id, issuer="https://accounts.google.com",
+                                subject="pg-unique-subject", connection_key="google"))
+        db.add(OIDCTransaction(state_hash=digest("pg-state"), browser_hash=digest("pg-browser"),
+                               connection_key="google", purpose="login", nonce="nonce", code_verifier="verifier",
+                               expires_at=datetime.now(timezone.utc) + timedelta(minutes=10)))
+        db.commit()
+
+    def claim(_):
+        with Session(engine, expire_on_commit=False) as db:
+            try:
+                claim_transaction(db, connection="google", state="pg-state", browser="pg-browser")
+                return True
+            except ValueError:
+                return False
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert sorted(pool.map(claim, range(2))) == [False, True]
+    with Session(engine) as db:
+        db.add(ExternalIdentity(user_id=user_id, issuer="https://accounts.google.com",
+                                subject="pg-other-subject", connection_key="google"))
+        with pytest.raises(IntegrityError):
+            db.commit()
+    with Session(engine) as db:
+        second_user = User(id=uuid.uuid4(), name="Other", email="oidc-pg-other@example.edu", role="user", is_verified=True)
+        db.add(second_user)
+        db.flush()
+        db.add(ExternalIdentity(user_id=second_user.id, issuer="https://accounts.google.com",
+                                subject="pg-unique-subject", connection_key="other-connection"))
+        with pytest.raises(IntegrityError):
+            db.commit()
+    engine.dispose()
 
 
 def _require_postgres_test_url() -> str:

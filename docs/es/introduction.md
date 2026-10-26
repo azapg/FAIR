@@ -1,49 +1,22 @@
 ---
 title: Bienvenido a FAIR
-description: Un LMS abierto y una plataforma de investigación con Extensiones instalables y opcionales.
+description: Un espacio para enseñar, aprender y revisar el trabajo de los estudiantes
 ---
 
-**FAIR** es una plataforma educativa y un entorno de investigación de código abierto creado por el [Proyecto Fair Grade](https://fairgradeproject.org). Ofrece a profesores, estudiantes e investigadores un espacio controlado para estudiar cómo las nuevas tecnologías afectan la educación, manteniendo el juicio humano en el centro.
+**FAIR** ayuda a profesores y estudiantes a gestionar cursos, compartir materiales,
+entregar asignaciones y revisar calificaciones y comentarios.
 
-FAIR es útil sin IA. Cuando no hay Extensiones instaladas, funciona como un LMS enfocado: personas, cursos, asignaciones, entregas, rúbricas, artefactos y decisiones humanas siguen disponibles.
+## Empieza aquí
 
-## Las Extensiones agregan comportamiento
+- [Primeros pasos](/es/quickstart): entra a FAIR y encuentra tus cursos.
+- [Iniciar sesión con Google](/es/platform/integrations): usa Google con una cuenta nueva o existente.
+- [Ajustes](/es/platform/settings): elige tu idioma y tus preferencias.
 
-Las Extensiones instaladas pueden agregar:
+## Herramientas de IA opcionales
 
-- evaluadores y herramientas de retroalimentación asistidas por IA;
-- asistentes personalizados con contexto del curso;
-- generadores de diapositivas HTML y materiales educativos;
-- transcripción y procesamiento de documentos;
-- herramientas deterministas y conectores con otros LMS.
+Tu institución puede habilitar herramientas para la enseñanza, los comentarios o
+la investigación. FAIR también funciona sin IA, y los profesores siguen a cargo
+de las decisiones sobre calificaciones.
 
-La plataforma no incorpora esas implementaciones ni un proveedor global de IA. Autentica y autoriza una Extensión instalada, crea una Ejecución observable, registra eventos ordenados y Artefactos, y conserva la procedencia necesaria para revisión e investigación.
-
-Lee [Núcleo y extensiones](/es/platform/extension-architecture) para conocer este límite fundacional.
-
-## Investigación reproducible mediante Flows
-
-Una tarea puntual puede representarse con una Ejecución. Una **FlowVersion** fija un procedimiento ordenado: versiones exactas de capacidades, configuración, entradas y Ejecuciones de pasos enlazadas. Así es posible comparar resultados, costos e intervenciones sin depender de un segundo sistema de workflows opaco.
-
-Lee [Flows y Ejecuciones](/es/platform/flows) para conocer el modelo actual y su estado de implementación.
-
-## El juicio humano sigue siendo explícito
-
-Las Extensiones pueden analizar, explicar, recomendar y proponer. Completar una Ejecución no publica silenciosamente una calificación ni toma una decisión institucional. Los resultados importantes siguen siendo acciones explícitas con procedencia humana o de política visible.
-
-## Próximos pasos
-
-<Columns cols={2}>
-  <Card title="Inicio rápido" icon="rocket" href="/es/quickstart">
-    Ejecuta FAIR y crea tu primer curso.
-  </Card>
-  <Card title="Núcleo y extensiones" icon="blocks" href="/es/platform/extension-architecture">
-    Comprende el límite de cada capacidad personalizada.
-  </Card>
-  <Card title="Flows y Ejecuciones" icon="workflow" href="/es/platform/flows">
-    Aprende cómo los procedimientos reproducibles comparten un solo modelo de ejecución.
-  </Card>
-  <Card title="Hoja de ruta" icon="map" href="/es/roadmap">
-    Sigue el avance hacia el contrato de FAIR 1.0.
-  </Card>
-</Columns>
+FAIR es un proyecto de código abierto del [Proyecto Fair Grade](https://fairgradeproject.org).
+Para instalarlo o consultar información técnica, abre **Desarrolladores y TI**.
