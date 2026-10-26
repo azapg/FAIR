@@ -5,9 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const { useStudentTodo } = vi.hoisted(() => ({ useStudentTodo: vi.fn() }))
 
 vi.mock('@/hooks/use-lms', () => ({ useStudentTodo }))
+vi.mock('@/components/page-header', () => ({
+  PageHeader: ({ title }: { title: string }) => <header><h1>{title}</h1></header>,
+}))
 
 import TodoPage from './page'
-import { SidebarProvider } from '@/components/ui/sidebar'
 
 describe('TodoPage', () => {
   afterEach(cleanup)
@@ -28,7 +30,7 @@ describe('TodoPage', () => {
       }],
     })
 
-    render(<MemoryRouter><SidebarProvider><TodoPage /></SidebarProvider></MemoryRouter>)
+    render(<MemoryRouter><TodoPage /></MemoryRouter>)
 
     expect(screen.getByRole('heading', { name: 'To-do' })).toBeInTheDocument()
     expect(screen.getByText('Cell diagram')).toBeInTheDocument()
@@ -41,7 +43,7 @@ describe('TodoPage', () => {
 
   it('shows an all caught up state', () => {
     useStudentTodo.mockReturnValue({ isLoading: false, data: [] })
-    render(<MemoryRouter><SidebarProvider><TodoPage /></SidebarProvider></MemoryRouter>)
+    render(<MemoryRouter><TodoPage /></MemoryRouter>)
     expect(screen.getByText('You are all caught up.')).toBeInTheDocument()
   })
 })

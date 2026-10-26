@@ -38,3 +38,13 @@ Stream announcements, participants, and files remain available on Stable.
 
 The Railway template and infrastructure defaults target Stable. CI checks pushes
 and pull requests for `main` and `nightly`.
+
+## Allan's phone preview
+
+The persistent phone preview follows `nightly` with
+`FAIR_RELEASE_CHANNEL=nightly`. Its URL remains
+`https://alam.tailf325ec.ts.net:8443`. Use `fair-nightly status`,
+`fair-nightly update`, and `fair-nightly use nightly`.
+Existing service names and data paths retain their legacy names for compatibility;
+the database, secret key, active development previews, and Windows publishing
+routes are preserved.
