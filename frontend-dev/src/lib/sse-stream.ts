@@ -3,11 +3,11 @@ import { getApiBaseUrl } from "@/lib/api";
 export type SseEvent = {
   event: string;
   data: string;
+  id?: string;
 };
 
 export type SseStreamOptions = {
   signal?: AbortSignal;
-  token?: string | null;
   timeoutMs?: number;
   onEvent?: (event: SseEvent) => void;
 };
@@ -26,6 +26,7 @@ function resolveApiOrigin(): string {
 function parseEventBlock(block: string): SseEvent | null {
   const lines = block.split(/\r?\n/);
   let event = "message";
+  let id: string | undefined;
   const dataParts: string[] = [];
 
   for (const line of lines) {
@@ -34,6 +35,10 @@ function parseEventBlock(block: string): SseEvent | null {
     }
     if (line.startsWith("event:")) {
       event = line.slice("event:".length).trim();
+      continue;
+    }
+    if (line.startsWith("id:")) {
+      id = line.slice("id:".length).trim();
       continue;
     }
     if (line.startsWith("data:")) {
@@ -45,7 +50,7 @@ function parseEventBlock(block: string): SseEvent | null {
     return null;
   }
 
-  return { event, data: dataParts.join("\n") };
+  return { event, data: dataParts.join("\n"), id };
 }
 
 export async function streamSse(
@@ -66,17 +71,14 @@ export async function streamSse(
 
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const token = options.token ?? localStorage.getItem("token");
     const headers: Record<string, string> = {
       Accept: "text/event-stream",
       "Cache-Control": "no-cache",
     };
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
     const response = await fetch(`${resolveApiOrigin()}${path}`, {
       method: "GET",
       headers,
+      credentials: "include",
       signal: controller.signal,
     });
 

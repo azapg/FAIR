@@ -22,13 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AiTextarea } from "@/components/ui/ai-textarea";
-
 import {
   Rubric,
   RubricContent,
   useCreateRubric,
-  useGenerateRubric,
   useUpdateRubric,
 } from "@/hooks/use-rubrics";
 
@@ -50,16 +47,11 @@ export function RubricFormDialog({
   const [name, setName] = useState("");
   const [levels, setLevels] = useState<string[]>([]);
   const [criteria, setCriteria] = useState<EditableCriterion[]>([]);
-  const [instruction, setInstruction] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const createRubric = useCreateRubric();
   const updateRubric = useUpdateRubric();
-  const generateRubric = useGenerateRubric();
 
-  const pending =
-    createRubric.isPending ||
-    updateRubric.isPending ||
-    generateRubric.isPending;
+  const pending = createRubric.isPending || updateRubric.isPending;
 
   useEffect(() => {
     if (!open) return;
@@ -67,7 +59,6 @@ export function RubricFormDialog({
     setName(rubric?.name ?? "");
     setLevels(source.levels);
     setCriteria(source.criteria);
-    setInstruction("");
     setFormError(null);
   }, [open, rubric]);
 
@@ -127,26 +118,6 @@ export function RubricFormDialog({
     );
   };
 
-  const handleGenerate = async () => {
-    setFormError(null);
-    if (!instruction.trim()) {
-      setFormError(t("rubrics.messages.instructionRequired"));
-      return;
-    }
-    try {
-      const generated = await generateRubric.mutateAsync({
-        instruction: instruction.trim(),
-      });
-      const normalized = normalizeContent(generated.content);
-      setLevels(normalized.levels);
-      setCriteria(normalized.criteria);
-    } catch (err: any) {
-      setFormError(
-        err?.response?.data?.detail ?? err?.message ?? t("common.error"),
-      );
-    }
-  };
-
   const handleSubmit = async () => {
     setFormError(null);
     if (!name.trim()) {
@@ -201,27 +172,6 @@ export function RubricFormDialog({
                 onChange={(event) => setName(event.target.value)}
                 placeholder={t("rubrics.namePlaceholder")}
               />
-            </div>
-
-            <div className="space-y-4">
-              <AiTextarea
-                value={instruction}
-                onChange={(event) => setInstruction(event.target.value)}
-                placeholder={t("rubrics.aiPlaceholder")}
-                className="min-h-24"
-              />
-              <div className="flex flex-col items-end">
-                <Button
-                  variant="secondary"
-                  onClick={handleGenerate}
-                  disabled={pending}
-                  className="w-min"
-                >
-                  {generateRubric.isPending
-                    ? t("rubrics.generating")
-                    : t("rubrics.generate")}
-                </Button>
-              </div>
             </div>
 
             <p className="text-xs text-muted-foreground">

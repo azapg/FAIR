@@ -1,7 +1,8 @@
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from fair_platform.backend.api.routers.auth import get_current_user
 from fair_platform.backend.data.models.user import User
@@ -112,7 +113,11 @@ def update_user(
             else getattr(payload.role, "value", payload.role)
         )
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Email already registered") from exc
     db.refresh(user)
     return user
 

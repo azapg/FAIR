@@ -1,11 +1,5 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import {Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
+import { ResponsiveDialogContent } from "@/components/ui/responsive-dialog";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {LoaderIcon} from "lucide-react";
@@ -45,14 +39,14 @@ export function CreateSubmissionDialog({ assignmentId, open, onOpenChange }: Cre
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={""}>
+      <ResponsiveDialogContent className={""}>
         <DialogHeader>
           <DialogTitle>{t("submissions.addSubmission")}</DialogTitle>
           <DialogDescription>{t("submissions.createSynthetic")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium">{t("submissions.studentName")}</label>
+            <label className="mb-1 block text-[13px] leading-4 font-medium">{t("submissions.studentName")}</label>
             <Input
               placeholder="Allan Zapata"
               value={username}
@@ -61,7 +55,7 @@ export function CreateSubmissionDialog({ assignmentId, open, onOpenChange }: Cre
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">{t("submissions.files")}</label>
+            <label className="mb-1 block text-[13px] leading-4 font-medium">{t("submissions.files")}</label>
             <Input
               type="file"
               multiple
@@ -85,7 +79,7 @@ export function CreateSubmissionDialog({ assignmentId, open, onOpenChange }: Cre
             )}
           </Button>
         </DialogFooter>
-      </DialogContent>
+      </ResponsiveDialogContent>
     </Dialog>
   )
 }

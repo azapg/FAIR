@@ -14,7 +14,7 @@ export function SettingsSectionCard({
   return (
     <section className="rounded-lg bg-card p-4">
       <header className="mb-4 space-y-1">
-        <h3 className="text-base font-semibold">{title}</h3>
+        <h3 className="text-base leading-5 font-medium">{title}</h3>
         <p className="text-sm text-muted-foreground">{description}</p>
       </header>
       <div className="space-y-3">{children}</div>

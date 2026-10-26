@@ -1,10 +1,11 @@
-import {useState, useEffect} from "react";
-import {AssignmentsTable} from "@/app/courses/tabs/assignments/assignments-table";
-import {useAssignmentColumns} from "@/app/courses/tabs/assignments/assignments";
-import {CreateAssignmentDialog} from "@/app/courses/tabs/assignments/create-assignment-dialog";
-import {Assignment, useDeleteAssignment} from "@/hooks/use-assignments";
-import {useTranslation} from "react-i18next";
-import {EditAssignmentDialog} from "@/app/courses/tabs/assignments/edit-assignment-dialog";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { AssignmentsTable } from "@/app/courses/tabs/assignments/assignments-table";
+import { useAssignmentColumns } from "@/app/courses/tabs/assignments/assignments";
+import { Assignment, useDeleteAssignment } from "@/hooks/use-assignments";
+import { useTranslation } from "react-i18next";
+import { EditAssignmentDialog } from "@/app/courses/tabs/assignments/edit-assignment-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,39 +22,46 @@ export default function AssignmentsTab({
   assignments: initialAssignments = [],
   courseId,
   canManageAssignments = true,
+  onCreateAssignment,
 }: {
   assignments?: Assignment[];
   courseId?: string;
   canManageAssignments?: boolean;
+  onCreateAssignment?: () => void;
 }) {
-  const [assignments, setAssignments] = useState<Assignment[]>(() => initialAssignments);
-  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[]>(
+    () => initialAssignments,
+  );
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(
+    null,
+  );
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const deleteAssignment = useDeleteAssignment();
   const columns = useAssignmentColumns({
     canManage: canManageAssignments,
-    onEdit: canManageAssignments ? (assignment) => {
-      setEditingAssignment(assignment);
-      setIsEditOpen(true);
-    } : undefined,
-    onDelete: canManageAssignments ? (assignment) => {
-      setDeleteTarget(assignment);
-    } : undefined,
+    onEdit: canManageAssignments
+      ? (assignment) => {
+          setEditingAssignment(assignment);
+          setIsEditOpen(true);
+        }
+      : undefined,
+    onDelete: canManageAssignments
+      ? (assignment) => {
+          setDeleteTarget(assignment);
+        }
+      : undefined,
   });
 
   useEffect(() => {
     setAssignments(initialAssignments);
   }, [initialAssignments]);
 
-  const handleAssignmentCreated = (newAssignment: Assignment) => {
-    setAssignments(prev => [...prev, newAssignment]);
-  };
-
   const handleAssignmentUpdated = (updated: Assignment) => {
-    setAssignments(prev => prev.map(item => item.id === updated.id ? updated : item));
+    setAssignments((prev) =>
+      prev.map((item) => (item.id === updated.id ? updated : item)),
+    );
   };
 
   const handleEditOpenChange = (open: boolean) => {
@@ -66,30 +74,30 @@ export default function AssignmentsTab({
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     await deleteAssignment.mutateAsync(deleteTarget.id);
-    setAssignments(prev => prev.filter(item => item.id !== deleteTarget.id));
+    setAssignments((prev) =>
+      prev.filter((item) => item.id !== deleteTarget.id),
+    );
     setDeleteTarget(null);
   };
 
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl">{t("assignments.title")}</h2>
-        {canManageAssignments && (
-          <CreateAssignmentDialog
-            courseId={courseId}
-            onAssignmentCreated={handleAssignmentCreated}
-            open={isCreateOpen}
-            onOpenChange={setIsCreateOpen}
-          />
+        <h2 className="text-base leading-5 font-medium">
+          {t("assignments.title")}
+        </h2>
+        {canManageAssignments && onCreateAssignment && (
+          <Button onClick={onCreateAssignment}>
+            <Plus />
+            {t("assignments.newAssignment")}
+          </Button>
         )}
       </div>
 
       <AssignmentsTable
         columns={columns}
         data={assignments}
-        onCreateAssignment={
-          canManageAssignments ? () => setIsCreateOpen(true) : undefined
-        }
+        courseId={courseId}
       />
       {canManageAssignments && (
         <EditAssignmentDialog
@@ -107,7 +115,9 @@ export default function AssignmentsTab({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("assignments.deleteConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("assignments.deleteConfirmTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t("assignments.deleteConfirmDescription")}
             </AlertDialogDescription>

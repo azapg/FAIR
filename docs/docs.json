@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "almond",
   "name": "The Fair Docs",
-  "description": "FAIR (The Fair Platform) is an open-source, AI-powered grading platform for experimenting with interpreters, rubrics, agent-based graders, and reproducible assessment workflows.",
+  "description": "FAIR is an open-source LMS for assignments, AI agents, chat, grading, and reproducible research.",
   "colors": {
     "primary": "#ff0000"
   },
@@ -58,27 +58,65 @@
                 "group": "Platform",
                 "pages": [
                   "en/platform/courses",
+                  "en/platform/course-content",
+                  "en/platform/course-copy",
+                  "en/platform/quizzes",
+                  "en/platform/student-dashboard",
                   "en/platform/assignments",
-                  "en/platform/workflows",
+                  "en/platform/lms-primitives",
+                  "en/platform/flows",
                   "en/platform/integrations",
-                  "en/platform/ai-service",
+                  "en/platform/access-controls",
                   "en/platform/settings"
                 ]
-              }
-            ]
-          },
-          {
-            "tab": "API Reference",
-            "openapi": "assets/openapi.json",
-            "icon": "code",
-            "groups": [
+              },
               {
-                "group": "Overview",
+                "group": "Development",
                 "pages": [
                   "en/api-reference/releases",
                   "en/api-reference/migrations",
                   "en/api-reference/dev-env",
                   "en/api-reference/settings-system"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Extensions Reference",
+            "openapi": "assets/openapi.json",
+            "icon": "code",
+            "groups": [
+              {
+                "group": "Start here",
+                "pages": [
+                  "en/extensions/overview",
+                  "en/extensions/quickstart",
+                  "en/extensions/manifests",
+                  "en/extensions/capabilities"
+                ]
+              },
+              {
+                "group": "Run Capabilities",
+                "pages": [
+                  "en/extensions/installations",
+                  "en/extensions/executions",
+                  "en/extensions/delivery",
+                  "en/extensions/events",
+                  "en/extensions/artifacts",
+                  "en/extensions/security"
+                ]
+              },
+              {
+                "group": "Product integration",
+                "pages": [
+                  "en/extensions/agents-and-chat",
+                  "en/extensions/assignments-and-grading"
+                ]
+              },
+              {
+                "group": "SDK",
+                "pages": [
+                  "en/extensions/sdk-status"
                 ]
               }
             ]
@@ -119,9 +157,11 @@
               {
                 "group": "Plataforma",
                 "pages": [
-                  "es/platform/workflows",
+                  "es/platform/extension-architecture",
+                  "es/platform/foundational-api",
+                  "es/platform/flows",
                   "es/platform/integrations",
-                  "es/platform/ai-service",
+                  "es/platform/access-controls",
                   "es/platform/settings"
                 ]
               }

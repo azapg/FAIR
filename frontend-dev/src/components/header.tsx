@@ -135,6 +135,7 @@ function Header({
     >
       {/* Left section - Platform title */}
       <div className="flex items-center">
+        {/* Keep the FAIR wordmark in its dedicated brand face. */}
         <h1 className="text-xl font-serif font-semibold text-foreground cursor-pointer" onClick={() => navigate("/")}>{displayTitle}</h1>
       </div>
 

@@ -1,170 +1,330 @@
-import {useCourse} from "@/hooks/use-courses";
-import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
-import {BreadcrumbNav, BreadcrumbSegment} from "@/components/breadcrumb-nav";
-import AssignmentsTab from "@/app/courses/tabs/assignments/assignments-tab";
-import {ScrollArea, ScrollBar} from "@/components/ui/scroll-area";
-import {useParams, useNavigate, useLocation} from "react-router-dom";
-import {useEffect} from "react";
-import {useTranslation} from "react-i18next";
-import {useAssignments} from "@/hooks/use-assignments";
-import {ParticipantsTab} from "@/app/courses/tabs/participants-tab";
-import {RunsTab} from "@/app/courses/tabs/runs-tab";
-import {ArtifactsTab} from "@/app/courses/tabs/artifacts-tab";
-import {WorkflowsTab} from "@/app/courses/tabs/workflows-tab";
-import {PluginsTab} from "@/app/courses/tabs/plugins-tab";
-import {useWorkflowStore} from "@/store/workflows-store";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import {
+  BookOpen,
+  ClipboardList,
+  GraduationCap,
+  MessageSquare,
+  Settings,
+  Users,
+} from "lucide-react";
+import {
+  hasStaffCourseMembership,
+  useCourse,
+  useCourses,
+  useResetEnrollmentCode,
+  useUpdateCourseSettings,
+} from "@/hooks/use-courses";
+import { useAuth, AuthUserRole } from "@/contexts/auth-context";
+import { usePermission } from "@/hooks/use-permission";
+import { useAssignments } from "@/hooks/use-assignments";
+import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FloatingNav, type FloatingNavItem } from "@/components/floating-nav";
 import { EnrollmentControls } from "../components/enrollment-controls";
-import {useResetEnrollmentCode, useUpdateCourseSettings} from "@/hooks/use-courses";
-import {useAuth} from "@/contexts/auth-context";
-import {usePermission} from "@/hooks/use-permission";
-type CourseTab = "assignments" | "participants" | "runs" | "artifacts" | "workflows" | "plugins";
+import { CourseStreamSidebar } from "../components/course-stream-sidebar";
+import {
+  CourseSettingsDialog,
+  type CourseSettingsSection,
+} from "../components/course-settings-dialog";
+import { CourseIcon } from "../course-icons";
+import AssignmentsTab from "../tabs/assignments/assignments-tab";
+import { CreateAssignmentDialog } from "../tabs/assignments/create-assignment-dialog";
+import { StreamTab } from "../tabs/stream-tab";
+import { CourseContentTab } from "../tabs/content/course-content-tab";
+import { GradebookTab } from "../tabs/gradebook-tab";
+import { StudentGradesTab } from "../tabs/student-grades-tab";
+import { ParticipantsTab } from "../tabs/participants-tab";
+import { ArtifactsTab } from "../tabs/artifacts-tab";
+
+import { useReleaseFeatures } from "@/hooks/use-release-features";
+
+const ADVANCED_TABS = ["runs", "flows", "capabilities", "artifacts"] as const;
 
 export default function CourseDetailPage() {
-  const params = useParams<{ courseId: string, tab: string }>()
-  const {courseId, tab} = params;
+  const { courseId, tab } = useParams<{ courseId: string; tab: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-  const {t} = useTranslation();
-  const {user} = useAuth();
-  const canManageAnyCourseSettings = usePermission("manage_course_settings_any");
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const flags = useReleaseFeatures();
+  const canManageAnyCourseSettings = usePermission(
+    "manage_course_settings_any",
+  );
   const canManageUsers = usePermission("manage_users");
-  const {setActiveCourseId} = useWorkflowStore();
   const resetEnrollmentCode = useResetEnrollmentCode();
   const updateCourseSettings = useUpdateCourseSettings();
-
-  const basePath = location.pathname.split('/').slice(0, -1).join('/');
-
-  const {isLoading, isError, data: course} = useCourse(courseId, Boolean(courseId), true);
-  const {data: assignmentsList} = useAssignments(courseId ? {course_id: courseId} : undefined, Boolean(courseId));
-
-  useEffect(() => {
-    if (!courseId || isLoading || isError || !course) return;
-    const instructorId = "instructorId" in course ? course.instructorId : course.instructor?.id;
-    const isInstructorView = !!user && (instructorId === user.id || canManageUsers);
-    const visibleTabs: CourseTab[] = isInstructorView
-      ? ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"]
-      : ["assignments", "artifacts"];
-    if (!tab || !visibleTabs.includes(tab as CourseTab)) {
-      navigate(`assignments`);
-    }
-  }, [tab, courseId, navigate, basePath, isLoading, isError, course, user, canManageUsers]);
-
-  useEffect(() => {
-    if (courseId) {
-      setActiveCourseId(courseId);
-    }
-  }, [courseId, setActiveCourseId]);
-
-  if (isLoading) {
-    return <div>{t("common.loading")}</div>;
-  }
-
-  if (isError || !course) {
-    return <div>{t("courses.errorLoading")}</div>;
-  }
-
-  const instructorId = "instructorId" in course ? course.instructorId : course.instructor?.id;
+  const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState(false);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const courseQuery = useCourse(courseId, Boolean(courseId), true);
+  const { data: course, isLoading, isError } = courseQuery;
+  const { data: allCourses = [] } = useCourses(
+    { include_archived: true },
+    Boolean(user),
+  );
+  const assignmentQuery = useAssignments(
+    courseId ? { course_id: courseId } : undefined,
+    Boolean(courseId),
+  );
+  const instructorId =
+    course &&
+    ("instructorId" in course ? course.instructorId : course.instructor?.id);
   const isCourseOwner = !!user && instructorId === user.id;
   const isCourseAdmin = !!user && canManageUsers;
-  const isInstructorView = isCourseOwner || isCourseAdmin;
-  const visibleTabs: CourseTab[] = isInstructorView
-    ? ["assignments", "participants", "runs", "artifacts", "workflows", "plugins"]
-    : ["assignments", "artifacts"];
-  const currentTab = (tab && visibleTabs.includes(tab as CourseTab) ? tab : "assignments") as CourseTab;
-
+  const isInstructorView =
+    isCourseOwner || isCourseAdmin || course?.membershipRole === "assistant";
+  const isLearnerView =
+    !isInstructorView &&
+    user?.role === AuthUserRole.USER &&
+    !hasStaffCourseMembership(allCourses);
   const showEnrollmentControls =
     !!user &&
-    (canManageAnyCourseSettings || isCourseOwner);
-  const enrollmentCode =
-    "enrollmentCode" in course ? course.enrollmentCode : undefined;
-  const isEnrollmentEnabled =
-    "isEnrollmentEnabled" in course ? course.isEnrollmentEnabled : false;
+    (canManageAnyCourseSettings || isCourseOwner) &&
+    !course?.isArchived;
+  const advancedSection =
+    isInstructorView &&
+    (flags.extensions || tab === "artifacts") &&
+    ADVANCED_TABS.includes(tab as (typeof ADVANCED_TABS)[number])
+      ? (tab as CourseSettingsSection)
+      : undefined;
+  const primaryTabs = [
+    "stream",
+    ...(flags.course_content ? ["content"] : []),
+    "assignments",
+    ...(isInstructorView
+      ? [...(flags.gradebook ? ["gradebook"] : []), "participants"]
+      : []),
+    ...(isLearnerView && flags.gradebook ? ["grades"] : []),
+    ...(!isInstructorView ? ["artifacts"] : []),
+  ];
+  const validTab = primaryTabs.includes(tab ?? "") || !!advancedSection;
+  const currentTab = advancedSection ? "stream" : validTab ? tab! : "stream";
+  const basePath = `/courses/${courseId}`;
 
-  const handleToggle = async (next: boolean) => {
-    if (!courseId || !showEnrollmentControls) return;
-    await updateCourseSettings.mutateAsync({
-      id: courseId,
-      data: { isEnrollmentEnabled: next },
-    });
+  useEffect(() => {
+    if (!course || isLoading || isError || !courseId || flags.isPending) return;
+    if (!validTab || tab === "timeline")
+      navigate(`/courses/${courseId}/stream`, { replace: true });
+  }, [
+    course,
+    isLoading,
+    isError,
+    courseId,
+    tab,
+    validTab,
+    navigate,
+    flags.isPending,
+  ]);
+
+  if (isLoading)
+    return (
+      <div className="p-8 text-muted-foreground">{t("common.loading")}</div>
+    );
+  if (isError || !course || !courseId)
+    return <div className="p-8">{t("courses.errorLoading")}</div>;
+
+  const assignments =
+    assignmentQuery.data ?? ("assignments" in course ? course.assignments : []);
+  const enrollmentControls = showEnrollmentControls ? (
+    <EnrollmentControls
+      enrollmentCode={course.enrollmentCode}
+      isEnrollmentEnabled={course.isEnrollmentEnabled ?? false}
+      onToggle={(next) =>
+        updateCourseSettings
+          .mutateAsync({ id: courseId, data: { isEnrollmentEnabled: next } })
+          .then(() => {})
+      }
+      onResetCode={() =>
+        resetEnrollmentCode.mutateAsync(courseId).then(() => {})
+      }
+      isTogglePending={updateCourseSettings.isPending}
+      isResetPending={resetEnrollmentCode.isPending}
+    />
+  ) : undefined;
+  const goToTab = (value: string) =>
+    navigate(`${basePath}/${value}`, { replace: true });
+  const closeSettings = () => {
+    setSettingsOpen(false);
+    if (advancedSection) goToTab("stream");
   };
-
-  const handleResetCode = async () => {
-    if (!courseId || !showEnrollmentControls) return;
-    await resetEnrollmentCode.mutateAsync(courseId);
-  };
-
-  const segments: BreadcrumbSegment[] = [
-    {label: t("courses.title"), slug: "courses"},
-    ...(courseId ? [{label: course?.name ?? "Course", slug: courseId}] : []),
-    ...(tab ? [{label: t(`tabs.${tab}`), slug: tab}] : []),
+  const canPost = isInstructorView && !course.isArchived;
+  const navItems: FloatingNavItem[] = [
+    { value: "stream", label: "Stream", icon: MessageSquare },
+    ...(flags.course_content
+      ? [{ value: "content", label: "Content", icon: BookOpen }]
+      : []),
+    { value: "assignments", label: t("tabs.assignments"), icon: ClipboardList },
+    ...(isInstructorView
+      ? [
+          ...(flags.gradebook
+            ? [{ value: "gradebook", label: "Gradebook", icon: GraduationCap }]
+            : []),
+          { value: "participants", label: t("tabs.participants"), icon: Users },
+        ]
+      : []),
+    ...(isLearnerView && flags.gradebook
+      ? [{ value: "grades", label: "Grades", icon: GraduationCap }]
+      : []),
+    ...(!isInstructorView
+      ? [{ value: "artifacts", label: "Files", icon: BookOpen }]
+      : []),
   ];
 
-  // Map assignments from detailed course if present
-  const courseAssignments = 'assignments' in course ? course.assignments : [];
-  const assignments = assignmentsList ?? courseAssignments ?? [];
-
   return (
-    <div className="flex flex-col">
-      <div className={"py-2 px-5"}>
-        <BreadcrumbNav segments={segments}/>
+    <div className="mx-auto flex w-full max-w-[1200px] flex-col pb-24 md:pb-8">
+      <PageHeader
+        title={
+          <span className="flex items-center gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-[10px] bg-primary/10 text-primary">
+              <CourseIcon iconKey={course.iconKey} size={24} />
+            </span>
+            <span>{course.name}</span>
+          </span>
+        }
+        description={course.description}
+        actions={
+          isInstructorView ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Course settings"
+              title="Course settings"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Settings />
+            </Button>
+          ) : undefined
+        }
+      />
+      <div className="mx-auto mt-6 w-full max-w-[1440px] px-6 sm:px-8">
+        {course.isArchived && (
+          <p className="mb-4 text-sm text-muted-foreground">Archived course</p>
+        )}
+        <Tabs value={currentTab} onValueChange={goToTab} className="gap-6">
+          <div className="hidden overflow-x-auto md:block">
+            <TabsList
+              className="h-auto gap-1 border-0"
+              aria-label="Course navigation"
+            >
+              {navItems.map((item) => (
+                <TabsTrigger
+                  key={item.value}
+                  value={item.value}
+                  className="m-0 rounded-md border-0 px-3 py-2 data-[state=active]:bg-muted"
+                >
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+          <TabsContent value="stream">
+            <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_13rem] md:gap-8 xl:grid-cols-[minmax(0,1fr)_15rem] xl:gap-10">
+              <div className="order-2 min-w-0 md:order-1">
+                <StreamTab
+                  courseId={courseId}
+                  canPost={canPost}
+                  assignments={assignments}
+                  assignmentsLoading={assignmentQuery.isPending}
+                  assignmentsError={assignmentQuery.isError}
+                  onRetryAssignments={() => {
+                    void assignmentQuery.refetch();
+                  }}
+                  onCreateAssignment={() => setIsCreateAssignmentOpen(true)}
+                  composerOpen={isComposerOpen}
+                  onComposerOpenChange={setIsComposerOpen}
+                />
+              </div>
+              <div className="order-1 min-w-0 md:order-2">
+                <CourseStreamSidebar
+                  courseId={courseId}
+                  assignments={assignments}
+                  canReview={isInstructorView && flags.gradebook}
+                  enrollmentControls={enrollmentControls}
+                />
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="assignments">
+            <AssignmentsTab
+              assignments={assignments}
+              courseId={courseId}
+              canManageAssignments={canPost}
+              onCreateAssignment={
+                canPost ? () => setIsCreateAssignmentOpen(true) : undefined
+              }
+            />
+          </TabsContent>
+          {flags.course_content && (
+            <TabsContent value="content">
+              <CourseContentTab
+                courseId={courseId}
+                canManage={isInstructorView}
+                isArchived={course.isArchived}
+                assignments={assignments}
+              />
+            </TabsContent>
+          )}
+          {isInstructorView && flags.gradebook && (
+            <TabsContent value="gradebook">
+              <GradebookTab
+                courseId={courseId}
+                isArchived={course.isArchived}
+              />
+            </TabsContent>
+          )}
+          {isInstructorView && (
+            <TabsContent value="participants">
+              <ParticipantsTab
+                courseId={courseId}
+                instructor={
+                  "instructor" in course ? course.instructor : undefined
+                }
+                canManageRoles={isCourseOwner || isCourseAdmin}
+              />
+            </TabsContent>
+          )}
+          {isLearnerView && flags.gradebook && (
+            <TabsContent value="grades">
+              <StudentGradesTab
+                courseId={courseId}
+                enabled={currentTab === "grades"}
+              />
+            </TabsContent>
+          )}
+          {!isInstructorView && (
+            <TabsContent value="artifacts">
+              <ArtifactsTab courseId={courseId} assignments={assignments} />
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
-      <div className={"px-8 py-2"}>
-        <h1 className={"text-3xl font-bold pb-1"}>{course?.name}</h1>
-        <p className={"text-sm text-muted-foreground"}>{course?.description}</p>
-      </div>
-      {showEnrollmentControls && (
-        <EnrollmentControls
-          enrollmentCode={enrollmentCode}
-          isEnrollmentEnabled={isEnrollmentEnabled}
-          onToggle={handleToggle}
-          onResetCode={handleResetCode}
-          isTogglePending={updateCourseSettings.isPending}
-          isResetPending={resetEnrollmentCode.isPending}
-          t={t}
+      <FloatingNav
+        value={currentTab}
+        onValueChange={goToTab}
+        items={navItems}
+      />
+      {canPost && (
+        <CreateAssignmentDialog
+          courseId={courseId}
+          onAssignmentCreated={() => {}}
+          open={isCreateAssignmentOpen}
+          onOpenChange={setIsCreateAssignmentOpen}
+          showTrigger={false}
         />
       )}
-      <Tabs value={currentTab} onValueChange={(val: string) => {
-        if (!courseId) return;
-        navigate(`${basePath}/${val}`, {replace: true});
-      }}>
-        <ScrollArea className={"w-full border-b"}>
-          <TabsList className={"px-8 w-full"}>
-            <TabsTrigger value="assignments">{t("tabs.assignments")}</TabsTrigger>
-            <TabsTrigger value="artifacts">{t("tabs.artifacts")}</TabsTrigger>
-            {isInstructorView && <TabsTrigger value="participants">{t("tabs.participants")}</TabsTrigger>}
-            {isInstructorView && <TabsTrigger value="runs">{t("tabs.runs")}</TabsTrigger>}
-            {isInstructorView && <TabsTrigger value="workflows">{t("tabs.workflows")}</TabsTrigger>}
-            {isInstructorView && <TabsTrigger value="plugins">{t("tabs.plugins")}</TabsTrigger>}
-          </TabsList>
-          <ScrollBar orientation="horizontal" className={"hidden"}/>
-        </ScrollArea>
-        <TabsContent value={"assignments"} className={"px-8 py-3"}>
-          <AssignmentsTab assignments={assignments} courseId={courseId} canManageAssignments={isInstructorView}/>
-        </TabsContent>
-        <TabsContent value={"artifacts"} className={"px-8"}>
-          <ArtifactsTab courseId={courseId} assignments={assignments}/>
-        </TabsContent>
-        {isInstructorView && (
-          <TabsContent value={"participants"} className={"px-8"}>
-            <ParticipantsTab instructor={"instructor" in course ? course.instructor : undefined}/>
-          </TabsContent>
-        )}
-        {isInstructorView && (
-          <TabsContent value={"runs"} className={"px-8"}>
-            <RunsTab courseId={courseId}/>
-          </TabsContent>
-        )}
-        {isInstructorView && (
-          <TabsContent value={"workflows"} className={"px-8"}>
-            <WorkflowsTab courseId={courseId}/>
-          </TabsContent>
-        )}
-        {isInstructorView && (
-          <TabsContent value={"plugins"} className={"px-8"}>
-            <PluginsTab/>
-          </TabsContent>
-        )}
-      </Tabs>
+      {isInstructorView && (settingsOpen || advancedSection) && (
+        <CourseSettingsDialog
+          key={courseId}
+          course={course}
+          assignments={assignments}
+          canEdit={isCourseOwner || isCourseAdmin}
+          enrollmentControls={enrollmentControls}
+          initialSection={advancedSection}
+          onClose={closeSettings}
+        />
+      )}
     </div>
   );
 }

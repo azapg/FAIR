@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from fair_platform.backend.data.models.enrollment import Enrollment
+from fair_platform.backend.data.models.enrollment import (
+    CourseMembershipRole,
+    Enrollment,
+    EnrollmentStatus,
+)
 from fair_platform.backend.data.models.course import Course
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.api.schema.enrollment import (
@@ -12,15 +16,29 @@ from fair_platform.backend.api.schema.enrollment import (
     EnrollmentBulkCreate,
     EnrollmentRead,
     EnrollmentJoin,
+    EnrollmentUpdate,
 )
 from fair_platform.backend.data.database import session_dependency
 from fair_platform.backend.api.routers.auth import get_current_user
-from fair_platform.backend.core.security.permissions import (
-    has_capability,
-    has_capability_or_owner,
-)
+from fair_platform.backend.core.security.permissions import has_capability
+from fair_platform.backend.services.course_access import can_manage_course, can_own_course
 
 router = APIRouter()
+
+
+def _enrollment_read(enrollment: Enrollment, user: User | None, course: Course | None) -> EnrollmentRead:
+    return EnrollmentRead(
+        id=enrollment.id,
+        user_id=enrollment.user_id,
+        course_id=enrollment.course_id,
+        enrolled_at=enrollment.enrolled_at,
+        role=enrollment.role,
+        status=enrollment.status,
+        updated_at=enrollment.updated_at,
+        user_name=user.name if user else None,
+        user_email=str(user.email) if user else None,
+        course_name=course.name if course else None,
+    )
 
 
 @router.post("/", response_model=EnrollmentRead, status_code=status.HTTP_201_CREATED)
@@ -37,7 +55,7 @@ def create_enrollment(
         )
 
     # Only admin or the course instructor can enroll students
-    if not has_capability_or_owner(current_user, "manage_enrollments_any", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can enroll students",
@@ -59,29 +77,27 @@ def create_enrollment(
         )
         .first()
     )
-    if existing:
+    if existing and existing.status == EnrollmentStatus.active:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Student is already enrolled in this course",
         )
 
-    enrollment = Enrollment(
-        id=uuid4(),
-        user_id=payload.user_id,
-        course_id=payload.course_id,
+    if payload.role == CourseMembershipRole.owner:
+        raise HTTPException(status_code=400, detail="Transfer course ownership through the course endpoint")
+    if payload.role == CourseMembershipRole.assistant and not can_own_course(db, course, current_user):
+        raise HTTPException(status_code=403, detail="Only the course owner or admin can add assistants")
+
+    enrollment = existing or Enrollment(
+        id=uuid4(), user_id=payload.user_id, course_id=payload.course_id
     )
+    enrollment.role = payload.role
+    enrollment.status = EnrollmentStatus.active
     db.add(enrollment)
     db.commit()
     db.refresh(enrollment)
 
-    return EnrollmentRead(
-        id=enrollment.id,
-        user_id=enrollment.user_id,
-        course_id=enrollment.course_id,
-        enrolled_at=enrollment.enrolled_at,
-        user_name=student.name,
-        course_name=course.name,
-    )
+    return _enrollment_read(enrollment, student, course)
 
 
 @router.post("/bulk", response_model=list[EnrollmentRead], status_code=status.HTTP_201_CREATED)
@@ -97,7 +113,7 @@ def bulk_create_enrollments(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    if not has_capability_or_owner(current_user, "manage_enrollments_any", course.instructor_id):
+    if not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can enroll students",
@@ -117,24 +133,21 @@ def bulk_create_enrollments(
             )
             .first()
         )
-        if existing:
+        if existing and existing.status == EnrollmentStatus.active:
             continue  # Skip already enrolled
 
-        enrollment = Enrollment(
-            id=uuid4(),
-            user_id=user_id,
-            course_id=payload.course_id,
+        if payload.role == CourseMembershipRole.owner:
+            raise HTTPException(status_code=400, detail="Transfer course ownership through the course endpoint")
+        if payload.role == CourseMembershipRole.assistant and not can_own_course(db, course, current_user):
+            raise HTTPException(status_code=403, detail="Only the course owner or admin can add assistants")
+        enrollment = existing or Enrollment(
+            id=uuid4(), user_id=user_id, course_id=payload.course_id
         )
+        enrollment.role = payload.role
+        enrollment.status = EnrollmentStatus.active
         db.add(enrollment)
         db.flush()
-        results.append(EnrollmentRead(
-            id=enrollment.id,
-            user_id=enrollment.user_id,
-            course_id=enrollment.course_id,
-            enrolled_at=enrollment.enrolled_at,
-            user_name=student.name,
-            course_name=course.name,
-        ))
+        results.append(_enrollment_read(enrollment, student, course))
 
     db.commit()
     return results
@@ -169,6 +182,8 @@ def join_course_by_code(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Self-enrollment is disabled for this course",
         )
+    if course.is_archived:
+        raise HTTPException(status_code=400, detail="Archived courses cannot accept enrollments")
 
     existing = (
         db.query(Enrollment)
@@ -178,29 +193,22 @@ def join_course_by_code(
         )
         .first()
     )
-    if existing:
+    if existing and existing.status == EnrollmentStatus.active:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Student is already enrolled in this course",
         )
 
-    enrollment = Enrollment(
-        id=uuid4(),
-        user_id=current_user.id,
-        course_id=course.id,
+    enrollment = existing or Enrollment(
+        id=uuid4(), user_id=current_user.id, course_id=course.id
     )
+    enrollment.role = CourseMembershipRole.student
+    enrollment.status = EnrollmentStatus.active
     db.add(enrollment)
     db.commit()
     db.refresh(enrollment)
 
-    return EnrollmentRead(
-        id=enrollment.id,
-        user_id=enrollment.user_id,
-        course_id=enrollment.course_id,
-        enrolled_at=enrollment.enrolled_at,
-        user_name=current_user.name,
-        course_name=course.name,
-    )
+    return _enrollment_read(enrollment, current_user, course)
 
 
 @router.get("/", response_model=list[EnrollmentRead])
@@ -209,9 +217,12 @@ def list_enrollments(
     current_user: User = Depends(get_current_user),
     course_id: UUID | None = Query(None, description="Filter by course ID"),
     user_id: UUID | None = Query(None, description="Filter by user ID"),
+    include_removed: bool = Query(False, description="Include removed memberships"),
 ):
     """List enrollments. Students can only see their own enrollments."""
     query = db.query(Enrollment)
+    if not include_removed:
+        query = query.filter(Enrollment.status == EnrollmentStatus.active)
 
     if has_capability(current_user, "update_any_course"):
         pass
@@ -220,6 +231,13 @@ def list_enrollments(
             or_(
                 Enrollment.user_id == current_user.id,
                 Course.instructor_id == current_user.id,
+                Enrollment.course_id.in_(
+                    db.query(Enrollment.course_id).filter(
+                        Enrollment.user_id == current_user.id,
+                        Enrollment.role == CourseMembershipRole.assistant,
+                        Enrollment.status == EnrollmentStatus.active,
+                    )
+                ),
             )
         )
     else:
@@ -236,15 +254,29 @@ def list_enrollments(
     for e in enrollments:
         user = db.get(User, e.user_id)
         course = db.get(Course, e.course_id)
-        results.append(EnrollmentRead(
-            id=e.id,
-            user_id=e.user_id,
-            course_id=e.course_id,
-            enrolled_at=e.enrolled_at,
-            user_name=user.name if user else None,
-            course_name=course.name if course else None,
-        ))
+        results.append(_enrollment_read(e, user, course))
     return results
+
+
+@router.patch("/{enrollment_id}", response_model=EnrollmentRead)
+def update_enrollment(
+    enrollment_id: UUID,
+    payload: EnrollmentUpdate,
+    db: Session = Depends(session_dependency),
+    current_user: User = Depends(get_current_user),
+):
+    enrollment = db.get(Enrollment, enrollment_id)
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+    course = db.get(Course, enrollment.course_id)
+    if not course or not can_own_course(db, course, current_user):
+        raise HTTPException(status_code=403, detail="Only the course owner or admin can change roles")
+    if enrollment.role == CourseMembershipRole.owner or payload.role == CourseMembershipRole.owner:
+        raise HTTPException(status_code=400, detail="Transfer course ownership through the course endpoint")
+    enrollment.role = payload.role
+    db.commit()
+    db.refresh(enrollment)
+    return _enrollment_read(enrollment, db.get(User, enrollment.user_id), course)
 
 
 @router.delete("/{enrollment_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -261,15 +293,15 @@ def delete_enrollment(
         )
 
     course = db.get(Course, enrollment.course_id)
-    if not has_capability_or_owner(
-        current_user, "manage_enrollments_any", course.instructor_id if course else None
-    ):
+    if not course or not can_manage_course(db, course, current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the course instructor or admin can remove enrollments",
         )
 
-    db.delete(enrollment)
+    if enrollment.role == CourseMembershipRole.owner:
+        raise HTTPException(status_code=400, detail="The course owner cannot be removed")
+    enrollment.status = EnrollmentStatus.removed
     db.commit()
     return None
 

@@ -30,9 +30,12 @@ function MainLayout() {
       className="flex min-h-svh w-full flex-col"
       cookieName="app_sidebar_state"
       keyboardShortcut="g"
-      defaultOpen={false}
-      width="20rem"
+      defaultOpen
+      width="18rem"
       widthMobile="20rem"
+      resizable
+      minWidth={256}
+      maxWidth={448}
     >
         <div className="h-full flex">
           <AppSidebar />

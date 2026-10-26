@@ -29,12 +29,19 @@ def parse_storage_uri(storage_uri: str) -> tuple[str, str]:
 
 
 class LocalStorageProvider:
-    def __init__(self, uploads_dir: Path | None = None, api_prefix: str = "/api/artifacts/storage/local"):
+    def __init__(self, uploads_dir: Path | None = None, api_prefix: str = "/api/v1/artifact-storage/local"):
         self.uploads_dir = uploads_dir or storage.uploads_dir
         self.api_prefix = api_prefix.rstrip("/")
 
+    def _safe_path(self, key: str) -> Path:
+        candidate = (self.uploads_dir / Path(key)).resolve()
+        root = self.uploads_dir.resolve()
+        if not candidate.is_relative_to(root):
+            raise ValueError("Storage key escapes the uploads directory")
+        return candidate
+
     def put_object(self, key: str, data: BinaryIO, content_type: str) -> str:
-        destination = self.uploads_dir / Path(key)
+        destination = self._safe_path(key)
         destination.parent.mkdir(parents=True, exist_ok=True)
         data.seek(0)
         with destination.open("wb") as buffer:
@@ -42,13 +49,13 @@ class LocalStorageProvider:
         return f"local://{key}"
 
     def get_object(self, key: str) -> BinaryIO:
-        file_path = self.uploads_dir / Path(key)
+        file_path = self._safe_path(key)
         if not file_path.exists():
             raise FileNotFoundError(key)
         return file_path.open("rb")
 
     def delete_object(self, key: str) -> None:
-        file_path = self.uploads_dir / Path(key)
+        file_path = self._safe_path(key)
         if not file_path.exists():
             return
         file_path.unlink()

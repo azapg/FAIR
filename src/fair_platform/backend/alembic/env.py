@@ -22,11 +22,15 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BACKEND_DIR, "..", ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from dotenv import load_dotenv  # type: ignore
+from dotenv import load_dotenv  # type: ignore  # noqa: E402
 
 load_dotenv()
 
-from fair_platform.backend.data.database import Base, get_database_url  # noqa: E402
+from fair_platform.backend.data.database import (  # noqa: E402
+    Base,
+    get_database_url,
+    normalize_database_url,
+)
 import fair_platform.backend.data.models  # noqa: F401,E402  (import models for autogenerate)
 
 config = context.config
@@ -44,6 +48,7 @@ else:
     _db_url = os.getenv("DATABASE_URL", "").strip() or config.get_main_option("sqlalchemy.url")
     if not _db_url:
         _db_url = get_database_url()
+    _db_url = normalize_database_url(_db_url)
 # Force relative sqlite paths to project root so all components share the same DB file
 if _db_url.startswith("sqlite:///"):
     # Extract path portion

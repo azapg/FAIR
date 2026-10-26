@@ -1,0 +1,32 @@
+name: Frontend
+
+on:
+  push:
+    branches: [main, nightly]
+    paths:
+      - 'frontend-dev/**'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    branches: [main, nightly]
+    paths:
+      - 'frontend-dev/**'
+      - '.github/workflows/frontend.yml'
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        working-directory: frontend-dev
+        run: bun install --frozen-lockfile
+      - name: Typecheck
+        working-directory: frontend-dev
+        run: bun x tsc --noEmit
+      - name: Test
+        working-directory: frontend-dev
+        run: bun run test --maxWorkers=2
+      - name: Build
+        working-directory: frontend-dev
+        run: bun run build

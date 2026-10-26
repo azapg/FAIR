@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from fastapi import UploadFile, HTTPException
 
@@ -14,9 +15,8 @@ from fair_platform.backend.data.models.artifact import (
 )
 from fair_platform.backend.data.models.user import User
 from fair_platform.backend.data.models.course import Course
-from fair_platform.backend.data.models.assignment import Assignment
+from fair_platform.backend.data.models.assignment import Assignment, AssignmentStatus
 from fair_platform.backend.data.models.submission import Submission
-from fair_platform.backend.data.models.enrollment import Enrollment
 from fair_platform.backend.storage.provider import (
     StorageProvider,
     get_storage_provider,
@@ -27,6 +27,8 @@ from fair_platform.backend.core.security.permissions import (
     has_capability,
     has_capability_and_owner,
 )
+from fair_platform.backend.services.course_content_service import CourseContentService
+from fair_platform.backend.services.course_access import active_membership, can_manage_course
 
 
 class ArtifactManager:
@@ -214,9 +216,22 @@ class ArtifactManager:
             if "creator_id" in filters:
                 query = query.filter(Artifact.creator_id == filters["creator_id"])
             if "course_id" in filters:
-                query = query.filter(Artifact.course_id == filters["course_id"])
+                course_id = filters["course_id"]
+                query = query.filter(
+                    or_(
+                        Artifact.course_id == course_id,
+                        Artifact.assignment.has(Assignment.course_id == course_id),
+                        Artifact.assignments.any(Assignment.course_id == course_id),
+                    )
+                )
             if "assignment_id" in filters:
-                query = query.filter(Artifact.assignment_id == filters["assignment_id"])
+                assignment_id = filters["assignment_id"]
+                query = query.filter(
+                    or_(
+                        Artifact.assignment_id == assignment_id,
+                        Artifact.assignments.any(Assignment.id == assignment_id),
+                    )
+                )
             if "status" in filters:
                 query = query.filter(Artifact.status == filters["status"])
             if "access_level" in filters:
@@ -272,6 +287,10 @@ class ArtifactManager:
         if status is not None:
             self._validate_status_transition(artifact.status, status)
             artifact.status = status
+            if status == ArtifactStatus.archived:
+                CourseContentService(self.db).remove_resource_links(
+                    "artifact", artifact.id
+                )
         if course_id is not None:
             artifact.course_id = course_id
         if assignment_id is not None:
@@ -313,14 +332,17 @@ class ArtifactManager:
         
         if not self.can_delete(user, artifact):
             raise HTTPException(status_code=403, detail="Permission denied")
-        
+
         if hard_delete:
             if not has_capability(user, "cleanup_orphaned_artifacts"):
                 raise HTTPException(
                     status_code=403,
                     detail="Hard delete requires admin privileges"
                 )
-            
+
+        CourseContentService(self.db).remove_resource_links("artifact", artifact.id)
+
+        if hard_delete:
             for derivative in list(artifact.derivatives):
                 self._delete_derivative_object(derivative.storage_uri)
             
@@ -613,6 +635,9 @@ class ArtifactManager:
         
         count = 0
         for artifact in orphaned_artifacts:
+            CourseContentService(self.db).remove_resource_links(
+                "artifact", artifact.id
+            )
             if hard_delete:
                 for derivative in list(artifact.derivatives):
                     self._delete_derivative_object(derivative.storage_uri)
@@ -637,10 +662,10 @@ class ArtifactManager:
         Permission rules:
         - Admins can view everything
         - Creators can view their own artifacts
-        - Course instructors can view course artifacts
+        - Course staff can view files linked to their assignments/submissions
         - Students can view their own submission artifacts
         - Public artifacts can be viewed by anyone
-        - Course-level artifacts can be viewed by course members (future enhancement)
+        - Active members can view course resources and readable assignment files
         
         Args:
             user: User requesting access
@@ -667,20 +692,38 @@ class ArtifactManager:
             if course and has_capability_and_owner(user, "manage_artifact", course.instructor_id):
                 return True
         
-        # Students can view artifacts from their own submissions
-        if artifact.submissions:
-            for submission in artifact.submissions:
-                if submission.submitter_id == user.id:
+        # Resolve private student work through its actual submission association,
+        # not optional (or stale) artifact scope hints.
+        for submission in artifact.submissions:
+            if submission.submitter.user_id == user.id:
+                return True
+            if can_manage_course(self.db, submission.assignment.course, user):
+                return True
+
+        if artifact.access_level == AccessLevel.assignment:
+            assignments = list(artifact.assignments)
+            if (
+                artifact.assignment is not None
+                and artifact.assignment not in assignments
+            ):
+                assignments.append(artifact.assignment)
+            # A shared file is readable through any authorized published/closed
+            # link. A draft link alone never grants learner access. No links means
+            # no assignment-based grant, even when course_id is populated.
+            for assignment in assignments:
+                if can_manage_course(self.db, assignment.course, user):
+                    return True
+                if (
+                    assignment.status in {
+                        AssignmentStatus.published,
+                        AssignmentStatus.closed,
+                    }
+                    and active_membership(self.db, assignment.course_id, user.id)
+                ):
                     return True
 
-        # Enrolled users can view course and assignment scoped artifacts.
-        if artifact.access_level in [AccessLevel.course, AccessLevel.assignment] and artifact.course_id:
-            enrollment = self.db.query(Enrollment).filter(
-                Enrollment.user_id == user.id,
-                Enrollment.course_id == artifact.course_id,
-            ).first()
-            if enrollment:
-                return True
+        if artifact.access_level == AccessLevel.course and artifact.course_id:
+            return active_membership(self.db, artifact.course_id, user.id) is not None
 
         return False
     

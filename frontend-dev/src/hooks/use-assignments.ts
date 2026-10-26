@@ -13,10 +13,13 @@ export type Assignment = {
   description?: string
 
   deadline?: string
-  maxGrade?: Grade
+  maxGrade: Grade
 
   createdAt: string
   updatedAt: string
+  status: 'draft' | 'published' | 'closed'
+  publishedAt?: string | null
+  allowResubmissions: boolean
 }
 
 export type CreateAssignmentInput = {
@@ -24,7 +27,7 @@ export type CreateAssignmentInput = {
   title: string
   description?: string | null
   deadline?: string | null
-  maxGrade?: Grade | null
+  maxGrade: Grade
   artifacts?: string[]  // Existing artifact IDs
   files?: File[]        // New files to upload
 }
@@ -93,6 +96,14 @@ const updateAssignment = async (id: string, data: UpdateAssignmentInput): Promis
 
 const deleteAssignment = async (id: string): Promise<void> => {
   await api.delete(`/assignments/${id}`)
+}
+
+const updateAssignmentStatus = async (
+  id: string,
+  status: Assignment['status'],
+): Promise<Assignment> => {
+  const res = await api.patch(`/assignments/${id}/status`, { status })
+  return res.data
 }
 
 export function useAssignments(params?: ListParams, enabled = true) {
@@ -164,6 +175,20 @@ export function useDeleteAssignment() {
         description: error.message || 'Something went wrong'
       });
     }
+  })
+}
+
+export function useUpdateAssignmentStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: Assignment['status'] }) =>
+      updateAssignmentStatus(id, status),
+    onSuccess: (assignment) => {
+      qc.invalidateQueries({ queryKey: assignmentsKeys.detail(assignment.id) })
+      qc.invalidateQueries({ queryKey: assignmentsKeys.lists() })
+      toast.success(assignment.status === 'published' ? 'Assignment published' : 'Assignment unpublished')
+    },
+    onError: (error: Error) => toast.error('Failed to change assignment status', { description: error.message }),
   })
 }
 

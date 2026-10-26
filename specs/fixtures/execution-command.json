@@ -1,0 +1,40 @@
+{
+  "protocolVersion": "1",
+  "commandId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "idempotencyKey": "execution:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb:start:1",
+  "command": "start",
+  "issuedAt": "2026-07-14T12:00:00Z",
+  "expiresAt": "2026-07-14T12:05:00Z",
+  "platformUrl": "https://fair.example.edu/",
+  "execution": {
+    "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "rootExecutionId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "parentExecutionId": null,
+    "attempt": 1,
+    "kind": "agent",
+    "capability": {
+      "definitionId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "capabilityId": "assistant.assignment",
+      "version": "1.0.0",
+      "installationId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "extensionId": "fair.example.assistant"
+    },
+    "scope": {
+      "courseId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "assignmentId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      "submissionIds": []
+    },
+    "deadlineAt": "2026-07-14T12:30:00Z",
+    "artifacts": []
+  },
+  "authorization": {
+    "tokenType": "Bearer",
+    "accessToken": "test-only.redacted.token",
+    "expiresAt": "2026-07-14T12:30:00Z",
+    "scopes": ["executions:events"]
+  },
+  "payload": {
+    "input": {"content": "Help me understand this assignment."}
+  },
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}

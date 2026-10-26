@@ -1,23 +1,25 @@
 import type { ComponentType } from "react";
 
 import { AccountSection } from "@/components/settings/sections/account-section";
-import { AiModelsSection } from "@/components/settings/sections/ai-models-section";
 import { EmptySectionFromKeys } from "@/components/settings/sections/empty-section";
 import { NotificationsSection } from "@/components/settings/sections/notifications-section";
-import { PersonalizationSection } from "@/components/settings/sections/personalization-section";
 import { PreferencesSection } from "@/components/settings/sections/preferences-section";
+import {
+  AdmissionSection,
+  AdminPeopleSection,
+  AIControlsSection,
+} from "@/components/settings/sections/access-control-sections";
 
-export type SettingsCategoryId = "you" | "ai" | "research" | "admin";
+export type SettingsCategoryId = "you" | "research" | "admin";
 
 export type SettingsSectionId =
   | "account"
   | "preferences"
   | "notifications"
-  | "personalization"
-  | "ai-models"
   | "api-keys"
   | "admin-people"
-  | "admin-models";
+  | "admin-admission"
+  | "admin-ai";
 
 export type SettingsSectionDefinition = {
   id: SettingsSectionId;
@@ -28,7 +30,7 @@ export type SettingsSectionDefinition = {
   render: ComponentType;
 };
 
-export const SETTINGS_CATEGORY_ORDER: SettingsCategoryId[] = ["you", "ai", "research", "admin"];
+export const SETTINGS_CATEGORY_ORDER: SettingsCategoryId[] = ["you", "research", "admin"];
 
 export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
   {
@@ -53,20 +55,6 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     render: NotificationsSection,
   },
   {
-    id: "personalization",
-    category: "ai",
-    titleKey: "settings.sections.personalization.title",
-    descriptionKey: "settings.sections.personalization.description",
-    render: PersonalizationSection,
-  },
-  {
-    id: "ai-models",
-    category: "ai",
-    titleKey: "settings.sections.aiModels.title",
-    descriptionKey: "settings.sections.aiModels.description",
-    render: AiModelsSection,
-  },
-  {
     id: "api-keys",
     category: "research",
     titleKey: "settings.sections.apiKeys.title",
@@ -83,23 +71,20 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     category: "admin",
     titleKey: "settings.sections.adminPeople.title",
     descriptionKey: "settings.sections.adminPeople.description",
-    render: () => (
-      <EmptySectionFromKeys
-        titleKey="settings.sections.adminPeople.title"
-        descriptionKey="settings.sections.adminPeople.description"
-      />
-    ),
+    render: AdminPeopleSection,
   },
   {
-    id: "admin-models",
+    id: "admin-admission",
     category: "admin",
-    titleKey: "settings.sections.adminModels.title",
-    descriptionKey: "settings.sections.adminModels.description",
-    render: () => (
-      <EmptySectionFromKeys
-        titleKey="settings.sections.adminModels.title"
-        descriptionKey="settings.sections.adminModels.description"
-      />
-    ),
+    titleKey: "settings.sections.adminAdmission.title",
+    descriptionKey: "settings.sections.adminAdmission.description",
+    render: AdmissionSection,
+  },
+  {
+    id: "admin-ai",
+    category: "admin",
+    titleKey: "settings.sections.adminAi.title",
+    descriptionKey: "settings.sections.adminAi.description",
+    render: AIControlsSection,
   },
 ];

@@ -1,0 +1,46 @@
+{
+  "contract": "fair.execution-event.v1",
+  "events": [
+    {
+      "producerSource": "fixture.extension",
+      "producerEventId": "started-1",
+      "producerSequence": 1,
+      "type": "execution.started",
+      "schemaUri": "urn:fair:event:execution.started:v1",
+      "occurredAt": "2026-07-11T00:00:00Z",
+      "visibility": "user",
+      "durability": "durable",
+      "payload": {}
+    },
+    {
+      "producerSource": "fixture.extension",
+      "producerEventId": "artifact-1",
+      "producerSequence": 2,
+      "type": "artifact.created",
+      "schemaUri": "urn:fair:event:artifact.created:v1",
+      "occurredAt": "2026-07-11T00:00:01Z",
+      "visibility": "user",
+      "durability": "durable",
+      "payload": {
+        "artifactId": "11111111-1111-4111-8111-111111111111",
+        "artifactVersionId": "22222222-2222-4222-8222-222222222222",
+        "state": "finalized"
+      }
+    },
+    {
+      "producerSource": "fixture.extension",
+      "producerEventId": "completed-1",
+      "producerSequence": 3,
+      "type": "execution.completed",
+      "schemaUri": "urn:fair:event:execution.completed:v1",
+      "occurredAt": "2026-07-11T00:00:02Z",
+      "visibility": "user",
+      "durability": "durable",
+      "payload": {
+        "outputSummary": {
+          "artifactVersionId": "22222222-2222-4222-8222-222222222222"
+        }
+      }
+    }
+  ]
+}

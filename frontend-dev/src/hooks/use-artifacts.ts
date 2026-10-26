@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 export type ListParams = Record<string, string | number | boolean | null | undefined>
 
-export type Artifact = {
+export type LmsArtifact = {
   id: string
   title: string
   artifactType: string
@@ -63,7 +63,7 @@ export const artifactsKeys = {
   detail: (id: string) => [...artifactsKeys.details(), id] as const,
 }
 
-const fetchArtifacts = async (params?: ArtifactsListParams): Promise<Artifact[]> => {
+const fetchArtifacts = async (params?: ArtifactsListParams): Promise<LmsArtifact[]> => {
   const queryParams: Record<string, string> = {}
   if (params?.creatorId) queryParams.creator_id = params.creatorId.toString()
   if (params?.courseId) queryParams.course_id = params.courseId.toString()
@@ -71,30 +71,30 @@ const fetchArtifacts = async (params?: ArtifactsListParams): Promise<Artifact[]>
   if (params?.status) queryParams.status = params.status
   if (params?.accessLevel) queryParams.access_level = params.accessLevel
 
-  const res = await api.get('/artifacts', { params: queryParams })
+  const res = await api.get('/v1/artifacts', { params: queryParams })
   return res.data
 }
 
-const fetchArtifact = async (id: string): Promise<Artifact> => {
-  const res = await api.get(`/artifacts/${id}`)
+const fetchArtifact = async (id: string): Promise<LmsArtifact> => {
+  const res = await api.get(`/v1/artifacts/${id}`)
   return res.data
 }
 
-const createArtifact = async (data: CreateArtifactInput): Promise<Artifact> => {
-  const res = await api.post('/artifacts', data)
+const createArtifact = async (data: CreateArtifactInput): Promise<LmsArtifact> => {
+  const res = await api.post('/v1/artifacts', data)
   return res.data
 }
 
-const updateArtifact = async (id: string, data: UpdateArtifactInput): Promise<Artifact> => {
-  const res = await api.put(`/artifacts/${id}`, data)
+const updateArtifact = async (id: string, data: UpdateArtifactInput): Promise<LmsArtifact> => {
+  const res = await api.put(`/v1/artifacts/${id}`, data)
   return res.data
 }
 
 const deleteArtifact = async (id: string): Promise<void> => {
-  await api.delete(`/artifacts/${id}`)
+  await api.delete(`/v1/artifacts/${id}`)
 }
 
-export function toSDKArtifact(artifact: Artifact): SDKArtifact {
+export function toSDKArtifact(artifact: LmsArtifact): SDKArtifact {
   return {
     id: artifact.id,
     title: artifact.title,

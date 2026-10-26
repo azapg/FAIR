@@ -18,6 +18,30 @@ export type ExtensionClientSecret = {
   enabled: boolean;
 };
 
+export type CapabilityDefinition = {
+  id: string;
+  installationId: string;
+  capabilityId: string;
+  /** Where this capability plugs into FAIR. */
+  surface: "chat.agent" | "function" | "flow.step";
+  /** FAIR-owned contract id, present only on the `function` surface. */
+  contract: string | null;
+  displayName: string | null;
+  description: string | null;
+  version: string;
+  declaredEffects: string[];
+  supportsStreaming: boolean;
+  supportsCancellation: boolean;
+  supportsResume: boolean;
+  costControl?: {
+    controlsEnabled: boolean;
+    classification: "unclassified" | "unmetered" | "ai";
+    costUnits: number | null;
+    executable: boolean;
+    reason: "ai_policy_unconfigured" | "ai_not_entitled" | "ai_quota_exhausted" | null;
+  } | null;
+};
+
 export type CreateExtensionInput = {
   extensionId: string;
   scopes?: string[];
@@ -39,22 +63,22 @@ export const extensionKeys = {
 };
 
 const listExtensions = async (): Promise<ExtensionClient[]> => {
-  const res = await api.get("/extensions/admin/clients");
+  const res = await api.get("/v1/extensions/clients");
   return res.data;
 };
 
 const getExtension = async (extensionId: string): Promise<ExtensionClient> => {
-  const res = await api.get(`/extensions/admin/clients/${extensionId}`);
+  const res = await api.get(`/v1/extensions/clients/${extensionId}`);
   return res.data;
 };
 
 const createExtension = async (payload: CreateExtensionInput): Promise<ExtensionClientSecret> => {
-  const res = await api.post("/extensions/admin/clients", payload);
+  const res = await api.post("/v1/extensions/clients", payload);
   return res.data;
 };
 
 const updateExtension = async (payload: UpdateExtensionInput): Promise<ExtensionClient> => {
-  const res = await api.patch(`/extensions/admin/clients/${payload.extensionId}`, {
+  const res = await api.patch(`/v1/extensions/clients/${payload.extensionId}`, {
     scopes: payload.scopes,
     enabled: payload.enabled,
   });
@@ -62,7 +86,7 @@ const updateExtension = async (payload: UpdateExtensionInput): Promise<Extension
 };
 
 const rotateExtensionSecret = async (extensionId: string): Promise<ExtensionClientSecret> => {
-  const res = await api.post(`/extensions/admin/clients/${extensionId}/rotate`);
+  const res = await api.post(`/v1/extensions/clients/${extensionId}/rotate`);
   return res.data;
 };
 
@@ -70,6 +94,17 @@ export function useExtensions(enabled = true) {
   return useQuery({
     queryKey: extensionKeys.list(),
     queryFn: listExtensions,
+    enabled,
+  });
+}
+
+export function useCapabilities(enabled = true) {
+  return useQuery({
+    queryKey: [...extensionKeys.all, "capabilities"],
+    queryFn: async (): Promise<CapabilityDefinition[]> => {
+      const response = await api.get("/v1/extensions/capabilities");
+      return response.data;
+    },
     enabled,
   });
 }

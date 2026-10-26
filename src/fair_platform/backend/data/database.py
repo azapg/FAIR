@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 from typing import Generator, Iterator, Any
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from fair_platform.backend.data.storage import storage
 
@@ -17,8 +17,18 @@ __all__ = [
     "get_session",
     "init_db",
     "get_database_url",
+    "normalize_database_url",
     "session_dependency",
 ]
+
+
+def normalize_database_url(url: str) -> str:
+    normalized = url.strip()
+    if normalized.startswith("postgres://"):
+        return "postgresql+psycopg://" + normalized[len("postgres://") :]
+    if normalized.startswith("postgresql://"):
+        return "postgresql+psycopg://" + normalized[len("postgresql://") :]
+    return normalized
 
 
 def get_database_url() -> str:
@@ -26,11 +36,7 @@ def get_database_url() -> str:
     if not url:
         print("Using SQLite since DATABASE_URL is not set")
         return f"sqlite:///{storage.local_db_path}"
-    if url.startswith("postgres://"):
-        return "postgresql+psycopg://" + url[len("postgres://") :]
-    if url.startswith("postgresql://"):
-        return "postgresql+psycopg://" + url[len("postgresql://") :]
-    return url
+    return normalize_database_url(url)
 
 
 DATABASE_URL = get_database_url()
@@ -42,6 +48,13 @@ if DATABASE_URL.startswith("sqlite:"):
     _engine_kwargs["connect_args"] = {"check_same_thread": False}
 
 engine = create_engine(DATABASE_URL, **_engine_kwargs)
+
+if DATABASE_URL.startswith("sqlite:"):
+    @event.listens_for(engine, "connect")
+    def _enable_sqlite_foreign_keys(dbapi_connection: Any, _connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 SessionLocal = sessionmaker(
     bind=engine, autoflush=False, autocommit=False, expire_on_commit=False, future=True

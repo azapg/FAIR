@@ -25,30 +25,19 @@ export function getWebSocketUrl(path: string) {
 const api = axios.create({
   baseURL,
   timeout: 10000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-api.interceptors.request.use((config) => {
-  // TODO: change to cookies
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
 export const clearAuthData = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
-
   window.dispatchEvent(new CustomEvent('auth:session-expired'))
 }
 
 // Auth endpoints that should not trigger session expiry on 401
 // (401 on these means invalid credentials, not an expired session)
-const AUTH_ENDPOINTS = ['/auth/login', '/auth/register']
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/me', '/auth/logout']
 
 // Response interceptor to handle session expiry
 api.interceptors.response.use(

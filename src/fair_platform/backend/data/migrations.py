@@ -25,7 +25,10 @@ def _resolve_alembic_ini_path() -> Path | None:
 
 def build_alembic_config(database_url: str | None = None) -> Config:
     import fair_platform.backend as backend_pkg
-    from fair_platform.backend.data.database import engine as db_engine
+    from fair_platform.backend.data.database import (
+        engine as db_engine,
+        normalize_database_url,
+    )
 
     config_path = _resolve_alembic_ini_path()
     config = Config(str(config_path)) if config_path else Config()
@@ -33,9 +36,12 @@ def build_alembic_config(database_url: str | None = None) -> Config:
     backend_dir = Path(backend_pkg.__file__).resolve().parent
     config.set_main_option("script_location", str(backend_dir / "alembic"))
     # Keep Alembic target aligned with the runtime SQLAlchemy engine.
+    resolved_url = normalize_database_url(
+        database_url or db_engine.url.render_as_string(hide_password=False)
+    )
     config.set_main_option(
         "sqlalchemy.url",
-        _escape_for_alembic_ini(database_url or str(db_engine.url)),
+        _escape_for_alembic_ini(resolved_url),
     )
     config.set_main_option("fair.runtime_url_locked", "1")
     # Keep runtime/server logging intact when invoking Alembic programmatically.
