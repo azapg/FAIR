@@ -480,7 +480,7 @@ function FlowSidebarProvider({
 
 function Sidebar({
   side = "left",
-  variant = "floating",
+  variant = "sidebar",
   collapsible = "offcanvas",
   className,
   children,
