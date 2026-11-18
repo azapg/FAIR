@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage FAIR Canary Preview"
+  short_description: "Operate the private FAIR canary preview"
+  default_prompt: "Use $manage-fair-canary-preview to check, update, or troubleshoot the FAIR canary preview."
